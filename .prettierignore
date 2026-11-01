@@ -1,0 +1,9 @@
+node_modules
+.expo
+dist
+web-build
+assets
+package-lock.json
+migrations
+src/core/i18n/lang
+docs
