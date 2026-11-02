@@ -105,12 +105,12 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| B1 | Elenco abitudini (iniziate / future con «Vedi abitudini future»), anelli | `habits` (pronta) → sync | Abitudini | P2 | API pronta | |
-| B2 | Crea/modifica/archivia/elimina, ordine | sync `habits` | Abitudini › Scheda | P2 | API pronta | |
-| B3 | Check-in (fatto/parziale/saltato/fallito, quantità, nota, umore) | `habits/{id}/log` → sync `habit_logs` | Abitudini | P2 | API pronta | |
+| B1 | Elenco abitudini (iniziate / future con «Vedi abitudini future»), anelli | `habits` (pronta) → sync | Abitudini | P2 | dati e regole scritti (sync, serie, check-in) · schermata da fare | |
+| B2 | Crea/modifica/archivia/elimina, ordine | sync `habits` | Abitudini › Scheda | P2 | dati e regole scritti · schermata da fare | |
+| B3 | Check-in (fatto/parziale/saltato/fallito, quantità, nota, umore) | `habits/{id}/log` → sync `habit_logs` | Abitudini | P2 | dati e regole scritti (stato del giorno, UUIDv5) · schermata da fare | |
 | B4 | Serie e record (`habit_streak_records`: **calcolati**, non si sincronizzano) | logica in TS | — | P2 | da fare — **test d'oro** (come `hb_log_imposta`) | |
 | B5 | Traguardi (`habit_achievements` catalogo, `habit_user_achievements`, «visti») | catalogo nell'app + sync | Abitudini › Traguardi | P2 | da fare | |
-| B6 | Categorie di abitudini | `habits/categories` → sync | Abitudini › Categorie | P2 | API pronta | |
+| B6 | Categorie di abitudini | `habits/categories` → sync | Abitudini › Categorie | P2 | dati e regole scritti · schermata da fare | |
 | B7 | Distribuzione per ora (`hour_distribution`) | locale | Abitudini › Statistiche | P2 | da fare | |
 | B8 | Diario delle abitudini (`journal_save`, `habit_daily_journal`) | sync | Abitudini › Diario | P2 | API pronta | |
 | B9 | Promemoria (`habit_reminders`) | notifiche locali | — | P2 | da fare | |
