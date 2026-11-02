@@ -5,7 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import type { TodoTheme } from '@/features/tasks/todoTheme';
 
+import { DEFAULT_CATEGORY_COLOR, type BuyCategory } from '@/features/buy/logic';
+import { localToday } from '@/features/tasks/groups';
+
 import { NOTE_MAX } from './quickNote';
+import { itemFromLine, inputOf, noteAfter, toSave, type SortItem } from './sort';
+import { SortModal } from './SortModal';
 
 /** Le righe che lo smistamento vede: senza vuote, senza puntini o numeri davanti (righeDi di todo_nota.js). */
 export function noteLines(text: string): { orig: number; text: string }[] {
@@ -23,16 +28,7 @@ const SAVE_DELAY_MS = 700;
  * La nota veloce in cima al To do: si tocca, si scrive, basta. Si salva da sola — subito sul telefono, poco dopo
  * sul server — e non c'è un tasto «salva» da dimenticare.
  */
-export function QuickNoteCard({
-  td,
-  paper,
-  onSort,
-}: {
-  td: TodoTheme;
-  paper: boolean;
-  /** «Smista a mano»: riceve le righe lette */
-  onSort?: (lines: { orig: number; text: string }[]) => void;
-}) {
+export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) {
   const { t } = useTranslation();
   const { services, version, changed } = useApp();
   const [text, setText] = useState(() => services?.notes.read() ?? '');
@@ -40,6 +36,8 @@ export function QuickNoteCard({
   const [status, setStatus] = useState<'' | 'saving' | 'saved'>('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasTimer = useRef(false);
+  const [sorting, setSorting] = useState<{ items: SortItem[]; cats: BuyCategory[] } | null>(null);
+  const [notice, setNotice] = useState('');
 
   // Una nota arrivata dal server (o da uno smistamento) si vede, ma mai mentre si sta scrivendo.
   useEffect(() => {
@@ -71,6 +69,60 @@ export function QuickNoteCard({
     hasTimer.current = true;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, SAVE_DELAY_MS);
+  }
+
+  function openSort() {
+    if (!services) return;
+    if (timer.current) flush();
+    const cats = services.categories.list();
+    const now = new Date();
+    const pad = (v: number) => String(v).padStart(2, '0');
+    const at = {
+      date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+      time: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    };
+    setSorting({
+      items: noteLines(services.notes.read()).map((l) => itemFromLine(l, at, cats)),
+      cats,
+    });
+  }
+
+  function saveSort(items: SortItem[]) {
+    if (!services || !sorting) return;
+    const made = new Map<string, string>(); // nome nuovo → uuid, così due voci con la stessa categoria nuova ne fanno una
+    const saved = new Set<SortItem>();
+    let failed = 0;
+    for (const it of toSave(items)) {
+      try {
+        const { listType, input } = inputOf(it);
+        if (listType === 'buy') {
+          let cat = it.catUuid;
+          if (it.newCategory) {
+            const key = it.newCategory.toLowerCase();
+            if (!made.has(key))
+              made.set(key, services.categories.create(it.newCategory, DEFAULT_CATEGORY_COLOR));
+            cat = made.get(key)!;
+          }
+          services.tasks.create({ ...input, buy_category_uuid: cat }, { listType });
+        } else {
+          services.tasks.create(input, { listType });
+        }
+        saved.add(it);
+      } catch {
+        failed++;
+      }
+    }
+    const rest = noteAfter(services.notes.read(), items, saved);
+    services.notes.write(rest);
+    setText(rest);
+    setSorting(null);
+    setNotice(
+      failed
+        ? t('todo.nota_fatto_parziale', { n: saved.size, f: failed })
+        : t(saved.size === 1 ? 'todo.nota_fatto_1' : 'todo.nota_fatto_n', { n: saved.size }),
+    );
+    setTimeout(() => setNotice(''), 3200);
+    changed();
   }
 
   const lines = noteLines(text);
@@ -115,18 +167,32 @@ export function QuickNoteCard({
         <Text testID="note-count" style={{ color: td.ink3, fontSize: 12 }}>
           {n ? t(n === 1 ? 'todo.nota_riga_1' : 'todo.nota_righe_n', { n }) : ''}
         </Text>
-        {onSort ? (
-          <Text
-            testID="note-sort"
-            accessibilityRole="button"
-            accessibilityState={{ disabled: n === 0 }}
-            onPress={() => n && onSort(lines)}
-            style={{ color: n ? td.accent : td.ink3, fontSize: 13, fontWeight: '500' }}
-          >
-            {t('todo.nota_mano')}
-          </Text>
-        ) : null}
+        <Text
+          testID="note-sort"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: n === 0 }}
+          onPress={() => n && openSort()}
+          style={{ color: n ? td.accent : td.ink3, fontSize: 13, fontWeight: '500' }}
+        >
+          {t('todo.nota_mano')}
+        </Text>
       </View>
+      {notice ? (
+        <Text testID="note-notice" style={{ color: td.accent, fontSize: 13, marginTop: 6 }}>
+          {notice}
+        </Text>
+      ) : null}
+      {sorting ? (
+        <SortModal
+          td={td}
+          paper={paper}
+          initial={sorting.items}
+          cats={sorting.cats}
+          today={localToday()}
+          onCancel={() => setSorting(null)}
+          onSave={saveSort}
+        />
+      ) : null}
     </View>
   );
 }

@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
+import { CategoriesRepo } from '@/features/buy/categoriesRepo';
+import { TasksRepo } from '@/features/tasks/repo';
 import i18n from '@/core/i18n';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 import { todoTheme } from '@/features/tasks/todoTheme';
@@ -9,20 +11,21 @@ import { noteLines, QuickNoteCard } from '../QuickNoteCard';
 import { QuickNoteStore } from '../quickNote';
 
 let mockNotes: QuickNoteStore;
+let mockServices: Record<string, unknown>;
 let mockVersion = 0;
 const mockChanged = jest.fn();
 jest.mock('@/core/app/AppProvider', () => ({
-  useApp: () => ({ services: { notes: mockNotes }, version: mockVersion, changed: mockChanged }),
+  useApp: () => ({ services: mockServices, version: mockVersion, changed: mockChanged }),
 }));
 
-function Card({ onSort }: { onSort?: (l: { orig: number; text: string }[]) => void }) {
+function Card() {
   const th = useTheme();
-  return <QuickNoteCard td={todoTheme('standard', th)} paper={false} onSort={onSort} />;
+  return <QuickNoteCard td={todoTheme('standard', th)} paper={false} />;
 }
-const ui = (onSort?: (l: { orig: number; text: string }[]) => void) =>
+const ui = () =>
   render(
     <ThemeProvider accent="blue">
-      <Card onSort={onSort} />
+      <Card />
     </ThemeProvider>,
   );
 
@@ -30,7 +33,14 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockVersion = 0;
-  mockNotes = new QuickNoteStore(memoryDb());
+  const db = memoryDb();
+  mockNotes = new QuickNoteStore(db);
+  mockServices = {
+    db,
+    notes: mockNotes,
+    tasks: new TasksRepo(db),
+    categories: new CategoriesRepo(db),
+  };
 });
 afterEach(() => jest.useRealTimers());
 
@@ -123,16 +133,73 @@ describe('QuickNoteCard', () => {
     expect(screen.getByTestId('note-input').props.value).toBe('dal sito');
   });
 
-  test('sort by hand is off for an empty note and passes the lines otherwise', async () => {
-    const onSort = jest.fn();
-    await ui(onSort);
+  test('sort by hand is off for an empty note', async () => {
+    await ui();
     await fireEvent.press(screen.getByTestId('note-sort'));
-    expect(onSort).not.toHaveBeenCalled();
-    await fireEvent.changeText(screen.getByTestId('note-input'), 'compra latte\ndentista domani');
+    expect(screen.queryByTestId('sort-modal')).toBeNull();
+  });
+
+  test('sort by hand: check the items, change one, save; saved lines leave the note', async () => {
+    const tasks = mockServices.tasks as TasksRepo;
+    mockNotes.write('compra latte 1,20\ndentista domani alle 9\nnon so cosa fare');
+    await ui();
     await fireEvent.press(screen.getByTestId('note-sort'));
-    expect(onSort).toHaveBeenCalledWith([
-      { orig: 0, text: 'compra latte' },
-      { orig: 1, text: 'dentista domani' },
-    ]);
+    expect(screen.getByTestId('sort-modal')).toBeTruthy();
+    expect(screen.getByTestId('sort-title-0').props.value).toBe('Latte');
+    expect(screen.getByTestId('sort-price-0').props.value).toBe('1,20');
+    expect(screen.getByTestId('sort-title-1').props.value).toBe('Dentista');
+
+    await fireEvent.changeText(screen.getByTestId('sort-title-1'), 'Dentista Rossi');
+    await fireEvent.press(screen.getByTestId('sort-remove-2')); // questa riga resta nella nota
+    await fireEvent.press(screen.getByTestId('sort-save'));
+
+    expect(screen.queryByTestId('sort-modal')).toBeNull();
+    const buy = tasks.list('buy');
+    expect(buy.map((x) => [x.title, x.buy_price_cents])).toEqual([['Latte', 120]]);
+    const todos = tasks.list('todo');
+    expect(todos).toHaveLength(1);
+    expect(todos[0]).toMatchObject({ title: 'Dentista Rossi', due_time: '09:00' });
+    expect(mockNotes.read()).toBe('non so cosa fare');
+    expect(screen.getByTestId('note-input').props.value).toBe('non so cosa fare');
+    expect(screen.getByTestId('note-notice').props.children).toBe(
+      i18n.t('todo.nota_fatto_n', { n: 2 }),
+    );
+    expect(mockChanged).toHaveBeenCalled();
+  });
+
+  test('cancelling the sort changes nothing', async () => {
+    mockNotes.write('uova');
+    await ui();
+    await fireEvent.press(screen.getByTestId('note-sort'));
+    await fireEvent.press(screen.getByTestId('sort-cancel'));
+    expect(screen.queryByTestId('sort-modal')).toBeNull();
+    expect(mockNotes.read()).toBe('uova');
+    expect((mockServices.tasks as TasksRepo).list('buy')).toEqual([]);
+  });
+
+  test('moving a line to to buy and picking a category', async () => {
+    const cats = mockServices.categories as CategoriesRepo;
+    const cat = cats.create('Casa', '#123456');
+    mockNotes.write('lampadina');
+    await ui();
+    await fireEvent.press(screen.getByTestId('note-sort'));
+    await fireEvent.press(screen.getByTestId('sort-dest-0-buy'));
+    await fireEvent.press(screen.getByTestId(`sort-cat-0-${cat}`));
+    await fireEvent.press(screen.getByTestId('sort-save'));
+    const [item] = (mockServices.tasks as TasksRepo).list('buy');
+    expect(item).toMatchObject({ title: 'Lampadina', buy_category_uuid: cat });
+    expect(mockNotes.read()).toBe('');
+  });
+
+  test('a new #category in the line is created once', async () => {
+    mockNotes.write('compra viti #ferramenta\ncompra chiodi #ferramenta');
+    await ui();
+    await fireEvent.press(screen.getByTestId('note-sort'));
+    await fireEvent.press(screen.getByTestId('sort-save'));
+    const cats = (mockServices.categories as CategoriesRepo).list();
+    expect(cats.map((c) => c.name)).toEqual(['ferramenta']);
+    const buy = (mockServices.tasks as TasksRepo).list('buy');
+    expect(buy).toHaveLength(2);
+    expect(new Set(buy.map((b) => b.buy_category_uuid)).size).toBe(1);
   });
 });

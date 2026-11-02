@@ -252,7 +252,7 @@ const timeOf = (hhmm: string) => {
 const hhmmOf = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 /** Un campo giorno o ora. iPhone/iPad: il selettore compatto di sistema; Android: la finestra di sistema. */
-function WhenField(p: {
+export function WhenField(p: {
   td: TodoTheme;
   kind: 'date' | 'time';
   label: string;
