@@ -1,4 +1,4 @@
-// Copia dal sito lang/it.json, lang/en.json e lib/data/habits_presets.json (una sola fonte di verità).
+// Copia dal sito lang/it.json, lang/en.json e lib/data/habits_presets.json e public/planner/planner_smart.json (una sola fonte di verità).
 //   npm run i18n:sync            → li scarica da GitHub (nico-1717/standout, ramo main)
 //   npm run i18n:sync -- ../standout/lang   → li copia da una cartella locale
 //   npm run i18n:sync -- --check → non scrive: fallisce se la copia dell'app è vecchia (CI)
@@ -20,6 +20,11 @@ const FILE = [
   [
     'lib/data/habits_presets.json',
     join(qui, '..', 'src', 'features', 'habits', 'habits_presets.json'),
+  ],
+  // le regole di data e ora della barra intelligente (planner e to do): lo stesso elenco di parole del sito
+  [
+    'public/planner/planner_smart.json',
+    join(qui, '..', 'src', 'features', 'tasks', 'planner_smart.json'),
   ],
 ];
 

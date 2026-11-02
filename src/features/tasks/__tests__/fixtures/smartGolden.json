@@ -1,0 +1,2858 @@
+[
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "chiamare il dentista domani alle 15 #salute",
+    "result": {
+      "title": "Chiamare il dentista",
+      "date": "2026-11-03",
+      "time": "15:00",
+      "minutes": 0,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute", "alle 15", "domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "ripasso cap 3 venerdì 1h",
+    "result": {
+      "title": "Ripasso cap 3",
+      "date": "2026-11-06",
+      "time": null,
+      "minutes": 60,
+      "project": null,
+      "projectNew": null,
+      "used": ["1h", "venerdì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "comprare il latte",
+    "result": {
+      "title": "Comprare il latte",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "dentista dopodomani 10:30",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-11-04",
+      "time": "10:30",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["10:30", "dopodomani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "riunione lunedì prossimo alle 9",
+    "result": {
+      "title": "Riunione",
+      "date": "2026-11-16",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 9", "lunedì"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "cena con Marco sabato sera",
+    "result": {
+      "title": "Cena con Marco sera",
+      "date": "2026-11-07",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["sabato"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "palestra stasera 1h30",
+    "result": {
+      "title": "Palestra",
+      "date": "2026-11-02",
+      "time": "20:00",
+      "minutes": 90,
+      "project": null,
+      "projectNew": null,
+      "used": ["1h30", "stasera"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "studiare analisi per 45 min",
+    "result": {
+      "title": "Studiare analisi",
+      "date": null,
+      "time": null,
+      "minutes": 45,
+      "project": null,
+      "projectNew": null,
+      "used": ["per 45 min"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "pagare affitto il 5/12",
+    "result": {
+      "title": "Pagare affitto",
+      "date": "2026-12-05",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["5/12"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "esame di fisica 20 gennaio",
+    "result": {
+      "title": "Esame di fisica",
+      "date": "2027-01-20",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["20 gennaio"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "compleanno mamma 13 agosto",
+    "result": {
+      "title": "Compleanno mamma",
+      "date": "2027-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13 agosto"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "call 3pm tomorrow",
+    "result": {
+      "title": "Call",
+      "date": "2026-11-03",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["3pm", "tomorrow"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "dinner friday at 8pm",
+    "result": {
+      "title": "Dinner",
+      "date": "2026-11-06",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["at 8pm", "friday"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "meeting august 13th",
+    "result": {
+      "title": "Meeting",
+      "date": "2027-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13 august"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "natale regali",
+    "result": {
+      "title": "Regali",
+      "date": "2026-12-25",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["natale"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "pasquetta pranzo dai nonni",
+    "result": {
+      "title": "Pranzo dai nonni",
+      "date": "2027-03-29",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["pasquetta"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "capodanno",
+    "result": {
+      "title": "",
+      "date": "2027-01-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["capodanno"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "ferragosto",
+    "result": {
+      "title": "",
+      "date": "2027-08-15",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["ferragosto"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "tell john tomorrow",
+    "result": {
+      "title": "Tell john",
+      "date": "2026-11-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["tomorrow"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "domani 15 dentista",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-11-03",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["15", "domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "venerdì 23 ottobre medico",
+    "result": {
+      "title": "Venerdì medico",
+      "date": "2027-10-23",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["23 ottobre"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "chiamare agsoto",
+    "result": {
+      "title": "Chiamare agsoto",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "telefonare al nonno giovedì alle 18",
+    "result": {
+      "title": "Telefonare al nonno",
+      "date": "2026-11-05",
+      "time": "18:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 18", "giovedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "mattina correre",
+    "result": {
+      "title": "Mattina correre",
+      "date": "2026-11-02",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "alle 7 sveglia",
+    "result": {
+      "title": "Sveglia",
+      "date": "2026-11-03",
+      "time": "07:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 7"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "alle 7.30 sveglia",
+    "result": {
+      "title": "Sveglia",
+      "date": "2026-11-03",
+      "time": "07:30",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 7.30"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "buy milk 2 hours",
+    "result": {
+      "title": "Buy milk",
+      "date": null,
+      "time": null,
+      "minutes": 120,
+      "project": null,
+      "projectNew": null,
+      "used": ["2 hours"]
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "ordinare libro #università",
+    "result": {
+      "title": "Ordinare libro",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": "Università",
+      "projectNew": null,
+      "used": ["#università"]
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "idea: leggere un libro",
+    "result": {
+      "title": "Idea: leggere un libro",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "per favore chiamare Anna domani",
+    "result": {
+      "title": "Favore chiamare Anna",
+      "date": "2026-11-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "progetto: tesi",
+    "result": {
+      "title": "Progetto: tesi",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "project"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "lunedì della prossima settimana palestra",
+    "result": {
+      "title": "Settimana palestra",
+      "date": "2026-11-16",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["lunedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "sabato 14:00 partita",
+    "result": {
+      "title": "Partita",
+      "date": "2026-11-07",
+      "time": "14:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["14:00", "sabato"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "3/1 dentista",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-01-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["3/1"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "13-08-2026 volo",
+    "result": {
+      "title": "Volo",
+      "date": "2026-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13-08-2026"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "oggi pomeriggio spesa",
+    "result": {
+      "title": "Pomeriggio spesa",
+      "date": "2026-11-02",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["oggi"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "dopodomani sera cinema",
+    "result": {
+      "title": "Sera cinema",
+      "date": "2026-11-04",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["dopodomani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "tra una settimana",
+    "result": {
+      "title": "Tra una settimana",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "fra due giorni",
+    "result": {
+      "title": "Fra due giorni",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "#salute visita",
+    "result": {
+      "title": "Visita",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "#nonesiste qualcosa domani",
+    "result": {
+      "title": "#nonesiste qualcosa",
+      "date": "2026-11-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": "nonesiste",
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "Dentista domani",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-11-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "  spazi   multipli  domani ",
+    "result": {
+      "title": "Spazi multipli",
+      "date": "2026-11-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "martedì 18",
+    "result": {
+      "title": "",
+      "date": "2026-11-03",
+      "time": "18:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["18", "martedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "volo 10 settembre alle 6",
+    "result": {
+      "title": "Volo",
+      "date": "2027-09-10",
+      "time": "06:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 6", "10 settembre"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "carnevale",
+    "result": {
+      "title": "",
+      "date": "2027-02-09",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["carnevale"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "pasqua",
+    "result": {
+      "title": "",
+      "date": "2027-03-28",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["pasqua"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "corsa 45'",
+    "result": {
+      "title": "Corsa",
+      "date": null,
+      "time": null,
+      "minutes": 45,
+      "project": null,
+      "projectNew": null,
+      "used": ["45'"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "call 11am",
+    "result": {
+      "title": "Call",
+      "date": "2026-11-02",
+      "time": "11:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["11am"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "ore 9 riunione",
+    "result": {
+      "title": "Riunione",
+      "date": "2026-11-03",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["ore 9"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "verso le 20 cena",
+    "result": {
+      "title": "20 cena",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "sera",
+    "result": {
+      "title": "Sera",
+      "date": "2026-11-02",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "tomorrow morning run",
+    "result": {
+      "title": "Run",
+      "date": "2026-11-03",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["tomorrow morning"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "",
+    "result": {
+      "title": "",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "x",
+    "result": {
+      "title": "X",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-11-02",
+      "time": "10:00"
+    },
+    "phrase": "ricordarsi di chiamare domani alle 9:15 per 20 minuti #salute",
+    "result": {
+      "title": "Ricordarsi di chiamare",
+      "date": "2026-11-03",
+      "time": "09:15",
+      "minutes": 20,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute", "per 20 minuti", "alle 9:15", "domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "chiamare il dentista domani alle 15 #salute",
+    "result": {
+      "title": "Chiamare il dentista",
+      "date": "2026-12-31",
+      "time": "15:00",
+      "minutes": 0,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute", "alle 15", "domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "ripasso cap 3 venerdì 1h",
+    "result": {
+      "title": "Ripasso cap 3",
+      "date": "2027-01-01",
+      "time": null,
+      "minutes": 60,
+      "project": null,
+      "projectNew": null,
+      "used": ["1h", "venerdì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "comprare il latte",
+    "result": {
+      "title": "Comprare il latte",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "dentista dopodomani 10:30",
+    "result": {
+      "title": "Dentista",
+      "date": "2027-01-01",
+      "time": "10:30",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["10:30", "dopodomani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "riunione lunedì prossimo alle 9",
+    "result": {
+      "title": "Riunione",
+      "date": "2027-01-11",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 9", "lunedì"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "cena con Marco sabato sera",
+    "result": {
+      "title": "Cena con Marco sera",
+      "date": "2027-01-02",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["sabato"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "palestra stasera 1h30",
+    "result": {
+      "title": "Palestra",
+      "date": "2026-12-30",
+      "time": "20:00",
+      "minutes": 90,
+      "project": null,
+      "projectNew": null,
+      "used": ["1h30", "stasera"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "studiare analisi per 45 min",
+    "result": {
+      "title": "Studiare analisi",
+      "date": null,
+      "time": null,
+      "minutes": 45,
+      "project": null,
+      "projectNew": null,
+      "used": ["per 45 min"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "pagare affitto il 5/12",
+    "result": {
+      "title": "Pagare affitto",
+      "date": "2026-12-05",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["5/12"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "esame di fisica 20 gennaio",
+    "result": {
+      "title": "Esame di fisica",
+      "date": "2027-01-20",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["20 gennaio"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "compleanno mamma 13 agosto",
+    "result": {
+      "title": "Compleanno mamma",
+      "date": "2027-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13 agosto"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "call 3pm tomorrow",
+    "result": {
+      "title": "Call",
+      "date": "2026-12-31",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["3pm", "tomorrow"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "dinner friday at 8pm",
+    "result": {
+      "title": "Dinner",
+      "date": "2027-01-01",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["at 8pm", "friday"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "meeting august 13th",
+    "result": {
+      "title": "Meeting",
+      "date": "2027-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13 august"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "natale regali",
+    "result": {
+      "title": "Regali",
+      "date": "2027-12-25",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["natale"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "pasquetta pranzo dai nonni",
+    "result": {
+      "title": "Pranzo dai nonni",
+      "date": "2027-03-29",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["pasquetta"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "capodanno",
+    "result": {
+      "title": "",
+      "date": "2027-01-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["capodanno"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "ferragosto",
+    "result": {
+      "title": "",
+      "date": "2027-08-15",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["ferragosto"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "tell john tomorrow",
+    "result": {
+      "title": "Tell john",
+      "date": "2026-12-31",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["tomorrow"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "domani 15 dentista",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-12-31",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["15", "domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "venerdì 23 ottobre medico",
+    "result": {
+      "title": "Venerdì medico",
+      "date": "2027-10-23",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["23 ottobre"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "chiamare agsoto",
+    "result": {
+      "title": "Chiamare agsoto",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "telefonare al nonno giovedì alle 18",
+    "result": {
+      "title": "Telefonare al nonno",
+      "date": "2026-12-31",
+      "time": "18:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 18", "giovedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "mattina correre",
+    "result": {
+      "title": "Mattina correre",
+      "date": "2026-12-30",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "alle 7 sveglia",
+    "result": {
+      "title": "Sveglia",
+      "date": "2026-12-31",
+      "time": "07:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 7"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "alle 7.30 sveglia",
+    "result": {
+      "title": "Sveglia",
+      "date": "2026-12-31",
+      "time": "07:30",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 7.30"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "buy milk 2 hours",
+    "result": {
+      "title": "Buy milk",
+      "date": null,
+      "time": null,
+      "minutes": 120,
+      "project": null,
+      "projectNew": null,
+      "used": ["2 hours"]
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "ordinare libro #università",
+    "result": {
+      "title": "Ordinare libro",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": "Università",
+      "projectNew": null,
+      "used": ["#università"]
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "idea: leggere un libro",
+    "result": {
+      "title": "Idea: leggere un libro",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "per favore chiamare Anna domani",
+    "result": {
+      "title": "Favore chiamare Anna",
+      "date": "2026-12-31",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "progetto: tesi",
+    "result": {
+      "title": "Progetto: tesi",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "project"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "lunedì della prossima settimana palestra",
+    "result": {
+      "title": "Settimana palestra",
+      "date": "2027-01-11",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["lunedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "sabato 14:00 partita",
+    "result": {
+      "title": "Partita",
+      "date": "2027-01-02",
+      "time": "14:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["14:00", "sabato"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "3/1 dentista",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-01-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["3/1"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "13-08-2026 volo",
+    "result": {
+      "title": "Volo",
+      "date": "2026-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13-08-2026"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "oggi pomeriggio spesa",
+    "result": {
+      "title": "Pomeriggio spesa",
+      "date": "2026-12-30",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["oggi"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "dopodomani sera cinema",
+    "result": {
+      "title": "Sera cinema",
+      "date": "2027-01-01",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["dopodomani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "tra una settimana",
+    "result": {
+      "title": "Tra una settimana",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "fra due giorni",
+    "result": {
+      "title": "Fra due giorni",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "#salute visita",
+    "result": {
+      "title": "Visita",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "#nonesiste qualcosa domani",
+    "result": {
+      "title": "#nonesiste qualcosa",
+      "date": "2026-12-31",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": "nonesiste",
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "Dentista domani",
+    "result": {
+      "title": "Dentista",
+      "date": "2026-12-31",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "  spazi   multipli  domani ",
+    "result": {
+      "title": "Spazi multipli",
+      "date": "2026-12-31",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "martedì 18",
+    "result": {
+      "title": "",
+      "date": "2027-01-05",
+      "time": "18:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["18", "martedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "volo 10 settembre alle 6",
+    "result": {
+      "title": "Volo",
+      "date": "2027-09-10",
+      "time": "06:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 6", "10 settembre"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "carnevale",
+    "result": {
+      "title": "",
+      "date": "2027-02-09",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["carnevale"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "pasqua",
+    "result": {
+      "title": "",
+      "date": "2027-03-28",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["pasqua"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "corsa 45'",
+    "result": {
+      "title": "Corsa",
+      "date": null,
+      "time": null,
+      "minutes": 45,
+      "project": null,
+      "projectNew": null,
+      "used": ["45'"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "call 11am",
+    "result": {
+      "title": "Call",
+      "date": "2026-12-31",
+      "time": "11:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["11am"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "ore 9 riunione",
+    "result": {
+      "title": "Riunione",
+      "date": "2026-12-31",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["ore 9"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "verso le 20 cena",
+    "result": {
+      "title": "20 cena",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "sera",
+    "result": {
+      "title": "Sera",
+      "date": "2026-12-30",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "tomorrow morning run",
+    "result": {
+      "title": "Run",
+      "date": "2026-12-31",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["tomorrow morning"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "",
+    "result": {
+      "title": "",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "x",
+    "result": {
+      "title": "X",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2026-12-30",
+      "time": "23:30"
+    },
+    "phrase": "ricordarsi di chiamare domani alle 9:15 per 20 minuti #salute",
+    "result": {
+      "title": "Ricordarsi di chiamare",
+      "date": "2026-12-31",
+      "time": "09:15",
+      "minutes": 20,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute", "per 20 minuti", "alle 9:15", "domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "chiamare il dentista domani alle 15 #salute",
+    "result": {
+      "title": "Chiamare il dentista",
+      "date": "2027-04-01",
+      "time": "15:00",
+      "minutes": 0,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute", "alle 15", "domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "ripasso cap 3 venerdì 1h",
+    "result": {
+      "title": "Ripasso cap 3",
+      "date": "2027-04-02",
+      "time": null,
+      "minutes": 60,
+      "project": null,
+      "projectNew": null,
+      "used": ["1h", "venerdì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "comprare il latte",
+    "result": {
+      "title": "Comprare il latte",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "dentista dopodomani 10:30",
+    "result": {
+      "title": "Dentista",
+      "date": "2027-04-02",
+      "time": "10:30",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["10:30", "dopodomani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "riunione lunedì prossimo alle 9",
+    "result": {
+      "title": "Riunione",
+      "date": "2027-04-12",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 9", "lunedì"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "cena con Marco sabato sera",
+    "result": {
+      "title": "Cena con Marco sera",
+      "date": "2027-04-03",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["sabato"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "palestra stasera 1h30",
+    "result": {
+      "title": "Palestra",
+      "date": "2027-03-31",
+      "time": "20:00",
+      "minutes": 90,
+      "project": null,
+      "projectNew": null,
+      "used": ["1h30", "stasera"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "studiare analisi per 45 min",
+    "result": {
+      "title": "Studiare analisi",
+      "date": null,
+      "time": null,
+      "minutes": 45,
+      "project": null,
+      "projectNew": null,
+      "used": ["per 45 min"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "pagare affitto il 5/12",
+    "result": {
+      "title": "Pagare affitto",
+      "date": "2027-12-05",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["5/12"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "esame di fisica 20 gennaio",
+    "result": {
+      "title": "Esame di fisica",
+      "date": "2028-01-20",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["20 gennaio"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "compleanno mamma 13 agosto",
+    "result": {
+      "title": "Compleanno mamma",
+      "date": "2027-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13 agosto"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "call 3pm tomorrow",
+    "result": {
+      "title": "Call",
+      "date": "2027-04-01",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["3pm", "tomorrow"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "dinner friday at 8pm",
+    "result": {
+      "title": "Dinner",
+      "date": "2027-04-02",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["at 8pm", "friday"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "meeting august 13th",
+    "result": {
+      "title": "Meeting",
+      "date": "2027-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13 august"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "natale regali",
+    "result": {
+      "title": "Regali",
+      "date": "2027-12-25",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["natale"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "pasquetta pranzo dai nonni",
+    "result": {
+      "title": "Pranzo dai nonni",
+      "date": "2028-04-17",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["pasquetta"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "capodanno",
+    "result": {
+      "title": "",
+      "date": "2028-01-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["capodanno"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "ferragosto",
+    "result": {
+      "title": "",
+      "date": "2027-08-15",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["ferragosto"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "tell john tomorrow",
+    "result": {
+      "title": "Tell john",
+      "date": "2027-04-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["tomorrow"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "domani 15 dentista",
+    "result": {
+      "title": "Dentista",
+      "date": "2027-04-01",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["15", "domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "venerdì 23 ottobre medico",
+    "result": {
+      "title": "Venerdì medico",
+      "date": "2027-10-23",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["23 ottobre"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "chiamare agsoto",
+    "result": {
+      "title": "Chiamare agsoto",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "telefonare al nonno giovedì alle 18",
+    "result": {
+      "title": "Telefonare al nonno",
+      "date": "2027-04-01",
+      "time": "18:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 18", "giovedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "mattina correre",
+    "result": {
+      "title": "Mattina correre",
+      "date": "2027-03-31",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "alle 7 sveglia",
+    "result": {
+      "title": "Sveglia",
+      "date": "2027-04-01",
+      "time": "07:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 7"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "alle 7.30 sveglia",
+    "result": {
+      "title": "Sveglia",
+      "date": "2027-04-01",
+      "time": "07:30",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 7.30"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "buy milk 2 hours",
+    "result": {
+      "title": "Buy milk",
+      "date": null,
+      "time": null,
+      "minutes": 120,
+      "project": null,
+      "projectNew": null,
+      "used": ["2 hours"]
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "ordinare libro #università",
+    "result": {
+      "title": "Ordinare libro",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": "Università",
+      "projectNew": null,
+      "used": ["#università"]
+    },
+    "dest": "buy"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "idea: leggere un libro",
+    "result": {
+      "title": "Idea: leggere un libro",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "per favore chiamare Anna domani",
+    "result": {
+      "title": "Favore chiamare Anna",
+      "date": "2027-04-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "progetto: tesi",
+    "result": {
+      "title": "Progetto: tesi",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "project"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "lunedì della prossima settimana palestra",
+    "result": {
+      "title": "Settimana palestra",
+      "date": "2027-04-12",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["lunedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "sabato 14:00 partita",
+    "result": {
+      "title": "Partita",
+      "date": "2027-04-03",
+      "time": "14:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["14:00", "sabato"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "3/1 dentista",
+    "result": {
+      "title": "Dentista",
+      "date": "2027-01-03",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["3/1"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "13-08-2026 volo",
+    "result": {
+      "title": "Volo",
+      "date": "2026-08-13",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["13-08-2026"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "oggi pomeriggio spesa",
+    "result": {
+      "title": "Pomeriggio spesa",
+      "date": "2027-03-31",
+      "time": "15:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["oggi"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "dopodomani sera cinema",
+    "result": {
+      "title": "Sera cinema",
+      "date": "2027-04-02",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["dopodomani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "tra una settimana",
+    "result": {
+      "title": "Tra una settimana",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "fra due giorni",
+    "result": {
+      "title": "Fra due giorni",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "#salute visita",
+    "result": {
+      "title": "Visita",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "#nonesiste qualcosa domani",
+    "result": {
+      "title": "#nonesiste qualcosa",
+      "date": "2027-04-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": "nonesiste",
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "Dentista domani",
+    "result": {
+      "title": "Dentista",
+      "date": "2027-04-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "  spazi   multipli  domani ",
+    "result": {
+      "title": "Spazi multipli",
+      "date": "2027-04-01",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["domani"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "martedì 18",
+    "result": {
+      "title": "",
+      "date": "2027-04-06",
+      "time": "18:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["18", "martedì"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "volo 10 settembre alle 6",
+    "result": {
+      "title": "Volo",
+      "date": "2027-09-10",
+      "time": "06:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["alle 6", "10 settembre"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "carnevale",
+    "result": {
+      "title": "",
+      "date": "2028-02-29",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["carnevale"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "pasqua",
+    "result": {
+      "title": "",
+      "date": "2028-04-16",
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["pasqua"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "corsa 45'",
+    "result": {
+      "title": "Corsa",
+      "date": null,
+      "time": null,
+      "minutes": 45,
+      "project": null,
+      "projectNew": null,
+      "used": ["45'"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "call 11am",
+    "result": {
+      "title": "Call",
+      "date": "2027-03-31",
+      "time": "11:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["11am"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "ore 9 riunione",
+    "result": {
+      "title": "Riunione",
+      "date": "2027-03-31",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["ore 9"]
+    },
+    "dest": "event"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "verso le 20 cena",
+    "result": {
+      "title": "20 cena",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "sera",
+    "result": {
+      "title": "Sera",
+      "date": "2027-03-31",
+      "time": "20:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "tomorrow morning run",
+    "result": {
+      "title": "Run",
+      "date": "2027-04-01",
+      "time": "09:00",
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": ["tomorrow morning"]
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "",
+    "result": {
+      "title": "",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "x",
+    "result": {
+      "title": "X",
+      "date": null,
+      "time": null,
+      "minutes": 0,
+      "project": null,
+      "projectNew": null,
+      "used": []
+    },
+    "dest": "todo"
+  },
+  {
+    "now": {
+      "date": "2027-03-31",
+      "time": "08:05"
+    },
+    "phrase": "ricordarsi di chiamare domani alle 9:15 per 20 minuti #salute",
+    "result": {
+      "title": "Ricordarsi di chiamare",
+      "date": "2027-04-01",
+      "time": "09:15",
+      "minutes": 20,
+      "project": "Salute",
+      "projectNew": null,
+      "used": ["#salute", "per 20 minuti", "alle 9:15", "domani"]
+    },
+    "dest": "todo"
+  }
+]
