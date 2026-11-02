@@ -18,3 +18,9 @@ test on Android; the same code runs on iOS.
 
 ## Security note
 The development build is signed with a debug key and is only for you. Never share the APK.
+
+## iPad instead of iPhone
+The app is declared **iPhone-only** (`supportsTablet: false`). On an iPad, iOS then runs it in "iPhone compatibility
+mode": a phone-sized window in the middle of the screen. It is good for checking layout and features, but it is not
+identical to a real iPhone (no notch or Dynamic Island, different keyboard and speed). Before a store release,
+always test on a real iPhone too (TestFlight works for that).
