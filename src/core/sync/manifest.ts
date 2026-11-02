@@ -4,7 +4,13 @@
  * tante, `npm run sync:manifest` la genererà da GET /sync/schema e la CI confronterà.
  */
 export type SyncTable =
-  'todo_buy_categories' | 'todos' | 'habit_categories' | 'habits' | 'habit_logs';
+  | 'todo_buy_categories'
+  | 'todos'
+  | 'habit_categories'
+  | 'habits'
+  | 'habit_logs'
+  | 'pill_plans'
+  | 'pill_doses';
 
 export interface TableDef {
   /** nell'ordine di dipendenza: il padre prima del figlio */
@@ -125,6 +131,48 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'note',
       'mood',
       'first_logged_at',
+      'updated_at',
+    ],
+  },
+  pill_plans: {
+    order: 60,
+    // il ritmo nuovo vale da quando lo decide il server (schedule_from); il telefono lo ricalcola per mostrarlo subito
+    readOnly: ['schedule_from', 'created_at', 'updated_at'],
+    createOnly: [],
+    booleans: ['is_active'],
+    columns: [
+      'uuid',
+      'name',
+      'dose',
+      'notes',
+      'color',
+      'freq_type',
+      'weekdays',
+      'month_days',
+      'interval_days',
+      'times',
+      'start_date',
+      'end_date',
+      'is_active',
+      'schedule_from',
+      'created_at',
+      'updated_at',
+    ],
+    children: [{ table: 'pill_doses', column: 'plan_uuid' }],
+  },
+  pill_doses: {
+    order: 70,
+    readOnly: ['updated_at'],
+    createOnly: ['plan_uuid', 'due_date', 'due_time', 'seq'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'plan_uuid',
+      'due_date',
+      'due_time',
+      'seq',
+      'status',
+      'taken_at',
       'updated_at',
     ],
   },

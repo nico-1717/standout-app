@@ -161,6 +161,44 @@ CREATE TABLE habit_logs (
 CREATE INDEX idx_hlogs_day ON habit_logs (log_date);
 `,
   },
+  {
+    version: 3,
+    sql: `
+-- le terapie delle pastiglie: il ritmo (orari, giorni) è un testo, come sul sito; schedule_from lo decide il server
+CREATE TABLE pill_plans (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  dose TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT '#B7A6D6',
+  freq_type TEXT NOT NULL DEFAULT 'daily',
+  weekdays TEXT NOT NULL DEFAULT '1111111',
+  month_days TEXT NOT NULL DEFAULT '',
+  interval_days INTEGER NOT NULL DEFAULT 1,
+  times TEXT NOT NULL DEFAULT '08:00x1',
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  schedule_from TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+-- una presa = una riga per (terapia, giorno, orario, n.); l'uuid è un UUIDv5 di quella chiave (vedi uuid5.ts)
+CREATE TABLE pill_doses (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  plan_uuid TEXT NOT NULL,
+  due_date TEXT NOT NULL,
+  due_time TEXT NOT NULL,
+  seq INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'pending',
+  taken_at TEXT,
+  updated_at TEXT,
+  UNIQUE (plan_uuid, due_date, due_time, seq)
+);
+CREATE INDEX idx_pdoses_day ON pill_doses (due_date);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

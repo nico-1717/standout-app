@@ -33,6 +33,7 @@ import {
 } from '@/features/habits/habitSettings';
 import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
 import { localToday } from '@/features/tasks/groups';
+import { PillsRepo, localStamp } from '@/features/pills/repo';
 import { TasksRepo } from '@/features/tasks/repo';
 import { secureStoreAdapter } from './secretStore';
 
@@ -45,6 +46,7 @@ export interface Services {
   categories: CategoriesRepo;
   habits: HabitsRepo;
   habitCategories: HabitCategoriesRepo;
+  pills: PillsRepo;
   scheduler: SyncScheduler;
 }
 
@@ -182,6 +184,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           categories: new CategoriesRepo(opened.db),
           habits: new HabitsRepo(opened.db, undefined, undefined, () => localToday()),
           habitCategories: new HabitCategoriesRepo(opened.db),
+          pills: new PillsRepo(
+            opened.db,
+            () => localToday(),
+            () => localStamp(),
+          ),
           scheduler,
         });
       } catch (e) {

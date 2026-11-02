@@ -95,8 +95,8 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | T9 | Memoria degli acquisti frequenti/storico (`todo_buy_memory`, `buy_forget`) | sync | To buy › suggerimenti | P2 | API pronta | |
 | T10 | Le due vesti del to buy: «Corsie» (standard) e «Scontrino» (paper) | — | To buy (due viste) | P2 | scritto (OK di Nico sull'aspetto il 02/11/2026), da provare sul telefono | |
 | T11 | Microfono nella barra del to buy (una frase = un articolo) | voce locale | To buy › microfono | P4 | da fare | |
-| T12 | Pastiglie: terapie, prese, arretrate, calendario, storico, «prese tutte» | `pills` (pronta) → sync | Pastiglie | P2 | API pronta | |
-| T13 | Programmazione delle dosi (ritmo: giorni, mese, ogni N giorni, orari) | logica in TS | (dentro Pastiglie) | P2 | da fare — **test d'oro** | |
+| T12 | Pastiglie: terapie, prese, arretrate, calendario, storico, «prese tutte» | `pills` (pronta) → sync | Pastiglie | P2 | dati, sincronizzazione e regole fatti e provati (terapie, prese, arretrate, calendario, storico, «prese tutte»; il server ora sincronizza anche le pastiglie) · manca la schermata (aspetto da far approvare a Nico) | |
+| T13 | Programmazione delle dosi (ritmo: giorni, mese, ogni N giorni, orari) | logica in TS | (dentro Pastiglie) | P2 | fatta (`pills/logic.ts`, **test d'oro** contro il codice vero del sito, a prova di ora legale) | |
 | T14 | Promemoria delle pastiglie | notifiche locali | — | P2 | da fare | |
 | T15 | Progetto collegato a un'attività, «chiudi pomodoro» (`pomodoro_close`) | sync | To do › progetto | P3 | da fare | |
 | T16 | «To study» (`to_study.php`, `study_api.php`, `to_study_progetti.css`): **sul sito è stato sostituito dal Piano dei progetti** (la pagina dice «ora vive dentro Progetti»; la scheda non esiste più nel To do) | — | non si porta | — | **da confermare** (§8, domanda 3) | |

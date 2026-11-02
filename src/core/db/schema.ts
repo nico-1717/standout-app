@@ -89,3 +89,33 @@ export const habitLogs = sqliteTable('habit_logs', {
   firstLoggedAt: text('first_logged_at'),
   updatedAt: text('updated_at'),
 });
+
+export const pillPlans = sqliteTable('pill_plans', {
+  uuid: text('uuid').primaryKey(),
+  name: text('name').notNull(),
+  dose: text('dose').notNull().default(''),
+  notes: text('notes').notNull().default(''),
+  color: text('color').notNull().default('#B7A6D6'),
+  freqType: text('freq_type').notNull().default('daily'),
+  weekdays: text('weekdays').notNull().default('1111111'),
+  monthDays: text('month_days').notNull().default(''),
+  intervalDays: integer('interval_days').notNull().default(1),
+  times: text('times').notNull().default('08:00x1'),
+  startDate: text('start_date').notNull(),
+  endDate: text('end_date'),
+  isActive: integer('is_active').notNull().default(1),
+  scheduleFrom: text('schedule_from'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const pillDoses = sqliteTable('pill_doses', {
+  uuid: text('uuid').primaryKey(),
+  planUuid: text('plan_uuid').notNull(),
+  dueDate: text('due_date').notNull(),
+  dueTime: text('due_time').notNull(),
+  seq: integer('seq').notNull().default(1),
+  status: text('status').notNull().default('pending'),
+  takenAt: text('taken_at'),
+  updatedAt: text('updated_at'),
+});

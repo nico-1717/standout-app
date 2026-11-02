@@ -101,3 +101,8 @@ export function uuid5(name: string, namespace: string = NS_UUID5): string {
 export function checkInUuid(habitUuid: string, day: string): string {
   return uuid5(`habit_logs|${habitUuid}|${day}`);
 }
+
+/** L'uuid di una presa: terapia (uuid) + giorno + orario (HH:MM) + n. (lo stesso calcolo del server: sync_uuid_presa). */
+export function doseUuid(planUuid: string, day: string, time: string, seq: number): string {
+  return uuid5(`pill_doses|${planUuid}|${day}|${time.slice(0, 5)}|${seq}`);
+}
