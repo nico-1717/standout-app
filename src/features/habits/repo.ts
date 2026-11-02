@@ -303,6 +303,14 @@ export class HabitsRepo {
     ]);
   }
 
+  /** Tutti i check-in di un'abitudine, per giorno (le statistiche della scheda di dettaglio). */
+  logsOf(habitUuid: string): HabitLog[] {
+    return this.db.all<HabitLog>(
+      'SELECT * FROM habit_logs WHERE habit_uuid = ? ORDER BY log_date',
+      [habitUuid],
+    );
+  }
+
   /** Stato per giorno di un'abitudine (serve alla serie). */
   statusByDate(habitUuid: string): Record<string, LogStatus> {
     const out: Record<string, LogStatus> = {};

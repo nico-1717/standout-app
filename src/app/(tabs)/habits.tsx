@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { ActionSheet, type SheetAction } from '@/features/habits/ActionSheet';
+import { HabitDetail } from '@/features/habits/HabitDetail';
 import { HabitForm } from '@/features/habits/HabitForm';
 import { HabitRow } from '@/features/habits/HabitRow';
 import {
@@ -17,6 +18,7 @@ import {
 } from '@/features/habits/HabitsParts';
 import { toInput, toPatch, type HabitFormState } from '@/features/habits/formModel';
 import { habitsTheme } from '@/features/habits/habitsTheme';
+import { NoteSheet } from '@/features/habits/NoteSheet';
 import {
   addDays,
   currentStreak,
@@ -61,6 +63,8 @@ export default function HabitsScreen() {
     habit: null,
   });
   const [showFuture, setShowFuture] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [noteFor, setNoteFor] = useState<{ habit: Habit; day: string } | null>(null);
 
   const habits = useMemo(
     () => (services ? services.habits.list() : []),
@@ -76,6 +80,17 @@ export default function HabitsScreen() {
   // le abitudini che iniziano più avanti non stanno nell'elenco: si vedono dietro «Abitudini future»
   const future = useMemo(() => habits.filter((h) => h.start_date > today), [habits, today]);
   const current = useMemo(() => habits.filter((h) => h.start_date <= today), [habits, today]);
+  const detail = detailId ? (habits.find((h) => h.uuid === detailId) ?? null) : null;
+  const detailLogs = useMemo(
+    () => (services && detailId ? services.habits.logsOf(detailId) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [services, detailId, version],
+  );
+  const noteTarget = useMemo(() => {
+    if (!noteFor || !services) return null;
+    const l = services.habits.log(noteFor.habit.uuid, noteFor.day);
+    return { ...noteFor, note: l?.note ?? '', mood: l?.mood ?? null };
+  }, [noteFor, services]);
   const logs = useMemo(() => {
     const m = new Map<string, HabitLog>();
     if (!services) return m;
@@ -264,13 +279,7 @@ export default function HabitsScreen() {
           unitText={quantity && !period ? h.unit : undefined}
           onCheck={() => tap(h)}
           onLongPress={() => setSheet(h)}
-          onOpen={
-            () =>
-              setForm({
-                open: true,
-                habit: h,
-              }) /* finché non c'è la pagina di dettaglio, un tocco apre la modifica */
-          }
+          onOpen={() => setDetailId(h.uuid)}
         />
       </View>
     );
@@ -425,6 +434,37 @@ export default function HabitsScreen() {
           <Text style={{ color: '#fff', fontSize: 30, lineHeight: 33, fontWeight: '300' }}>+</Text>
         </LinearGradient>
       </Pressable>
+      <HabitDetail
+        habit={detail}
+        logs={detailLogs}
+        today={today}
+        selectedDay={day}
+        th={ht}
+        onClose={() => setDetailId(null)}
+        onEdit={(h) => {
+          setDetailId(null);
+          setForm({ open: true, habit: h });
+        }}
+        onToggle={(h, d) => {
+          if (d > today || !services) return;
+          services.habits.checkIn(h.uuid, d, 'toggle');
+          changed();
+        }}
+        onNote={(h, d) => {
+          if (d <= today) setNoteFor({ habit: h, day: d });
+        }}
+      />
+      <NoteSheet
+        target={noteTarget}
+        today={today}
+        th={ht}
+        onClose={() => setNoteFor(null)}
+        onSave={(h, d, note, mood) => {
+          services?.habits.setNote(h.uuid, d, { note: note || null, mood });
+          setNoteFor(null);
+          changed();
+        }}
+      />
       <HabitForm
         visible={form.open}
         habit={form.habit}

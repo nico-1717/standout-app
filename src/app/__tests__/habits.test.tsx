@@ -10,6 +10,7 @@ import { localToday } from '@/features/tasks/groups';
 import HabitsScreen from '../(tabs)/habits';
 
 let mockServices: unknown;
+let mockVersion = 0;
 const mockChanged = jest.fn();
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -18,8 +19,11 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
     services: mockServices,
-    version: 0,
-    changed: mockChanged,
+    version: mockVersion,
+    changed: () => {
+      mockVersion++;
+      mockChanged();
+    },
     uiStyle: 'standard',
     syncInfo: { status: 'idle', lastSyncAt: null, pending: 0 },
   }),
@@ -210,5 +214,67 @@ describe('Habit form', () => {
     expect(screen.getByText('Now')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('future-toggle'));
     expect(screen.getByText('Later')).toBeTruthy();
+  });
+});
+
+describe('Habit detail and notes', () => {
+  beforeEach(() => mockChanged.mockClear());
+
+  test('tapping a row opens the detail with the numbers', async () => {
+    const { read, habits } = setup();
+    habits.checkIn(read, localToday(), 'toggle');
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-row-${read}`));
+    expect(screen.getByTestId('habit-detail')).toBeTruthy();
+    expect(screen.getByText('CURRENT STREAK')).toBeTruthy();
+    expect(screen.getByText('BEST')).toBeTruthy();
+    expect(screen.getByText('TOTAL CHECK-INS')).toBeTruthy();
+    expect(screen.getByText('Undo today')).toBeTruthy(); // oggi è già fatta
+    expect(
+      screen.getByText('No notes yet. Press and hold a day in the calendar to write one.'),
+    ).toBeTruthy();
+  });
+
+  test('a day in the calendar toggles the check-in', async () => {
+    const { read, habits } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-row-${read}`));
+    await fireEvent.press(screen.getByTestId(`cal-${localToday()}`));
+    expect(habits.log(read, localToday())).toMatchObject({ status: 'done' });
+    await fireEvent.press(screen.getByTestId('detail-toggle')); // «Annulla oggi»
+    expect(habits.log(read, localToday())).toBeNull();
+  });
+
+  test('writing a note with a mood saves it and the detail lists it', async () => {
+    const { read, habits } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-row-${read}`));
+    await fireEvent.press(screen.getByTestId('detail-note'));
+    await fireEvent.press(screen.getByTestId('mood-4'));
+    await fireEvent.changeText(screen.getByTestId('note-text'), 'felt good');
+    expect(screen.getByText('9 characters')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('note-save'));
+    expect(habits.log(read, localToday())).toMatchObject({ note: 'felt good', mood: 4 });
+    expect(screen.getByText('felt good')).toBeTruthy();
+  });
+
+  test('clearing a note removes it', async () => {
+    const { read, habits } = setup();
+    habits.setNote(read, localToday(), { note: 'old', mood: 2 });
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-row-${read}`));
+    await fireEvent.press(screen.getByTestId('detail-note'));
+    expect(screen.getByDisplayValue('old')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('note-clear'));
+    await fireEvent.press(screen.getByTestId('note-save'));
+    expect(habits.log(read, localToday())).toBeNull();
+  });
+
+  test('Edit from the detail opens the form', async () => {
+    const { read } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-row-${read}`));
+    await fireEvent.press(screen.getByTestId('detail-edit'));
+    expect(screen.getByText('Edit habit')).toBeTruthy();
   });
 });
