@@ -5,6 +5,7 @@ import Svg, { Path } from 'react-native-svg';
 import type { HabitsTheme } from './habitsTheme';
 
 const THRESHOLD = 74;
+const TRASH_PATH = 'M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3';
 
 interface SwipeProps {
   allowRight: boolean;
@@ -68,7 +69,7 @@ class SwipeGesture {
  * da fare la riga resta ferma. Un movimento più verticale che orizzontale è lo scorrimento della pagina e non conta.
  */
 export function SwipeRow(p: {
-  th: HabitsTheme;
+  th: Pick<HabitsTheme, 'red'>;
   color: string;
   doneLabel: string;
   undoLabel: string;
@@ -78,6 +79,10 @@ export function SwipeRow(p: {
   onBuzz?: () => void;
   children: ReactNode;
   testID?: string;
+  /** il disegno sul lato «destra»: la spunta (abitudini) o il cestino (to do) */
+  icon?: 'check' | 'trash';
+  /** gli angoli: 22 nelle abitudini, meno nelle righe del to do */
+  radius?: number;
 }) {
   const { th } = p;
   const [x] = useState(() => new Animated.Value(0));
@@ -88,11 +93,15 @@ export function SwipeRow(p: {
   const pan = gesture.responder;
 
   return (
-    <View style={styles.wrap} testID={p.testID}>
+    <View
+      style={[styles.wrap, p.radius !== undefined && { borderRadius: p.radius }]}
+      testID={p.testID}
+    >
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
           styles.behind,
+          p.radius !== undefined && { borderRadius: p.radius },
           // fermo non si vede (niente bordino colorato attorno alla riga); appena si muove, appare
           { opacity: x.interpolate({ inputRange: [-6, 0, 6], outputRange: [1, 0, 1] }) },
         ]}
@@ -101,9 +110,9 @@ export function SwipeRow(p: {
         <View style={[styles.side, { backgroundColor: p.color, justifyContent: 'flex-start' }]}>
           <Svg width={19} height={19} viewBox="0 0 24 24">
             <Path
-              d="M20 6L9 17l-5-5"
+              d={p.icon === 'trash' ? TRASH_PATH : 'M20 6L9 17l-5-5'}
               stroke="#fff"
-              strokeWidth={3}
+              strokeWidth={p.icon === 'trash' ? 2.2 : 3}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"

@@ -84,9 +84,9 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| T1 | To do: elenco, crea, modifica, spunta, cancella, sotto-attività, data/ora/durata, progetto | `tasks` (pronta) → sync `todos` | To do | **P1** | API pronta (**è la prova di sincronizzazione**) | |
-| T2 | Riordino e azioni su più voci (cancella, programma, progetto, sposta) | `tasks/bulk`, `reorder` → `sort_key` | To do › selezione | P1/P2 | API pronta | |
-| T3 | Barra intelligente del to do (`todo_barra.js`, `todo_smart.js`) | locale | To do › barra rapida | P2 | fatto il lettore di frasi (`smart.ts`, **test d'oro**: 168 risultati uguali al codice vero del sito) e i gruppi/ordine/«spariscono il giorno dopo» (`groups.ts`) · manca: la schermata (barra con «cosa ho capito», righe a riposo, scorciatoie data, selezione) — in attesa dell'OK di Nico sull'aspetto | |
+| T1 | To do: elenco, crea, modifica, spunta, cancella, sotto-attività, data/ora/durata, progetto | `tasks` (pronta) → sync `todos` | To do | **P1** | scritto con l'aspetto del sito (OK di Nico il 02/11/2026), in chiaro/scuro e nelle due vesti, provato con test · da provare sul telefono · manca il progetto (Fase 3) | |
+| T2 | Riordino e azioni su più voci (cancella, programma, progetto, sposta) | `tasks/bulk`, `reorder` → `sort_key` | To do › selezione | P1/P2 | fatta la selezione con cancella (con conferma) e «data e ora» per tutte insieme · mancano «progetto» (Fase 3) e il riordino a trascinamento | |
+| T3 | Barra intelligente del to do (`todo_barra.js`, `todo_smart.js`) | locale | To do › barra rapida | P2 | fatta: lettore di frasi (`smart.ts`, **test d'oro**: 168 risultati uguali al sito), «cosa ho capito» sotto la barra, gruppi per giorno, righe a riposo con una frase sola, scorciatoie per la data (Oggi/Domani/Weekend/Fra una settimana/Senza data), scorrimento per cancellare · manca il microfono (Fase 4) | |
 | T4 | Nota veloce in cima (`todo_nota.js`): si salva da sola | sync `todo_notes` | To do › Nota | P2 | da fare | |
 | T5 | Smista la nota a mano (regole di `todo_smart.js`) | locale | To do › Nota › Smista | P2 | da fare | |
 | T6 | Smista la nota con l'IA (`todo_nota_ai.php`, crediti) | `ai/*` | To do › Nota › Smista con IA | P3 | solo online | |
