@@ -18,6 +18,7 @@ import { AccountApi } from '../account/accountApi';
 import { askPermission, phoneNotifier } from '@/features/reminders/notifier';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '@/features/reminders/plan';
 import { rescheduleAll } from '@/features/reminders/scheduler';
+import { QuickNoteStore } from '@/features/notes/quickNote';
 import { RemindersStore } from '@/features/reminders/store';
 import { AuthService, type AuthState } from '../auth/authService';
 import { DbNotEncryptedError, destroyDatabase, openEncryptedDb } from '../db/expoDb';
@@ -52,6 +53,7 @@ export interface Services {
   habits: HabitsRepo;
   habitCategories: HabitCategoriesRepo;
   pills: PillsRepo;
+  notes: QuickNoteStore;
   scheduler: SyncScheduler;
 }
 
@@ -177,6 +179,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         remindersStore.current = rStore;
         scheduledSig.current = null;
         setReminders(rStore.read());
+        const notes = new QuickNoteStore(opened.db);
         const scheduler = new SyncScheduler({
           syncOnce: async () => {
             const r = await engine.syncOnce();
@@ -197,10 +200,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 throw e;
               if (e instanceof TypeError) throw e;
             }
+            try {
+              await notes.sync(api);
+            } catch (e) {
+              // come sopra; la nota resta sul telefono e riparte al prossimo giro
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
             setVersion((x) => x + 1); // il server può aver cambiato dati: le schermate rileggono
             return r;
           },
-          pendingCount: () => pendingCount(opened.db),
+          pendingCount: () => pendingCount(opened.db) + (notes.hasPending() ? 1 : 0),
           refreshToken: () => auth.refresh(),
         });
         scheduler.subscribe(setSyncInfo);
@@ -216,6 +227,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             () => localToday(),
             () => localStamp(),
           ),
+          notes,
           scheduler,
         });
       } catch (e) {
@@ -335,7 +347,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback<AppContextValue['signOut']>(
     async (opts) => {
-      const pending = services ? pendingCount(services.db) : 0;
+      const pending = services
+        ? pendingCount(services.db) + (services.notes.hasPending() ? 1 : 0)
+        : 0;
       if (pending > 0 && !opts?.discardPending) return { blocked: pending };
       services?.scheduler.stop();
       await auth.logout();

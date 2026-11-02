@@ -1,3 +1,4 @@
+import { QuickNoteStore } from '@/features/notes/quickNote';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -42,7 +43,7 @@ function setup() {
   const today = tasks.create({ title: 'Call Anna', due_date: TODAY });
   const later = tasks.create({ title: 'Book the train', due_date: TOMORROW, due_time: '15:00' });
   const idea = tasks.create({ title: 'Read a book' });
-  mockServices = { db, tasks, scheduler: { trigger: jest.fn() } };
+  mockServices = { db, tasks, notes: new QuickNoteStore(db), scheduler: { trigger: jest.fn() } };
   return { tasks, late, today, later, idea };
 }
 
@@ -81,7 +82,12 @@ describe.each(['standard', 'paper'] as const)('To do screen (%s)', (style) => {
   test('empty list shows the website sentence', async () => {
     const db = memoryDb();
     migrate(db);
-    mockServices = { db, tasks: new TasksRepo(db), scheduler: { trigger: jest.fn() } };
+    mockServices = {
+      db,
+      tasks: new TasksRepo(db),
+      notes: new QuickNoteStore(db),
+      scheduler: { trigger: jest.fn() },
+    };
     await renderIt();
     expect(screen.getByTestId('todo-empty')).toBeTruthy();
   });

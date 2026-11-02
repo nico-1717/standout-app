@@ -1,4 +1,5 @@
 import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
+import type { PutNoteResult, QuickNoteApi, ServerNote } from '@/features/notes/quickNote';
 import type { Settings, SettingsApi } from '../settings/settings';
 import type { Mutation, PullResponse, PushResult, SyncApi } from '../sync/types';
 
@@ -7,6 +8,8 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    /** il resto della risposta d'errore del server (es. la versione del server in un 409) */
+    public readonly data: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -19,7 +22,7 @@ export type TokenSupplier = () => Promise<string>;
  * Il server visto dall'app, via fetch. Ogni chiamata porta la versione dell'app (il server può rispondere
  * 426 upgrade_required). Errori: HTTP non 2xx → ApiError col `code` del server.
  */
-export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi {
+export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi, QuickNoteApi {
   constructor(
     private readonly baseUrl: string,
     private readonly token: TokenSupplier,
@@ -55,6 +58,7 @@ export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi {
         res.status,
         String(json.code ?? 'http_error'),
         String(json.error ?? `HTTP ${res.status}`),
+        json,
       );
     }
     return json as T;
@@ -86,5 +90,24 @@ export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi {
   async patchHabitSettings(patch: Partial<HabitSettings>): Promise<HabitSettings> {
     return (await this.call<{ settings: HabitSettings }>('PATCH', '/habits/settings', patch))
       .settings;
+  }
+
+  async getQuickNote(): Promise<ServerNote> {
+    return (await this.call<{ note: ServerNote }>('GET', '/notes/quick')).note;
+  }
+
+  /** 409 `conflict` non è un guasto: il server dice com'è la nota adesso e chi chiama decide. */
+  async putQuickNote(body: string, base: string | null): Promise<PutNoteResult> {
+    try {
+      const r = await this.call<{ note: ServerNote }>('PUT', '/notes/quick', {
+        body,
+        base_updated_at: base,
+      });
+      return { conflict: false, note: r.note };
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'conflict' && e.data.note)
+        return { conflict: true, note: e.data.note as ServerNote };
+      throw e;
+    }
   }
 }

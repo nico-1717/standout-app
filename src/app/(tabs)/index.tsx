@@ -1,3 +1,4 @@
+import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -361,6 +362,8 @@ export default function TodoScreen() {
               </Text>
             </>
           )}
+
+          {!selecting && <QuickNoteCard td={td} paper={paper} />}
 
           <View style={styles.label}>
             <Text
