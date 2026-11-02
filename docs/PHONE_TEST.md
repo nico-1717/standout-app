@@ -19,8 +19,16 @@ test on Android; the same code runs on iOS.
 ## Security note
 The development build is signed with a debug key and is only for you. Never share the APK.
 
-## iPad instead of iPhone
-The app is declared **iPhone-only** (`supportsTablet: false`). On an iPad, iOS then runs it in "iPhone compatibility
-mode": a phone-sized window in the middle of the screen. It is good for checking layout and features, but it is not
-identical to a real iPhone (no notch or Dynamic Island, different keyboard and speed). Before a store release,
-always test on a real iPhone too (TestFlight works for that).
+## iPad: phone-sized window or full tablet
+The shipping app supports iPhone **and** iPad (`supportsTablet: true`).
+To check the **phone layout on an iPad**, build with the profile `development-phone`
+(`eas build --profile development-phone --platform ios`): it sets `STANDOUT_PHONE_ONLY=1`, the app then declares
+itself iPhone-only and iPadOS shows it in a phone-sized window (iPhone compatibility mode).
+To check the real iPad layout, build with the normal `development` profile.
+The phone-sized window is not identical to a real iPhone (no notch or Dynamic Island, different keyboard and
+speed), so before a store release always test on a real iPhone too (TestFlight works for that).
+
+## Other people's devices
+Every device (your iPad, your girlfriend's iPhone) must be registered once with `eas device:create`, and needs
+Developer Mode on. If you log in on her phone with your account, your tasks are stored on her phone until you log out:
+log out when you finish.
