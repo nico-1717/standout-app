@@ -38,6 +38,16 @@ function Shell() {
   );
 }
 
+/** Il tema segue il colore scelto nelle impostazioni (lo stesso del sito). */
+function Themed() {
+  const { settings } = useApp();
+  return (
+    <ThemeProvider accent={settings.accent}>
+      <Shell />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
   // I caratteri dello «Scontrino» (come sul sito). Se non si caricano si va avanti con quelli del telefono.
   const [loaded, fontError] = useFonts({
@@ -49,11 +59,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AppProvider>
-            <Shell />
-          </AppProvider>
-        </ThemeProvider>
+        <AppProvider>
+          <Themed />
+        </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { accents, type AccentId } from '@/core/theme/tokens';
 import { Card, Header, PrimaryButton } from '@/ui/kit';
 import { SyncBadge } from '@/ui/SyncBadge';
 
@@ -11,7 +12,17 @@ export default function SettingsScreen() {
   const th = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { authState, services, syncInfo, signOut, version, uiStyle, setUiStyle } = useApp();
+  const {
+    authState,
+    services,
+    syncInfo,
+    signOut,
+    version,
+    uiStyle,
+    setUiStyle,
+    settings,
+    updateSettings,
+  } = useApp();
   const user = authState.status === 'signedIn' ? authState.user : null;
   const problems = services
     ? (services.db.all<{ n: number }>(
@@ -62,6 +73,60 @@ export default function SettingsScreen() {
               >
                 <Text style={{ color: uiStyle === s ? '#fff' : th.text, fontWeight: '600' }}>
                   {t(s === 'paper' ? 'stile.paper' : 'stile.standard')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+        <Card style={{ padding: 16, gap: 10 }}>
+          <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.colore')}</Text>
+          <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+            {(Object.keys(accents) as AccentId[]).map((a) => (
+              <Pressable
+                key={a}
+                onPress={() => updateSettings({ accent: a })}
+                accessibilityRole="radio"
+                accessibilityLabel={t(`stile.colore_${a}`)}
+                accessibilityState={{ selected: settings.accent === a }}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: accents[a][th.scheme === 'dark' ? 'd' : 'l'],
+                  borderWidth: settings.accent === a ? 3 : 0,
+                  borderColor: th.text,
+                }}
+              />
+            ))}
+          </View>
+        </Card>
+        <Card style={{ padding: 16, gap: 10 }}>
+          <Text style={{ color: th.text, fontWeight: '700' }}>{t('comune.lingua')}</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(
+              [
+                ['it', 'Italiano'],
+                ['en', 'English'],
+                [null, t('comune.automatico')],
+              ] as const
+            ).map(([code, label]) => (
+              <Pressable
+                key={String(code)}
+                onPress={() => updateSettings({ lang: code })}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: settings.lang === code }}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  backgroundColor: settings.lang === code ? th.brand : th.bg,
+                }}
+              >
+                <Text
+                  style={{ color: settings.lang === code ? '#fff' : th.text, fontWeight: '600' }}
+                >
+                  {label}
                 </Text>
               </Pressable>
             ))}

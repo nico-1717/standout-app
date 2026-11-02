@@ -13,7 +13,7 @@ import {
 } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import { HttpSyncApi } from '../api/httpApi';
+import { ApiError, HttpSyncApi } from '../api/httpApi';
 import { AuthService, type AuthState } from '../auth/authService';
 import { DbNotEncryptedError, destroyDatabase, openEncryptedDb } from '../db/expoDb';
 import { migrate } from '../db/migrations';
@@ -21,6 +21,9 @@ import type { SqlDb } from '../db/sqldb';
 import { getState, SyncEngine, setState } from '../sync/engine';
 import { pendingCount } from '../sync/outbox';
 import { SyncScheduler, type SyncStatusInfo } from '../sync/scheduler';
+import i18n, { pickLanguage } from '../i18n';
+import { getLocales } from 'expo-localization';
+import { DEFAULT_SETTINGS, SettingsStore, type Settings } from '../settings/settings';
 import type { UiStyle } from '@/features/buy/buyTheme';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
 import { TasksRepo } from '@/features/tasks/repo';
@@ -48,6 +51,9 @@ interface AppContextValue {
   /** L'aspetto scelto per il to buy: «Corsie» (standard) o «Scontrino» (paper). */
   uiStyle: UiStyle;
   setUiStyle: (s: UiStyle) => void;
+  /** Stile, colore del sito e lingua: uguali a quelli del sito, cambiati qui o là. */
+  settings: Settings;
+  updateSettings: (patch: Partial<Settings>) => void;
   /** Da chiamare dopo una modifica locale: aggiorna le schermate e avvia la sincronizzazione. */
   changed: () => void;
   signOut: (opts?: { discardPending?: boolean }) => Promise<{ blocked: number } | { blocked: 0 }>;
@@ -82,7 +88,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [fatal, setFatal] = useState<'cipher' | null>(null);
   const [version, setVersion] = useState(0);
   const [syncInfo, setSyncInfo] = useState<SyncStatusInfo>(IDLE);
-  const [uiStyle, setUiStyleState] = useState<UiStyle>('standard');
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const settingsStore = useRef<SettingsStore | null>(null);
   const closeDb = useRef<(() => void) | null>(null);
   const opening = useRef(false);
 
@@ -121,9 +128,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
           Platform.OS,
         );
         const engine = new SyncEngine(opened.db, api);
+        const store = new SettingsStore(opened.db);
+        settingsStore.current = store;
+        setSettings(store.read());
         const scheduler = new SyncScheduler({
           syncOnce: async () => {
             const r = await engine.syncOnce();
+            try {
+              setSettings(await store.sync(api));
+            } catch (e) {
+              // Le impostazioni sono estetica: se il server non le dà, si riprova al prossimo giro.
+              // Una sessione chiusa o la rete assente invece interessano tutta la sincronizzazione.
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
             setVersion((x) => x + 1); // il server può aver cambiato dati: le schermate rileggono
             return r;
           },
@@ -132,7 +151,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         scheduler.subscribe(setSyncInfo);
         scheduler.start();
-        setUiStyleState(getState(opened.db, 'ui_style') === 'paper' ? 'paper' : 'standard');
         setServices({
           db: opened.db,
           tasks: new TasksRepo(opened.db),
@@ -180,13 +198,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     services?.scheduler.trigger();
   }, [services]);
 
-  const setUiStyle = useCallback(
-    (st: UiStyle) => {
-      setUiStyleState(st);
-      if (services) setState(services.db, 'ui_style', st);
+  const updateSettings = useCallback(
+    (patch: Partial<Settings>) => {
+      const store = settingsStore.current;
+      if (!store) return;
+      setSettings(store.update(patch));
+      services?.scheduler.trigger(); // il cambio parte verso il sito entro un paio di secondi
     },
     [services],
   );
+  const setUiStyle = useCallback(
+    (st: UiStyle) => updateSettings({ ui_style: st }),
+    [updateSettings],
+  );
+  const uiStyle: UiStyle = settings.ui_style;
+
+  // La lingua scelta (o quella del telefono) vale per tutti i testi dell'app.
+  useEffect(() => {
+    void i18n.changeLanguage(settings.lang ?? pickLanguage(getLocales()[0]?.languageCode));
+  }, [settings.lang]);
 
   const signOut = useCallback<AppContextValue['signOut']>(
     async (opts) => {
@@ -199,6 +229,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await destroyDatabase();
       setServices(null);
       setSyncInfo(IDLE);
+      setSettings(DEFAULT_SETTINGS);
+      settingsStore.current = null;
       return { blocked: 0 };
     },
     [auth, services],
@@ -214,10 +246,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       syncInfo,
       uiStyle,
       setUiStyle,
+      settings,
+      updateSettings,
       changed,
       signOut,
     }),
-    [auth, authState, services, fatal, version, syncInfo, uiStyle, setUiStyle, changed, signOut],
+    [
+      auth,
+      authState,
+      services,
+      fatal,
+      version,
+      syncInfo,
+      uiStyle,
+      setUiStyle,
+      settings,
+      updateSettings,
+      changed,
+      signOut,
+    ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

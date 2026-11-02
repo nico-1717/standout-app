@@ -32,7 +32,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | A11 | Elenco e uscita dei dispositivi | `auth/devices` | Impostazioni › Dispositivi collegati | P1 | API pronta | |
 | A12 | Uscita da tutti i dispositivi | `auth/logout_all` | Impostazioni › Dispositivi › Esci ovunque | P2 | API pronta | |
 | A13 | Lingua (`partials/lang_picker.php`, `api/lingua.php`, `users.lang`) | `me` + sync impostazioni | Impostazioni › Lingua | P1 | da fare | |
-| A14 | Stile standard / paper (`api/stile.php`, `users.ui_style`) | sync impostazioni | Impostazioni › Aspetto | P2 | da fare | |
+| A14 | Stile standard / paper (`api/stile.php`, `users.ui_style`) | sync impostazioni | Impostazioni › Aspetto | P2 | scritto e provato con test (stile, colore, lingua), da provare sul telefono | |
 | A15 | Colore del sito (`api/accento.php`, `lib/accent.php`, `users.ui_accent`) | sync impostazioni | Impostazioni › Aspetto › Colore | P2 | da fare | |
 | A16 | Menu dell'avatar: stile, colore, lingua, barre d'uso dell'IA (`partials/notifiche_widget.php`) | `home/ai_usage` (solo online) | Pannello profilo | P2 | da fare | |
 | A17 | Notifiche del widget (richieste di amicizia: sul sito il social è SPENTO) | — | rimandata alla fase social | — | da confermare | |

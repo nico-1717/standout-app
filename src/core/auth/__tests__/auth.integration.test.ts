@@ -5,6 +5,7 @@
  */
 import * as http from 'node:http';
 
+import { HttpSyncApi } from '@/core/api/httpApi';
 import { AuthService, type SecretStore } from '../authService';
 
 const URL_ = process.env.STANDOUT_TEST_URL;
@@ -62,5 +63,21 @@ const mem = (): SecretStore => {
     expect(t2).not.toBe(t1);
     await a.logout();
     expect(a.getState().status).toBe('signedOut');
+  });
+
+  test('settings: read, change, reject junk, restore', async () => {
+    const a = new AuthService(URL_!, mem(), 'jest', nodeFetch);
+    await a.login(process.env.STANDOUT_TEST_USER!, process.env.STANDOUT_TEST_PASSWORD!);
+    const api = new HttpSyncApi(URL_!, () => a.getAccessToken(), '0.0.0-test', 'jest', nodeFetch);
+    const before = await api.getSettings();
+    const changed = await api.putSettings({ ui_style: 'paper', accent: 'rose', lang: 'en' });
+    expect(changed).toEqual({ ui_style: 'paper', accent: 'rose', lang: 'en' });
+    await expect(api.putSettings({ accent: 'pink' as never })).rejects.toMatchObject({
+      status: 422,
+    });
+    expect(await api.getSettings()).toEqual(changed);
+    await api.putSettings(before);
+    expect(await api.getSettings()).toEqual(before);
+    await a.logout();
   });
 });
