@@ -15,6 +15,10 @@ import { AppState, Platform } from 'react-native';
 
 import { ApiError, HttpSyncApi } from '../api/httpApi';
 import { AccountApi } from '../account/accountApi';
+import { askPermission, phoneNotifier } from '@/features/reminders/notifier';
+import { DEFAULT_REMINDERS, type ReminderSettings } from '@/features/reminders/plan';
+import { rescheduleAll } from '@/features/reminders/scheduler';
+import { RemindersStore } from '@/features/reminders/store';
 import { AuthService, type AuthState } from '../auth/authService';
 import { DbNotEncryptedError, destroyDatabase, openEncryptedDb } from '../db/expoDb';
 import { migrate } from '../db/migrations';
@@ -70,6 +74,9 @@ interface AppContextValue {
   /** Le preferenze della pagina Abitudini (colore, giorni in barra, gruppi…): uguali a quelle del sito. */
   habitSettings: HabitSettings;
   updateHabitSettings: (patch: Partial<HabitSettings>) => void;
+  /** I promemoria (pastiglie, abitudini): restano su questo telefono. Ritorna false se il telefono nega il permesso. */
+  reminders: ReminderSettings;
+  updateReminders: (patch: Partial<ReminderSettings>) => Promise<boolean>;
   /** Da chiamare dopo una modifica locale: aggiorna le schermate e avvia la sincronizzazione. */
   changed: () => void;
   signOut: (opts?: { discardPending?: boolean }) => Promise<{ blocked: number } | { blocked: 0 }>;
@@ -118,6 +125,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const settingsStore = useRef<SettingsStore | null>(null);
   const [habitSettings, setHabitSettings] = useState<HabitSettings>(DEFAULT_HABIT_SETTINGS);
   const habitSettingsStore = useRef<HabitSettingsStore | null>(null);
+  const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
+  const remindersStore = useRef<RemindersStore | null>(null);
+  /** l'impronta delle notifiche già programmate (null = non si sa: si rifanno) */
+  const scheduledSig = useRef<string | null>(null);
   const closeDb = useRef<(() => void) | null>(null);
   const opening = useRef(false);
 
@@ -162,6 +173,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const hStore = new HabitSettingsStore(opened.db);
         habitSettingsStore.current = hStore;
         setHabitSettings(hStore.read());
+        const rStore = new RemindersStore(opened.db);
+        remindersStore.current = rStore;
+        scheduledSig.current = null;
+        setReminders(rStore.read());
         const scheduler = new SyncScheduler({
           syncOnce: async () => {
             const r = await engine.syncOnce();
@@ -239,6 +254,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [authState, services]);
 
+  // Le notifiche seguono i dati: a ogni cambiamento (e quando l'app torna in primo piano) si rifanno,
+  // ma solo se la lista è davvero cambiata.
+  const redoReminders = useCallback(
+    async (force = false) => {
+      if (!services) return;
+      try {
+        const r = await rescheduleAll({
+          notifier: phoneNotifier(i18n.t('app.promemoria_t')),
+          settings: reminders,
+          pills: services.pills,
+          habits: services.habits,
+          today: localToday(),
+          now: new Date(),
+          words: {
+            pillsTitle: i18n.t('app.notifica_pastiglie'),
+            habitsTitle: i18n.t('app.notifica_abitudini'),
+          },
+          previous: force ? null : scheduledSig.current,
+        });
+        scheduledSig.current = r.signature;
+      } catch {
+        scheduledSig.current = null; // non è andata: al prossimo giro si riprova
+      }
+    },
+    [services, reminders],
+  );
+  useEffect(() => {
+    void redoReminders();
+  }, [redoReminders, version, settings.lang]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') void redoReminders(true);
+    });
+    return () => sub.remove();
+  }, [redoReminders]);
+
+  const updateReminders = useCallback(async (patch: Partial<ReminderSettings>) => {
+    const store = remindersStore.current;
+    if (!store) return false;
+    // Accendere un promemoria chiede il permesso al telefono; se lo nega, la scelta non cambia.
+    if ((patch.pills || patch.habits) && !(await askPermission())) return false;
+    setReminders(store.update(patch));
+    return true;
+  }, []);
+
   const changed = useCallback(() => {
     setVersion((x) => x + 1);
     services?.scheduler.trigger();
@@ -288,6 +348,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       settingsStore.current = null;
       setHabitSettings(DEFAULT_HABIT_SETTINGS);
       habitSettingsStore.current = null;
+      remindersStore.current = null;
+      scheduledSig.current = null;
+      setReminders(DEFAULT_REMINDERS);
+      // Le notifiche sono dati dell'utente: uscendo non devono restare sul telefono.
+      await phoneNotifier('')
+        .cancelAll()
+        .catch(() => undefined);
       return { blocked: 0 };
     },
     [auth, services],
@@ -308,6 +375,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateSettings,
       habitSettings,
       updateHabitSettings,
+      reminders,
+      updateReminders,
       changed,
       signOut,
     }),
@@ -325,6 +394,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateSettings,
       habitSettings,
       updateHabitSettings,
+      reminders,
+      updateReminders,
       changed,
       signOut,
     ],

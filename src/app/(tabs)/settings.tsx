@@ -7,6 +7,7 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { accents, type AccentId } from '@/core/theme/tokens';
 import { Card, Header, PrimaryButton } from '@/ui/kit';
+import { RemindersCard } from '@/features/reminders/RemindersCard';
 import { SyncBadge } from '@/ui/SyncBadge';
 
 export default function SettingsScreen() {
@@ -145,6 +146,7 @@ export default function SettingsScreen() {
             ))}
           </View>
         </Card>
+        <RemindersCard />
         {(problems > 0 || syncInfo.status === 'error') && (
           <Card style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontWeight: '700' }}>{t('app.problemi_titolo')}</Text>

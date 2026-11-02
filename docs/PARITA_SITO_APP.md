@@ -97,7 +97,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | T11 | Microfono nella barra del to buy (una frase = un articolo) | voce locale | To buy › microfono | P4 | da fare | |
 | T12 | Pastiglie: terapie, prese, arretrate, calendario, storico, «prese tutte» | `pills` (pronta) → sync | Pastiglie | P2 | dati, sincronizzazione e regole fatti e provati (terapie, prese, arretrate, calendario, storico, «prese tutte»; il server ora sincronizza anche le pastiglie) · schermata scritta con l'aspetto del sito (in chiaro/scuro e nelle due vesti): prese di oggi per orario, arretrate in rosso con «Prese tutte», scheda terapia, calendario con «quante prese», tab «Pastiglie» · da provare sul telefono · mancano i promemoria (T14) | |
 | T13 | Programmazione delle dosi (ritmo: giorni, mese, ogni N giorni, orari) | logica in TS | (dentro Pastiglie) | P2 | fatta (`pills/logic.ts`, **test d'oro** contro il codice vero del sito, a prova di ora legale) | |
-| T14 | Promemoria delle pastiglie | notifiche locali | — | P2 | da fare | |
+| T14 | Promemoria delle pastiglie | notifiche locali | Impostazioni › Promemoria (una notifica per orario; si rifanno a ogni cambiamento) | P2 | scritto e provato con test, da provare sul telefono | |
 | T15 | Progetto collegato a un'attività, «chiudi pomodoro» (`pomodoro_close`) | sync | To do › progetto | P3 | da fare | |
 | T16 | «To study» (`to_study.php`, `study_api.php`, `to_study_progetti.css`): **sul sito è stato sostituito dal Piano dei progetti** (la pagina dice «ora vive dentro Progetti»; la scheda non esiste più nel To do) | — | non si porta | — | **da confermare** (§8, domanda 3) | |
 
@@ -113,7 +113,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | B6 | Categorie di abitudini | `habits/categories` → sync | Abitudini › Categorie | P2 | fatto: le categorie si scelgono nel modulo e servono a statistiche/radar · il sito non ha una pagina per gestirle, quindi non serve una schermata | |
 | B7 | Distribuzione per ora (`hour_distribution`) | locale | Abitudini › Statistiche | P2 | da fare | |
 | B8 | Diario delle abitudini (`journal_save`, `habit_daily_journal`) | sync | Abitudini › Diario | P2 | API pronta | |
-| B9 | Promemoria (`habit_reminders`) | notifiche locali | — | P2 | da fare | |
+| B9 | Promemoria (`habit_reminders`: il sito non ha ancora una schermata) | notifiche locali | Impostazioni › Promemoria (una notifica al giorno, a un'ora scelta, con le abitudini ancora da fare) | P2 | scritto e provato con test, da provare sul telefono | |
 | B10 | Impostazioni abitudini (`habit_settings`) | `GET/PATCH habits/settings` (nuova, [app-api]) | Abitudini › Impostazioni | P2 | fatto: colore, giorni in barra, finestra grafici, interruttori (gruppi, carosello, coriandoli, vibrazione, suono), archiviate · mancano: importa, esporta; coriandoli/vibrazione/suono si salvano ma non fanno ancora nulla | |
 | B11 | Importazione abitudini (`habits_import.php`: leggi, rimappa, salva) | `habits/import` (nuova) | Abitudini › Importa | P4 | da fare | |
 
