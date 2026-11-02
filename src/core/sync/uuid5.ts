@@ -106,3 +106,8 @@ export function checkInUuid(habitUuid: string, day: string): string {
 export function doseUuid(planUuid: string, day: string, time: string, seq: number): string {
   return uuid5(`pill_doses|${planUuid}|${day}|${time.slice(0, 5)}|${seq}`);
 }
+
+/** Il giorno del diario di un utente: una riga sola per (utente, giorno), come sul server (sync_uuid_diario). */
+export function diaryDayUuid(userId: number | string, day: string): string {
+  return uuid5(`habit_daily_journal|${userId}|${day}`);
+}

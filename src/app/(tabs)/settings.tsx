@@ -68,6 +68,18 @@ export default function SettingsScreen() {
             <Text style={{ color: th.brand, marginTop: 8 }}>{t('app.account')} ›</Text>
           </Card>
         </Pressable>
+        <Pressable
+          testID="open-diary"
+          accessibilityRole="button"
+          onPress={() => router.push('/diary')}
+        >
+          <Card style={{ padding: 16 }}>
+            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+              {t('diario.titolo')}
+            </Text>
+            <Text style={{ color: th.brand, marginTop: 8 }}>{t('diario.apri_il_diario')} ›</Text>
+          </Card>
+        </Pressable>
         <Card style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>

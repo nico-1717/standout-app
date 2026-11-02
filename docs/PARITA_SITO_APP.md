@@ -121,13 +121,13 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| D1 | Il giorno: umore, energia, testo, due elenchi (cose buone / imparate), abitudini, anelli | `diary/day` (pronta) → sync | Diario › Giorno | P2 | API pronta | |
-| D2 | Testo lungo: conflitto «conservate entrambe le versioni» | `sync_conflicts` | Diario › avviso | P2 | da fare | |
-| D3 | Mese (giorni scritti, medie, cose imparate) | locale | Diario › Mese | P2 | API pronta | |
-| D4 | Anno (`diario_anno.php`) | locale | Diario › Anno | P2 | da fare | |
-| D5 | Modalità lettura (`diario_lettura.php`) | locale | Diario › Lettura | P2 | da fare | |
-| D6 | I numeri del diario (`diario_numeri.php`, `insights`) | locale | Diario › Numeri | P2 | API pronta | |
-| D7 | Impostazioni (carattere, grandezza, carta) | sync `diary_settings` | Diario › Aspetto | P2 | API pronta | |
+| D1 | Il giorno: umore, energia, testo, due elenchi (cose buone / imparate), abitudini, anelli | sync `habit_daily_journal` + `diary_list_items` (UUIDv5 per giorno); anelli e riepilogo abitudini calcolati sul telefono | Diario › Giorno (scorri per cambiare giorno, «annulla», salvataggio da solo; stile standard e carta) | P2 | scritto e provato con test, da provare sul telefono (manca la dettatura con il microfono) | |
+| D2 | Testo lungo: conflitto «conservate entrambe le versioni» | il telefono manda `note_rev` (impronta del testo visto); se il sito è cambiato, il server tiene TUTTE E DUE le versioni, divise da una riga «———», e le rimanda | Diario › Giorno (si vedono nel testo, nessun avviso a parte) | P2 | scritto e provato con test, da provare sul telefono | |
+| D3 | Mese (giorni scritti, medie, cose imparate) | locale (dal DB del telefono) | Diario › Mese (calendario con faccine, 4 medie, «cose imparate questo mese») | P2 | scritto e provato con test, da provare sul telefono | |
+| D4 | Anno (`diario_anno.php`): tessere, calendario a colori (umore / energia / abitudini), settimane / mesi / anni a confronto | `diary/insights` (serve la rete: il server ha anche pomodori e abitudini di tutto l'anno) | Diario › «Il diario in numeri» (tasto ▥ in basso) | P2 | scritto e provato con test, da provare sul telefono | |
+| D5 | Modalità lettura (`diario_lettura.php`): legge i resoconti e i libri scritti dall'IA | serve una rotta `/api/v1` che non c'è ancora | Diario › Lettura | P3 | da fare (insieme a D8) | |
+| D6 | I numeri del diario (`diario_numeri.php`, `insights`) | vedi D4: è la stessa schermata | Diario › «Il diario in numeri» | P2 | scritto e provato con test, da provare sul telefono | |
+| D7 | Impostazioni (carattere, grandezza, carta) | `diary/settings` (GET/PATCH), cambiano subito anche senza rete | Diario › «Aa» (6 scritture in standard, 5 sulla carta; corpo 14–26). La carta a righe / a puntini / bianca si salva ma sul sito non c'è un selettore | P2 | scritto e provato con test, da provare sul telefono | |
 | D8 | Libri del diario scritti dall'IA (`diary_ai_books`) e rapporti trimestrali (`diary_ai_reports`) | `ai/*`; i risultati si sincronizzano (solo lettura) | Diario › Libri e rapporti | P3 | solo online per generarli | |
 | D9 | Schermata nascosta nel selettore app (con blocco attivo) | — | — | P4 | da fare | |
 

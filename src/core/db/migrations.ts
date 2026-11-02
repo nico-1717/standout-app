@@ -199,6 +199,32 @@ CREATE TABLE pill_doses (
 CREATE INDEX idx_pdoses_day ON pill_doses (due_date);
 `,
   },
+  {
+    version: 4,
+    sql: `
+-- il diario: il giorno (umore, energia, testo) e le due liste («cose belle», «cose imparate»)
+CREATE TABLE habit_daily_journal (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  entry_date TEXT NOT NULL UNIQUE,
+  mood INTEGER,
+  energy INTEGER,
+  note TEXT,
+  note_rev TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE diary_list_items (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  entry_date TEXT NOT NULL,
+  list_type TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_dlist_day ON diary_list_items (entry_date, list_type, sort_order);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

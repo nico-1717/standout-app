@@ -1,3 +1,5 @@
+import type { Insights } from '@/features/diary/insights';
+
 import { ApiError } from '../api/httpApi';
 
 /**
@@ -109,6 +111,11 @@ export class AccountApi {
 
   async revokeDevice(id: number): Promise<void> {
     await this.json(await this.send('DELETE', `/api/v1/auth/devices/${id}`));
+  }
+
+  /** Il diario in numeri di un anno (lo calcola il server: ha anche i pomodori e le abitudini di tutto l'anno). */
+  async diaryInsights(year: number): Promise<Insights> {
+    return this.json<Insights>(await this.send('GET', `/api/v1/diary/insights?year=${year}`));
   }
 
   /** Reinvia l'email di verifica. Ritorna lo stato del server: inviata | gia_verificata | attendi | errore. */

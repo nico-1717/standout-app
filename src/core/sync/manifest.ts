@@ -10,7 +10,9 @@ export type SyncTable =
   | 'habits'
   | 'habit_logs'
   | 'pill_plans'
-  | 'pill_doses';
+  | 'pill_doses'
+  | 'habit_daily_journal'
+  | 'diary_list_items';
 
 export interface TableDef {
   /** nell'ordine di dipendenza: il padre prima del figlio */
@@ -173,6 +175,40 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'seq',
       'status',
       'taken_at',
+      'updated_at',
+    ],
+  },
+  // il giorno del diario: una riga per (utente, giorno), uuid = UUIDv5 di quella chiave (vedi uuid5.ts › diaryDayUuid).
+  // note_rev è l'impronta del testo sul server: viaggia con la modifica del testo (così il server vede se è cambiato nel frattempo).
+  habit_daily_journal: {
+    order: 80,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: ['entry_date'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'entry_date',
+      'mood',
+      'energy',
+      'note',
+      'note_rev',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  diary_list_items: {
+    order: 90,
+    // l'ordine nell'elenco lo decide il server (sort_order); il telefono ne mette uno suo per mostrare subito la voce
+    readOnly: ['sort_order', 'created_at', 'updated_at'],
+    createOnly: ['entry_date', 'list_type'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'entry_date',
+      'list_type',
+      'content',
+      'sort_order',
+      'created_at',
       'updated_at',
     ],
   },

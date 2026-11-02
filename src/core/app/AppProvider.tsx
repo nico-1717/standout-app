@@ -18,6 +18,12 @@ import { AccountApi } from '../account/accountApi';
 import { askPermission, phoneNotifier } from '@/features/reminders/notifier';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '@/features/reminders/plan';
 import { rescheduleAll } from '@/features/reminders/scheduler';
+import { DiaryRepo } from '@/features/diary/repo';
+import {
+  DEFAULT_DIARY_SETTINGS,
+  DiarySettingsStore,
+  type DiarySettings,
+} from '@/features/diary/settings';
 import { QuickNoteStore } from '@/features/notes/quickNote';
 import { RemindersStore } from '@/features/reminders/store';
 import { AuthService, type AuthState } from '../auth/authService';
@@ -54,6 +60,7 @@ export interface Services {
   habitCategories: HabitCategoriesRepo;
   pills: PillsRepo;
   notes: QuickNoteStore;
+  diary: DiaryRepo;
   scheduler: SyncScheduler;
 }
 
@@ -76,6 +83,8 @@ interface AppContextValue {
   /** Le preferenze della pagina Abitudini (colore, giorni in barra, gruppi…): uguali a quelle del sito. */
   habitSettings: HabitSettings;
   updateHabitSettings: (patch: Partial<HabitSettings>) => void;
+  diarySettings: DiarySettings;
+  updateDiarySettings: (patch: Partial<DiarySettings>) => void;
   /** I promemoria (pastiglie, abitudini): restano su questo telefono. Ritorna false se il telefono nega il permesso. */
   reminders: ReminderSettings;
   updateReminders: (patch: Partial<ReminderSettings>) => Promise<boolean>;
@@ -127,6 +136,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const settingsStore = useRef<SettingsStore | null>(null);
   const [habitSettings, setHabitSettings] = useState<HabitSettings>(DEFAULT_HABIT_SETTINGS);
   const habitSettingsStore = useRef<HabitSettingsStore | null>(null);
+  const [diarySettings, setDiarySettings] = useState<DiarySettings>(DEFAULT_DIARY_SETTINGS);
+  const diarySettingsStore = useRef<DiarySettingsStore | null>(null);
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const remindersStore = useRef<RemindersStore | null>(null);
   /** l'impronta delle notifiche già programmate (null = non si sa: si rifanno) */
@@ -175,6 +186,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const hStore = new HabitSettingsStore(opened.db);
         habitSettingsStore.current = hStore;
         setHabitSettings(hStore.read());
+        const dStore = new DiarySettingsStore(opened.db);
+        diarySettingsStore.current = dStore;
+        setDiarySettings(dStore.read());
         const rStore = new RemindersStore(opened.db);
         remindersStore.current = rStore;
         scheduledSig.current = null;
@@ -196,6 +210,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setHabitSettings(await hStore.sync(api));
             } catch (e) {
               // come sopra: estetica. Un server più vecchio (senza questa rotta) risponde 404 e va bene così.
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
+            try {
+              setDiarySettings(await dStore.sync(api));
+            } catch (e) {
+              // come sopra: estetica, e un server più vecchio può non avere la rotta
               if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
                 throw e;
               if (e instanceof TypeError) throw e;
@@ -228,6 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             () => localStamp(),
           ),
           notes,
+          diary: new DiaryRepo(opened.db, userId),
           scheduler,
         });
       } catch (e) {
@@ -334,6 +357,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updateDiarySettings = useCallback(
+    (patch: Partial<DiarySettings>) => {
+      const store = diarySettingsStore.current;
+      if (!store) return;
+      setDiarySettings(store.update(patch));
+      services?.scheduler.trigger();
+    },
+    [services],
+  );
   const setUiStyle = useCallback(
     (st: UiStyle) => updateSettings({ ui_style: st }),
     [updateSettings],
@@ -362,6 +394,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       settingsStore.current = null;
       setHabitSettings(DEFAULT_HABIT_SETTINGS);
       habitSettingsStore.current = null;
+      setDiarySettings(DEFAULT_DIARY_SETTINGS);
+      diarySettingsStore.current = null;
       remindersStore.current = null;
       scheduledSig.current = null;
       setReminders(DEFAULT_REMINDERS);
@@ -389,6 +423,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateSettings,
       habitSettings,
       updateHabitSettings,
+      diarySettings,
+      updateDiarySettings,
       reminders,
       updateReminders,
       changed,
@@ -408,6 +444,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateSettings,
       habitSettings,
       updateHabitSettings,
+      diarySettings,
+      updateDiarySettings,
       reminders,
       updateReminders,
       changed,

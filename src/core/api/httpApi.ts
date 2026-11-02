@@ -1,3 +1,4 @@
+import type { DiarySettings, DiarySettingsApi } from '@/features/diary/settings';
 import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
 import type { PutNoteResult, QuickNoteApi, ServerNote } from '@/features/notes/quickNote';
 import type { Settings, SettingsApi } from '../settings/settings';
@@ -22,7 +23,9 @@ export type TokenSupplier = () => Promise<string>;
  * Il server visto dall'app, via fetch. Ogni chiamata porta la versione dell'app (il server può rispondere
  * 426 upgrade_required). Errori: HTTP non 2xx → ApiError col `code` del server.
  */
-export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi, QuickNoteApi {
+export class HttpSyncApi
+  implements SyncApi, SettingsApi, HabitSettingsApi, DiarySettingsApi, QuickNoteApi
+{
   constructor(
     private readonly baseUrl: string,
     private readonly token: TokenSupplier,
@@ -89,6 +92,15 @@ export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi, Quic
 
   async patchHabitSettings(patch: Partial<HabitSettings>): Promise<HabitSettings> {
     return (await this.call<{ settings: HabitSettings }>('PATCH', '/habits/settings', patch))
+      .settings;
+  }
+
+  async getDiarySettings(): Promise<DiarySettings> {
+    return (await this.call<{ settings: DiarySettings }>('GET', '/diary/settings')).settings;
+  }
+
+  async patchDiarySettings(patch: Partial<DiarySettings>): Promise<DiarySettings> {
+    return (await this.call<{ settings: DiarySettings }>('PATCH', '/diary/settings', patch))
       .settings;
   }
 

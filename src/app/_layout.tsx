@@ -1,6 +1,12 @@
 import { Caveat_500Medium } from '@expo-google-fonts/caveat';
-import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
+import {
+  CormorantGaramond_300Light,
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium_Italic,
+} from '@expo-google-fonts/cormorant-garamond';
 import { Jost_400Regular } from '@expo-google-fonts/jost';
+import { Kalam_400Regular } from '@expo-google-fonts/kalam';
+import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -35,6 +41,8 @@ function Shell() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="categories" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="diary" />
+          <Stack.Screen name="diary-year" />
         </Stack.Protected>
       </Stack>
     </>
@@ -55,8 +63,12 @@ export default function RootLayout() {
   // I caratteri dello «Scontrino» (come sul sito). Se non si caricano si va avanti con quelli del telefono.
   const [loaded, fontError] = useFonts({
     Caveat_500Medium,
+    CormorantGaramond_300Light,
+    CormorantGaramond_400Regular,
     CormorantGaramond_500Medium_Italic,
     Jost_400Regular,
+    Kalam_400Regular,
+    PatrickHand_400Regular,
   });
   if (!loaded && !fontError) return null;
   return (
