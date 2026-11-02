@@ -17,33 +17,48 @@ import {
   type DayCell,
 } from '@/features/habits/HabitsParts';
 import { toInput, toPatch, type HabitFormState } from '@/features/habits/formModel';
+import { allLogsOf, statCards, globalStreak } from '@/features/habits/globalStats';
+import { DEFAULT_HABIT_SETTINGS } from '@/features/habits/habitSettings';
 import { habitsTheme } from '@/features/habits/habitsTheme';
+import { labelDate } from '@/features/habits/labels';
+import { HabitsHeader, StatCarousel, type CardView } from '@/features/habits/overview';
+import { StatsSheet } from '@/features/habits/StatsSheet';
+import { TableSheet } from '@/features/habits/TableSheet';
 import { NoteSheet } from '@/features/habits/NoteSheet';
 import {
   addDays,
   currentStreak,
   dailyFor,
+  isDue,
   dayMessageKey,
   dayProgress,
+  isSuccess,
   isoWeekday,
   ofKind,
-  perfectStreak,
   periodProgress,
   stateOf,
   type CheckInMode,
   type Habit,
-  type HabitLog,
 } from '@/features/habits/logic';
 import { localToday } from '@/features/tasks/groups';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { mix } from '@/features/buy/buyTheme';
-import { Header } from '@/ui/kit';
 import { SyncBadge } from '@/ui/SyncBadge';
 
-type Filter = 'all' | Habit['frequency_type'];
-const PARTS: Habit['day_part'][] = ['any', 'morning', 'afternoon', 'evening', 'night'];
-const WINDOW_DAYS = 28;
+/** Come sul sito: tutte, da fare, oppure una fascia della giornata (compare solo se c'è un'abitudine in quella fascia). */
+type Filter = 'all' | 'todo' | `part:${Habit['day_part']}`;
+/** L'ordine dei gruppi del sito (prima la mattina, «tutto il giorno» per ultimo). */
+const PARTS: Habit['day_part'][] = ['morning', 'afternoon', 'evening', 'night', 'any'];
+const PART_ICON: Record<Habit['day_part'], string> = {
+  any: '🕐',
+  morning: '🌅',
+  afternoon: '☀️',
+  evening: '🌆',
+  night: '🌙',
+};
+// finché la schermata «Impostazioni» non c'è, valgono i valori di partenza del sito
+const SETTINGS = DEFAULT_HABIT_SETTINGS;
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
@@ -64,6 +79,7 @@ export default function HabitsScreen() {
   });
   const [showFuture, setShowFuture] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<'stats' | 'table' | null>(null);
   const [noteFor, setNoteFor] = useState<{ habit: Habit; day: string } | null>(null);
 
   const habits = useMemo(
@@ -91,14 +107,13 @@ export default function HabitsScreen() {
     const l = services.habits.log(noteFor.habit.uuid, noteFor.day);
     return { ...noteFor, note: l?.note ?? '', mood: l?.mood ?? null };
   }, [noteFor, services]);
-  const logs = useMemo(() => {
-    const m = new Map<string, HabitLog>();
-    if (!services) return m;
-    for (const l of services.habits.logsBetween(addDays(today, -(WINDOW_DAYS - 1)), today))
-      m.set(`${l.habit_uuid}|${l.log_date}`, l);
-    return m;
+  // tutti i check-in: servono alla fascia dei giorni, al carosello e ai fogli «Statistiche» e «Tabella»
+  const logList = useMemo(
+    () => (services ? services.habits.logsBetween('0000-01-01', '9999-12-31') : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [services, version, today]);
+    [services, version],
+  );
+  const logs = useMemo(() => allLogsOf(logList), [logList]);
 
   /** I giorni «fatti» di ogni abitudine non giornaliera (servono ad anello settimanale/mensile/intervallo) e la serie di ogni abitudine. */
   const history = useMemo(() => {
@@ -119,12 +134,12 @@ export default function HabitsScreen() {
 
   const cells = useMemo<DayCell[]>(() => {
     const out: DayCell[] = [];
-    for (let i = WINDOW_DAYS - 1; i >= 0; i--) {
+    for (let i = SETTINGS.visible_days - 1; i >= 0; i--) {
       const d = addDays(today, -i);
       const p = dayProgress(current, d, logs, today);
       out.push({
         day: d,
-        dow: t(`abitudini.dow_${isoWeekday(d)}`),
+        dow: t(`abitudini.dowm_${isoWeekday(d)}`),
         num: Number(d.slice(8)),
         pct: p.pct,
         hasHabits: p.total > 0,
@@ -137,12 +152,45 @@ export default function HabitsScreen() {
     () => dayProgress(current, day, logs, today),
     [current, day, logs, today],
   );
-  const streakDays = useMemo(
-    () => perfectStreak(habits, logs, today, WINDOW_DAYS),
-    [habits, logs, today],
+  const streakDays = useMemo(() => globalStreak(current, logs, today), [current, logs, today]);
+  const skipped = useMemo(
+    () =>
+      dailyFor(current, day).filter(
+        (h) => stateOf(h, day, logs.get(`${h.uuid}|${day}`) ?? null, today).status === 'skipped',
+      ).length,
+    [current, day, logs, today],
+  );
+  const cards = useMemo<CardView[]>(
+    () =>
+      statCards(
+        current,
+        logs,
+        day,
+        today,
+        t(`abitudini.mese_${Number(today.slice(5, 7))}`).toLowerCase(),
+      ).map((c) => ({
+        key: c.key,
+        color: c.color,
+        emoji: c.emoji,
+        kicker: c.kickerIsDay ? labelDate(c.kicker, today, t) : t(c.kicker),
+        value: c.value,
+        suffix: c.suffix,
+        sub: t(c.sub.key, c.sub.params),
+        spark: c.spark,
+        ring: c.ring,
+      })),
+    [current, logs, day, today, t],
   );
 
-  const keep = (h: Habit) => filter === 'all' || h.frequency_type === filter;
+  /** Il filtro vale per le giornaliere (come il sito); «da fare» toglie quelle già riuscite. */
+  const keepDaily = (h: Habit) => {
+    if (filter === 'all') return true;
+    if (filter === 'todo')
+      return !isSuccess(h, stateOf(h, day, logs.get(`${h.uuid}|${day}`) ?? null, today));
+    return h.day_part === filter.slice(5);
+  };
+  const keepOther = (h: Habit) =>
+    filter === 'all' || filter === 'todo' || h.day_part === filter.slice(5);
 
   function tap(h: Habit) {
     if (!services) return;
@@ -285,52 +333,87 @@ export default function HabitsScreen() {
     );
   }
 
-  const dailyAll = dailyFor(current, day).filter(keep);
-  const byPart = PARTS.map((p) => ({
-    part: p,
-    list: dailyAll.filter((h) => h.day_part === p),
-  })).filter((g) => g.list.length > 0);
-  const sections: { key: string; title: string; list: Habit[] }[] = (
+  const items = dailyFor(current, day).filter(keepDaily);
+  const weekly = ofKind(current, 'weekly').filter(keepOther);
+  const monthly = ofKind(current, 'monthly').filter(keepOther);
+  // le «ogni N giorni» si vedono nei loro giorni, o finché il turno non è stato fatto (regola del sito)
+  const interval = ofKind(current, 'interval')
+    .filter(keepOther)
+    .filter(
+      (h) =>
+        isDue(h, day) ||
+        !isSuccess(h, stateOf(h, day, logs.get(`${h.uuid}|${day}`) ?? null, today)),
+    );
+  const others = weekly.length + monthly.length + interval.length;
+  const byPart = SETTINGS.group_by_day_part
+    ? PARTS.map((p) => ({ part: p, list: items.filter((h) => h.day_part === p) })).filter(
+        (g) => g.list.length > 0,
+      )
+    : [];
+  const sections = (
     [
-      ['weekly', t('abitudini.settimanali')],
-      ['monthly', t('abitudini.mensili')],
-      ['interval', t('abitudini.personalizzate')],
+      ['weekly', t('abitudini.settimanali'), weekly],
+      ['monthly', t('abitudini.mensili'), monthly],
+      ['interval', t('abitudini.personalizzate'), interval],
     ] as const
-  )
-    .map(([k, title]) => ({ key: k, title, list: ofKind(current, k).filter(keep) }))
-    .filter((s) => s.list.length > 0);
+  ).filter((s) => s[2].length > 0);
 
-  const nothing = byPart.length === 0 && sections.length === 0;
-  const dayLabel =
-    day === today ? t('abitudini.da_fare') : day.split('-').reverse().slice(0, 2).join('/');
+  const nothing = items.length === 0 && others === 0;
+  const chips = [
+    `✅ ${progress.done}/${progress.total}`,
+    `🔥 ${t('abitudini.n_di_fila', { n: streakDays })}`,
+    ...(skipped ? [`⏭ ${t('abitudini.n_saltate', { n: skipped })}`] : []),
+  ];
+  const filters: { key: Filter; label: string }[] = [
+    { key: 'all', label: t('abitudini.tutte') },
+    { key: 'todo', label: t('abitudini.da_fare') },
+    ...PARTS.filter(
+      (p) => p !== 'any' && current.some((h) => !h.is_archived && h.day_part === p),
+    ).map((p) => ({
+      key: `part:${p}` as Filter,
+      label: `${PART_ICON[p]} ${t(`abitudini.part_${p}`)}`,
+    })),
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: ht.bg }}>
-      <Header title={t('abitudini.titolo')} top={insets.top} right={<SyncBadge />} />
+      <HabitsHeader
+        th={ht}
+        top={insets.top}
+        eyebrow={labelDate(day, today, t)}
+        title={t('abitudini.titolo')}
+        right={<SyncBadge />}
+        onTable={() => setPanel('table')}
+        onStats={() => setPanel('stats')}
+      />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <DayStrip cells={cells} selected={day} today={today} th={ht} onSelect={setDay} />
+        <StatCarousel
+          th={ht}
+          cards={cards}
+          autoplay={SETTINGS.carousel_autoplay}
+          intervalS={SETTINGS.carousel_interval_s}
+        />
         <TodayCard
           th={ht}
-          title={dayLabel}
+          title={labelDate(day, today, t)}
           pct={progress.pct}
-          line1={t('abitudini.n_di_n_completate', { fatte: progress.done, totale: progress.total })}
-          line2={t(dayMessageKey(progress))}
-          streakText={
-            streakDays > 0 ? t('abitudini.n_giorni_di_fila', { n: streakDays }) : undefined
-          }
+          sub={t(dayMessageKey(progress))}
+          chips={chips}
         />
-        <FilterChips
-          th={ht}
-          value={filter}
-          onChange={setFilter}
-          items={[
-            { key: 'all', label: t('abitudini.tutte') },
-            { key: 'daily', label: t('abitudini.giornalieri') },
-            { key: 'weekly', label: t('abitudini.settimanali') },
-            { key: 'monthly', label: t('abitudini.mensili') },
-            { key: 'interval', label: t('abitudini.personalizzate') },
-          ]}
-        />
+        <Text
+          testID="list-title"
+          style={{
+            color: ht.text,
+            fontWeight: '800',
+            fontSize: 20,
+            marginHorizontal: 20,
+            marginTop: 18,
+          }}
+        >
+          {t('abitudini.n_di_n_completate', { fatte: progress.done, totale: progress.total })}
+        </Text>
+        <FilterChips th={ht} value={filter} onChange={setFilter} items={filters} />
         {nothing && (
           <View style={{ alignItems: 'center', paddingHorizontal: 32, marginTop: 40, gap: 6 }}>
             <Text style={{ color: ht.text, fontWeight: '800', fontSize: 17 }}>
@@ -345,17 +428,25 @@ export default function HabitsScreen() {
             )}
           </View>
         )}
-        {byPart.map((g) => (
-          <View key={g.part}>
-            {byPart.length > 1 && <GroupLabel th={ht} text={t(`abitudini.part_${g.part}`)} />}
-            {byPart.length === 1 && <View style={{ height: 6 }} />}
-            {g.list.map(renderRow)}
+        {SETTINGS.group_by_day_part ? (
+          byPart.map((g) => (
+            <View key={g.part}>
+              <GroupLabel th={ht} text={`${PART_ICON[g.part]} ${t(`abitudini.part_${g.part}`)}`} />
+              {g.list.map(renderRow)}
+            </View>
+          ))
+        ) : (
+          <View>
+            {items.length > 0 && others > 0 && (
+              <GroupLabel th={ht} text={t('abitudini.giornalieri')} />
+            )}
+            {items.map(renderRow)}
           </View>
-        ))}
-        {sections.map((s) => (
-          <View key={s.key}>
-            <GroupLabel th={ht} text={s.title} />
-            {s.list.map(renderRow)}
+        )}
+        {sections.map(([key, title, list]) => (
+          <View key={key}>
+            <GroupLabel th={ht} text={title} />
+            {list.map(renderRow)}
           </View>
         ))}
         {future.length > 0 && (
@@ -434,6 +525,29 @@ export default function HabitsScreen() {
           <Text style={{ color: '#fff', fontSize: 30, lineHeight: 33, fontWeight: '300' }}>+</Text>
         </LinearGradient>
       </Pressable>
+      <StatsSheet
+        visible={panel === 'stats'}
+        habits={current}
+        logs={logList}
+        categories={categories}
+        today={today}
+        range={SETTINGS.chart_range_days}
+        th={ht}
+        onClose={() => setPanel(null)}
+      />
+      <TableSheet
+        visible={panel === 'table'}
+        habits={current}
+        logs={logList}
+        today={today}
+        th={ht}
+        onClose={() => setPanel(null)}
+        onToggle={(h, d) => {
+          if (d > today || !services) return;
+          services.habits.checkIn(h.uuid, d, 'toggle');
+          changed();
+        }}
+      />
       <HabitDetail
         habit={detail}
         logs={detailLogs}

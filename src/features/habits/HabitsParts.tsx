@@ -72,14 +72,13 @@ export function DayStrip(p: {
   );
 }
 
-/** La carta «Oggi»: anello grande, conteggio, frase e serie dei giorni perfetti. */
+/** La carta del giorno (#hbDayHero del sito): anello grande, titolo, frase e le «chip» (fatte, serie, saltate). */
 export function TodayCard(p: {
   th: HabitsTheme;
   title: string;
   pct: number;
-  line1: string;
-  line2: string;
-  streakText?: string;
+  sub: string;
+  chips: string[];
 }) {
   const { th } = p;
   return (
@@ -94,17 +93,16 @@ export function TodayCard(p: {
         />
         <Text style={[styles.pct, { color: th.text }]}>{Math.round(p.pct * 100)}%</Text>
       </View>
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text style={[styles.todayTitle, { color: th.text }]}>{p.title}</Text>
-        <Text style={{ color: th.text, fontWeight: '700', fontSize: 14 }}>{p.line1}</Text>
-        <Text style={{ color: th.text2, fontSize: 13 }}>{p.line2}</Text>
-        {!!p.streakText && (
-          <View style={[styles.streak, { backgroundColor: th.surface2 }]}>
-            <Text style={{ color: th.text, fontWeight: '800', fontSize: 12.5 }}>
-              🔥 {p.streakText}
-            </Text>
-          </View>
-        )}
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={{ color: th.text, fontWeight: '800', fontSize: 18 }}>{p.title}</Text>
+        <Text style={{ color: th.text2, fontSize: 13 }}>{p.sub}</Text>
+        <View style={styles.chipRow}>
+          {p.chips.map((c) => (
+            <View key={c} style={[styles.miniChip, { backgroundColor: th.surface2 }]}>
+              <Text style={{ color: th.text, fontWeight: '800', fontSize: 12.5 }}>{c}</Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -151,7 +149,7 @@ export function GroupLabel({ text, th }: { text: string; th: HabitsTheme }) {
 const styles = StyleSheet.create({
   strip: { paddingHorizontal: 12, paddingVertical: 10, gap: 4 },
   cell: { width: 50, alignItems: 'center', paddingVertical: 8, borderRadius: 18, gap: 5 },
-  dow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
+  dow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   ringBox: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   num: { position: 'absolute', fontSize: 12.5, fontWeight: '800' },
   today: {
@@ -165,20 +163,8 @@ const styles = StyleSheet.create({
   },
   bigRing: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center' },
   pct: { position: 'absolute', fontSize: 19, fontWeight: '800' },
-  todayTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.3,
-    textTransform: 'uppercase',
-    opacity: 0.55,
-  },
-  streak: {
-    alignSelf: 'flex-start',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginTop: 4,
-  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  miniChip: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
   chips: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   chip: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8 },
   group: {

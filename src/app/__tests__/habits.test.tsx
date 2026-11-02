@@ -64,10 +64,12 @@ describe('Habits screen', () => {
     expect(screen.getByText('Drink water')).toBeTruthy();
     expect(screen.getByText('Read')).toBeTruthy();
     expect(screen.getByText('Long run')).toBeTruthy();
-    expect(screen.getByText('MORNING')).toBeTruthy();
-    expect(screen.getByText('EVENING')).toBeTruthy();
-    expect(screen.getAllByText('0/2')).toHaveLength(2); // acqua (0 di 2 bicchieri) + anello settimanale
-    expect(screen.getByText('0%')).toBeTruthy();
+    // l'ordine dei gruppi è quello del sito: mattina, sera, poi «tutto il giorno»; gli altri tipi dopo
+    expect(screen.getByText('🌅 MORNING')).toBeTruthy();
+    expect(screen.getByText('🌆 EVENING')).toBeTruthy();
+    expect(screen.getByText('WEEKLY')).toBeTruthy();
+    expect(screen.getByText('0 of 2 completed')).toBeTruthy();
+    expect(screen.getByTestId('hb-stats')).toBeTruthy();
   });
 
   test('a tap checks in; the Today card follows', async () => {
@@ -90,12 +92,37 @@ describe('Habits screen', () => {
     expect(habits.log(read, localToday())).toMatchObject({ status: 'skipped' });
   });
 
-  test('filter chips hide the other kinds', async () => {
+  test('filters: a day part only shows when used; «To do» hides what is done', async () => {
+    const { read } = setup();
+    await renderIt();
+    expect(screen.queryByTestId('filter-part:night')).toBeNull(); // nessuna abitudine di notte
+    await fireEvent.press(screen.getByTestId('filter-part:morning'));
+    expect(screen.queryByText('Read')).toBeNull();
+    expect(screen.getByText('Drink water')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('filter-all'));
+    await fireEvent.press(screen.getByTestId(`habit-check-${read}`));
+    await fireEvent.press(screen.getByTestId('filter-todo'));
+    expect(screen.queryByText('Read')).toBeNull();
+    expect(screen.getByText('Drink water')).toBeTruthy();
+  });
+
+  test('the header opens the Statistics and Table sheets', async () => {
     setup();
     await renderIt();
-    await fireEvent.press(screen.getByTestId('filter-weekly'));
-    expect(screen.queryByText('Read')).toBeNull();
-    expect(screen.getByText('Long run')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('hb-stats'));
+    expect(screen.getByTestId('stats-sheet')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Cancel'));
+  });
+
+  test('the Table sheet toggles a day and shows the 7/14/30 switch', async () => {
+    const { habits, read } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hb-table'));
+    expect(screen.getByTestId('table-sheet')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`cell-${read}-${localToday()}`));
+    expect(habits.log(read, localToday())).toMatchObject({ status: 'done' });
+    await fireEvent.press(screen.getByTestId('table-span-7'));
+    expect(screen.getByTestId(`cell-${read}-${localToday()}`)).toBeTruthy();
   });
 
   test('empty state when there are no habits', async () => {
@@ -226,7 +253,7 @@ describe('Habit detail and notes', () => {
     await renderIt();
     await fireEvent.press(screen.getByTestId(`habit-row-${read}`));
     expect(screen.getByTestId('habit-detail')).toBeTruthy();
-    expect(screen.getByText('CURRENT STREAK')).toBeTruthy();
+    expect(screen.getAllByText('CURRENT STREAK').length).toBeGreaterThan(0);
     expect(screen.getByText('BEST')).toBeTruthy();
     expect(screen.getByText('TOTAL CHECK-INS')).toBeTruthy();
     expect(screen.getByText('Undo today')).toBeTruthy(); // oggi è già fatta
