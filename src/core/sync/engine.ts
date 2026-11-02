@@ -133,6 +133,7 @@ export class SyncEngine {
     );
     if (r.current === undefined) return; // il server non ha detto com'è la riga: la lasciamo
     if (r.current === null) {
+      this.cascade(table, uuid);
       deleteRow(this.db, table, uuid);
     } else {
       upsertRow(this.db, table, r.current);
@@ -211,7 +212,15 @@ export class SyncEngine {
         [table, uuid],
       );
     }
+    this.cascade(table, uuid);
     deleteRow(this.db, table, uuid);
+  }
+
+  /** Il server cancella le righe figlie insieme al padre (es. i check-in di un'abitudine): il telefono le toglie anche lui. */
+  private cascade(table: SyncTable, uuid: string): void {
+    for (const ch of MANIFEST[table].children ?? []) {
+      this.db.run(`DELETE FROM ${ch.table} WHERE ${ch.column} = ?`, [uuid]);
+    }
   }
 
   /** Fine della copia completa: via le righe che il server non ha più (ma non quelle create qui e non ancora inviate). */

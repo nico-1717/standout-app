@@ -94,6 +94,73 @@ CREATE TABLE sync_problems (
 );
 `,
   },
+  {
+    version: 2,
+    sql: `
+-- categorie delle abitudini: quelle di sistema (is_system = 1, sola lettura) e le proprie
+CREATE TABLE habit_categories (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  slug TEXT,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT '#0A84FF',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_system INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE habits (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  category_uuid TEXT,
+  preset_key TEXT,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '⭐',
+  color TEXT NOT NULL DEFAULT '#7C5CFF',
+  motivation TEXT,
+  kind TEXT NOT NULL DEFAULT 'build',
+  goal_type TEXT NOT NULL DEFAULT 'completion',
+  target_amount REAL NOT NULL DEFAULT 1,
+  step_amount REAL NOT NULL DEFAULT 1,
+  unit TEXT NOT NULL DEFAULT '',
+  frequency_type TEXT NOT NULL DEFAULT 'daily',
+  weekdays TEXT NOT NULL DEFAULT '1111111',
+  times_per_week INTEGER NOT NULL DEFAULT 7,
+  times_per_month INTEGER NOT NULL DEFAULT 30,
+  interval_days INTEGER NOT NULL DEFAULT 1,
+  day_part TEXT NOT NULL DEFAULT 'any',
+  duration_type TEXT NOT NULL DEFAULT 'forever',
+  duration_days INTEGER,
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  planner_minutes INTEGER,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  archived_at TEXT,
+  sort_key TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_habits_sort ON habits (is_archived, sort_key);
+CREATE INDEX idx_habits_cat ON habits (category_uuid);
+
+-- un check-in = una riga per (abitudine, giorno); l'uuid è un UUIDv5 di quella coppia (vedi uuid5.ts)
+CREATE TABLE habit_logs (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  habit_uuid TEXT NOT NULL,
+  log_date TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'partial',
+  amount REAL NOT NULL DEFAULT 0,
+  completions INTEGER NOT NULL DEFAULT 0,
+  target_amount REAL NOT NULL DEFAULT 1,
+  note TEXT,
+  mood INTEGER,
+  first_logged_at TEXT,
+  updated_at TEXT,
+  UNIQUE (habit_uuid, log_date)
+);
+CREATE INDEX idx_hlogs_day ON habit_logs (log_date);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

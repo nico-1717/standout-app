@@ -66,7 +66,7 @@ export class FakeServer implements SyncApi {
           field: 'colore_strano',
           current: cur ? this.strip(cur) : null,
         };
-      } else if (!this.rows.has(k) && !m.patch.title) {
+      } else if (m.table === 'todos' && !this.rows.has(k) && !m.patch.title) {
         r = {
           mutation_id: m.mutation_id,
           status: 'rejected',
@@ -75,7 +75,11 @@ export class FakeServer implements SyncApi {
           current: null,
         };
       } else {
-        this.external(m.table, m.uuid, { is_done: false, ...m.patch });
+        this.external(
+          m.table,
+          m.uuid,
+          m.table === 'todos' ? { is_done: false, ...m.patch } : m.patch,
+        );
         r = { mutation_id: m.mutation_id, status: 'applied' };
       }
       this.seen.set(m.mutation_id, r);

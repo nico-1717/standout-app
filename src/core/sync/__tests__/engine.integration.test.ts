@@ -7,6 +7,7 @@
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { HttpSyncApi } from '@/core/api/httpApi';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
+import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import { SyncEngine } from '../engine';
@@ -171,5 +172,99 @@ maybe('motore + server vero', () => {
     await a.engine.syncOnce();
     await b.engine.syncOnce();
     expect(b.repo.get(item)).toBeNull();
+  });
+
+  it('abitudini: due telefoni, check-in come stato del giorno, categoria, cancellazione a cascata', async () => {
+    const tok = await login();
+    const api = () => new HttpSyncApi(URL_!, async () => tok, '0.0.0-test', 'jest', nodeFetch);
+    const romeToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+    const mk = () => {
+      const p = phone(api());
+      return {
+        ...p,
+        habits: new HabitsRepo(p.db, undefined, undefined, romeToday),
+        cats: new HabitCategoriesRepo(p.db),
+      };
+    };
+    const a = mk();
+    const b = mk();
+    await a.engine.syncOnce();
+    // avanzi di una prova interrotta: via, o i nomi doppi farebbero rifiutare le modifiche
+    for (const x of [...a.habits.list(), ...a.habits.list({ archived: true })]) {
+      if (x.name.startsWith('prova app')) a.habits.remove(x.uuid);
+    }
+    for (const x of a.cats.list()) if (x.name.startsWith('prova app')) a.cats.remove(x.uuid);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    const today = romeToday();
+    const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86400000)
+      .toISOString()
+      .slice(0, 10);
+
+    const c = a.cats.create('prova app cat', '🧪', '#336699');
+    const h = a.habits.create({
+      name: 'prova app acqua',
+      icon: '💧',
+      category_uuid: c,
+      goal_type: 'quantity',
+      target_amount: 8,
+      step_amount: 1,
+      unit: 'bicchieri',
+      start_date: yesterday,
+    });
+    a.habits.checkIn(h, today, 'increment');
+    a.habits.checkIn(h, today, 'increment');
+    a.habits.checkIn(h, yesterday, 'set', 8);
+    a.habits.setNote(h, today, { note: 'bene', mood: 4 });
+    const rep = await a.engine.syncOnce();
+    expect(rep.rejected).toBe(0);
+    expect(pendingCount(a.db)).toBe(0);
+
+    await b.engine.syncOnce();
+    expect(b.habits.get(h)).toMatchObject({
+      name: 'prova app acqua',
+      category_uuid: c,
+      target_amount: 8,
+      unit: 'bicchieri',
+    });
+    expect(b.habits.log(h, today)).toMatchObject({
+      amount: 2,
+      status: 'partial',
+      note: 'bene',
+      mood: 4,
+    });
+    expect(b.habits.log(h, yesterday)).toMatchObject({ amount: 8, status: 'done' });
+    // lo stato lo rifa il server: quello del telefono A e quello arrivato a B coincidono
+    await a.engine.syncOnce();
+    expect(a.habits.log(h, today)).toMatchObject({ amount: 2, status: 'partial' });
+
+    // B porta oggi a 8 → fatto; A la saltata di ieri
+    b.habits.checkIn(h, today, 'set', 8);
+    a.habits.checkIn(h, yesterday, 'skip');
+    await Promise.all([a.engine.syncOnce(), b.engine.syncOnce()]);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    expect(a.habits.log(h, today)?.status).toBe('done');
+    expect(b.habits.log(h, yesterday)?.status).toBe('skipped');
+
+    // annullare
+    a.habits.checkIn(h, today, 'clear');
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    expect(b.habits.log(h, today)?.note).toBe('bene'); // la nota tiene viva la riga
+    expect(b.habits.log(h, today)?.amount).toBe(0);
+
+    // archiviare, poi cancellare: i check-in spariscono dall'altro telefono
+    a.habits.archive(h);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    expect(b.habits.get(h)?.is_archived).toBe(1);
+    a.habits.remove(h);
+    a.cats.remove(c);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    expect(b.habits.get(h)).toBeNull();
+    expect(b.habits.log(h, yesterday)).toBeNull();
+    expect(b.cats.list().find((x) => x.uuid === c)).toBeUndefined();
   });
 });
