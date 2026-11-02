@@ -5,7 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 /** Icone provvisorie disegnate con forme semplici; le definitive arrivano con la rifinitura (fase 4). */
-function Icon({ kind, color }: { kind: 'todo' | 'habits' | 'buy' | 'settings'; color: string }) {
+function Icon({
+  kind,
+  color,
+}: {
+  kind: 'todo' | 'habits' | 'buy' | 'pills' | 'settings';
+  color: string;
+}) {
   if (kind === 'todo') {
     return (
       <View
@@ -57,6 +63,33 @@ function Icon({ kind, color }: { kind: 'todo' | 'habits' | 'buy' | 'settings'; c
       </View>
     );
   }
+  if (kind === 'pills') {
+    // una capsula inclinata
+    return (
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: [{ rotate: '-45deg' }],
+        }}
+      >
+        <View
+          style={{
+            width: 11,
+            height: 22,
+            borderRadius: 6,
+            borderWidth: 2,
+            borderColor: color,
+            overflow: 'hidden',
+          }}
+        >
+          <View style={{ flex: 1, backgroundColor: color, opacity: 0.45 }} />
+        </View>
+      </View>
+    );
+  }
   return (
     <View style={{ width: 24, height: 24, justifyContent: 'center', gap: 5 }}>
       {[0, 1, 2].map((i) => (
@@ -101,6 +134,13 @@ export default function TabsLayout() {
         options={{
           title: t('planner.to_buy'),
           tabBarIcon: ({ color }) => <Icon kind="buy" color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
+        name="pills"
+        options={{
+          title: t('todo.tipo_pills'),
+          tabBarIcon: ({ color }) => <Icon kind="pills" color={String(color)} />,
         }}
       />
       <Tabs.Screen
