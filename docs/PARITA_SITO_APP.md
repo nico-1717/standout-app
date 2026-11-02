@@ -59,14 +59,14 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| P1 | Vista giorno (`pl_giornata.php`) | sync planner | Planner › Giorno | P2 | da fare | |
-| P2 | Vista settimana + «settimana» con righe (`planner_weeks`, liste settimanali) | sync planner | Planner › Settimana | P2 | da fare | |
-| P3 | Vista mese | sync planner | Planner › Mese | P2 | da fare | |
-| P4 | Eventi: crea, modifica, sposta (`event_move`), copia giorno, spunta, cancella | `events` (pronta) → sync `planner_events` | Scheda evento | P2 | API pronta | |
-| P5 | Ripetizioni (giornaliera, settimanale, mensile, annuale, personalizzata, `rrule`), eccezioni per una sola occorrenza (`original_date`, `is_cancelled`) | logica da portare in TS | (dentro Planner) | P2 | da fare — **test d'oro contro PHP** | |
+| P1 | Vista giorno (`pl_giornata.php`) | sync planner | Planner › Giorno | P2 | fatto (giorno, ore, fasce, ora attuale) | |
+| P2 | Vista settimana + «settimana» con righe (`planner_weeks`, liste settimanali) | sync planner | Planner › Settimana | P2 | vista settimana fatta; righe settimanali (`planner_weeks`) da fare | |
+| P3 | Vista mese | sync planner | Planner › Mese | P2 | fatto (griglia del mese, tocca per aprire il giorno) | |
+| P4 | Eventi: crea, modifica, sposta (`event_move`), copia giorno, spunta, cancella | `events` (pronta) → sync `planner_events` | Scheda evento | P2 | fatto: crea, modifica, spunta, cancella (spostare con trascina: da fare) | |
+| P5 | Ripetizioni (giornaliera, settimanale, mensile, annuale, personalizzata, `rrule`), eccezioni per una sola occorrenza (`original_date`, `is_cancelled`) | logica da portare in TS | (dentro Planner) | P2 | fatto — test d'oro contro PHP, DST sistemato anche sul sito | |
 | P6 | Invitati (`event_guests`) e rubrica (`contacts`) | sync | Scheda evento › Invitati | P2 | da fare | |
-| P7 | Calendari (colore, visibilità, solo uno, regole) | sync `planner_calendars` | Planner › Calendari | P2 | da fare | |
-| P8 | Categorie e parole chiave | sync `planner_categories`, `_keywords` | Planner › Categorie | P2 | da fare | |
+| P7 | Calendari (colore, visibilità, solo uno, regole) | sync `planner_calendars` | Planner › Calendari | P2 | fatto (schermata Calendari e categorie) | |
+| P8 | Categorie e parole chiave | sync `planner_categories`, `_keywords` | Planner › Categorie | P2 | fatto (schermata Calendari e categorie) | |
 | P9 | Luoghi e rubrica dei luoghi; ricerca luoghi e dettaglio | sync `planner_places`; ricerca **solo online** | Scheda luogo + mappa | P2 | da fare | |
 | P10 | Mappa dei luoghi | — (`react-native-maps`) | Mappa | P2 | da fare (serve la chiave Google Maps per Android: vedi §8) | |
 | P11 | Priorità del giorno (`planner_priorities`) | sync | Planner › Priorità | P2 | da fare | |
