@@ -43,6 +43,8 @@ Ogni deviazione è «a parità di risultato per l'utente»: cambia **come**, non
 | D9 | Cursore `0` per la copia completa | Il cursore della **copia completa** è la parola `snapshot`; un numero (anche `0`) è «dopo questa voce del registro». Alla fine della copia il server dà come cursore la testa del registro letta **prima** delle righe, così ciò che cambia mentre si scarica lo recupera il registro. `resync_required` risponde con cursore `snapshot`. | Con `0` un registro ancora vuoto era indistinguibile da «copia da fare» (trovato in prova). |
 | D10 | `sort_key` solo dell'app | `sort_order` (sito) e `sort_key` (app) restano **sempre d'accordo**: chi scrive `sort_order` (il sito) fa rifare le chiavi per posizione a fine richiesta; chi scrive `sort_key` (l'app) fa ricalcolare `sort_order`. | Il sito ordina ancora con `sort_order` in decine di query: non si riscrivono. |
 
+| D11 | iOS minimo: **16.4** (quello di Expo SDK 58: `ExpoModulesCore.podspec`) | Nessuna funzione si toglie per i telefoni vecchi: l'iPhone X di Nico arriva a iOS 16.7, quindi è coperto (se è sotto la 16.4 si aggiorna, gratis). Le cose che esistono solo sui sistemi nuovi (es. widget interattivi iOS 17+) si aggiungono come **extra** che compaiono solo dove ci sono: il nucleo dell'app resta uguale per tutti. | «Più potente possibile» non deve voler dire «solo per i telefoni nuovi». |
+
 Nessuna deviazione sullo stack: **Expo SDK 58 è uscito il 15/10/2026** (React Native 0.88; verificato sul changelog di Expo).
 La compatibilità di ogni libreria si **controlla all'installazione** (Fase 1), non si copia da qui.
 
