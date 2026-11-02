@@ -1,3 +1,4 @@
+import { FieldsError } from '../account/accountApi';
 import { ApiError } from '../api/httpApi';
 
 /** Dove stanno i token. Nell'app: SecureStore (Keychain/Keystore). Nei test: una mappa. */
@@ -118,6 +119,14 @@ export class AuthService {
       /* non JSON */
     }
     if (!res.ok || json.ok === false) {
+      const fields = json.fields as Record<string, string> | undefined;
+      if (fields && typeof fields === 'object')
+        throw new FieldsError(
+          res.status,
+          String(json.code ?? 'validation'),
+          String(json.error ?? ''),
+          fields,
+        );
       throw new ApiError(
         res.status,
         String(json.code ?? 'http_error'),
@@ -146,6 +155,33 @@ export class AuthService {
       device_name: this.deviceName,
     });
     await this.saveSession(p);
+  }
+
+  /**
+   * Crea l'account e lo collega a questo telefono. Il server dice QUALI campi non vanno (`FieldsError`):
+   * stesso controllo del sito (consenso, nome, email, password, doppioni).
+   */
+  async register(f: {
+    username: string;
+    email: string;
+    password: string;
+    passwordConfirm: string;
+    accept: boolean;
+  }): Promise<void> {
+    const p = await this.post<AccessPacket>('/auth/register', {
+      username: f.username,
+      email: f.email,
+      password: f.password,
+      password_confirm: f.passwordConfirm,
+      accetto: f.accept,
+      device_name: this.deviceName,
+    });
+    await this.saveSession(p);
+  }
+
+  /** «Password dimenticata»: il server risponde sempre ok, esista l'account o no. */
+  async forgot(identifier: string): Promise<void> {
+    await this.post('/auth/forgot', { identifier });
   }
 
   /** Dà un token d'accesso valido, rinnovandolo (una sola volta, anche con richieste in parallelo) se serve. */

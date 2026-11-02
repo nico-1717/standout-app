@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,7 @@ export default function SettingsScreen() {
   const th = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     authState,
     services,
@@ -50,10 +52,21 @@ export default function SettingsScreen() {
     <View style={{ flex: 1 }}>
       <Header title={t('comune.impostazioni')} top={insets.top} right={<SyncBadge />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
-        <Card style={{ padding: 16 }}>
-          <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>{user?.username}</Text>
-          {user?.email ? <Text style={{ color: th.text2, marginTop: 2 }}>{user.email}</Text> : null}
-        </Card>
+        <Pressable
+          testID="open-account"
+          accessibilityRole="button"
+          onPress={() => router.push('/account')}
+        >
+          <Card style={{ padding: 16 }}>
+            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+              {user?.username}
+            </Text>
+            {user?.email ? (
+              <Text style={{ color: th.text2, marginTop: 2 }}>{user.email}</Text>
+            ) : null}
+            <Text style={{ color: th.brand, marginTop: 8 }}>{t('app.account')} ›</Text>
+          </Card>
+        </Pressable>
         <Card style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>

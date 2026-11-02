@@ -25,6 +25,8 @@ function Shell() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}>
         <Stack.Protected guard={!loading && signedOut}>
           <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+          <Stack.Screen name="forgot" />
         </Stack.Protected>
         <Stack.Protected guard={!loading && needTerms}>
           <Stack.Screen name="terms" />
@@ -32,6 +34,7 @@ function Shell() {
         <Stack.Protected guard={ready}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="categories" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="account" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
     </>

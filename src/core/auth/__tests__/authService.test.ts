@@ -144,3 +144,46 @@ describe('AuthService', () => {
     expect(a.getState()).toMatchObject({ termsRequired: false });
   });
 });
+
+describe('AuthService register and forgot', () => {
+  test('register posts the form and saves the session', async () => {
+    const store = memStore();
+    const f = fakeFetch(() => ({ json: packet(1) }));
+    const a = new AuthService('https://x', store, 'Pixel', f.fn);
+    await a.register({
+      username: 'nico',
+      email: 'n@x.it',
+      password: 'longpassword1',
+      passwordConfirm: 'longpassword1',
+      accept: true,
+    });
+    expect(f.calls[0].path).toBe('/auth/register');
+    expect(f.calls[0].body).toMatchObject({
+      username: 'nico',
+      password_confirm: 'longpassword1',
+      accetto: true,
+      device_name: 'Pixel',
+    });
+    expect(a.getState().status).toBe('signedIn');
+  });
+
+  test('register shows the fields the server rejects', async () => {
+    const f = fakeFetch(() => ({
+      status: 422,
+      json: { ok: false, error: 'validation', fields: { email: 'Taken' } },
+    }));
+    const a = new AuthService('https://x', memStore(), 'Pixel', f.fn);
+    const e = await a
+      .register({ username: 'n', email: 'e', password: 'p', passwordConfirm: 'p', accept: false })
+      .catch((x) => x);
+    expect(e.fields).toEqual({ email: 'Taken' });
+    expect(a.getState().status).not.toBe('signedIn');
+  });
+
+  test('forgot posts only the identifier', async () => {
+    const f = fakeFetch(() => ({ json: { ok: true } }));
+    const a = new AuthService('https://x', memStore(), 'Pixel', f.fn);
+    await a.forgot('nico');
+    expect(f.calls[0]).toMatchObject({ path: '/auth/forgot', body: { identifier: 'nico' } });
+  });
+});

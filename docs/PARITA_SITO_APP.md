@@ -19,18 +19,18 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione del sito (file) | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| A1 | Registrazione (`account/register.php`; accetta termini, password ≥ 10 caratteri) | `auth/register` (nuova) | Registrati | P1 | da fare | |
+| A1 | Registrazione (`account/register.php`; accetta termini, password ≥ 10 caratteri) | `auth/register` (nuova) | Registrati | P1 | scritto e provato con test, da provare sul telefono | |
 | A2 | Accesso (`account/login.php`) | `auth/login` | Accedi | P1 | API pronta | |
 | A3 | Uscita da questo dispositivo (`account/logout.php`) | `auth/logout` | Impostazioni › Esci (con controllo della coda non inviata) | P1 | API pronta | |
-| A4 | Conferma email (`invia_verifica.php`, `verifica_email.php`) | `auth/verify_email` (nuova: rinvio) | Banner «conferma l'email» + rinvio | P4 | da fare | |
-| A5 | Password dimenticata (`password_dimenticata.php`, `password_nuova.php`) | `auth/forgot` (nuova) | Accedi › Password dimenticata (manda l'email; il link si apre sul sito) | P4 | da fare | |
-| A6 | Cambio password (`cambia_password.php`) | `account/password` (nuova) | Impostazioni › Account › Cambia password | P2 | da fare | |
+| A4 | Conferma email (`invia_verifica.php`, `verifica_email.php`) | `auth/verify_email` (nuova: rinvio) | Banner «conferma l'email» + rinvio | P4 | scritto e provato con test, da provare sul telefono | |
+| A5 | Password dimenticata (`password_dimenticata.php`, `password_nuova.php`) | `auth/forgot` (nuova) | Accedi › Password dimenticata (manda l'email; il link si apre sul sito) | P4 | scritto e provato con test, da provare sul telefono | |
+| A6 | Cambio password (`cambia_password.php`) | `account/password` (nuova) | Impostazioni › Account › Cambia password (poi rientra con la password nuova: il server chiude tutte le sessioni) | P2 | scritto e provato con test, da provare sul telefono | |
 | A7 | Accettare condizioni e privacy (`accetta_termini.php`) | `auth/accept_terms` | Schermata «Condizioni aggiornate» | P1 | API pronta | |
-| A8 | Privacy e dati: scarica i miei dati (`esporta_dati.php`) | `account/export` (nuova) | Impostazioni › Privacy e dati › Scarica | P2 | da fare | |
-| A9 | Privacy e dati: elimina il mio account (`elimina_account.php`, chiede la password) | `account/delete` (nuova) | Impostazioni › Privacy e dati › Elimina (≤ 3 tocchi; la regola di Apple chiede solo che si **avvii nell'app**) | P2 | da fare | |
-| A10 | Pagine legali (`legal/privacy.php`, `legal/termini.php`) | — | Impostazioni › Privacy / Condizioni (si aprono dal sito, nella lingua dell'utente) | P2 | da fare | |
-| A11 | Elenco e uscita dei dispositivi | `auth/devices` | Impostazioni › Dispositivi collegati | P1 | API pronta | |
-| A12 | Uscita da tutti i dispositivi | `auth/logout_all` | Impostazioni › Dispositivi › Esci ovunque | P2 | API pronta | |
+| A8 | Privacy e dati: scarica i miei dati (`esporta_dati.php`) | `account/export` (nuova) | Impostazioni › Privacy e dati › Scarica | P2 | scritto e provato con test, da provare sul telefono | |
+| A9 | Privacy e dati: elimina il mio account (`elimina_account.php`, chiede la password) | `account/delete` (nuova) | Impostazioni › Privacy e dati › Elimina (≤ 3 tocchi; la regola di Apple chiede solo che si **avvii nell'app**) | P2 | scritto e provato con test, da provare sul telefono | |
+| A10 | Pagine legali (`legal/privacy.php`, `legal/termini.php`) | — | Impostazioni › Privacy / Condizioni (si aprono dal sito, nella lingua dell'utente) | P2 | scritto e provato con test, da provare sul telefono | |
+| A11 | Elenco e uscita dei dispositivi | `auth/devices` | Impostazioni › Dispositivi collegati | P1 | scritto e provato con test, da provare sul telefono | |
+| A12 | Uscita da tutti i dispositivi | `auth/logout_all` | Impostazioni › Dispositivi › Esci ovunque | P2 | scritto e provato con test, da provare sul telefono | |
 | A13 | Lingua (`partials/lang_picker.php`, `api/lingua.php`, `users.lang`) | `me` + sync impostazioni | Impostazioni › Lingua | P1 | da fare | |
 | A14 | Stile standard / paper (`api/stile.php`, `users.ui_style`) | sync impostazioni | Impostazioni › Aspetto | P2 | scritto e provato con test (stile, colore, lingua), da provare sul telefono | |
 | A15 | Colore del sito (`api/accento.php`, `lib/accent.php`, `users.ui_accent`) | sync impostazioni | Impostazioni › Aspetto › Colore | P2 | da fare | |

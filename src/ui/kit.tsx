@@ -48,16 +48,19 @@ export function PrimaryButton({
   busy,
   disabled,
   danger,
+  testID,
 }: {
   label: string;
   onPress: () => void;
   busy?: boolean;
   disabled?: boolean;
   danger?: boolean;
+  testID?: string;
 }) {
   const th = useTheme();
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       onPress={onPress}
       disabled={busy || disabled}
@@ -78,14 +81,17 @@ export function TextButton({
   label,
   onPress,
   danger,
+  testID,
 }: {
   label: string;
   onPress: () => void;
   danger?: boolean;
+  testID?: string;
 }) {
   const th = useTheme();
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       onPress={onPress}
       hitSlop={10}

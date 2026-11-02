@@ -14,6 +14,7 @@ import {
 import { AppState, Platform } from 'react-native';
 
 import { ApiError, HttpSyncApi } from '../api/httpApi';
+import { AccountApi } from '../account/accountApi';
 import { AuthService, type AuthState } from '../auth/authService';
 import { DbNotEncryptedError, destroyDatabase, openEncryptedDb } from '../db/expoDb';
 import { migrate } from '../db/migrations';
@@ -52,6 +53,7 @@ export interface Services {
 
 interface AppContextValue {
   auth: AuthService;
+  account: AccountApi;
   authState: AuthState;
   services: Services | null;
   /** 'cipher' = il telefono/la build non ha il database cifrato: l'app non parte (sicurezza). */
@@ -96,6 +98,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         Platform.OS,
       ),
     [],
+  );
+  const account = useMemo(
+    () =>
+      new AccountApi(
+        BASE_URL,
+        () => auth.getAccessToken(),
+        Constants.expoConfig?.version ?? '0.0.0',
+        Platform.OS,
+      ),
+    [auth],
   );
   const [authState, setAuthState] = useState<AuthState>(auth.getState());
   const [services, setServices] = useState<Services | null>(null);
@@ -284,6 +296,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AppContextValue>(
     () => ({
       auth,
+      account,
       authState,
       services,
       fatal,
@@ -300,6 +313,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       auth,
+      account,
       authState,
       services,
       fatal,

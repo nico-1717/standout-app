@@ -1,10 +1,10 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import * as WebBrowser from 'expo-web-browser';
 
 import { ApiError } from '@/core/api/httpApi';
-import { BASE_URL, useApp } from '@/core/app/AppProvider';
+import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Field, PrimaryButton, TextButton } from '@/ui/kit';
 
@@ -23,6 +23,7 @@ function loginMessage(e: unknown, t: (k: string) => string): string {
 export default function Login() {
   const th = useTheme();
   const { t } = useTranslation();
+  const router = useRouter();
   const { auth, authState } = useApp();
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
@@ -95,11 +96,10 @@ export default function Login() {
         {error && <Text style={{ color: th.red, marginBottom: 4 }}>{error}</Text>}
         <PrimaryButton label={t('auth.accedi')} onPress={submit} busy={busy} />
         <View style={{ marginTop: 10 }}>
+          <TextButton label={t('auth.dimenticata')} onPress={() => router.push('/forgot')} />
           <TextButton
-            label={t('auth.dimenticata')}
-            onPress={() =>
-              void WebBrowser.openBrowserAsync(`${BASE_URL}/account/password_dimenticata.php`)
-            }
+            label={`${t('auth.no_account')} ${t('auth.registrati')}`}
+            onPress={() => router.push('/register')}
           />
         </View>
       </ScrollView>

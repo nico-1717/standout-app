@@ -1,0 +1,125 @@
+import { ApiError } from '../api/httpApi';
+
+/**
+ * Le chiamate dell'account che non sono sincronizzazione: cambio password, scarica i miei dati, elimina
+ * l'account, dispositivi, rinvio della verifica email. Sono le STESSE pagine del sito (`/account/*.php`), che
+ * accettano anche il token dell'app: quindi stesse regole, stessi limiti di frequenza, stessa password richiesta.
+ */
+
+export interface Device {
+  id: number;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+  current: boolean;
+}
+
+/** Un errore di controllo con i testi del server per campo (`errori: { nuova: '...' }`). */
+export class FieldsError extends ApiError {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    public readonly fields: Record<string, string>,
+  ) {
+    super(status, code, message);
+  }
+}
+
+export type TokenSupplier = () => Promise<string>;
+
+export class AccountApi {
+  constructor(
+    private readonly baseUrl: string,
+    private readonly token: TokenSupplier,
+    private readonly appVersion = '0.0.0',
+    private readonly platform = 'unknown',
+    private readonly fetchFn: typeof fetch = (...a) => fetch(...a),
+  ) {}
+
+  private async send(
+    method: 'GET' | 'POST' | 'DELETE',
+    path: string,
+    body?: unknown,
+  ): Promise<Response> {
+    return this.fetchFn(this.baseUrl.replace(/\/$/, '') + path, {
+      method,
+      headers: {
+        Authorization: `Bearer ${await this.token()}`,
+        'Content-Type': 'application/json',
+        'X-App-Version': this.appVersion,
+        'X-App-Platform': this.platform,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  }
+
+  /** La risposta come JSON; un errore diventa ApiError (o FieldsError se il server dice quale campo). */
+  private async json<T>(res: Response): Promise<T> {
+    const text = await res.text();
+    let j: Record<string, unknown> = {};
+    try {
+      j = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      /* pagina d'errore del server: resta {} */
+    }
+    // il sito risponde {success:true} o {ok:true}; gli errori {ok:false,error,message} o {success:false,errori}
+    const failed = !res.ok || j.ok === false || j.success === false;
+    if (!failed) return j as T;
+    const fields = j.errori as Record<string, string> | undefined;
+    const msg = String(j.message ?? j.error ?? `HTTP ${res.status}`);
+    const code = String(j.code ?? (typeof j.error === 'string' ? j.error : 'http_error'));
+    if (fields && typeof fields === 'object') throw new FieldsError(res.status, code, msg, fields);
+    throw new ApiError(res.status, code, msg);
+  }
+
+  /** Il server chiude TUTTE le sessioni (anche questa): chi chiama deve rifare il login con la password nuova. */
+  async changePassword(current: string, next: string, confirm: string): Promise<void> {
+    await this.json(
+      await this.send('POST', '/account/cambia_password.php', {
+        attuale: current,
+        nuova: next,
+        conferma: confirm,
+      }),
+    );
+  }
+
+  async deleteAccount(password: string): Promise<void> {
+    await this.json(
+      await this.send('POST', '/account/elimina_account.php', { password, conferma: true }),
+    );
+  }
+
+  /** Il file ZIP dei dati dell'utente, come byte. */
+  async exportData(): Promise<Uint8Array> {
+    const res = await this.send('POST', '/account/esporta_dati.php', {});
+    if (!res.ok) await this.json(res); // lancia l'errore giusto
+    return new Uint8Array(await res.arrayBuffer());
+  }
+
+  async devices(): Promise<Device[]> {
+    return (await this.json<{ devices: Device[] }>(await this.send('GET', '/api/v1/auth/devices')))
+      .devices;
+  }
+
+  /** Esce da TUTTI i dispositivi, anche questo (il server chiude ogni sessione). */
+  async logoutEverywhere(): Promise<void> {
+    await this.json(await this.send('POST', '/api/v1/auth/logout_all', {}));
+  }
+
+  async revokeDevice(id: number): Promise<void> {
+    await this.json(await this.send('DELETE', `/api/v1/auth/devices/${id}`));
+  }
+
+  /** Reinvia l'email di verifica. Ritorna lo stato del server: inviata | gia_verificata | attendi | errore. */
+  async resendVerification(): Promise<string> {
+    const res = await this.send('POST', '/account/invia_verifica.php', {});
+    try {
+      // «attendi» e «errore» arrivano con ok:false: sono risposte normali, non guasti
+      const j = JSON.parse(await res.text()) as { stato?: string };
+      return j.stato ?? 'errore';
+    } catch {
+      return 'errore';
+    }
+  }
+}
