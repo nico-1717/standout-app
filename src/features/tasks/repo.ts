@@ -12,6 +12,8 @@ export interface Task {
   parent_uuid: string | null;
   title: string;
   is_done: number;
+  /** quando è stata spuntata (lo scrive il server, o l'app al tocco): serve a far sparire le fatte il giorno dopo */
+  done_at: string | null;
   due_date: string | null;
   due_time: string | null;
   duration_minutes: number;

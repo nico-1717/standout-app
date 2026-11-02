@@ -6,7 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import type { Task } from '@/features/tasks/repo';
-import { groupTasks, localToday, type TaskGroup } from '@/features/tasks/groups';
+import {
+  groupTasks,
+  localNow,
+  localToday,
+  visibleTasks,
+  type TaskGroup,
+} from '@/features/tasks/groups';
 import { Chip, Field, Header, SectionLabel, cardShadow } from '@/ui/kit';
 import { SyncBadge } from '@/ui/SyncBadge';
 
@@ -40,15 +46,18 @@ export default function TodoScreen() {
   }, [services, version]);
 
   const groupLabel: Record<TaskGroup, string> = {
-    overdue: t('todo.tn_g_ritardo'),
-    today: t('todo.tn_g_oggi'),
-    later: t('todo.tn_g_dopo'),
-    done: t('todo.tn_g_fatte'),
+    ritardo: t('todo.tn_g_ritardo'),
+    oggi: t('todo.tn_g_oggi'),
+    domani: t('todo.tn_g_domani'),
+    settimana: t('todo.tn_g_settimana'),
+    dopo: t('todo.tn_g_dopo'),
+    senza: t('todo.tn_g_senza'),
+    fatte: t('todo.tn_g_fatte'),
   };
 
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
-    for (const g of groupTasks(tasks, today)) {
+    for (const g of groupTasks(visibleTasks(tasks, today), today, localNow())) {
       out.push({ kind: 'label', key: `l-${g.group}`, text: groupLabel[g.group] });
       g.tasks.forEach((task, i) =>
         out.push({
