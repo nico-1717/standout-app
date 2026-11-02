@@ -1,4 +1,4 @@
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -11,7 +11,7 @@ export default function SettingsScreen() {
   const th = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { authState, services, syncInfo, signOut, version } = useApp();
+  const { authState, services, syncInfo, signOut, version, uiStyle, setUiStyle } = useApp();
   const user = authState.status === 'signedIn' ? authState.user : null;
   const problems = services
     ? (services.db.all<{ n: number }>(
@@ -42,6 +42,30 @@ export default function SettingsScreen() {
         <Card style={{ padding: 16 }}>
           <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>{user?.username}</Text>
           {user?.email ? <Text style={{ color: th.text2, marginTop: 2 }}>{user.email}</Text> : null}
+        </Card>
+        <Card style={{ padding: 16, gap: 10 }}>
+          <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(['standard', 'paper'] as const).map((s) => (
+              <Pressable
+                key={s}
+                onPress={() => setUiStyle(s)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: uiStyle === s }}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  backgroundColor: uiStyle === s ? th.brand : th.bg,
+                }}
+              >
+                <Text style={{ color: uiStyle === s ? '#fff' : th.text, fontWeight: '600' }}>
+                  {t(s === 'paper' ? 'stile.paper' : 'stile.standard')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </Card>
         {(problems > 0 || syncInfo.status === 'error') && (
           <Card style={{ padding: 16 }}>

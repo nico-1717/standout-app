@@ -6,6 +6,7 @@
  */
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { HttpSyncApi } from '@/core/api/httpApi';
+import { CategoriesRepo } from '@/features/buy/categoriesRepo';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import { SyncEngine } from '../engine';
@@ -118,5 +119,57 @@ maybe('motore + server vero', () => {
     expect(b.repo.get(figlia)).toBeNull();
     expect(b.repo.get(y)).toBeNull();
     expect(b.repo.list().length).toBe(base);
+  });
+
+  it('to buy: categoria e articolo con prezzo, priorita e link arrivano sull altro telefono', async () => {
+    const tok = await login();
+    const api = () => new HttpSyncApi(URL_!, async () => tok, '0.0.0-test', 'jest', nodeFetch);
+    const a = phone(api());
+    const b = phone(api());
+    const catsA = new CategoriesRepo(a.db);
+    const catsB = new CategoriesRepo(b.db);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+
+    const c = catsA.create('prova app categoria', '#E8B86B');
+    const item = a.repo.create(
+      {
+        title: 'prova app latte',
+        buy_category_uuid: c,
+        buy_price_cents: 189,
+        buy_priority: 1,
+        buy_url: 'https://example.com/latte',
+      },
+      { listType: 'buy' },
+    );
+    const rep = await a.engine.syncOnce();
+    expect(rep.rejected).toBe(0);
+    await b.engine.syncOnce();
+    expect(catsB.list().find((x) => x.uuid === c)).toMatchObject({
+      name: 'prova app categoria',
+      color: '#E8B86B',
+    });
+    expect(b.repo.get(item)).toMatchObject({
+      list_type: 'buy',
+      buy_category_uuid: c,
+      buy_price_cents: 189,
+      buy_priority: 1,
+      buy_url: 'https://example.com/latte',
+    });
+
+    // il prezzo cambia sul secondo telefono, poi si cancella la categoria: l'articolo resta, senza categoria
+    b.repo.update(item, { buy_price_cents: 250 });
+    await b.engine.syncOnce();
+    await a.engine.syncOnce();
+    expect(a.repo.get(item)?.buy_price_cents).toBe(250);
+    catsA.remove(c);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    expect(b.repo.get(item)?.buy_category_uuid).toBeNull();
+
+    a.repo.remove(item);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+    expect(b.repo.get(item)).toBeNull();
   });
 });

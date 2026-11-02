@@ -145,6 +145,13 @@ export class TasksRepo {
     this.update(uuid, { sort_key: generateKeyBetween(a, b) });
   }
 
+  /** Toglie più voci in una volta sola (es. «Bought» svuota il carrello): tutto o niente. */
+  removeMany(uuids: string[]): void {
+    this.db.transaction(() => {
+      for (const u of uuids) this.remove(u);
+    });
+  }
+
   remove(uuid: string): void {
     this.db.transaction(() => {
       const now = this.clock();

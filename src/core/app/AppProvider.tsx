@@ -21,6 +21,8 @@ import type { SqlDb } from '../db/sqldb';
 import { getState, SyncEngine, setState } from '../sync/engine';
 import { pendingCount } from '../sync/outbox';
 import { SyncScheduler, type SyncStatusInfo } from '../sync/scheduler';
+import type { UiStyle } from '@/features/buy/buyTheme';
+import { CategoriesRepo } from '@/features/buy/categoriesRepo';
 import { TasksRepo } from '@/features/tasks/repo';
 import { secureStoreAdapter } from './secretStore';
 
@@ -30,6 +32,7 @@ export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://nisama.alter
 export interface Services {
   db: SqlDb;
   tasks: TasksRepo;
+  categories: CategoriesRepo;
   scheduler: SyncScheduler;
 }
 
@@ -42,6 +45,9 @@ interface AppContextValue {
   /** Cresce a ogni cambiamento dei dati (locale o dal server): le schermate rileggono. */
   version: number;
   syncInfo: SyncStatusInfo;
+  /** L'aspetto scelto per il to buy: «Corsie» (standard) o «Scontrino» (paper). */
+  uiStyle: UiStyle;
+  setUiStyle: (s: UiStyle) => void;
   /** Da chiamare dopo una modifica locale: aggiorna le schermate e avvia la sincronizzazione. */
   changed: () => void;
   signOut: (opts?: { discardPending?: boolean }) => Promise<{ blocked: number } | { blocked: 0 }>;
@@ -76,6 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [fatal, setFatal] = useState<'cipher' | null>(null);
   const [version, setVersion] = useState(0);
   const [syncInfo, setSyncInfo] = useState<SyncStatusInfo>(IDLE);
+  const [uiStyle, setUiStyleState] = useState<UiStyle>('standard');
   const closeDb = useRef<(() => void) | null>(null);
   const opening = useRef(false);
 
@@ -125,7 +132,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         scheduler.subscribe(setSyncInfo);
         scheduler.start();
-        setServices({ db: opened.db, tasks: new TasksRepo(opened.db), scheduler });
+        setUiStyleState(getState(opened.db, 'ui_style') === 'paper' ? 'paper' : 'standard');
+        setServices({
+          db: opened.db,
+          tasks: new TasksRepo(opened.db),
+          categories: new CategoriesRepo(opened.db),
+          scheduler,
+        });
       } catch (e) {
         if (e instanceof DbNotEncryptedError) setFatal('cipher');
         else throw e;
@@ -167,6 +180,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     services?.scheduler.trigger();
   }, [services]);
 
+  const setUiStyle = useCallback(
+    (st: UiStyle) => {
+      setUiStyleState(st);
+      if (services) setState(services.db, 'ui_style', st);
+    },
+    [services],
+  );
+
   const signOut = useCallback<AppContextValue['signOut']>(
     async (opts) => {
       const pending = services ? pendingCount(services.db) : 0;
@@ -184,8 +205,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AppContextValue>(
-    () => ({ auth, authState, services, fatal, version, syncInfo, changed, signOut }),
-    [auth, authState, services, fatal, version, syncInfo, changed, signOut],
+    () => ({
+      auth,
+      authState,
+      services,
+      fatal,
+      version,
+      syncInfo,
+      uiStyle,
+      setUiStyle,
+      changed,
+      signOut,
+    }),
+    [auth, authState, services, fatal, version, syncInfo, uiStyle, setUiStyle, changed, signOut],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

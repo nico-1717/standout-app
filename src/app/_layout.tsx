@@ -1,3 +1,7 @@
+import { Caveat_500Medium } from '@expo-google-fonts/caveat';
+import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
+import { Jost_400Regular } from '@expo-google-fonts/jost';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -27,6 +31,7 @@ function Shell() {
         </Stack.Protected>
         <Stack.Protected guard={ready}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="categories" options={{ presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
     </>
@@ -34,6 +39,13 @@ function Shell() {
 }
 
 export default function RootLayout() {
+  // I caratteri dello «Scontrino» (come sul sito). Se non si caricano si va avanti con quelli del telefono.
+  const [loaded, fontError] = useFonts({
+    Caveat_500Medium,
+    CormorantGaramond_500Medium_Italic,
+    Jost_400Regular,
+  });
+  if (!loaded && !fontError) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

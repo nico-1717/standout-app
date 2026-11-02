@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 /** Icone provvisorie disegnate con forme semplici; le definitive arrivano con la rifinitura (fase 4). */
-function Icon({ kind, color }: { kind: 'todo' | 'settings'; color: string }) {
+function Icon({ kind, color }: { kind: 'todo' | 'buy' | 'settings'; color: string }) {
   if (kind === 'todo') {
     return (
       <View
@@ -20,6 +20,25 @@ function Icon({ kind, color }: { kind: 'todo' | 'settings'; color: string }) {
         }}
       >
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+      </View>
+    );
+  }
+  if (kind === 'buy') {
+    return (
+      <View style={{ width: 24, height: 24, justifyContent: 'flex-end' }}>
+        <View style={{ height: 17, borderRadius: 5, borderWidth: 2, borderColor: color }} />
+        <View
+          style={{
+            position: 'absolute',
+            top: 1,
+            left: 7,
+            width: 10,
+            height: 9,
+            borderRadius: 5,
+            borderWidth: 2,
+            borderColor: color,
+          }}
+        />
       </View>
     );
   }
@@ -53,6 +72,13 @@ export default function TabsLayout() {
         options={{
           title: t('planner.to_do'),
           tabBarIcon: ({ color }) => <Icon kind="todo" color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
+        name="buy"
+        options={{
+          title: t('planner.to_buy'),
+          tabBarIcon: ({ color }) => <Icon kind="buy" color={String(color)} />,
         }}
       />
       <Tabs.Screen

@@ -90,10 +90,10 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | T4 | Nota veloce in cima (`todo_nota.js`): si salva da sola | sync `todo_notes` | To do › Nota | P2 | da fare | |
 | T5 | Smista la nota a mano (regole di `todo_smart.js`) | locale | To do › Nota › Smista | P2 | da fare | |
 | T6 | Smista la nota con l'IA (`todo_nota_ai.php`, crediti) | `ai/*` | To do › Nota › Smista con IA | P3 | solo online | |
-| T7 | To buy: articoli, categorie (colore), priorità, prezzo, link, totale, «Carrello» | `shopping` (pronta) → sync | To buy | P2 | API pronta | |
+| T7 | To buy: articoli, categorie (colore), priorità, prezzo, link, totale, «Carrello» | `shopping` (pronta) → sync | To buy | P2 | scritto e provato con test, da provare sul telefono | |
 | T8 | To buy con immagine dell'articolo | `shopping/{id}/image` → coda media | To buy | P2 | API pronta | |
 | T9 | Memoria degli acquisti frequenti/storico (`todo_buy_memory`, `buy_forget`) | sync | To buy › suggerimenti | P2 | API pronta | |
-| T10 | Le due vesti del to buy: «Corsie» (standard) e «Scontrino» (paper) | — | To buy (due viste) | P2 | da fare — **serve il tuo OK sull'aspetto** | |
+| T10 | Le due vesti del to buy: «Corsie» (standard) e «Scontrino» (paper) | — | To buy (due viste) | P2 | scritto (OK di Nico sull'aspetto il 02/11/2026), da provare sul telefono | |
 | T11 | Microfono nella barra del to buy (una frase = un articolo) | voce locale | To buy › microfono | P4 | da fare | |
 | T12 | Pastiglie: terapie, prese, arretrate, calendario, storico, «prese tutte» | `pills` (pronta) → sync | Pastiglie | P2 | API pronta | |
 | T13 | Programmazione delle dosi (ritmo: giorni, mese, ogni N giorni, orari) | logica in TS | (dentro Pastiglie) | P2 | da fare — **test d'oro** | |
