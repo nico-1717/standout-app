@@ -1,4 +1,4 @@
-// Copia lang/it.json e lang/en.json del sito dentro l'app (una sola fonte di verità).
+// Copia dal sito lang/it.json, lang/en.json e lib/data/habits_presets.json (una sola fonte di verità).
 //   npm run i18n:sync            → li scarica da GitHub (nico-1717/standout, ramo main)
 //   npm run i18n:sync -- ../standout/lang   → li copia da una cartella locale
 //   npm run i18n:sync -- --check → non scrive: fallisce se la copia dell'app è vecchia (CI)
@@ -11,10 +11,21 @@ const destinazione = join(qui, '..', 'src', 'core', 'i18n', 'lang');
 const args = process.argv.slice(2);
 const soloControllo = args.includes('--check');
 const cartella = args.find((a) => !a.startsWith('--'));
-const BASE = 'https://raw.githubusercontent.com/nico-1717/standout/main/lang/';
+const BASE = 'https://raw.githubusercontent.com/nico-1717/standout/main/';
+// I file del sito che l'app copia così come sono: nome sul sito (da BASE o dalla cartella ../standout) → dove stanno nell'app.
+const FILE = [
+  ['lang/it.json', join(destinazione, 'it.json')],
+  ['lang/en.json', join(destinazione, 'en.json')],
+  // l'elenco delle abitudini pronte, dei colori e delle icone: lo stesso del sito (decisione D12)
+  [
+    'lib/data/habits_presets.json',
+    join(qui, '..', 'src', 'features', 'habits', 'habits_presets.json'),
+  ],
+];
 
 async function leggi(nome) {
-  if (cartella) return readFile(join(cartella, nome), 'utf8');
+  // la cartella passata da riga di comando è quella «lang» del sito: la radice del sito è la sua cartella madre
+  if (cartella) return readFile(join(cartella, '..', nome), 'utf8');
   const r = await fetch(BASE + nome);
   if (!r.ok) throw new Error(`${nome}: HTTP ${r.status}`);
   return r.text();
@@ -23,9 +34,8 @@ async function leggi(nome) {
 // Si confronta il JSON, non i byte: così a capo e spazi non fanno falsi allarmi.
 const normale = (testo) => JSON.stringify(JSON.parse(testo));
 let diversi = 0;
-for (const nome of ['it.json', 'en.json']) {
+for (const [nome, percorso] of FILE) {
   const sito = await leggi(nome);
-  const percorso = join(destinazione, nome);
   let app = '';
   try {
     app = await readFile(percorso, 'utf8');

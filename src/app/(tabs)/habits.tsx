@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { ActionSheet, type SheetAction } from '@/features/habits/ActionSheet';
+import { HabitForm } from '@/features/habits/HabitForm';
 import { HabitRow } from '@/features/habits/HabitRow';
 import {
   DayStrip,
@@ -14,6 +15,7 @@ import {
   TodayCard,
   type DayCell,
 } from '@/features/habits/HabitsParts';
+import { toInput, toPatch, type HabitFormState } from '@/features/habits/formModel';
 import { habitsTheme } from '@/features/habits/habitsTheme';
 import {
   addDays,
@@ -31,6 +33,9 @@ import {
   type HabitLog,
 } from '@/features/habits/logic';
 import { localToday } from '@/features/tasks/groups';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { mix } from '@/features/buy/buyTheme';
 import { Header } from '@/ui/kit';
 import { SyncBadge } from '@/ui/SyncBadge';
 
@@ -51,6 +56,11 @@ export default function HabitsScreen() {
   const [day, setDay] = useState(today);
   const [filter, setFilter] = useState<Filter>('all');
   const [sheet, setSheet] = useState<Habit | null>(null);
+  const [form, setForm] = useState<{ open: boolean; habit: Habit | null }>({
+    open: false,
+    habit: null,
+  });
+  const [showFuture, setShowFuture] = useState(false);
 
   const habits = useMemo(
     () => (services ? services.habits.list() : []),
@@ -58,6 +68,14 @@ export default function HabitsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [services, version],
   );
+  const categories = useMemo(
+    () => (services ? services.habitCategories.list() : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [services, version],
+  );
+  // le abitudini che iniziano più avanti non stanno nell'elenco: si vedono dietro «Abitudini future»
+  const future = useMemo(() => habits.filter((h) => h.start_date > today), [habits, today]);
+  const current = useMemo(() => habits.filter((h) => h.start_date <= today), [habits, today]);
   const logs = useMemo(() => {
     const m = new Map<string, HabitLog>();
     if (!services) return m;
@@ -88,7 +106,7 @@ export default function HabitsScreen() {
     const out: DayCell[] = [];
     for (let i = WINDOW_DAYS - 1; i >= 0; i--) {
       const d = addDays(today, -i);
-      const p = dayProgress(habits, d, logs, today);
+      const p = dayProgress(current, d, logs, today);
       out.push({
         day: d,
         dow: t(`abitudini.dow_${isoWeekday(d)}`),
@@ -98,9 +116,12 @@ export default function HabitsScreen() {
       });
     }
     return out;
-  }, [habits, logs, today, t]);
+  }, [current, logs, today, t]);
 
-  const progress = useMemo(() => dayProgress(habits, day, logs, today), [habits, day, logs, today]);
+  const progress = useMemo(
+    () => dayProgress(current, day, logs, today),
+    [current, day, logs, today],
+  );
   const streakDays = useMemo(
     () => perfectStreak(habits, logs, today, WINDOW_DAYS),
     [habits, logs, today],
@@ -132,13 +153,31 @@ export default function HabitsScreen() {
   const sheetActions = useMemo<SheetAction[]>(() => {
     if (!sheet) return [];
     const st = stateOf(sheet, day, logs.get(`${sheet.uuid}|${day}`) ?? null, today);
+    const tail: SheetAction[] = [
+      {
+        key: 'edit',
+        label: t('abitudini.modifica_abitudine'),
+        onPress: () => setForm({ open: true, habit: sheet }),
+      },
+      {
+        key: 'archive',
+        label: t('abitudini.archivia'),
+        onPress: () => {
+          services?.habits.archive(sheet.uuid, true);
+          changed();
+        },
+      },
+      {
+        key: 'delete',
+        label: t('abitudini.elimina_attr'),
+        destructive: true,
+        onPress: () => confirmDelete(sheet),
+      },
+    ];
     if (st.status === 'skipped')
       return [
-        {
-          key: 'unskip',
-          label: t('abitudini.non_saltare'),
-          onPress: () => run(sheet, 'clear'),
-        },
+        { key: 'unskip', label: t('abitudini.non_saltare'), onPress: () => run(sheet, 'clear') },
+        ...tail,
       ];
     const list: SheetAction[] = [];
     if (sheet.kind === 'quit')
@@ -155,9 +194,39 @@ export default function HabitsScreen() {
         label: t('abitudini.annulla_oggi'),
         onPress: () => run(sheet, 'clear'),
       });
-    return list;
+    return [...list, ...tail];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, day, logs, today, t]);
+
+  function confirmDelete(h: Habit) {
+    Alert.alert(
+      t('abitudini.eliminare_nome', { nome: h.name }),
+      t('abitudini.sparisce_anche_tutto_lo_storico'),
+      [
+        { text: t('comune.annulla'), style: 'cancel' },
+        {
+          text: t('comune.elimina'),
+          style: 'destructive',
+          onPress: () => {
+            services?.habits.remove(h.uuid);
+            changed();
+          },
+        },
+      ],
+    );
+  }
+
+  function save(f: HabitFormState, h: Habit | null) {
+    if (!services) return;
+    if (h) services.habits.update(h.uuid, toPatch(h, f));
+    else services.habits.create(toInput(f));
+    setForm({ open: false, habit: null });
+    changed();
+    if (f.start_date > today)
+      Alert.alert(
+        t('abitudini.comparira_il', { data: f.start_date.split('-').reverse().join('/') }),
+      );
+  }
 
   function renderRow(h: Habit) {
     const log = logs.get(`${h.uuid}|${day}`) ?? null;
@@ -195,13 +264,19 @@ export default function HabitsScreen() {
           unitText={quantity && !period ? h.unit : undefined}
           onCheck={() => tap(h)}
           onLongPress={() => setSheet(h)}
-          onOpen={() => undefined /* la pagina di dettaglio arriva con la prossima fetta */}
+          onOpen={
+            () =>
+              setForm({
+                open: true,
+                habit: h,
+              }) /* finché non c'è la pagina di dettaglio, un tocco apre la modifica */
+          }
         />
       </View>
     );
   }
 
-  const dailyAll = dailyFor(habits, day).filter(keep);
+  const dailyAll = dailyFor(current, day).filter(keep);
   const byPart = PARTS.map((p) => ({
     part: p,
     list: dailyAll.filter((h) => h.day_part === p),
@@ -213,7 +288,7 @@ export default function HabitsScreen() {
       ['interval', t('abitudini.personalizzate')],
     ] as const
   )
-    .map(([k, title]) => ({ key: k, title, list: ofKind(habits, k).filter(keep) }))
+    .map(([k, title]) => ({ key: k, title, list: ofKind(current, k).filter(keep) }))
     .filter((s) => s.list.length > 0);
 
   const nothing = byPart.length === 0 && sections.length === 0;
@@ -274,7 +349,91 @@ export default function HabitsScreen() {
             {s.list.map(renderRow)}
           </View>
         ))}
+        {future.length > 0 && (
+          <View style={{ marginTop: 18 }}>
+            <Pressable
+              testID="future-toggle"
+              accessibilityRole="button"
+              onPress={() => setShowFuture((v) => !v)}
+              style={{ marginHorizontal: 20, paddingVertical: 8 }}
+            >
+              <Text style={{ color: ht.accent, fontWeight: '800', fontSize: 14 }}>
+                {t('abitudini.future_vedi', { n: future.length })}
+              </Text>
+            </Pressable>
+            {showFuture && (
+              <View>
+                <Text
+                  style={{ color: ht.text2, marginHorizontal: 20, marginBottom: 8, fontSize: 13 }}
+                >
+                  {t('abitudini.future_nota')}
+                </Text>
+                {future.map((h) => (
+                  <Pressable
+                    key={h.uuid}
+                    testID={`future-${h.uuid}`}
+                    onPress={() => setForm({ open: true, habit: h })}
+                    style={{
+                      marginHorizontal: 16,
+                      marginBottom: 8,
+                      backgroundColor: ht.surface,
+                      borderRadius: 18,
+                      padding: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      opacity: 0.8,
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{h.icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: ht.text, fontWeight: '800', fontSize: 16 }}>
+                        {h.name}
+                      </Text>
+                      <Text style={{ color: ht.text2, fontSize: 13 }}>
+                        {t('abitudini.future_inizia', {
+                          data: h.start_date.split('-').reverse().join('/'),
+                        })}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
+      <Pressable
+        testID="habit-add"
+        accessibilityRole="button"
+        accessibilityLabel={t('abitudini.aggiungi_abitudine')}
+        onPress={() => setForm({ open: true, habit: null })}
+        style={{ position: 'absolute', right: 18, bottom: 18 }}
+      >
+        <LinearGradient
+          colors={[mix(ht.accent, '#FFFFFF', 0.82), ht.accent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: 58,
+            height: 58,
+            borderRadius: 29,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 30, lineHeight: 33, fontWeight: '300' }}>+</Text>
+        </LinearGradient>
+      </Pressable>
+      <HabitForm
+        visible={form.open}
+        habit={form.habit}
+        categories={categories}
+        today={today}
+        th={ht}
+        onClose={() => setForm({ open: false, habit: null })}
+        onSave={save}
+      />
       <ActionSheet
         visible={sheet !== null}
         title={sheet ? `${sheet.icon} ${sheet.name}` : ''}

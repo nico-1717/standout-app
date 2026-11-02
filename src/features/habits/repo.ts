@@ -55,6 +55,13 @@ export type HabitInput = Partial<
   >
 > & { is_archived?: boolean };
 
+/**
+ * Cosa parte verso il server: `duration_days: null` no (il server lo accetta solo come numero ed è lui
+ * a metterlo a null quando la durata è «per sempre»); il telefono invece lo azzera subito in locale.
+ */
+const toWire = (f: Record<string, WireValue>): Record<string, WireValue> =>
+  Object.fromEntries(Object.entries(f).filter(([k, v]) => !(k === 'duration_days' && v === null)));
+
 const clean = (o: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Record<
     string,
@@ -227,7 +234,7 @@ export class HabitsRepo {
           table: 'habits',
           uuid,
           op: 'upsert',
-          patch: { ...fields, sort_key: sortKey },
+          patch: { ...toWire(fields), sort_key: sortKey },
           isCreate: true,
         },
         now,
@@ -254,7 +261,7 @@ export class HabitsRepo {
         ]);
       }
       patchRow(this.db, 'habits', uuid, fields);
-      enqueue(this.db, { table: 'habits', uuid, op: 'upsert', patch: fields }, now);
+      enqueue(this.db, { table: 'habits', uuid, op: 'upsert', patch: toWire(fields) }, now);
     });
   }
 

@@ -7,6 +7,15 @@
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { HttpSyncApi } from '@/core/api/httpApi';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
+import {
+  applyPreset,
+  formFromHabit,
+  newForm,
+  toInput,
+  toPatch,
+  validate,
+} from '@/features/habits/formModel';
+import { presets } from '@/features/habits/presets';
 import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
 import { TasksRepo } from '@/features/tasks/repo';
 
@@ -266,5 +275,92 @@ maybe('motore + server vero', () => {
     expect(b.habits.get(h)).toBeNull();
     expect(b.habits.log(h, yesterday)).toBeNull();
     expect(b.cats.list().find((x) => x.uuid === c)).toBeUndefined();
+  });
+
+  it('modulo abitudine: tutti i campi (preset, categoria di sistema, durata, minuti) passano dal server e tornano uguali', async () => {
+    const tok = await login();
+    const api = () => new HttpSyncApi(URL_!, async () => tok, '0.0.0-test', 'jest', nodeFetch);
+    const romeToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Rome' });
+    const mk = () => {
+      const p = phone(api());
+      return {
+        ...p,
+        habits: new HabitsRepo(p.db, undefined, undefined, romeToday),
+        cats: new HabitCategoriesRepo(p.db),
+      };
+    };
+    const a = mk();
+    const b = mk();
+    await a.engine.syncOnce();
+    for (const x of [...a.habits.list(), ...a.habits.list({ archived: true })])
+      if (x.name.startsWith('prova form')) a.habits.remove(x.uuid);
+    await a.engine.syncOnce();
+    await b.engine.syncOnce();
+
+    const water = presets(((k: string) => k) as never).find((x) => x.key === 'drink_water')!;
+    const health = a.cats.list().find((c) => c.slug === 'health');
+    let f = applyPreset(
+      newForm(romeToday(), '#7C5CFF'),
+      water,
+      a.cats.list().map((c) => ({ uuid: c.uuid, slug: c.slug ?? '' })),
+    );
+    f = {
+      ...f,
+      name: 'prova form acqua',
+      day_part: 'morning',
+      duration_type: 'days',
+      duration_days: 21,
+      planner_minutes: '15',
+      frequency_type: 'daily',
+      weekdays: '1111100',
+    };
+    expect(validate(f)).toEqual([]);
+    const h = a.habits.create(toInput(f));
+    let rep = await a.engine.syncOnce();
+    expect(rep.rejected).toBe(0);
+    await b.engine.syncOnce();
+    expect(b.habits.get(h)).toMatchObject({
+      name: 'prova form acqua',
+      preset_key: 'drink_water',
+      category_uuid: health?.uuid ?? null,
+      goal_type: 'quantity',
+      target_amount: 8,
+      day_part: 'morning',
+      weekdays: '1111100',
+      duration_type: 'days',
+      duration_days: 21,
+      planner_minutes: 15,
+    });
+    expect(b.habits.get(h)?.end_date).toBeTruthy();
+
+    // modifica: da «21 giorni» a «per sempre», settimanale, senza minuti, da evitare
+    const was = a.habits.get(h)!;
+    a.habits.update(
+      h,
+      toPatch(was, {
+        ...formFromHabit(was),
+        duration_type: 'forever',
+        frequency_type: 'weekly',
+        times_per_week: 3,
+        planner_minutes: '',
+        kind: 'quit',
+        motivation: 'meno è meglio',
+      }),
+    );
+    rep = await a.engine.syncOnce();
+    expect(rep.rejected).toBe(0);
+    await b.engine.syncOnce();
+    expect(b.habits.get(h)).toMatchObject({
+      duration_type: 'forever',
+      duration_days: null,
+      end_date: null,
+      frequency_type: 'weekly',
+      times_per_week: 3,
+      planner_minutes: null,
+      kind: 'quit',
+      motivation: 'meno è meglio',
+    });
+    a.habits.remove(h);
+    await a.engine.syncOnce();
   });
 });
