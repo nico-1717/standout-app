@@ -38,4 +38,6 @@ export interface PullResponse {
 export interface SyncApi {
   push(mutations: Mutation[]): Promise<{ results: PushResult[]; head: number }>;
   pull(cursor: string, limit: number): Promise<PullResponse>;
+  /** Le tabelle che il server sa sincronizzare (un server più vecchio dell'app non le ha tutte). Facoltativa. */
+  tables?(): Promise<string[]>;
 }

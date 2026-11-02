@@ -9,9 +9,19 @@ function Icon({
   kind,
   color,
 }: {
-  kind: 'todo' | 'habits' | 'buy' | 'pills' | 'settings';
+  kind: 'planner' | 'todo' | 'habits' | 'buy' | 'pills' | 'settings';
   color: string;
 }) {
+  if (kind === 'planner') {
+    // un foglio d'agenda: cornice con la riga in alto
+    return (
+      <View style={{ width: 24, height: 24, justifyContent: 'flex-end' }}>
+        <View style={{ height: 20, borderRadius: 5, borderWidth: 2, borderColor: color }}>
+          <View style={{ height: 2.5, marginTop: 4, backgroundColor: color }} />
+        </View>
+      </View>
+    );
+  }
   if (kind === 'todo') {
     return (
       <View
@@ -116,6 +126,13 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="planner"
+        options={{
+          title: t('sidebar.planner'),
+          tabBarIcon: ({ color }) => <Icon kind="planner" color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: t('planner.to_do'),
@@ -139,6 +156,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="pills"
         options={{
+          // la scheda si apre da «Altro» (impostazioni) e dalla Home: la barra resta a cinque
+          href: null,
           title: t('todo.tipo_pills'),
           tabBarIcon: ({ color }) => <Icon kind="pills" color={String(color)} />,
         }}

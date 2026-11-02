@@ -71,6 +71,11 @@ export class HttpSyncApi
     return this.call<{ results: PushResult[]; head: number }>('POST', '/sync/push', { mutations });
   }
 
+  async tables(): Promise<string[]> {
+    const r = await this.call<{ tables: string[] }>('GET', '/sync/state');
+    return r.tables;
+  }
+
   pull(cursor: string, limit: number) {
     return this.call<PullResponse>(
       'GET',

@@ -225,6 +225,85 @@ CREATE TABLE diary_list_items (
 CREATE INDEX idx_dlist_day ON diary_list_items (entry_date, list_type, sort_order);
 `,
   },
+  {
+    version: 5,
+    sql: `
+-- il planner: calendari, categorie (con le parole che le agganciano) ed eventi
+CREATE TABLE planner_calendars (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT,
+  is_visible INTEGER NOT NULL DEFAULT 1,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  role TEXT,
+  keywords TEXT NOT NULL DEFAULT '',
+  def_repeat TEXT NOT NULL DEFAULT 'none',
+  def_notify TEXT NOT NULL DEFAULT 'none',
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE planner_categories (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '#C8DAD3',
+  is_hidden INTEGER NOT NULL DEFAULT 0,
+  role TEXT,
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE planner_category_keywords (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  category_uuid TEXT NOT NULL,
+  keyword TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_pkw_cat ON planner_category_keywords (category_uuid);
+CREATE TABLE planner_events (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  notes TEXT,
+  location TEXT,
+  place_name TEXT,
+  place_lat REAL,
+  place_lon REAL,
+  place_ref TEXT,
+  duration_locked INTEGER NOT NULL DEFAULT 1,
+  event_date TEXT NOT NULL,
+  end_date TEXT,
+  start_time TEXT NOT NULL DEFAULT '09:00',
+  end_time TEXT NOT NULL DEFAULT '10:00',
+  is_all_day INTEGER NOT NULL DEFAULT 0,
+  category_uuid TEXT,
+  calendar_uuid TEXT,
+  habit_uuid TEXT,
+  importance TEXT NOT NULL DEFAULT 'normal',
+  color TEXT,
+  item_type TEXT NOT NULL DEFAULT 'event',
+  is_completed INTEGER NOT NULL DEFAULT 0,
+  completed_at TEXT,
+  notify_type TEXT NOT NULL DEFAULT 'h1',
+  notify_minutes INTEGER NOT NULL DEFAULT 60,
+  repeat_type TEXT NOT NULL DEFAULT 'none',
+  repeat_interval INTEGER NOT NULL DEFAULT 1,
+  repeat_unit TEXT NOT NULL DEFAULT 'week',
+  repeat_until TEXT,
+  rrule TEXT,
+  series_uuid TEXT,
+  original_date TEXT,
+  is_cancelled INTEGER NOT NULL DEFAULT 0,
+  routine_group TEXT,
+  routine_collapsed INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_pev_date ON planner_events (event_date);
+CREATE INDEX idx_pev_series ON planner_events (series_uuid, original_date);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

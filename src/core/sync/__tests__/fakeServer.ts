@@ -22,6 +22,13 @@ export class FakeServer implements SyncApi {
   errorOnce = new Set<string>();
   pushCalls = 0;
   floor = 0;
+  /** Se è pieno, il server conosce solo queste tabelle (come un server più vecchio dell'app). */
+  known: string[] | null = null;
+
+  async tables(): Promise<string[]> {
+    if (this.known) return this.known;
+    throw new Error('non lo so');
+  }
 
   private key = (t: string, u: string) => `${t}|${u}`;
 

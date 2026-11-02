@@ -32,6 +32,8 @@ export function setState(db: SqlDb, key: string, value: string): void {
  */
 export class SyncEngine {
   private running: Promise<SyncReport> | null = null;
+  /** Le tabelle che il server conosce (null = non lo so: le provo tutte). */
+  private supported: Set<string> | null = null;
 
   constructor(
     private readonly db: SqlDb,
@@ -57,6 +59,14 @@ export class SyncEngine {
       pulled: 0,
       snapshotDone: false,
     };
+    this.supported = null;
+    if (this.api.tables) {
+      try {
+        this.supported = new Set(await this.api.tables());
+      } catch {
+        // senza saperlo si prova con tutte: se la rete manca fallirà anche l'invio, e si riprova dopo
+      }
+    }
     await this.pushAll(report);
     await this.pullAll(report);
     setState(this.db, 'last_sync_at', this.clock());
@@ -67,7 +77,7 @@ export class SyncEngine {
 
   private async pushAll(report: SyncReport): Promise<void> {
     for (;;) {
-      const batch = nextBatch(this.db, PUSH_MAX);
+      const batch = nextBatch(this.db, PUSH_MAX, this.supported);
       if (!batch.length) return;
       let results: PushResult[];
       try {

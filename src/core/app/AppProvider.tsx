@@ -19,6 +19,7 @@ import { askPermission, phoneNotifier } from '@/features/reminders/notifier';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '@/features/reminders/plan';
 import { rescheduleAll } from '@/features/reminders/scheduler';
 import { DiaryRepo } from '@/features/diary/repo';
+import { PlannerRepo } from '@/features/planner/repo';
 import {
   DEFAULT_DIARY_SETTINGS,
   DiarySettingsStore,
@@ -61,6 +62,7 @@ export interface Services {
   pills: PillsRepo;
   notes: QuickNoteStore;
   diary: DiaryRepo;
+  planner: PlannerRepo;
   scheduler: SyncScheduler;
 }
 
@@ -251,6 +253,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ),
           notes,
           diary: new DiaryRepo(opened.db, userId),
+          planner: new PlannerRepo(opened.db, undefined, undefined, () =>
+            i18n.t('planner.tit_senza_titolo'),
+          ),
           scheduler,
         });
       } catch (e) {

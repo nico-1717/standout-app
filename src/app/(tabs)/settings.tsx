@@ -80,6 +80,18 @@ export default function SettingsScreen() {
             <Text style={{ color: th.brand, marginTop: 8 }}>{t('diario.apri_il_diario')} ›</Text>
           </Card>
         </Pressable>
+        <Pressable
+          testID="open-pills"
+          accessibilityRole="button"
+          onPress={() => router.push('/pills')}
+        >
+          <Card style={{ padding: 16 }}>
+            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+              {t('todo.tipo_pills')}
+            </Text>
+            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
+          </Card>
+        </Pressable>
         <Card style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>

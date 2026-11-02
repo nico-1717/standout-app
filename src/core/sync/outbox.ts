@@ -83,11 +83,13 @@ export function resetSending(db: SqlDb): void {
 }
 
 /** Le prossime modifiche da inviare, segnate come «in volo». */
-export function nextBatch(db: SqlDb, limit: number): Mutation[] {
+export function nextBatch(db: SqlDb, limit: number, only?: ReadonlySet<string> | null): Mutation[] {
   return db.transaction(() => {
+    // `only`: le tabelle che il server conosce. Le altre restano in coda (non si perdono) finché il server non le impara.
+    const where = only ? ` AND tbl IN (${[...only].map(() => '?').join(',') || "''"})` : '';
     const rows = db.all<OutboxRow>(
-      `SELECT * FROM outbox WHERE state = 'pending' ORDER BY seq LIMIT ?`,
-      [limit],
+      `SELECT * FROM outbox WHERE state = 'pending'${where} ORDER BY seq LIMIT ?`,
+      [...(only ? [...only] : []), limit],
     );
     for (const r of rows) db.run(`UPDATE outbox SET state = 'sending' WHERE seq = ?`, [r.seq]);
     return rows.map((r) => ({

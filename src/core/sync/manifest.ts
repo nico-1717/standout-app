@@ -12,7 +12,11 @@ export type SyncTable =
   | 'pill_plans'
   | 'pill_doses'
   | 'habit_daily_journal'
-  | 'diary_list_items';
+  | 'diary_list_items'
+  | 'planner_calendars'
+  | 'planner_categories'
+  | 'planner_category_keywords'
+  | 'planner_events';
 
 export interface TableDef {
   /** nell'ordine di dipendenza: il padre prima del figlio */
@@ -211,6 +215,106 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'created_at',
       'updated_at',
     ],
+  },
+  // ---- planner ----
+  planner_calendars: {
+    order: 100,
+    // il «principale» e il ruolo li decide il server
+    readOnly: ['is_default', 'role', 'created_at', 'updated_at'],
+    createOnly: [],
+    booleans: ['is_visible', 'is_default'],
+    columns: [
+      'uuid',
+      'name',
+      'color',
+      'is_visible',
+      'is_default',
+      'role',
+      'keywords',
+      'def_repeat',
+      'def_notify',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  planner_categories: {
+    order: 110,
+    readOnly: ['role', 'created_at', 'updated_at'],
+    createOnly: [],
+    booleans: ['is_hidden'],
+    columns: ['uuid', 'name', 'color', 'is_hidden', 'role', 'sort_key', 'created_at', 'updated_at'],
+    children: [{ table: 'planner_category_keywords', column: 'category_uuid' }],
+  },
+  planner_category_keywords: {
+    order: 120,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: ['category_uuid', 'keyword'],
+    booleans: [],
+    columns: ['uuid', 'category_uuid', 'keyword', 'created_at', 'updated_at'],
+  },
+  // gli eventi: la riga com'è sul sito. Una serie = un capostipite con `rrule` (la scrive il server dai campi repeat_*);
+  // «solo questa volta» / «questa volta no» = una riga con series_uuid + original_date (+ is_cancelled). Le occorrenze
+  // non sono righe: si calcolano in lettura (vedi features/planner/recurrence.ts ed events.ts).
+  planner_events: {
+    order: 130,
+    readOnly: [
+      'completed_at',
+      'rrule',
+      'routine_group',
+      'routine_collapsed',
+      'sort_order',
+      'created_at',
+      'updated_at',
+    ],
+    createOnly: ['habit_uuid', 'series_uuid', 'original_date'],
+    booleans: [
+      'duration_locked',
+      'is_all_day',
+      'is_completed',
+      'is_cancelled',
+      'routine_collapsed',
+    ],
+    columns: [
+      'uuid',
+      'title',
+      'notes',
+      'location',
+      'place_name',
+      'place_lat',
+      'place_lon',
+      'place_ref',
+      'duration_locked',
+      'event_date',
+      'end_date',
+      'start_time',
+      'end_time',
+      'is_all_day',
+      'category_uuid',
+      'calendar_uuid',
+      'habit_uuid',
+      'importance',
+      'color',
+      'item_type',
+      'is_completed',
+      'completed_at',
+      'notify_type',
+      'notify_minutes',
+      'repeat_type',
+      'repeat_interval',
+      'repeat_unit',
+      'repeat_until',
+      'rrule',
+      'series_uuid',
+      'original_date',
+      'is_cancelled',
+      'routine_group',
+      'routine_collapsed',
+      'sort_order',
+      'created_at',
+      'updated_at',
+    ],
+    children: [{ table: 'planner_events', column: 'series_uuid' }],
   },
 };
 

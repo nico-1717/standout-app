@@ -235,4 +235,19 @@ describe('motore di sincronizzazione', () => {
     a.repo.remove(m);
     expect(a.repo.get(s)).toBeNull();
   });
+
+  it('un server che non conosce una tabella non la riceve: le modifiche restano in coda e non si perdono', async () => {
+    const server = new FakeServer();
+    server.known = ['todos', 'todo_buy_categories'];
+    const a = phone(server);
+    a.repo.create({ title: 'si invia' });
+    a.db.run(
+      `INSERT INTO outbox (mutation_id, tbl, uuid, op, is_create, patch, state, created_at)
+       VALUES ('m-planner', 'planner_events', 'e1', 'upsert', 1, '{}', 'pending', 'x')`,
+    );
+    const rep = await a.engine.syncOnce();
+    expect(rep.applied).toBe(1);
+    expect(pendingCount(a.db)).toBe(1);
+    expect(server.pushCalls).toBe(1);
+  });
 });
