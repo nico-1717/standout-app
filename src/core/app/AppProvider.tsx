@@ -26,6 +26,11 @@ import { getLocales } from 'expo-localization';
 import { DEFAULT_SETTINGS, SettingsStore, type Settings } from '../settings/settings';
 import type { UiStyle } from '@/features/buy/buyTheme';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
+import {
+  DEFAULT_HABIT_SETTINGS,
+  HabitSettingsStore,
+  type HabitSettings,
+} from '@/features/habits/habitSettings';
 import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
 import { localToday } from '@/features/tasks/groups';
 import { TasksRepo } from '@/features/tasks/repo';
@@ -58,6 +63,9 @@ interface AppContextValue {
   /** Stile, colore del sito e lingua: uguali a quelli del sito, cambiati qui o là. */
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
+  /** Le preferenze della pagina Abitudini (colore, giorni in barra, gruppi…): uguali a quelle del sito. */
+  habitSettings: HabitSettings;
+  updateHabitSettings: (patch: Partial<HabitSettings>) => void;
   /** Da chiamare dopo una modifica locale: aggiorna le schermate e avvia la sincronizzazione. */
   changed: () => void;
   signOut: (opts?: { discardPending?: boolean }) => Promise<{ blocked: number } | { blocked: 0 }>;
@@ -94,6 +102,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [syncInfo, setSyncInfo] = useState<SyncStatusInfo>(IDLE);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const settingsStore = useRef<SettingsStore | null>(null);
+  const [habitSettings, setHabitSettings] = useState<HabitSettings>(DEFAULT_HABIT_SETTINGS);
+  const habitSettingsStore = useRef<HabitSettingsStore | null>(null);
   const closeDb = useRef<(() => void) | null>(null);
   const opening = useRef(false);
 
@@ -135,6 +145,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const store = new SettingsStore(opened.db);
         settingsStore.current = store;
         setSettings(store.read());
+        const hStore = new HabitSettingsStore(opened.db);
+        habitSettingsStore.current = hStore;
+        setHabitSettings(hStore.read());
         const scheduler = new SyncScheduler({
           syncOnce: async () => {
             const r = await engine.syncOnce();
@@ -143,6 +156,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             } catch (e) {
               // Le impostazioni sono estetica: se il server non le dà, si riprova al prossimo giro.
               // Una sessione chiusa o la rete assente invece interessano tutta la sincronizzazione.
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
+            try {
+              setHabitSettings(await hStore.sync(api));
+            } catch (e) {
+              // come sopra: estetica. Un server più vecchio (senza questa rotta) risponde 404 e va bene così.
               if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
                 throw e;
               if (e instanceof TypeError) throw e;
@@ -213,6 +234,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updateHabitSettings = useCallback(
+    (patch: Partial<HabitSettings>) => {
+      const store = habitSettingsStore.current;
+      if (!store) return;
+      setHabitSettings(store.update(patch));
+      services?.scheduler.trigger();
+    },
+    [services],
+  );
   const setUiStyle = useCallback(
     (st: UiStyle) => updateSettings({ ui_style: st }),
     [updateSettings],
@@ -237,6 +267,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSyncInfo(IDLE);
       setSettings(DEFAULT_SETTINGS);
       settingsStore.current = null;
+      setHabitSettings(DEFAULT_HABIT_SETTINGS);
+      habitSettingsStore.current = null;
       return { blocked: 0 };
     },
     [auth, services],
@@ -254,6 +286,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUiStyle,
       settings,
       updateSettings,
+      habitSettings,
+      updateHabitSettings,
       changed,
       signOut,
     }),
@@ -268,6 +302,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUiStyle,
       settings,
       updateSettings,
+      habitSettings,
+      updateHabitSettings,
       changed,
       signOut,
     ],

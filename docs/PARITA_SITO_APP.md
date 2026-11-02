@@ -105,8 +105,8 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| B1 | Elenco abitudini (iniziate / future con «Vedi abitudini future»), anelli | `habits` (pronta) → sync | Abitudini | P2 | fatto: intestazione con tasti tabella/statistiche, carosello a 7 carte, fascia dei giorni, carta del giorno con chip, filtri (tutte/da fare/fascia), gruppi nell'ordine del sito, sezioni settimanali/mensili/personalizzate, «future» · manca: scorrimento (swipe), tasto «Scrivi» (diario), impostazioni | |
-| B2 | Crea/modifica/archivia/elimina, ordine | sync `habits` | Abitudini › Scheda | P2 | fatti: modulo completo (icona, preset del sito, colori, categoria, tipo, obiettivo, frequenza, momento, durata, minuti planner, motivazione, inizio), modifica, archivia, elimina, «future» · manca: riordino a trascinamento, archiviate/ripristina | |
+| B1 | Elenco abitudini (iniziate / future con «Vedi abitudini future»), anelli | `habits` (pronta) → sync | Abitudini | P2 | fatto: intestazione con tasti tabella/statistiche, carosello a 7 carte, fascia dei giorni, carta del giorno con chip, filtri (tutte/da fare/fascia), gruppi nell'ordine del sito, sezioni settimanali/mensili/personalizzate, «future» · scorrimento laterale (fatto/annulla) e impostazioni fatti · manca: tasto «Scrivi» (diario), vibrazione/suono/coriandoli | |
+| B2 | Crea/modifica/archivia/elimina, ordine | sync `habits` | Abitudini › Scheda | P2 | fatti: modulo completo (icona, preset del sito, colori, categoria, tipo, obiettivo, frequenza, momento, durata, minuti planner, motivazione, inizio), modifica, archivia, elimina, «future» · archiviate/ripristina fatto (dalle Impostazioni) · manca: riordino a trascinamento | |
 | B3 | Check-in (fatto/parziale/saltato/fallito, quantità, nota, umore) | `habits/{id}/log` → sync `habit_logs` | Abitudini | P2 | fatti: tocco, salta, «ci sono cascato», annulla · mancano: nota e umore, quantità a mano (dettaglio) | |
 | B4 | Serie e record (`habit_streak_records`: **calcolati**, non si sincronizzano) | logica in TS | — | P2 | fatto: serie, record, carte del carosello, «Statistiche» e «Vista tabella» con test d'oro sui numeri del sito · manca: record salvato sul server (`best_streak`), ore e traguardi | |
 | B5 | Traguardi (`habit_achievements` catalogo, `habit_user_achievements`, «visti») | catalogo nell'app + sync | Abitudini › Traguardi | P2 | da fare | |
@@ -114,7 +114,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | B7 | Distribuzione per ora (`hour_distribution`) | locale | Abitudini › Statistiche | P2 | da fare | |
 | B8 | Diario delle abitudini (`journal_save`, `habit_daily_journal`) | sync | Abitudini › Diario | P2 | API pronta | |
 | B9 | Promemoria (`habit_reminders`) | notifiche locali | — | P2 | da fare | |
-| B10 | Impostazioni abitudini (`habit_settings`) | sync | Abitudini › Impostazioni | P2 | da fare | |
+| B10 | Impostazioni abitudini (`habit_settings`) | `GET/PATCH habits/settings` (nuova, [app-api]) | Abitudini › Impostazioni | P2 | fatto: colore, giorni in barra, finestra grafici, interruttori (gruppi, carosello, coriandoli, vibrazione, suono), archiviate · mancano: riordina, importa, esporta; coriandoli/vibrazione/suono si salvano ma non fanno ancora nulla | |
 | B11 | Importazione abitudini (`habits_import.php`: leggi, rimappa, salva) | `habits/import` (nuova) | Abitudini › Importa | P4 | da fare | |
 
 ## 6. Diario (`diario*.php`, `diary_api.php`, `diario_ai.php`)

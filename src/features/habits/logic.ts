@@ -355,3 +355,22 @@ export function perfectStreak(
   }
   return n;
 }
+
+/**
+ * Lo scorrimento di una riga (swipeAllowed/swipeMode del sito). dir +1 = fare / «ci sono cascato», -1 = annullare.
+ * Una direzione vale solo se porta a un vero cambio: niente da annullare = la riga resta ferma.
+ */
+export function swipeAllowed(h: Habit, s: DayState, dir: 1 | -1): boolean {
+  const qty = h.goal_type === 'quantity';
+  if (dir > 0) {
+    if (qty) return true; // le quantità si possono sempre aumentare
+    return h.kind === 'quit' ? s.status !== 'failed' : s.status !== 'done';
+  }
+  if (qty) return s.amount > 0;
+  return h.kind === 'quit' ? s.status === 'failed' : s.status === 'done';
+}
+
+export function swipeMode(h: Habit, dir: 1 | -1): CheckInMode {
+  if (h.goal_type === 'quantity') return dir > 0 ? 'increment' : 'decrement';
+  return h.kind === 'quit' ? 'fail' : 'toggle';
+}

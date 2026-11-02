@@ -9,6 +9,7 @@ import { ActionSheet, type SheetAction } from '@/features/habits/ActionSheet';
 import { HabitDetail } from '@/features/habits/HabitDetail';
 import { HabitForm } from '@/features/habits/HabitForm';
 import { HabitRow } from '@/features/habits/HabitRow';
+import { SwipeRow } from '@/features/habits/SwipeRow';
 import {
   DayStrip,
   FilterChips,
@@ -18,7 +19,7 @@ import {
 } from '@/features/habits/HabitsParts';
 import { toInput, toPatch, type HabitFormState } from '@/features/habits/formModel';
 import { allLogsOf, statCards, globalStreak } from '@/features/habits/globalStats';
-import { DEFAULT_HABIT_SETTINGS } from '@/features/habits/habitSettings';
+import { SettingsSheet } from '@/features/habits/SettingsSheet';
 import { habitsTheme } from '@/features/habits/habitsTheme';
 import { labelDate } from '@/features/habits/labels';
 import { HabitsHeader, StatCarousel, type CardView } from '@/features/habits/overview';
@@ -37,6 +38,8 @@ import {
   ofKind,
   periodProgress,
   stateOf,
+  swipeAllowed,
+  swipeMode,
   type CheckInMode,
   type Habit,
 } from '@/features/habits/logic';
@@ -57,17 +60,18 @@ const PART_ICON: Record<Habit['day_part'], string> = {
   evening: '🌆',
   night: '🌙',
 };
-// finché la schermata «Impostazioni» non c'è, valgono i valori di partenza del sito
-const SETTINGS = DEFAULT_HABIT_SETTINGS;
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
 export default function HabitsScreen() {
   const th = useTheme();
-  const ht = useMemo(() => habitsTheme(th.scheme), [th.scheme]);
+  const { services, version, changed, habitSettings: SETTINGS, updateHabitSettings } = useApp();
+  const ht = useMemo(
+    () => habitsTheme(th.scheme, SETTINGS.accent_color),
+    [th.scheme, SETTINGS.accent_color],
+  );
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { services, version, changed } = useApp();
 
   const today = localToday();
   const [day, setDay] = useState(today);
@@ -79,12 +83,17 @@ export default function HabitsScreen() {
   });
   const [showFuture, setShowFuture] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'stats' | 'table' | null>(null);
+  const [panel, setPanel] = useState<'stats' | 'table' | 'settings' | null>(null);
   const [noteFor, setNoteFor] = useState<{ habit: Habit; day: string } | null>(null);
 
   const habits = useMemo(
     () => (services ? services.habits.list() : []),
     // `version` cambia a ogni modifica (locale o dal server): è ciò che fa rileggere i dati
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [services, version],
+  );
+  const archivedList = useMemo(
+    () => (services ? services.habits.list({ archived: true }) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [services, version],
   );
@@ -146,7 +155,7 @@ export default function HabitsScreen() {
       });
     }
     return out;
-  }, [current, logs, today, t]);
+  }, [current, logs, today, t, SETTINGS.visible_days]);
 
   const progress = useMemo(
     () => dayProgress(current, day, logs, today),
@@ -317,18 +326,29 @@ export default function HabitsScreen() {
     const quantity = h.goal_type === 'quantity';
     return (
       <View key={h.uuid} style={{ marginHorizontal: 16, marginBottom: 10 }}>
-        <HabitRow
-          habit={h}
-          state={st}
+        <SwipeRow
           th={ht}
-          meta={meta.join(' · ')}
-          period={period}
-          amountText={quantity && !period ? `${fmt(st.amount)}/${fmt(st.target)}` : undefined}
-          unitText={quantity && !period ? h.unit : undefined}
-          onCheck={() => tap(h)}
-          onLongPress={() => setSheet(h)}
-          onOpen={() => setDetailId(h.uuid)}
-        />
+          testID={`swipe-${h.uuid}`}
+          color={h.color}
+          doneLabel={h.kind === 'quit' ? t('abitudini.ci_sono_cascato') : t('abitudini.fatto')}
+          undoLabel={t('comune.annulla')}
+          allowRight={swipeAllowed(h, st, 1)}
+          allowLeft={swipeAllowed(h, st, -1)}
+          onSwipe={(dir) => run(h, swipeMode(h, dir))}
+        >
+          <HabitRow
+            habit={h}
+            state={st}
+            th={ht}
+            meta={meta.join(' · ')}
+            period={period}
+            amountText={quantity && !period ? `${fmt(st.amount)}/${fmt(st.target)}` : undefined}
+            unitText={quantity && !period ? h.unit : undefined}
+            onCheck={() => tap(h)}
+            onLongPress={() => setSheet(h)}
+            onOpen={() => setDetailId(h.uuid)}
+          />
+        </SwipeRow>
       </View>
     );
   }
@@ -385,6 +405,7 @@ export default function HabitsScreen() {
         right={<SyncBadge />}
         onTable={() => setPanel('table')}
         onStats={() => setPanel('stats')}
+        onSettings={() => setPanel('settings')}
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <DayStrip cells={cells} selected={day} today={today} th={ht} onSelect={setDay} />
@@ -533,6 +554,18 @@ export default function HabitsScreen() {
         today={today}
         range={SETTINGS.chart_range_days}
         th={ht}
+        onClose={() => setPanel(null)}
+      />
+      <SettingsSheet
+        visible={panel === 'settings'}
+        settings={SETTINGS}
+        archived={archivedList}
+        th={ht}
+        onChange={updateHabitSettings}
+        onRestore={(h) => {
+          services?.habits.archive(h.uuid, false);
+          changed();
+        }}
         onClose={() => setPanel(null)}
       />
       <TableSheet

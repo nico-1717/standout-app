@@ -1,3 +1,4 @@
+import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
 import type { Settings, SettingsApi } from '../settings/settings';
 import type { Mutation, PullResponse, PushResult, SyncApi } from '../sync/types';
 
@@ -18,7 +19,7 @@ export type TokenSupplier = () => Promise<string>;
  * Il server visto dall'app, via fetch. Ogni chiamata porta la versione dell'app (il server può rispondere
  * 426 upgrade_required). Errori: HTTP non 2xx → ApiError col `code` del server.
  */
-export class HttpSyncApi implements SyncApi, SettingsApi {
+export class HttpSyncApi implements SyncApi, SettingsApi, HabitSettingsApi {
   constructor(
     private readonly baseUrl: string,
     private readonly token: TokenSupplier,
@@ -27,7 +28,11 @@ export class HttpSyncApi implements SyncApi, SettingsApi {
     private readonly fetchFn: typeof fetch = (...a) => fetch(...a),
   ) {}
 
-  private async call<T>(method: 'GET' | 'POST' | 'PUT', path: string, body?: unknown): Promise<T> {
+  private async call<T>(
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH',
+    path: string,
+    body?: unknown,
+  ): Promise<T> {
     const res = await this.fetchFn(this.baseUrl.replace(/\/$/, '') + '/api/v1' + path, {
       method,
       headers: {
@@ -72,5 +77,14 @@ export class HttpSyncApi implements SyncApi, SettingsApi {
 
   async putSettings(patch: Partial<Settings>): Promise<Settings> {
     return (await this.call<{ settings: Settings }>('PUT', '/settings', patch)).settings;
+  }
+
+  async getHabitSettings(): Promise<HabitSettings> {
+    return (await this.call<{ settings: HabitSettings }>('GET', '/habits/settings')).settings;
+  }
+
+  async patchHabitSettings(patch: Partial<HabitSettings>): Promise<HabitSettings> {
+    return (await this.call<{ settings: HabitSettings }>('PATCH', '/habits/settings', patch))
+      .settings;
   }
 }

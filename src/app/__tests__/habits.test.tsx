@@ -11,6 +11,9 @@ import HabitsScreen from '../(tabs)/habits';
 
 let mockServices: unknown;
 let mockVersion = 0;
+let mockHabitSettings = {
+  ...jest.requireActual('@/features/habits/habitSettings').DEFAULT_HABIT_SETTINGS,
+};
 const mockChanged = jest.fn();
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -23,6 +26,11 @@ jest.mock('@/core/app/AppProvider', () => ({
     changed: () => {
       mockVersion++;
       mockChanged();
+    },
+    habitSettings: mockHabitSettings,
+    updateHabitSettings: (patch: object) => {
+      mockHabitSettings = { ...mockHabitSettings, ...patch };
+      mockVersion++;
     },
     uiStyle: 'standard',
     syncInfo: { status: 'idle', lastSyncAt: null, pending: 0 },
@@ -112,6 +120,23 @@ describe('Habits screen', () => {
     await fireEvent.press(screen.getByTestId('hb-stats'));
     expect(screen.getByTestId('stats-sheet')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Cancel'));
+  });
+
+  test('Settings: grouping can be turned off; archived habits can be restored', async () => {
+    const { habits, read } = setup();
+    habits.archive(read, true);
+    await renderIt();
+    expect(screen.queryByText('Read')).toBeNull();
+    expect(screen.getByText('🌅 MORNING')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('hb-settings'));
+    expect(screen.getByTestId('settings-sheet')).toBeTruthy();
+    await fireEvent(screen.getByTestId('set-group_by_day_part'), 'valueChange', false);
+    expect(mockHabitSettings.group_by_day_part).toBe(false);
+    await fireEvent.press(screen.getByTestId('set-days-plus'));
+    expect(mockHabitSettings.visible_days).toBe(12);
+    await fireEvent.press(screen.getByTestId(`restore-${read}`));
+    expect(habits.get(read)?.is_archived).toBe(0);
+    mockHabitSettings = { ...mockHabitSettings, group_by_day_part: true, visible_days: 11 };
   });
 
   test('the Table sheet toggles a day and shows the 7/14/30 switch', async () => {

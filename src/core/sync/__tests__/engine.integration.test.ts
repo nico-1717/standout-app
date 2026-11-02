@@ -17,6 +17,7 @@ import {
 } from '@/features/habits/formModel';
 import { presets } from '@/features/habits/presets';
 import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
+import { HabitSettingsStore } from '@/features/habits/habitSettings';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import { SyncEngine } from '../engine';
@@ -362,5 +363,32 @@ maybe('motore + server vero', () => {
     });
     a.habits.remove(h);
     await a.engine.syncOnce();
+  });
+
+  it("impostazioni delle abitudini: un telefono le cambia, l'altro le vede; poi si rimettono", async () => {
+    const tok = await login();
+    const api = () => new HttpSyncApi(URL_!, async () => tok, '0.0.0-test', 'jest', nodeFetch);
+    const a = new HabitSettingsStore(memoryDb());
+    const b = new HabitSettingsStore(memoryDb());
+    const before = await a.sync(api());
+    try {
+      a.update({
+        visible_days: before.visible_days === 17 ? 18 : 17,
+        group_by_day_part: !before.group_by_day_part,
+      });
+      const sent = await a.sync(api());
+      expect(sent.visible_days).not.toBe(before.visible_days);
+      const seen = await b.sync(api());
+      expect(seen).toMatchObject({
+        visible_days: sent.visible_days,
+        group_by_day_part: sent.group_by_day_part,
+      });
+    } finally {
+      a.update({
+        visible_days: before.visible_days,
+        group_by_day_part: before.group_by_day_part,
+      });
+      await a.sync(api());
+    }
   });
 });

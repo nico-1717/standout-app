@@ -15,6 +15,8 @@ import {
   periodProgress,
   stateOf,
   perfectStreak,
+  swipeAllowed,
+  swipeMode,
   type HabitLog,
 } from '../logic';
 
@@ -263,5 +265,41 @@ describe('perfectStreak', () => {
     const logs = new Map<string, HabitLog>([['a|2026-11-04', lg('a', '2026-11-04', 'done', 1)]]);
     expect(perfectStreak([a], logs, '2026-11-05')).toBe(1);
     expect(perfectStreak([a], new Map(), '2026-11-05')).toBe(0);
+  });
+});
+
+describe('swipeAllowed / swipeMode (come il sito)', () => {
+  const TODAY = '2026-11-02';
+  const st = (x: Habit, log: Partial<HabitLog> | null) =>
+    stateOf(x, TODAY, log ? ({ ...log } as HabitLog) : null, TODAY);
+
+  test('completion: right = do, left = undo, only when it changes something', () => {
+    const a = h({});
+    expect(swipeAllowed(a, st(a, null), 1)).toBe(true);
+    expect(swipeAllowed(a, st(a, null), -1)).toBe(false);
+    const done = st(a, { status: 'done', amount: 1, completions: 1 });
+    expect(swipeAllowed(a, done, 1)).toBe(false);
+    expect(swipeAllowed(a, done, -1)).toBe(true);
+    expect(swipeMode(a, 1)).toBe('toggle');
+  });
+
+  test('quit: right = "I slipped", left = undo the slip', () => {
+    const q = h({ kind: 'quit' });
+    expect(swipeAllowed(q, st(q, null), 1)).toBe(true);
+    expect(swipeAllowed(q, st(q, null), -1)).toBe(false);
+    const failed = st(q, { status: 'failed', amount: 1, completions: 1 });
+    expect(swipeAllowed(q, failed, 1)).toBe(false);
+    expect(swipeAllowed(q, failed, -1)).toBe(true);
+    expect(swipeMode(q, 1)).toBe('fail');
+    expect(swipeMode(q, -1)).toBe('fail');
+  });
+
+  test('quantity: always up, down only above zero', () => {
+    const w = h({ goal_type: 'quantity', target_amount: 8, step_amount: 1 });
+    expect(swipeAllowed(w, st(w, null), 1)).toBe(true);
+    expect(swipeAllowed(w, st(w, null), -1)).toBe(false);
+    expect(swipeAllowed(w, st(w, { status: 'partial', amount: 3, completions: 3 }), -1)).toBe(true);
+    expect(swipeMode(w, 1)).toBe('increment');
+    expect(swipeMode(w, -1)).toBe('decrement');
   });
 });
