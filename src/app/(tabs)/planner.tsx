@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
@@ -32,6 +33,7 @@ export default function PlannerScreen() {
   const th = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { services, version, changed, uiStyle } = useApp();
   const pt = plannerTheme(uiStyle, th);
@@ -152,6 +154,15 @@ export default function PlannerScreen() {
             </Text>
           </View>
           {arrow(t('planner.giorno_successivo'), 1, 'day-next')}
+          <Pressable
+            testID="planner-manage"
+            accessibilityRole="button"
+            accessibilityLabel={`${t('planner.calendari')} · ${t('planner.categorie')}`}
+            onPress={() => router.push('/planner-manage')}
+            style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Text style={{ color: pt.ink2, fontSize: 20 }}>☰</Text>
+          </Pressable>
         </View>
         <View
           style={{
