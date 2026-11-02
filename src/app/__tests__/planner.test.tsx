@@ -159,4 +159,26 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     await fireEvent.press(screen.getByTestId('day-today'));
     expect(screen.queryByTestId('day-today')).toBeNull();
   });
+  test('week and month views list the events and open the day on tap', async () => {
+    const repo = setup();
+    repo.create({ title: 'Dentist', date: TODAY, start: '15:00', end: '16:00' });
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('mode-week'));
+    expect(screen.getByTestId('week-view')).toBeTruthy();
+    expect(screen.getByText('Dentist')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('mode-month'));
+    expect(screen.getByTestId('month-view')).toBeTruthy();
+    expect(screen.getByText('Dentist')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`month-day-${TODAY}`));
+    expect(screen.getByTestId('day-scroll')).toBeTruthy();
+  });
+
+  test('the arrows move by a week in week view', async () => {
+    setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('mode-week'));
+    await fireEvent.press(screen.getByTestId('day-next'));
+    expect(screen.getByTestId('week-view')).toBeTruthy();
+    expect(screen.queryByTestId(`week-day-${TODAY}`)).toBeNull();
+  });
 });
