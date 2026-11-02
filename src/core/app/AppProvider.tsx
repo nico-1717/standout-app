@@ -26,6 +26,8 @@ import { getLocales } from 'expo-localization';
 import { DEFAULT_SETTINGS, SettingsStore, type Settings } from '../settings/settings';
 import type { UiStyle } from '@/features/buy/buyTheme';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
+import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
+import { localToday } from '@/features/tasks/groups';
 import { TasksRepo } from '@/features/tasks/repo';
 import { secureStoreAdapter } from './secretStore';
 
@@ -36,6 +38,8 @@ export interface Services {
   db: SqlDb;
   tasks: TasksRepo;
   categories: CategoriesRepo;
+  habits: HabitsRepo;
+  habitCategories: HabitCategoriesRepo;
   scheduler: SyncScheduler;
 }
 
@@ -155,6 +159,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           db: opened.db,
           tasks: new TasksRepo(opened.db),
           categories: new CategoriesRepo(opened.db),
+          habits: new HabitsRepo(opened.db, undefined, undefined, () => localToday()),
+          habitCategories: new HabitCategoriesRepo(opened.db),
           scheduler,
         });
       } catch (e) {

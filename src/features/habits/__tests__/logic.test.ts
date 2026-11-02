@@ -8,6 +8,14 @@ import {
   isoWeekday,
   type Habit,
   type LogStatus,
+  dailyFor,
+  dayMessageKey,
+  dayProgress,
+  ofKind,
+  periodProgress,
+  stateOf,
+  perfectStreak,
+  type HabitLog,
 } from '../logic';
 
 const base: Habit = {
@@ -166,5 +174,94 @@ describe('currentStreak', () => {
       '2026-10-13': 'done', // sett. 12/10 solo 1: rompe
     };
     expect(run(s, w)).toBe(2);
+  });
+});
+
+const lg = (habit: string, day: string, status: LogStatus, amount: number): HabitLog => ({
+  uuid: 'l',
+  habit_uuid: habit,
+  log_date: day,
+  status,
+  amount,
+  completions: 0,
+  target_amount: 1,
+  note: null,
+  mood: null,
+});
+
+describe('stateOf e avanzamento del giorno', () => {
+  const today = '2026-11-05';
+  it('da fare: vuoto, parziale, fatto, saltato', () => {
+    expect(stateOf(base, today, null, today).status).toBe('empty');
+    const q = h({ goal_type: 'quantity', target_amount: 8 });
+    expect(stateOf(q, today, lg('h', today, 'partial', 2), today)).toMatchObject({
+      status: 'partial',
+      pct: 0.25,
+    });
+    expect(stateOf(q, today, lg('h', today, 'done', 8), today).status).toBe('done');
+    expect(stateOf(base, today, lg('h', today, 'skipped', 0), today).status).toBe('skipped');
+  });
+  it('da evitare: parte «pulita», «cascato» = fallita', () => {
+    const q = h({ kind: 'quit' });
+    expect(stateOf(q, today, null, today).status).toBe('clean');
+    expect(stateOf(q, '2026-11-06', null, today).status).toBe('empty'); // futuro
+    expect(stateOf(q, today, lg('h', today, 'failed', 1), today).status).toBe('failed');
+  });
+  it('da evitare a quantità: il margine che resta', () => {
+    const q = h({ kind: 'quit', goal_type: 'quantity', target_amount: 4 });
+    expect(stateOf(q, today, lg('h', today, 'partial', 1), today)).toMatchObject({
+      status: 'partial',
+      pct: 0.75,
+    });
+  });
+  it('avanzamento: solo giornaliere previste, le saltate non contano', () => {
+    const a = h({ uuid: 'a' });
+    const b = h({ uuid: 'b' });
+    const c = h({ uuid: 'c' });
+    const w = h({ uuid: 'w', frequency_type: 'weekly' });
+    const logs = new Map<string, HabitLog>([
+      [`a|${today}`, lg('a', today, 'done', 1)],
+      [`c|${today}`, lg('c', today, 'skipped', 0)],
+    ]);
+    expect(dailyFor([a, b, c, w], today).map((x) => x.uuid)).toEqual(['a', 'b', 'c']);
+    expect(dayProgress([a, b, c, w], today, logs, today)).toEqual({ done: 1, total: 2, pct: 0.5 });
+    expect(dayMessageKey({ total: 2, pct: 0.5 })).toBe('abitudini.hai_iniziato_continua');
+    expect(dayMessageKey({ total: 2, pct: 0.6 })).toBe('abitudini.ci_sei_quasi_tieni_il');
+    expect(dayMessageKey({ total: 0, pct: 0 })).toBe('abitudini.nessuna_abitudine_prevista');
+    expect(ofKind([a, w], 'weekly')).toHaveLength(1);
+  });
+  it('settimanali, mensili, a intervallo', () => {
+    const w = h({ frequency_type: 'weekly', times_per_week: 3 });
+    expect(periodProgress(w, '2026-11-05', ['2026-11-02', '2026-11-04', '2026-10-30'])).toEqual({
+      done: 2,
+      target: 3,
+    });
+    const m = h({ frequency_type: 'monthly', times_per_month: 10 });
+    expect(periodProgress(m, '2026-11-05', ['2026-11-02', '2026-10-30'])).toEqual({
+      done: 1,
+      target: 10,
+    });
+    const i = h({ frequency_type: 'interval', interval_days: 3, start_date: '2026-11-01' });
+    expect(periodProgress(i, '2026-11-05', [])).toMatchObject({ done: 0, daysToNext: 2, step: 3 }); // turno 4-6: oggi è il 2° giorno, il prossimo fra 2
+    expect(periodProgress(i, '2026-11-05', ['2026-11-04']).done).toBe(1);
+  });
+});
+
+describe('perfectStreak', () => {
+  it('conta i giorni con tutto fatto; oggi incompleto non rompe', () => {
+    const a = h({ uuid: 'a', start_date: '2026-11-01' });
+    const logs = new Map<string, HabitLog>([
+      ['a|2026-11-04', lg('a', '2026-11-04', 'done', 1)],
+      ['a|2026-11-03', lg('a', '2026-11-03', 'done', 1)],
+    ]);
+    expect(perfectStreak([a], logs, '2026-11-05')).toBe(2);
+    logs.set('a|2026-11-05', lg('a', '2026-11-05', 'done', 1));
+    expect(perfectStreak([a], logs, '2026-11-05')).toBe(3);
+  });
+  it('un giorno non perfetto prima di oggi la spezza', () => {
+    const a = h({ uuid: 'a', start_date: '2026-11-01' });
+    const logs = new Map<string, HabitLog>([['a|2026-11-04', lg('a', '2026-11-04', 'done', 1)]]);
+    expect(perfectStreak([a], logs, '2026-11-05')).toBe(1);
+    expect(perfectStreak([a], new Map(), '2026-11-05')).toBe(0);
   });
 });

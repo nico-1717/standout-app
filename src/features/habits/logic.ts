@@ -218,3 +218,140 @@ export function currentStreak(h: Habit, byDate: Record<string, LogStatus>, today
   }
   return streak;
 }
+
+/* ---------------- stato del giorno per la schermata (come stateOf/dayProgress di habits.js) ---------------- */
+
+export type UiStatus = 'done' | 'partial' | 'failed' | 'skipped' | 'empty' | 'clean';
+
+export interface DayState {
+  status: UiStatus;
+  amount: number;
+  target: number;
+  /** 0..1: quanto è avanti (per le «da evitare» a quantità: quanto margine resta) */
+  pct: number;
+}
+
+/** Stato di un'abitudine in un giorno, normalizzato per l'interfaccia. */
+export function stateOf(h: Habit, day: string, log: HabitLog | null, today: string): DayState {
+  const target = h.goal_type === 'quantity' ? h.target_amount : 1;
+  const amount = log ? log.amount : 0;
+  const future = day > today;
+  if (h.kind === 'quit') {
+    const q = log ? log.status : !future && day >= h.start_date ? 'clean' : 'empty';
+    if (q === 'skipped') return { status: 'skipped', amount: 0, target, pct: 0 };
+    if (q === 'failed') return { status: 'failed', amount, target, pct: 0 };
+    if (h.goal_type === 'quantity' && q === 'partial' && amount > 0) {
+      return {
+        status: 'partial',
+        amount,
+        target,
+        pct: target > 0 ? Math.max(0, 1 - amount / target) : 0,
+      };
+    }
+    return { status: future ? 'empty' : 'clean', amount: 0, target, pct: 1 };
+  }
+  const status: string = log ? log.status : 'empty';
+  const pct = target > 0 ? Math.min(1, amount / target) : 0;
+  if (status === 'skipped') return { status: 'skipped', amount, target, pct: 0 };
+  if (amount >= target && target > 0) return { status: 'done', amount, target, pct: 1 };
+  if (amount > 0) return { status: 'partial', amount, target, pct };
+  return { status: 'empty', amount: 0, target, pct: 0 };
+}
+
+/** «Conta come riuscito»: per le «da evitare» anche restare sotto la soglia. */
+export function isSuccess(h: Habit, s: DayState): boolean {
+  return h.kind === 'quit' ? s.status === 'clean' || s.status === 'partial' : s.status === 'done';
+}
+
+/** Le abitudini giornaliere previste in un giorno (le settimanali, mensili e a intervallo hanno sezioni loro). */
+export function dailyFor(habits: Habit[], day: string): Habit[] {
+  return habits.filter((h) => !h.is_archived && h.frequency_type === 'daily' && isDue(h, day));
+}
+
+export function dayProgress(
+  habits: Habit[],
+  day: string,
+  logs: Map<string, HabitLog>,
+  today: string,
+): { done: number; total: number; pct: number } {
+  let done = 0;
+  let total = 0;
+  for (const h of dailyFor(habits, day)) {
+    const s = stateOf(h, day, logs.get(`${h.uuid}|${day}`) ?? null, today);
+    if (s.status === 'skipped') continue;
+    total++;
+    if (isSuccess(h, s)) done++;
+  }
+  return { done, total, pct: total ? done / total : 0 };
+}
+
+/** Le abitudini attive di un tipo di frequenza. */
+export function ofKind(habits: Habit[], kind: Habit['frequency_type']): Habit[] {
+  return habits.filter((h) => !h.is_archived && h.frequency_type === kind);
+}
+
+/** Quante volte «fatta» in un periodo (settimana di `day`, mese di `day`, o il turno corrente per «ogni N giorni»). */
+export function periodProgress(
+  h: Habit,
+  day: string,
+  doneDates: string[],
+): { done: number; target: number; daysToNext?: number; step?: number } {
+  if (h.frequency_type === 'weekly') {
+    const s = weekStart(day);
+    const e = addDays(s, 6);
+    return {
+      done: doneDates.filter((d) => d >= s && d <= e).length,
+      target: Math.max(1, h.times_per_week || 1),
+    };
+  }
+  if (h.frequency_type === 'monthly') {
+    const m = day.slice(0, 7);
+    return {
+      done: doneDates.filter((d) => d.slice(0, 7) === m).length,
+      target: Math.max(1, h.times_per_month || 1),
+    };
+  }
+  const step = Math.max(1, h.interval_days || 1);
+  const since = Math.floor(
+    (Date.parse(`${day}T00:00:00Z`) - Date.parse(`${h.start_date}T00:00:00Z`)) / 86_400_000,
+  );
+  if (since < 0) return { done: 0, target: 1, daysToNext: -since, step };
+  const from = addDays(h.start_date, since - (since % step));
+  const to = addDays(from, step - 1);
+  const n = doneDates.filter((d) => d >= from && d <= to).length;
+  return { done: Math.min(1, n), target: 1, daysToNext: step - (since % step), step };
+}
+
+/** Il messaggio sotto «Oggi» (stesse soglie del sito). */
+export function dayMessageKey(p: { total: number; pct: number }): string {
+  if (p.total === 0) return 'abitudini.nessuna_abitudine_prevista';
+  const pct = Math.round(p.pct * 100);
+  if (pct === 100) return 'abitudini.giornata_perfetta_chiusa_cosi';
+  if (pct >= 60) return 'abitudini.ci_sei_quasi_tieni_il';
+  if (pct > 0) return 'abitudini.hai_iniziato_continua';
+  return 'abitudini.il_primo_check_in_e';
+}
+
+/** Giorni perfetti di fila fino a oggi (oggi non ancora completo non rompe la serie). */
+export function perfectStreak(
+  habits: Habit[],
+  logs: Map<string, HabitLog>,
+  today: string,
+  maxDays = 400,
+): number {
+  let n = 0;
+  for (let i = 0; i < maxDays; i++) {
+    const d = addDays(today, -i);
+    const p = dayProgress(habits, d, logs, today);
+    if (p.total === 0) {
+      if (i === 0) continue;
+      // un giorno senza abitudini previste non rompe e non conta
+      if (habits.every((h) => d < h.start_date)) break;
+      continue;
+    }
+    if (p.pct === 1) n++;
+    else if (i === 0) continue;
+    else break;
+  }
+  return n;
+}

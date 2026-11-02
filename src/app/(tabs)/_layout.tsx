@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 /** Icone provvisorie disegnate con forme semplici; le definitive arrivano con la rifinitura (fase 4). */
-function Icon({ kind, color }: { kind: 'todo' | 'buy' | 'settings'; color: string }) {
+function Icon({ kind, color }: { kind: 'todo' | 'habits' | 'buy' | 'settings'; color: string }) {
   if (kind === 'todo') {
     return (
       <View
@@ -21,6 +21,21 @@ function Icon({ kind, color }: { kind: 'todo' | 'buy' | 'settings'; color: strin
       >
         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
       </View>
+    );
+  }
+  if (kind === 'habits') {
+    return (
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          borderWidth: 3,
+          borderColor: color,
+          borderTopColor: 'transparent',
+          transform: [{ rotate: '-35deg' }],
+        }}
+      />
     );
   }
   if (kind === 'buy') {
@@ -72,6 +87,13 @@ export default function TabsLayout() {
         options={{
           title: t('planner.to_do'),
           tabBarIcon: ({ color }) => <Icon kind="todo" color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
+        name="habits"
+        options={{
+          title: t('abitudini.titolo'),
+          tabBarIcon: ({ color }) => <Icon kind="habits" color={String(color)} />,
         }}
       />
       <Tabs.Screen
