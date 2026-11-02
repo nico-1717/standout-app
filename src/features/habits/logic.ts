@@ -374,3 +374,13 @@ export function swipeMode(h: Habit, dir: 1 | -1): CheckInMode {
   if (h.goal_type === 'quantity') return dir > 0 ? 'increment' : 'decrement';
   return h.kind === 'quit' ? 'fail' : 'toggle';
 }
+
+/** Spostare `uuid` al posto `to` (0 = in cima): ritorna i due vicini d'arrivo, per HabitsRepo.move(uuid, sopra, sotto). */
+export function moveNeighbours(
+  ordered: { uuid: string }[],
+  uuid: string,
+  to: number,
+): [string | null, string | null] {
+  const rest = ordered.filter((x) => x.uuid !== uuid);
+  return [rest[to - 1]?.uuid ?? null, rest[to]?.uuid ?? null];
+}

@@ -19,6 +19,7 @@ import {
 } from '@/features/habits/HabitsParts';
 import { toInput, toPatch, type HabitFormState } from '@/features/habits/formModel';
 import { allLogsOf, statCards, globalStreak } from '@/features/habits/globalStats';
+import { ReorderSheet } from '@/features/habits/ReorderSheet';
 import { SettingsSheet } from '@/features/habits/SettingsSheet';
 import { habitsTheme } from '@/features/habits/habitsTheme';
 import { labelDate } from '@/features/habits/labels';
@@ -35,6 +36,7 @@ import {
   dayProgress,
   isSuccess,
   isoWeekday,
+  moveNeighbours,
   ofKind,
   periodProgress,
   stateOf,
@@ -83,7 +85,7 @@ export default function HabitsScreen() {
   });
   const [showFuture, setShowFuture] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'stats' | 'table' | 'settings' | null>(null);
+  const [panel, setPanel] = useState<'stats' | 'table' | 'settings' | 'reorder' | null>(null);
   const [noteFor, setNoteFor] = useState<{ habit: Habit; day: string } | null>(null);
 
   const habits = useMemo(
@@ -566,7 +568,24 @@ export default function HabitsScreen() {
           services?.habits.archive(h.uuid, false);
           changed();
         }}
+        onReorder={() => setPanel('reorder')}
         onClose={() => setPanel(null)}
+      />
+      <ReorderSheet
+        visible={panel === 'reorder'}
+        habits={current.filter((h) => !h.is_archived)}
+        th={ht}
+        onMove={(h, _from, to) => {
+          if (!services) return;
+          const [above, below] = moveNeighbours(
+            current.filter((x) => !x.is_archived),
+            h.uuid,
+            to,
+          );
+          services.habits.move(h.uuid, above, below);
+          changed();
+        }}
+        onClose={() => setPanel('settings')}
       />
       <TableSheet
         visible={panel === 'table'}

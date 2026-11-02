@@ -330,3 +330,15 @@ describe('Habit detail and notes', () => {
     expect(screen.getByText('Edit habit')).toBeTruthy();
   });
 });
+
+describe('Habits reorder', () => {
+  test('Settings opens the reorder sheet with every habit and a handle', async () => {
+    const { water, read } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hb-settings'));
+    await fireEvent.press(screen.getByTestId('open-reorder'));
+    expect(screen.getByTestId('reorder-sheet')).toBeTruthy();
+    expect(screen.getByTestId(`grip-${water}`)).toBeTruthy();
+    expect(screen.getByTestId(`grip-${read}`)).toBeTruthy();
+  });
+});

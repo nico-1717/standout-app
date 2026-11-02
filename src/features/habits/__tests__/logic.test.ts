@@ -16,6 +16,7 @@ import {
   stateOf,
   perfectStreak,
   swipeAllowed,
+  moveNeighbours,
   swipeMode,
   type HabitLog,
 } from '../logic';
@@ -301,5 +302,15 @@ describe('swipeAllowed / swipeMode (come il sito)', () => {
     expect(swipeAllowed(w, st(w, { status: 'partial', amount: 3, completions: 3 }), -1)).toBe(true);
     expect(swipeMode(w, 1)).toBe('increment');
     expect(swipeMode(w, -1)).toBe('decrement');
+  });
+});
+
+describe('moveNeighbours (riordino)', () => {
+  const list = ['a', 'b', 'c', 'd'].map((uuid) => ({ uuid }));
+  test('to the top, the middle and the bottom', () => {
+    expect(moveNeighbours(list, 'c', 0)).toEqual([null, 'a']);
+    expect(moveNeighbours(list, 'a', 2)).toEqual(['c', 'd']); // b c [a] d
+    expect(moveNeighbours(list, 'a', 3)).toEqual(['d', null]);
+    expect(moveNeighbours(list, 'd', 1)).toEqual(['a', 'b']);
   });
 });

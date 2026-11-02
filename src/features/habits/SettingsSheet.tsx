@@ -18,6 +18,7 @@ export interface SettingsSheetProps {
   th: HabitsTheme;
   onChange: (patch: Partial<HabitSettings>) => void;
   onRestore: (h: Habit) => void;
+  onReorder: () => void;
   onClose: () => void;
 }
 
@@ -102,6 +103,31 @@ export function SettingsSheet(p: SettingsSheetProps) {
               onChange={(k) => p.onChange({ chart_range_days: Number(k) })}
             />
           </Field>
+
+          <View
+            style={[styles.card, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}
+          >
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: th.text, fontWeight: '700', fontSize: 15.5 }}>
+                  {t('abitudini.ordine_dell_elenco')}
+                </Text>
+                <Text style={{ color: th.text2, fontSize: 13, marginTop: 2 }}>
+                  {t('abitudini.decidi_tu_quali_abitudini_stanno')}
+                </Text>
+              </View>
+              <Pressable
+                testID="open-reorder"
+                accessibilityRole="button"
+                onPress={p.onReorder}
+                style={[styles.btn, { backgroundColor: th.surface2 }]}
+              >
+                <Text style={{ color: th.text, fontWeight: '700', fontSize: 13 }}>
+                  {t('abitudini.riordina_b')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
 
           <View
             style={[styles.card, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}
