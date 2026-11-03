@@ -69,10 +69,10 @@ import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
 import { localToday } from '@/features/tasks/groups';
 import { PillsRepo, localStamp } from '@/features/pills/repo';
 import { TasksRepo } from '@/features/tasks/repo';
+import { BASE_URL } from './baseUrl';
 import { secureStoreAdapter } from './secretStore';
 
-/** L'indirizzo del server. Si cambia solo per provare in locale (EXPO_PUBLIC_API_URL). */
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://nisama.altervista.org';
+export { BASE_URL };
 
 export interface Services {
   db: SqlDb;

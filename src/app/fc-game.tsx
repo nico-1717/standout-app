@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
 import { Card, PrimaryButton } from '@/ui/kit';
@@ -16,6 +17,8 @@ interface Item {
   isChild: boolean;
   question: string | null;
   answer: string | null;
+  questionImage: string | null;
+  answerImage: string | null;
 }
 
 /** Il colore e il nome del voto che una riga ha adesso. */
@@ -93,6 +96,8 @@ export default function GameScreen() {
       isChild,
       question: row?.question_desc ?? null,
       answer: row?.answer_desc ?? null,
+      questionImage: row?.question_image ?? null,
+      answerImage: row?.answer_image ?? null,
     };
   });
   const father = items.find((i) => !i.isChild);
@@ -243,10 +248,12 @@ export default function GameScreen() {
               {label(current).toUpperCase()}
             </Text>
             <DocView testID="fcg-question" raw={current.question} size={19} />
+            <CardImage testID="fcg-question-image" name={current.questionImage} />
             {shown ? (
               <View style={{ gap: 12 }}>
                 <View style={{ height: 1, backgroundColor: th.hairline2 }} />
                 <DocView testID="fcg-answer" raw={current.answer} size={17} />
+                <CardImage testID="fcg-answer-image" name={current.answerImage} />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {verdictBtn('fcg-wrong', t('fc.vg_sbagliato'), th.red, () =>
                     grade(current, 'wrong'),

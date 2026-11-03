@@ -257,6 +257,21 @@ describe('card page', () => {
     });
   });
 
+  test('card images from the website show on the card page', async () => {
+    const { flashcards, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    db.run('UPDATE fc_study_cards SET question_image = ?, answer_image = ? WHERE uuid = ?', [
+      'q1.png',
+      'a1.png',
+      c,
+    ]);
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    expect(screen.getByTestId('fcc-q-image')).toBeTruthy();
+    expect(screen.getByTestId('fcc-a-image')).toBeTruthy();
+  });
+
   test('clearing a side saves it as empty', async () => {
     const { flashcards } = setup();
     const deck = flashcards.createDeck({ name: 'Chem' })!;
