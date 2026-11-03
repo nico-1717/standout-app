@@ -31,6 +31,7 @@ import {
   PomodoroSettingsStore,
   type PomodoroSettings,
 } from '@/features/pomodoro/settings';
+import { DEFAULT_HOME_LAYOUT, HomeLayoutStore, type HomeWidget } from '@/features/home/layout';
 import { ProjectOptionsStore } from '@/features/projects/options';
 import { ProjectsRepo } from '@/features/projects/repo';
 import {
@@ -105,6 +106,8 @@ interface AppContextValue {
   updateDiarySettings: (patch: Partial<DiarySettings>) => void;
   pomodoroSettings: PomodoroSettings;
   updatePomodoroSettings: (patch: Partial<PomodoroSettings>) => void;
+  homeLayout: HomeWidget[];
+  updateHomeLayout: (layout: HomeWidget[]) => void;
   plannerSettings: PlannerSettings;
   updatePlannerSettings: (patch: Partial<Omit<PlannerSettings, 'first_week_start'>>) => void;
   /** I promemoria (pastiglie, abitudini): restano su questo telefono. Ritorna false se il telefono nega il permesso. */
@@ -165,6 +168,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pomodoroSettings, setPomodoroSettings] =
     useState<PomodoroSettings>(DEFAULT_POMODORO_SETTINGS);
   const pomodoroSettingsStore = useRef<PomodoroSettingsStore | null>(null);
+  const [homeLayout, setHomeLayout] = useState<HomeWidget[]>(DEFAULT_HOME_LAYOUT);
+  const homeLayoutStore = useRef<HomeLayoutStore | null>(null);
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const remindersStore = useRef<RemindersStore | null>(null);
   /** l'impronta delle notifiche già programmate (null = non si sa: si rifanno) */
@@ -222,6 +227,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const poStore = new PomodoroSettingsStore(opened.db);
         pomodoroSettingsStore.current = poStore;
         setPomodoroSettings(poStore.read());
+        const hoStore = new HomeLayoutStore(opened.db);
+        homeLayoutStore.current = hoStore;
+        setHomeLayout(hoStore.read());
         const rStore = new RemindersStore(opened.db);
         remindersStore.current = rStore;
         scheduledSig.current = null;
@@ -267,6 +275,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               setPomodoroSettings(await poStore.sync(api));
             } catch (e) {
               // come sopra: ultime scelte e pausa in corso; un server più vecchio può non avere la rotta
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
+            try {
+              setHomeLayout(await hoStore.sync(api));
+            } catch (e) {
+              // come sopra: i riquadri della Home; un server più vecchio può non avere la rotta
               if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
                 throw e;
               if (e instanceof TypeError) throw e;
@@ -443,6 +459,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updateHomeLayout = useCallback(
+    (layout: HomeWidget[]) => {
+      const store = homeLayoutStore.current;
+      if (!store) return;
+      setHomeLayout(store.write(layout));
+      services?.scheduler.trigger();
+    },
+    [services],
+  );
   const setUiStyle = useCallback(
     (st: UiStyle) => updateSettings({ ui_style: st }),
     [updateSettings],
@@ -475,6 +500,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       diarySettingsStore.current = null;
       plannerSettingsStore.current = null;
       pomodoroSettingsStore.current = null;
+      homeLayoutStore.current = null;
+      setHomeLayout(DEFAULT_HOME_LAYOUT);
       remindersStore.current = null;
       scheduledSig.current = null;
       setReminders(DEFAULT_REMINDERS);
@@ -508,6 +535,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatePlannerSettings,
       pomodoroSettings,
       updatePomodoroSettings,
+      homeLayout,
+      updateHomeLayout,
       reminders,
       updateReminders,
       changed,
@@ -533,6 +562,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatePlannerSettings,
       pomodoroSettings,
       updatePomodoroSettings,
+      homeLayout,
+      updateHomeLayout,
       reminders,
       updateReminders,
       changed,

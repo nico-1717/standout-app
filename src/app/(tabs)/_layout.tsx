@@ -10,9 +10,30 @@ function Icon({
   kind,
   color,
 }: {
-  kind: 'planner' | 'todo' | 'habits' | 'buy' | 'pills' | 'settings';
+  kind: 'home' | 'planner' | 'todo' | 'habits' | 'buy' | 'pills' | 'settings';
   color: string;
 }) {
+  if (kind === 'home') {
+    // una casetta: tetto e porta
+    return (
+      <View style={{ width: 24, height: 24, justifyContent: 'flex-end' }}>
+        <View style={{ height: 14, borderRadius: 4, borderWidth: 2, borderColor: color }} />
+        <View
+          style={{
+            position: 'absolute',
+            top: 1,
+            left: 5,
+            width: 14,
+            height: 14,
+            borderTopWidth: 2,
+            borderLeftWidth: 2,
+            borderColor: color,
+            transform: [{ rotate: '45deg' }],
+          }}
+        />
+      </View>
+    );
+  }
   if (kind === 'planner') {
     // un foglio d'agenda: cornice con la riga in alto
     return (
@@ -133,6 +154,13 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="home"
+        options={{
+          title: t('sidebar.home'),
+          tabBarIcon: ({ color }) => <Icon kind="home" color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
         name="planner"
         options={{
           title: t('sidebar.planner'),
@@ -156,6 +184,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="buy"
         options={{
+          // la lista della spesa si apre da «Altro» e dalla Home: la barra resta a cinque
+          href: null,
           title: t('planner.to_buy'),
           tabBarIcon: ({ color }) => <Icon kind="buy" color={String(color)} />,
         }}
@@ -172,7 +202,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: t('comune.impostazioni'),
+          title: t('progetti.altro'),
           tabBarIcon: ({ color }) => <Icon kind="settings" color={String(color)} />,
         }}
       />

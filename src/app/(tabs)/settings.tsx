@@ -104,6 +104,14 @@ export default function SettingsScreen() {
             <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
           </Card>
         </Pressable>
+        <Pressable testID="open-buy" accessibilityRole="button" onPress={() => router.push('/buy')}>
+          <Card style={{ padding: 16 }}>
+            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+              {t('planner.to_buy')}
+            </Text>
+            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
+          </Card>
+        </Pressable>
         <Pressable
           testID="open-pills"
           accessibilityRole="button"

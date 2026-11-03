@@ -1,3 +1,4 @@
+import type { HomeWidget } from '@/features/home/layout';
 import type { DiarySettings, DiarySettingsApi } from '@/features/diary/settings';
 import type { PlannerSettings, PlannerSettingsApi } from '@/features/planner/settings';
 import type { PomodoroSettings, PomodoroSettingsApi } from '@/features/pomodoro/settings';
@@ -125,6 +126,14 @@ export class HttpSyncApi
   async patchPlannerSettings(patch: Partial<PlannerSettings>): Promise<PlannerSettings> {
     return (await this.call<{ settings: PlannerSettings }>('PATCH', '/planner/settings', patch))
       .settings;
+  }
+
+  async getHomeLayout(): Promise<HomeWidget[]> {
+    return (await this.call<{ layout: HomeWidget[] }>('GET', '/home/layout')).layout;
+  }
+
+  async putHomeLayout(layout: HomeWidget[]): Promise<HomeWidget[]> {
+    return (await this.call<{ layout: HomeWidget[] }>('PUT', '/home/layout', { layout })).layout;
   }
 
   async getPomodoroSettings(): Promise<PomodoroSettings> {
