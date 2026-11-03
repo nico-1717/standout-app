@@ -16,6 +16,9 @@ export type SyncTable =
   | 'planner_calendars'
   | 'planner_categories'
   | 'planner_category_keywords'
+  | 'planner_priorities'
+  | 'planner_routines'
+  | 'planner_routine_items'
   | 'planner_events';
 
 export interface TableDef {
@@ -253,21 +256,44 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     booleans: [],
     columns: ['uuid', 'category_uuid', 'keyword', 'created_at', 'updated_at'],
   },
+  // le priorità del giorno: una riga per (giorno, posto 1..6), identità UUIDv5 come un check-in
+  planner_priorities: {
+    order: 105,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: ['priority_date', 'position'],
+    booleans: ['is_done'],
+    columns: [
+      'uuid',
+      'priority_date',
+      'position',
+      'content',
+      'is_done',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  planner_routines: {
+    order: 106,
+    readOnly: ['created_at'],
+    createOnly: [],
+    booleans: [],
+    columns: ['uuid', 'name', 'color', 'sort_key', 'created_at'],
+    children: [{ table: 'planner_routine_items', column: 'routine_uuid' }],
+  },
+  planner_routine_items: {
+    order: 107,
+    readOnly: [],
+    createOnly: ['routine_uuid'],
+    booleans: [],
+    columns: ['uuid', 'routine_uuid', 'name', 'duration_minutes', 'sort_key'],
+  },
   // gli eventi: la riga com'è sul sito. Una serie = un capostipite con `rrule` (la scrive il server dai campi repeat_*);
   // «solo questa volta» / «questa volta no» = una riga con series_uuid + original_date (+ is_cancelled). Le occorrenze
   // non sono righe: si calcolano in lettura (vedi features/planner/recurrence.ts ed events.ts).
   planner_events: {
     order: 130,
-    readOnly: [
-      'completed_at',
-      'rrule',
-      'routine_group',
-      'routine_collapsed',
-      'sort_order',
-      'created_at',
-      'updated_at',
-    ],
-    createOnly: ['habit_uuid', 'series_uuid', 'original_date'],
+    readOnly: ['completed_at', 'rrule', 'sort_order', 'created_at', 'updated_at'],
+    createOnly: ['habit_uuid', 'series_uuid', 'original_date', 'routine_uuid', 'routine_group'],
     booleans: [
       'duration_locked',
       'is_all_day',
@@ -308,6 +334,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'series_uuid',
       'original_date',
       'is_cancelled',
+      'routine_uuid',
       'routine_group',
       'routine_collapsed',
       'sort_order',

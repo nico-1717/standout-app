@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -16,6 +17,8 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { localToday } from '@/features/tasks/groups';
 import { addDaysIso, addMonths, mondayOf, monthOf, yearOf } from '@/features/planner/dates';
 import type { EventView } from '@/features/planner/events';
+import type { Priority, Routine } from '@/features/planner/repo';
+import { PrioritiesCard, RoutineBar, routineBlocks } from '@/features/planner/DayExtras';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
   BandEvent,
@@ -50,7 +53,7 @@ export default function PlannerScreen() {
     return Array.from({ length: 7 }, (_, i) => addDaysIso(m, i));
   }, [date]);
 
-  const { events, busy, calendars, categories, span } = useMemo(() => {
+  const { events, busy, calendars, categories, span, priorities, routines } = useMemo(() => {
     void version;
     if (!repo) {
       return {
@@ -59,6 +62,8 @@ export default function PlannerScreen() {
         calendars: [],
         categories: [],
         span: [] as EventView[],
+        priorities: [] as Priority[],
+        routines: [] as Routine[],
       };
     }
     const grid = monthGrid(date);
@@ -74,6 +79,8 @@ export default function PlannerScreen() {
       calendars: repo.calendars(),
       categories: repo.categories(),
       span: inSpan,
+      priorities: repo.priorities(date),
+      routines: repo.routines(),
     };
   }, [repo, version, date, week, mode]);
 
@@ -100,8 +107,11 @@ export default function PlannerScreen() {
   );
 
   if (!repo) return null;
-  const bands = events.filter(isBand);
-  const grid = events.filter((e) => !isBand(e));
+  const blocks = routineBlocks(events, routines);
+  const closed = new Set(blocks.filter((b) => b.collapsed).map((b) => b.group));
+  const shown = events.filter((e) => !(e.routineGroup && closed.has(e.routineGroup)));
+  const bands = shown.filter(isBand);
+  const grid = shown.filter((e) => !isBand(e));
   const step = (delta: number) =>
     setDate(
       mode === 'day'
@@ -276,6 +286,55 @@ export default function PlannerScreen() {
           testID="day-scroll"
           contentContainerStyle={{ paddingBottom: 120 }}
         >
+          <PrioritiesCard
+            pt={pt}
+            date={date}
+            items={priorities}
+            onSave={(pos, text, done) => {
+              repo.setPriority(date, pos, text, done);
+              changed();
+            }}
+          />
+          <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
+            {blocks.map((b) => (
+              <RoutineBar
+                key={b.group}
+                pt={pt}
+                block={b}
+                onToggle={(x) => {
+                  repo.setRoutineCollapsed(x.group, !x.collapsed);
+                  changed();
+                }}
+                onDelete={() =>
+                  Alert.alert(
+                    t('planner.elimino_tutta_la_routine'),
+                    t('planner.tutti_i_passaggi_di_questo'),
+                    [
+                      { text: t('comune.annulla'), style: 'cancel' },
+                      {
+                        text: t('planner.elimina'),
+                        style: 'destructive',
+                        onPress: () => {
+                          repo.removeRoutineBlock(b.group);
+                          changed();
+                        },
+                      },
+                    ],
+                  )
+                }
+              />
+            ))}
+            <Pressable
+              testID="open-routines"
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/planner-routines', params: { date } })}
+              style={{ alignSelf: 'flex-start', paddingVertical: 4 }}
+            >
+              <Text style={{ color: pt.accentInk, fontSize: 13, fontFamily: pt.sans }}>
+                {t('planner.routine')} ›
+              </Text>
+            </Pressable>
+          </View>
           {bands.length ? (
             <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
               {bands.map((e) => (

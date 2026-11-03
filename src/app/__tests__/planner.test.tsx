@@ -184,4 +184,49 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(screen.getByTestId('week-view')).toBeTruthy();
     expect(screen.queryByTestId(`week-day-${TODAY}`)).toBeNull();
   });
+  test('priorities: add one, tick it, and it stays after a refresh', async () => {
+    const repo = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('priority-empty'));
+    await fireEvent.changeText(screen.getByTestId('priority-new'), 'Study maths');
+    await fireEvent(screen.getByTestId('priority-new'), 'submitEditing');
+    expect(repo.priorities(TODAY).map((p) => p.content)).toEqual(['Study maths']);
+    await screen.rerender(
+      <ThemeProvider>
+        <PlannerScreen />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId('priority-box-1'));
+    expect(repo.priorities(TODAY)[0]!.is_done).toBe(1);
+  });
+
+  test('a closed routine is one bar; opening it shows its steps; deleting asks first', async () => {
+    const repo = setup();
+    const id = repo.saveRoutine({
+      name: 'Morning',
+      color: '#C6B6A6',
+      items: [
+        { name: 'Shower', minutes: 10 },
+        { name: 'Breakfast', minutes: 20 },
+      ],
+    })!;
+    repo.insertRoutine(id, TODAY, '07:00');
+    const group = repo.rows()[0]!.routine_group!;
+    await renderIt();
+    expect(screen.getByTestId(`routine-${group}`)).toBeTruthy();
+    expect(screen.queryByText('Shower')).toBeNull();
+    await fireEvent.press(screen.getByTestId(`routine-toggle-${group}`));
+    await screen.rerender(
+      <ThemeProvider>
+        <PlannerScreen />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('Shower')).toBeTruthy();
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => {
+      buttons?.find((b) => b.style === 'destructive')?.onPress?.();
+    });
+    await fireEvent.press(screen.getByTestId(`routine-del-${group}`));
+    expect(alert).toHaveBeenCalled();
+    expect(repo.rows()).toHaveLength(0);
+  });
 });

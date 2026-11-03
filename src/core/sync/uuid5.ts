@@ -111,3 +111,12 @@ export function doseUuid(planUuid: string, day: string, time: string, seq: numbe
 export function diaryDayUuid(userId: number | string, day: string): string {
   return uuid5(`habit_daily_journal|${userId}|${day}`);
 }
+
+/** Una priorità del giorno: una riga per (utente, giorno, posto 1..6), come sul server (sync_uuid_priorita). */
+export function plannerPriorityUuid(
+  userId: number | string,
+  day: string,
+  position: number,
+): string {
+  return uuid5(`planner_priorities|${userId}|${day}|${position}`);
+}

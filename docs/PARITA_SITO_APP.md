@@ -69,8 +69,8 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P8 | Categorie e parole chiave | sync `planner_categories`, `_keywords` | Planner › Categorie | P2 | fatto (schermata Calendari e categorie) | |
 | P9 | Luoghi e rubrica dei luoghi; ricerca luoghi e dettaglio | sync `planner_places`; ricerca **solo online** | Scheda luogo + mappa | P2 | da fare | |
 | P10 | Mappa dei luoghi | — (`react-native-maps`) | Mappa | P2 | da fare (serve la chiave Google Maps per Android: vedi §8) | |
-| P11 | Priorità del giorno (`planner_priorities`) | sync | Planner › Priorità | P2 | da fare | |
-| P12 | Routine (gruppi di righe, comprimi/ricompatta, inserisci) | sync `planner_routines`, `_items` | Planner › Routine | P2 | da fare | |
+| P11 | Priorità del giorno (`planner_priorities`) | sync | Planner › Priorità | P2 | fatto (scheda nel giorno: scrivi, spunta, fino a 6; sync con UUIDv5) | |
+| P12 | Routine (gruppi di righe, comprimi/ricompatta, inserisci) | sync `planner_routines`, `_items` | Planner › Routine | P2 | fatto (crea/cambia routine, inserisci a un'ora, apri/chiudi, elimina il blocco) | |
 | P13 | Preferiti | sync | Planner › Preferiti | P2 | da fare | |
 | P14 | Barra intelligente (data, ora, durata dalla frase: `04_barra_e_priorita.js`, `planner_smart.json`) | locale | Barra rapida | P2 | da fare — **test d'oro** (il parser sta in JS: si porta e si prova su frasi vere) | |
 | P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | da fare | |

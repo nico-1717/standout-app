@@ -1,4 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
+import { plannerPriorityUuid } from '@/core/sync/uuid5';
 import { uuidv7 } from 'uuidv7';
 
 import type { SqlDb } from '@/core/db/sqldb';
@@ -7,7 +8,7 @@ import { deleteRow, patchRow, upsertRow } from '@/core/sync/rows';
 import type { WireRow, WireValue } from '@/core/sync/types';
 
 import { eventsInRange, type EventRow, type EventView } from './events';
-import { inputOf, normalise, type Context, type EventInput } from './model';
+import { inputOf, minutesOf, normalise, timeOf, type Context, type EventInput } from './model';
 
 export interface Calendar {
   uuid: string;
@@ -28,6 +29,29 @@ export interface Category {
   color: string;
   is_hidden: number;
   role: string | null;
+  sort_key: string;
+}
+
+export interface Priority {
+  uuid: string;
+  priority_date: string;
+  position: number;
+  content: string;
+  is_done: number;
+}
+
+export interface Routine {
+  uuid: string;
+  name: string;
+  color: string;
+  sort_key: string;
+}
+
+export interface RoutineItem {
+  uuid: string;
+  routine_uuid: string;
+  name: string;
+  duration_minutes: number;
   sort_key: string;
 }
 
@@ -83,6 +107,7 @@ export class PlannerRepo {
     private readonly clock: () => string = () => new Date().toISOString(),
     private readonly newId: () => string = uuidv7,
     private readonly untitled: () => string = () => 'Untitled',
+    private readonly userId: number | string = 0,
   ) {}
 
   /* ---------------- lettura ---------------- */
@@ -209,7 +234,9 @@ export class PlannerRepo {
       series_uuid: null,
       original_date: null,
       is_cancelled: 0,
+      routine_uuid: null,
       routine_group: null,
+      routine_collapsed: 1,
       sort_order: 0,
     };
   }
@@ -376,7 +403,9 @@ export class PlannerRepo {
 
   /* ---------------- calendari, categorie, parole ---------------- */
 
-  private lastKey(table: 'planner_calendars' | 'planner_categories'): string | null {
+  private lastKey(
+    table: 'planner_calendars' | 'planner_categories' | 'planner_routines',
+  ): string | null {
     return (
       this.db.all<{ sort_key: string }>(
         `SELECT sort_key FROM ${table} ORDER BY sort_key DESC LIMIT 1`,
@@ -553,5 +582,298 @@ export class PlannerRepo {
       deleteRow(this.db, 'planner_category_keywords', uuid);
       enqueue(this.db, { table: 'planner_category_keywords', uuid, op: 'delete' }, this.clock());
     });
+  }
+
+  /* ---------------- priorità del giorno ---------------- */
+
+  /** Le priorità scritte per un giorno (al massimo 6), in ordine di posto. */
+  priorities(date: string): Priority[] {
+    return this.db.all<Priority>(
+      'SELECT uuid, priority_date, position, content, is_done FROM planner_priorities WHERE priority_date = ? ORDER BY position',
+      [date],
+    );
+  }
+
+  /** Quali giorni di un periodo hanno almeno una priorità. */
+  prioritiesInRange(from: string, to: string): Map<string, Priority[]> {
+    const out = new Map<string, Priority[]>();
+    for (const p of this.db.all<Priority>(
+      'SELECT uuid, priority_date, position, content, is_done FROM planner_priorities WHERE priority_date BETWEEN ? AND ? ORDER BY priority_date, position',
+      [from, to],
+    )) {
+      out.set(p.priority_date, [...(out.get(p.priority_date) ?? []), p]);
+    }
+    return out;
+  }
+
+  /**
+   * Scrive il posto `position` (1..6) di un giorno. Come sul sito: un testo vuoto e non spuntato
+   * toglie la riga. Ritorna false se il posto non è valido.
+   */
+  setPriority(date: string, position: number, content: string, done = false): boolean {
+    if (!Number.isInteger(position) || position < 1 || position > 6) return false;
+    const text = content.trim().slice(0, 200);
+    const uuid = plannerPriorityUuid(this.userId, date, position);
+    const cur = this.priorities(date).find((p) => p.position === position);
+    this.db.transaction(() => {
+      const now = this.clock();
+      if (text === '' && !done) {
+        if (!cur) return;
+        deleteRow(this.db, 'planner_priorities', cur.uuid);
+        enqueue(this.db, { table: 'planner_priorities', uuid: cur.uuid, op: 'delete' }, now);
+        return;
+      }
+      if (cur && cur.content === text && !!cur.is_done === done) return;
+      if (cur) {
+        patchRow(this.db, 'planner_priorities', cur.uuid, {
+          content: text,
+          is_done: done ? 1 : 0,
+          updated_at: now,
+        });
+      } else {
+        upsertRow(this.db, 'planner_priorities', {
+          uuid,
+          priority_date: date,
+          position,
+          content: text,
+          is_done: done ? 1 : 0,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+      enqueue(
+        this.db,
+        {
+          table: 'planner_priorities',
+          uuid: cur?.uuid ?? uuid,
+          op: 'upsert',
+          isCreate: !cur,
+          patch: cur
+            ? { content: text, is_done: done }
+            : { priority_date: date, position, content: text, is_done: done },
+        },
+        now,
+      );
+    });
+    return true;
+  }
+
+  /* ---------------- routine ---------------- */
+
+  routines(): Routine[] {
+    return this.db.all<Routine>(
+      'SELECT uuid, name, color, sort_key FROM planner_routines ORDER BY sort_key, uuid',
+    );
+  }
+
+  routineItems(routineUuid?: string): RoutineItem[] {
+    return routineUuid
+      ? this.db.all<RoutineItem>(
+          'SELECT uuid, routine_uuid, name, duration_minutes, sort_key FROM planner_routine_items WHERE routine_uuid = ? ORDER BY sort_key, uuid',
+          [routineUuid],
+        )
+      : this.db.all<RoutineItem>(
+          'SELECT uuid, routine_uuid, name, duration_minutes, sort_key FROM planner_routine_items ORDER BY routine_uuid, sort_key, uuid',
+        );
+  }
+
+  /**
+   * Crea una routine o la cambia (se `uuid` c'è) con i suoi passaggi, come fa «Salva» sul sito: il nome, il colore
+   * e l'elenco intero dei passaggi (massimo 40, durata da 1 a 1440 minuti, i vuoti si saltano).
+   * Ritorna l'uuid, o null se manca il nome.
+   */
+  saveRoutine(input: {
+    uuid?: string;
+    name: string;
+    color: string;
+    items: { name: string; minutes: number }[];
+  }): string | null {
+    const name = input.name.trim().slice(0, 80);
+    if (name === '') return null;
+    const items = input.items
+      .map((i) => ({
+        name: i.name.trim().slice(0, 120),
+        minutes: Math.min(1440, Math.max(1, Math.round(Number(i.minutes)) || 5)),
+      }))
+      .filter((i) => i.name !== '')
+      .slice(0, 40);
+    const uuid = input.uuid ?? this.newId();
+    this.db.transaction(() => {
+      const now = this.clock();
+      const cur = this.routines().find((r) => r.uuid === uuid);
+      if (cur) {
+        patchRow(this.db, 'planner_routines', uuid, { name, color: input.color });
+        enqueue(
+          this.db,
+          { table: 'planner_routines', uuid, op: 'upsert', patch: { name, color: input.color } },
+          now,
+        );
+      } else {
+        const key = generateKeyBetween(this.lastKey('planner_routines'), null);
+        upsertRow(this.db, 'planner_routines', {
+          uuid,
+          name,
+          color: input.color,
+          sort_key: key,
+          created_at: now,
+        });
+        enqueue(
+          this.db,
+          {
+            table: 'planner_routines',
+            uuid,
+            op: 'upsert',
+            isCreate: true,
+            patch: { name, color: input.color, sort_key: key },
+          },
+          now,
+        );
+      }
+      // i passaggi: si tengono quelli che ci sono ancora (stessa posizione = stesso uuid), si aggiungono i nuovi, si tolgono i vecchi
+      const old = this.routineItems(uuid);
+      let prev: string | null = null;
+      items.forEach((it, i) => {
+        const keep = old[i];
+        const key = generateKeyBetween(prev, null);
+        prev = key;
+        if (keep) {
+          const patch: Record<string, WireValue> = {};
+          if (keep.name !== it.name) patch.name = it.name;
+          if (keep.duration_minutes !== it.minutes) patch.duration_minutes = it.minutes;
+          if (keep.sort_key !== key) patch.sort_key = key;
+          if (Object.keys(patch).length) {
+            patchRow(this.db, 'planner_routine_items', keep.uuid, patch);
+            enqueue(
+              this.db,
+              { table: 'planner_routine_items', uuid: keep.uuid, op: 'upsert', patch },
+              now,
+            );
+          }
+        } else {
+          const id = this.newId();
+          upsertRow(this.db, 'planner_routine_items', {
+            uuid: id,
+            routine_uuid: uuid,
+            name: it.name,
+            duration_minutes: it.minutes,
+            sort_key: key,
+          });
+          enqueue(
+            this.db,
+            {
+              table: 'planner_routine_items',
+              uuid: id,
+              op: 'upsert',
+              isCreate: true,
+              patch: {
+                routine_uuid: uuid,
+                name: it.name,
+                duration_minutes: it.minutes,
+                sort_key: key,
+              },
+            },
+            now,
+          );
+        }
+      });
+      for (const extra of old.slice(items.length)) {
+        deleteRow(this.db, 'planner_routine_items', extra.uuid);
+        enqueue(this.db, { table: 'planner_routine_items', uuid: extra.uuid, op: 'delete' }, now);
+      }
+    });
+    return uuid;
+  }
+
+  /** Toglie una routine e i suoi passaggi. I blocchi già messi nei giorni restano (come sul sito). */
+  removeRoutine(uuid: string): void {
+    this.db.transaction(() => {
+      this.db.run('DELETE FROM planner_routine_items WHERE routine_uuid = ?', [uuid]);
+      deleteRow(this.db, 'planner_routines', uuid);
+      enqueue(this.db, { table: 'planner_routines', uuid, op: 'delete' }, this.clock());
+    });
+  }
+
+  /**
+   * Mette una routine in un giorno: un blocco per ogni passaggio, uno dopo l'altro dall'ora `start`, tutti con lo
+   * stesso gruppo (come `routine_insert` del sito). Si ferma alle 23:59. Ritorna quanti blocchi ha messo
+   * (0 se la routine non ha passaggi).
+   */
+  insertRoutine(routineUuid: string, date: string, start: string): number {
+    const routine = this.routines().find((r) => r.uuid === routineUuid);
+    const items = this.routineItems(routineUuid);
+    if (!routine || !items.length) return 0;
+    const group = Array.from({ length: 32 }, () =>
+      Math.floor(Math.random() * 16).toString(16),
+    ).join('');
+    const calendar = this.calendars().find((c) => c.is_default)?.uuid ?? null;
+    let cursor = minutesOf(start);
+    let n = 0;
+    this.db.transaction(() => {
+      for (const it of items) {
+        const dur = Math.max(1, it.duration_minutes);
+        const end = Math.min(1439, cursor + dur);
+        const uuid = this.newId();
+        const row: EventRow = {
+          ...this.blank(uuid, date),
+          title: it.name,
+          start_time: timeOf(cursor),
+          end_time: timeOf(end),
+          color: routine.color,
+          notify_type: 'none',
+          notify_minutes: 0,
+          calendar_uuid: calendar,
+          routine_uuid: routineUuid,
+          routine_group: group,
+          routine_collapsed: 1,
+        };
+        const patch: Record<string, WireValue> = {};
+        for (const f of WRITABLE) patch[f] = wire(f, row[f]);
+        patch.routine_uuid = routineUuid;
+        patch.routine_group = group;
+        patch.routine_collapsed = true;
+        this.writeNew(row, patch);
+        n += 1;
+        cursor = end;
+        if (cursor >= 1439) break;
+      }
+    });
+    return n;
+  }
+
+  /** Apre o richiude un blocco di routine (tutti i pezzi dello stesso gruppo). */
+  setRoutineCollapsed(group: string, collapsed: boolean): void {
+    const rows = this.rows().filter((r) => r.routine_group === group);
+    this.db.transaction(() => {
+      const now = this.clock();
+      for (const r of rows) {
+        if ((r.routine_collapsed === 1) === collapsed) continue;
+        patchRow(this.db, 'planner_events', r.uuid, {
+          routine_collapsed: collapsed ? 1 : 0,
+          updated_at: now,
+        });
+        enqueue(
+          this.db,
+          {
+            table: 'planner_events',
+            uuid: r.uuid,
+            op: 'upsert',
+            patch: { routine_collapsed: collapsed },
+          },
+          now,
+        );
+      }
+    });
+  }
+
+  /** Toglie tutti i pezzi di un blocco di routine messo in un giorno («elimina tutta la routine»). */
+  removeRoutineBlock(group: string): number {
+    const rows = this.rows().filter((r) => r.routine_group === group);
+    this.db.transaction(() => {
+      for (const r of rows) {
+        const view = this.eventsInRange(r.event_date, r.event_date).find((v) => v.uuid === r.uuid);
+        if (view) this.remove(view, 'one');
+      }
+    });
+    return rows.length;
   }
 }

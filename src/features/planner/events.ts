@@ -38,7 +38,9 @@ export interface EventRow extends RepeatSource {
   series_uuid: string | null;
   original_date: string | null;
   is_cancelled: number;
+  routine_uuid: string | null;
   routine_group: string | null;
+  routine_collapsed: number;
   sort_order: number;
 }
 
@@ -69,6 +71,9 @@ export interface EventView {
   categoryUuid: string | null;
   calendarUuid: string | null;
   habitUuid: string | null;
+  routineUuid: string | null;
+  routineGroup: string | null;
+  routineCollapsed: boolean;
   importance: string;
   color: string | null;
   type: string;
@@ -126,6 +131,9 @@ function view(r: EventRow, occDate: string, masterUuid: string, clone: boolean):
     categoryUuid: r.category_uuid,
     calendarUuid: r.calendar_uuid,
     habitUuid: r.habit_uuid,
+    routineUuid: r.routine_uuid,
+    routineGroup: r.routine_group,
+    routineCollapsed: r.routine_collapsed === 1,
     importance: r.importance,
     color: r.color,
     type: r.item_type,

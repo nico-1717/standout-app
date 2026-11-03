@@ -253,8 +253,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ),
           notes,
           diary: new DiaryRepo(opened.db, userId),
-          planner: new PlannerRepo(opened.db, undefined, undefined, () =>
-            i18n.t('planner.tit_senza_titolo'),
+          planner: new PlannerRepo(
+            opened.db,
+            undefined,
+            undefined,
+            () => i18n.t('planner.tit_senza_titolo'),
+            userId,
           ),
           scheduler,
         });

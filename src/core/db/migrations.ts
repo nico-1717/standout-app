@@ -304,6 +304,38 @@ CREATE INDEX idx_pev_date ON planner_events (event_date);
 CREATE INDEX idx_pev_series ON planner_events (series_uuid, original_date);
 `,
   },
+  {
+    version: 6,
+    sql: `
+-- le priorità del giorno (fino a 6 per giorno), le routine e i loro passaggi; gli eventi ricordano la routine d'origine
+CREATE TABLE planner_priorities (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  priority_date TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  is_done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE UNIQUE INDEX idx_ppri_slot ON planner_priorities (priority_date, position);
+CREATE TABLE planner_routines (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '#E3D9EE',
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  created_at TEXT
+);
+CREATE TABLE planner_routine_items (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  routine_uuid TEXT NOT NULL,
+  name TEXT NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 5,
+  sort_key TEXT NOT NULL DEFAULT 'a0'
+);
+CREATE INDEX idx_pri_routine ON planner_routine_items (routine_uuid);
+ALTER TABLE planner_events ADD COLUMN routine_uuid TEXT;
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {
