@@ -32,6 +32,7 @@ import {
   type PomodoroSettings,
 } from '@/features/pomodoro/settings';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
+import { GameRepo } from '@/features/flashcards/game';
 import { StudyRepo } from '@/features/flashcards/study';
 import { GradesRepo } from '@/features/grades/repo';
 import { GradeSettingsStore } from '@/features/grades/settings';
@@ -88,6 +89,7 @@ export interface Services {
   grades: GradesRepo;
   flashcards: FlashcardsRepo;
   study: StudyRepo;
+  games: GameRepo;
   scheduler: SyncScheduler;
 }
 
@@ -326,6 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         scheduler.subscribe(setSyncInfo);
         scheduler.start();
+        const study = new StudyRepo(opened.db, userId);
         setServices({
           db: opened.db,
           tasks: new TasksRepo(opened.db),
@@ -351,7 +354,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           pomodoro: new PomodoroRepo(opened.db, userId),
           grades: new GradesRepo(opened.db),
           flashcards: new FlashcardsRepo(opened.db),
-          study: new StudyRepo(opened.db, userId),
+          study,
+          games: new GameRepo(opened.db, study),
           scheduler,
         });
       } catch (e) {
