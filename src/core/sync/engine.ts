@@ -229,6 +229,19 @@ export class SyncEngine {
   /** Il server cancella le righe figlie insieme al padre (es. i check-in di un'abitudine): il telefono le toglie anche lui. */
   private cascade(table: SyncTable, uuid: string): void {
     for (const ch of MANIFEST[table].children ?? []) {
+      if (ch.setNull) {
+        this.db.run(`UPDATE ${ch.table} SET ${ch.column} = NULL WHERE ${ch.column} = ?`, [uuid]);
+        continue;
+      }
+      // un albero (i progetti): prima i nipoti, poi i figli
+      if (MANIFEST[ch.table].children?.length) {
+        for (const k of this.db.all<{ uuid: string }>(
+          `SELECT uuid FROM ${ch.table} WHERE ${ch.column} = ?`,
+          [uuid],
+        )) {
+          this.cascade(ch.table, k.uuid);
+        }
+      }
       this.db.run(`DELETE FROM ${ch.table} WHERE ${ch.column} = ?`, [uuid]);
     }
   }

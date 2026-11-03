@@ -20,6 +20,9 @@ export type SyncTable =
   | 'planner_routines'
   | 'planner_routine_items'
   | 'planner_weeks'
+  | 'projects'
+  | 'pomodoro_sessions'
+  | 'pomodoro_custom_durations'
   | 'planner_events';
 
 export interface TableDef {
@@ -33,7 +36,7 @@ export interface TableDef {
   booleans: string[];
   columns: string[];
   /** righe figlie che il server cancella insieme a questa (chiave esterna a cascata): il telefono le toglie dalla vista */
-  children?: { table: SyncTable; column: string }[];
+  children?: { table: SyncTable; column: string; setNull?: boolean }[];
 }
 
 export const MANIFEST: Record<SyncTable, TableDef> = {
@@ -360,6 +363,77 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'updated_at',
     ],
     children: [{ table: 'planner_events', column: 'series_uuid' }],
+  },
+  // i progetti: un albero. Il colore si eredita dal padre finché non lo scegli tu (color_edited). I campi study_* li scrive il
+  // piano di studio del sito: qui si leggono e basta (tranne la stima dei pomodori).
+  projects: {
+    order: 140,
+    readOnly: [
+      'study_event_uuid',
+      'study_start',
+      'study_end',
+      'study_ripasso_di_uuid',
+      'study_ripasso_n',
+      'created_at',
+      'updated_at',
+    ],
+    createOnly: [],
+    booleans: ['color_edited', 'todo_enabled', 'is_favorite'],
+    columns: [
+      'uuid',
+      'parent_uuid',
+      'name',
+      'notes',
+      'status',
+      'color',
+      'color_edited',
+      'target_date',
+      'due_date',
+      'todo_enabled',
+      'is_favorite',
+      'sort_key',
+      'study_event_uuid',
+      'study_start',
+      'study_end',
+      'study_pomodori_stimati',
+      'study_ripasso_di_uuid',
+      'study_ripasso_n',
+      'created_at',
+      'updated_at',
+    ],
+    // i figli se ne vanno col padre; le sessioni restano, senza progetto
+    children: [
+      { table: 'projects', column: 'parent_uuid' },
+      { table: 'pomodoro_sessions', column: 'project_uuid', setNull: true },
+    ],
+  },
+  // le sessioni del Pomodoro e del cronometro: date e ore come sul sito, «AAAA-MM-GG HH:MM:SS» ora locale
+  pomodoro_sessions: {
+    order: 150,
+    readOnly: ['updated_at'],
+    createOnly: ['mode'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'mode',
+      'start_time',
+      'end_time',
+      'status',
+      'resume_time',
+      'duration_seconds',
+      'planned_duration_min',
+      'project_uuid',
+      'is_manual',
+      'updated_at',
+    ],
+  },
+  // le durate salvate (25, 50, 90...): una riga per (tipo, minuti), identità UUIDv5
+  pomodoro_custom_durations: {
+    order: 160,
+    readOnly: ['updated_at'],
+    createOnly: ['type', 'minutes'],
+    booleans: [],
+    columns: ['uuid', 'type', 'minutes', 'updated_at'],
   },
 };
 

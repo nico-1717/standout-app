@@ -81,6 +81,18 @@ export default function SettingsScreen() {
           </Card>
         </Pressable>
         <Pressable
+          testID="open-pomodoro"
+          accessibilityRole="button"
+          onPress={() => router.push('/pomodoro')}
+        >
+          <Card style={{ padding: 16 }}>
+            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+              {t('pomodoro.tipo_pomodoro')}
+            </Text>
+            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
+          </Card>
+        </Pressable>
+        <Pressable
           testID="open-pills"
           accessibilityRole="button"
           onPress={() => router.push('/pills')}

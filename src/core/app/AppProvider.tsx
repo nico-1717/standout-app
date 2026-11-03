@@ -25,6 +25,13 @@ import {
   type PlannerSettings,
 } from '@/features/planner/settings';
 import { PlannerRepo } from '@/features/planner/repo';
+import { PomodoroRepo } from '@/features/pomodoro/repo';
+import {
+  DEFAULT_POMODORO_SETTINGS,
+  PomodoroSettingsStore,
+  type PomodoroSettings,
+} from '@/features/pomodoro/settings';
+import { ProjectsRepo } from '@/features/projects/repo';
 import {
   DEFAULT_DIARY_SETTINGS,
   DiarySettingsStore,
@@ -68,6 +75,8 @@ export interface Services {
   notes: QuickNoteStore;
   diary: DiaryRepo;
   planner: PlannerRepo;
+  projects: ProjectsRepo;
+  pomodoro: PomodoroRepo;
   scheduler: SyncScheduler;
 }
 
@@ -92,6 +101,8 @@ interface AppContextValue {
   updateHabitSettings: (patch: Partial<HabitSettings>) => void;
   diarySettings: DiarySettings;
   updateDiarySettings: (patch: Partial<DiarySettings>) => void;
+  pomodoroSettings: PomodoroSettings;
+  updatePomodoroSettings: (patch: Partial<PomodoroSettings>) => void;
   plannerSettings: PlannerSettings;
   updatePlannerSettings: (patch: Partial<Omit<PlannerSettings, 'first_week_start'>>) => void;
   /** I promemoria (pastiglie, abitudini): restano su questo telefono. Ritorna false se il telefono nega il permesso. */
@@ -149,6 +160,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const diarySettingsStore = useRef<DiarySettingsStore | null>(null);
   const [plannerSettings, setPlannerSettings] = useState<PlannerSettings>(DEFAULT_PLANNER_SETTINGS);
   const plannerSettingsStore = useRef<PlannerSettingsStore | null>(null);
+  const [pomodoroSettings, setPomodoroSettings] =
+    useState<PomodoroSettings>(DEFAULT_POMODORO_SETTINGS);
+  const pomodoroSettingsStore = useRef<PomodoroSettingsStore | null>(null);
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const remindersStore = useRef<RemindersStore | null>(null);
   /** l'impronta delle notifiche già programmate (null = non si sa: si rifanno) */
@@ -203,6 +217,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const pStore = new PlannerSettingsStore(opened.db);
         plannerSettingsStore.current = pStore;
         setPlannerSettings(pStore.read());
+        const poStore = new PomodoroSettingsStore(opened.db);
+        pomodoroSettingsStore.current = poStore;
+        setPomodoroSettings(poStore.read());
         const rStore = new RemindersStore(opened.db);
         remindersStore.current = rStore;
         scheduledSig.current = null;
@@ -245,6 +262,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               if (e instanceof TypeError) throw e;
             }
             try {
+              setPomodoroSettings(await poStore.sync(api));
+            } catch (e) {
+              // come sopra: ultime scelte e pausa in corso; un server più vecchio può non avere la rotta
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
+            try {
               await notes.sync(api);
             } catch (e) {
               // come sopra; la nota resta sul telefono e riparte al prossimo giro
@@ -280,6 +305,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             () => i18n.t('planner.tit_senza_titolo'),
             userId,
           ),
+          projects: new ProjectsRepo(opened.db),
+          pomodoro: new PomodoroRepo(opened.db, userId),
           scheduler,
         });
       } catch (e) {
@@ -404,6 +431,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updatePomodoroSettings = useCallback(
+    (patch: Partial<PomodoroSettings>) => {
+      const store = pomodoroSettingsStore.current;
+      if (!store) return;
+      setPomodoroSettings(store.update(patch));
+      services?.scheduler.trigger();
+    },
+    [services],
+  );
   const setUiStyle = useCallback(
     (st: UiStyle) => updateSettings({ ui_style: st }),
     [updateSettings],
@@ -435,6 +471,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDiarySettings(DEFAULT_DIARY_SETTINGS);
       diarySettingsStore.current = null;
       plannerSettingsStore.current = null;
+      pomodoroSettingsStore.current = null;
       remindersStore.current = null;
       scheduledSig.current = null;
       setReminders(DEFAULT_REMINDERS);
@@ -466,6 +503,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateDiarySettings,
       plannerSettings,
       updatePlannerSettings,
+      pomodoroSettings,
+      updatePomodoroSettings,
       reminders,
       updateReminders,
       changed,
@@ -489,6 +528,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateDiarySettings,
       plannerSettings,
       updatePlannerSettings,
+      pomodoroSettings,
+      updatePomodoroSettings,
       reminders,
       updateReminders,
       changed,

@@ -43,6 +43,7 @@ function Shell() {
           <Stack.Screen name="planner-manage" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-routines" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-week" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="pomodoro" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />

@@ -35,7 +35,15 @@ export async function askPermission(): Promise<boolean> {
 export function phoneNotifier(channelName: string): Notifier {
   return {
     allowed: async () => (await Notifications.getPermissionsAsync()).granted,
-    cancelAll: () => Notifications.cancelAllScheduledNotificationsAsync(),
+    // i promemoria si rifanno da zero, ma l'avviso di fine Pomodoro (id «pomodoro-…») non è un promemoria: resta
+    cancelAll: async () => {
+      const all = await Notifications.getAllScheduledNotificationsAsync();
+      await Promise.all(
+        all
+          .filter((n) => !n.identifier.startsWith('pomodoro-'))
+          .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+      );
+    },
     schedule: async (r) => {
       await ensureChannel(channelName);
       await Notifications.scheduleNotificationAsync({

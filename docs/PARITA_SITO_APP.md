@@ -146,13 +146,13 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | J9 | Modelli di piano (`plan_templates`) | sync | Piano › Modelli | P3 | da fare | |
 | J10 | «Porta le stime nel nuovo piano» (`import_old`) e salta/riporta (`skip_fix`) | logica | Piano | P4 | da fare | |
 | J11 | Registro giornaliero «Ho già fatto» e avvio con minuti preimpostati (`daily_log`) | sync `pomodoro_sessions` | Piano › Oggi | P3 | da fare | |
-| J12 | Pomodoro: timer, pausa, riprendi, ferma (chiede pausa/fine/scarta), durate personalizzate | sync `pomodoro_sessions`, `pomodoro_custom_durations`, `pomodoro_settings` | Pomodoro | P3 | da fare | |
+| J12 | Pomodoro: timer, pausa, riprendi, ferma (chiede pausa/fine/scarta), durate personalizzate | sync `pomodoro_sessions`, `pomodoro_custom_durations`, `pomodoro_settings` | Pomodoro | P3 | fatto: schermata con timer/cronometro, pausa, ferma (pausa/fine/scarta, «molto breve»), durate personalizzate, progetto, pausa dopo lo studio (sessioni, durate e impostazioni si sincronizzano) | |
 | J13 | Barra globale del Pomodoro (`pomodoro_barra.*`) | locale | mini-barra sopra le schede | P3 | da fare | |
 | J14 | Pause e scene (`pausa_scena.php`, `pomodoro_current_breaks`), clessidra (`clessidra.php`) | sync | Pomodoro › Pausa | P3 | da fare — **serve il tuo OK sull'aspetto** (scene animate) | |
 | J15 | Storico del Pomodoro (`pomodoro_storico.php`: modifica, cancella) | locale | Pomodoro › Storico | P3 | da fare | |
 | J16 | Importazione Pomodoro (`pomodoro_import.php`) | `pomodoro/import` (nuova) | Pomodoro › Importa | P4 | da fare | |
 | J17 | Nota automatica (`nota_auto.js`) | locale | — | P3 | da fare | |
-| J18 | Notifica di fine Pomodoro | notifica locale | — | P3 | da fare | |
+| J18 | Notifica di fine Pomodoro | notifica locale | — | P3 | fatto: notifica locale all'ora di fine, anche con l'app chiusa; le pausa pure | |
 | J19 | Mazzi collegati a un progetto (`fc_study_deck_projects`) | sync | Progetto › Mazzi | P3 | da fare | |
 
 ## 8. Voti / Esami (`exams/voti.php`)

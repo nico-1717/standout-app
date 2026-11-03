@@ -352,6 +352,56 @@ CREATE TABLE planner_weeks (
 CREATE UNIQUE INDEX idx_pweek_start ON planner_weeks (week_start);
 `,
   },
+  {
+    version: 8,
+    sql: `
+CREATE TABLE projects (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  parent_uuid TEXT,
+  name TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'in_progress',
+  color TEXT NOT NULL DEFAULT '#8E8E93',
+  color_edited INTEGER NOT NULL DEFAULT 0,
+  target_date TEXT,
+  due_date TEXT,
+  todo_enabled INTEGER NOT NULL DEFAULT 0,
+  is_favorite INTEGER NOT NULL DEFAULT 0,
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  study_event_uuid TEXT,
+  study_start TEXT,
+  study_end TEXT,
+  study_pomodori_stimati INTEGER,
+  study_ripasso_di_uuid TEXT,
+  study_ripasso_n INTEGER,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_projects_parent ON projects (parent_uuid);
+CREATE TABLE pomodoro_sessions (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  mode INTEGER NOT NULL DEFAULT 0,
+  start_time TEXT NOT NULL,
+  end_time TEXT,
+  status TEXT,
+  resume_time TEXT,
+  duration_seconds INTEGER NOT NULL DEFAULT 0,
+  planned_duration_min INTEGER,
+  project_uuid TEXT,
+  is_manual INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE INDEX idx_pomo_start ON pomodoro_sessions (start_time);
+CREATE INDEX idx_pomo_project ON pomodoro_sessions (project_uuid);
+CREATE TABLE pomodoro_custom_durations (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  type TEXT NOT NULL,
+  minutes INTEGER NOT NULL,
+  updated_at TEXT
+);
+CREATE UNIQUE INDEX idx_pcd_key ON pomodoro_custom_durations (type, minutes);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

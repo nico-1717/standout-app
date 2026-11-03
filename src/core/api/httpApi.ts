@@ -1,5 +1,6 @@
 import type { DiarySettings, DiarySettingsApi } from '@/features/diary/settings';
 import type { PlannerSettings, PlannerSettingsApi } from '@/features/planner/settings';
+import type { PomodoroSettings, PomodoroSettingsApi } from '@/features/pomodoro/settings';
 import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
 import type { PutNoteResult, QuickNoteApi, ServerNote } from '@/features/notes/quickNote';
 import type { Settings, SettingsApi } from '../settings/settings';
@@ -31,6 +32,7 @@ export class HttpSyncApi
     HabitSettingsApi,
     DiarySettingsApi,
     PlannerSettingsApi,
+    PomodoroSettingsApi,
     QuickNoteApi
 {
   constructor(
@@ -122,6 +124,15 @@ export class HttpSyncApi
 
   async patchPlannerSettings(patch: Partial<PlannerSettings>): Promise<PlannerSettings> {
     return (await this.call<{ settings: PlannerSettings }>('PATCH', '/planner/settings', patch))
+      .settings;
+  }
+
+  async getPomodoroSettings(): Promise<PomodoroSettings> {
+    return (await this.call<{ settings: PomodoroSettings }>('GET', '/pomodoro/settings')).settings;
+  }
+
+  async patchPomodoroSettings(patch: Partial<PomodoroSettings>): Promise<PomodoroSettings> {
+    return (await this.call<{ settings: PomodoroSettings }>('PATCH', '/pomodoro/settings', patch))
       .settings;
   }
 

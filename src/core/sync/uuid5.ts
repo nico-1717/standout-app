@@ -125,3 +125,12 @@ export function plannerPriorityUuid(
 export function plannerWeekUuid(userId: number | string, monday: string): string {
   return uuid5(`planner_weeks|${userId}|${monday}`);
 }
+
+/** Una durata salvata del Pomodoro: una riga per (utente, tipo, minuti), come sul server (sync_uuid_preset). */
+export function pomodoroPresetUuid(
+  userId: number | string,
+  type: 'pomodoro' | 'pausa',
+  minutes: number,
+): string {
+  return uuid5(`pomodoro_custom_durations|${userId}|${type}|${minutes}`);
+}
