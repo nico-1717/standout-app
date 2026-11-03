@@ -134,3 +134,18 @@ export function pomodoroPresetUuid(
 ): string {
   return uuid5(`pomodoro_custom_durations|${userId}|${type}|${minutes}`);
 }
+
+/** Una carta (o carta figlia) imparata: una riga per (utente, carta, flag figlia), come sul server (sync_uuid_imparata). */
+export function learntUuid(userId: number | string, targetUuid: string, isChild: boolean): string {
+  return uuid5(`fc_study_learnt|${userId}|${targetUuid}|${isChild ? 1 : 0}`);
+}
+
+/** Un record di studio: una riga per (utente, tipo), come sul server (sync_uuid_record). */
+export function studyRecordUuid(userId: number | string, kind: string): string {
+  return uuid5(`fc_study_records|${userId}|${kind}`);
+}
+
+/** Le impostazioni di studio o l'obiettivo: una riga per utente, come sul server (sync_uuid_per_utente). */
+export function perUserUuid(table: 'fc_settings' | 'fc_goals', userId: number | string): string {
+  return uuid5(`${table}|${userId}`);
+}

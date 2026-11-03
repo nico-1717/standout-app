@@ -32,6 +32,7 @@ import {
   type PomodoroSettings,
 } from '@/features/pomodoro/settings';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
+import { StudyRepo } from '@/features/flashcards/study';
 import { GradesRepo } from '@/features/grades/repo';
 import { GradeSettingsStore } from '@/features/grades/settings';
 import { DEFAULT_GRADE_SETTINGS, type GradeSettings } from '@/features/grades/logic';
@@ -86,6 +87,7 @@ export interface Services {
   pomodoro: PomodoroRepo;
   grades: GradesRepo;
   flashcards: FlashcardsRepo;
+  study: StudyRepo;
   scheduler: SyncScheduler;
 }
 
@@ -349,6 +351,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           pomodoro: new PomodoroRepo(opened.db, userId),
           grades: new GradesRepo(opened.db),
           flashcards: new FlashcardsRepo(opened.db),
+          study: new StudyRepo(opened.db, userId),
           scheduler,
         });
       } catch (e) {

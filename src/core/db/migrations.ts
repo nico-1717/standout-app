@@ -500,6 +500,106 @@ CREATE TABLE fc_study_subcards (
 CREATE INDEX idx_fc_subcards_parent ON fc_study_subcards (parent_uuid, custom_order);
 `,
   },
+  {
+    version: 11,
+    sql: `
+CREATE TABLE fc_study_favorites (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  card_uuid TEXT,
+  child_uuid TEXT,
+  favorited_date TEXT
+);
+CREATE INDEX idx_fc_fav_card ON fc_study_favorites (card_uuid);
+CREATE INDEX idx_fc_fav_child ON fc_study_favorites (child_uuid);
+CREATE TABLE fc_study_learnt (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  target_uuid TEXT NOT NULL,
+  is_child INTEGER NOT NULL DEFAULT 0,
+  learnt_date TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_learnt_target ON fc_study_learnt (target_uuid);
+CREATE TABLE fc_study_examples (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  card_uuid TEXT,
+  child_uuid TEXT,
+  example_text TEXT,
+  example_image TEXT,
+  example_audio TEXT
+);
+CREATE INDEX idx_fc_ex_card ON fc_study_examples (card_uuid);
+CREATE INDEX idx_fc_ex_child ON fc_study_examples (child_uuid);
+CREATE TABLE fc_games (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_date TEXT,
+  score REAL,
+  type TEXT NOT NULL DEFAULT 'fc',
+  card_status TEXT,
+  parent_uuid TEXT,
+  total_father_words INTEGER NOT NULL DEFAULT 0,
+  game_order TEXT,
+  total_words_with_children INTEGER NOT NULL DEFAULT 1,
+  max_card_uuid TEXT
+);
+CREATE INDEX idx_fc_games_date ON fc_games (game_date);
+CREATE INDEX idx_fc_games_parent ON fc_games (parent_uuid);
+CREATE TABLE fc_game_durations (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  start_time TEXT,
+  duration_seconds INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_dur_game ON fc_game_durations (game_uuid);
+CREATE TABLE fc_study_plays (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  card_uuid TEXT,
+  child_uuid TEXT,
+  correct_answer TEXT,
+  user_answer TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  play_date TEXT
+);
+CREATE INDEX idx_fc_plays_game ON fc_study_plays (game_uuid, position);
+CREATE INDEX idx_fc_plays_card ON fc_study_plays (card_uuid);
+CREATE INDEX idx_fc_plays_child ON fc_study_plays (child_uuid);
+CREATE TABLE fc_study_game_decks (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  deck_uuid TEXT NOT NULL,
+  category_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_fc_gdecks_game ON fc_study_game_decks (game_uuid);
+CREATE TABLE fc_study_sequence (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  card_uuid TEXT NOT NULL
+);
+CREATE INDEX idx_fc_seq_game ON fc_study_sequence (game_uuid, position);
+CREATE TABLE fc_study_records (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  kind TEXT NOT NULL,
+  value REAL NOT NULL DEFAULT 0,
+  game_uuid TEXT,
+  achieved_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE fc_settings (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  vocab_meaning TEXT NOT NULL DEFAULT 'aperto',
+  vocab_examples TEXT NOT NULL DEFAULT 'aperto',
+  voice_read TEXT,
+  updated_at TEXT
+);
+CREATE TABLE fc_goals (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  daily_goal INTEGER NOT NULL DEFAULT 20,
+  updated_at TEXT
+);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

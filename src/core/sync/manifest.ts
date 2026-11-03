@@ -29,7 +29,18 @@ export type SyncTable =
   | 'planner_events'
   | 'fc_study_decks'
   | 'fc_study_cards'
-  | 'fc_study_subcards';
+  | 'fc_study_subcards'
+  | 'fc_study_favorites'
+  | 'fc_study_learnt'
+  | 'fc_study_examples'
+  | 'fc_games'
+  | 'fc_game_durations'
+  | 'fc_study_plays'
+  | 'fc_study_game_decks'
+  | 'fc_study_sequence'
+  | 'fc_study_records'
+  | 'fc_settings'
+  | 'fc_goals';
 
 export interface TableDef {
   /** nell'ordine di dipendenza: il padre prima del figlio */
@@ -530,6 +541,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     children: [
       { table: 'fc_study_decks', column: 'parent_uuid' },
       { table: 'fc_study_cards', column: 'category_uuid' },
+      { table: 'fc_study_game_decks', column: 'deck_uuid' },
     ],
   },
   fc_study_cards: {
@@ -558,7 +570,15 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'custom_order',
       'updated_at',
     ],
-    children: [{ table: 'fc_study_subcards', column: 'parent_uuid' }],
+    // il server toglie con la carta anche preferiti, imparate, esempi, risposte e posti in sequenza
+    children: [
+      { table: 'fc_study_subcards', column: 'parent_uuid' },
+      { table: 'fc_study_favorites', column: 'card_uuid' },
+      { table: 'fc_study_learnt', column: 'target_uuid' },
+      { table: 'fc_study_examples', column: 'card_uuid' },
+      { table: 'fc_study_plays', column: 'card_uuid' },
+      { table: 'fc_study_sequence', column: 'card_uuid' },
+    ],
   },
   fc_study_subcards: {
     order: 202,
@@ -584,6 +604,122 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'custom_order',
       'updated_at',
     ],
+    children: [
+      { table: 'fc_study_favorites', column: 'child_uuid' },
+      { table: 'fc_study_learnt', column: 'target_uuid' },
+      { table: 'fc_study_examples', column: 'child_uuid' },
+      { table: 'fc_study_plays', column: 'child_uuid' },
+    ],
+  },
+  // i dati di studio: preferiti, imparate, esempi (di una carta o di una carta figlia)
+  fc_study_favorites: {
+    order: 210,
+    readOnly: [],
+    createOnly: ['card_uuid', 'child_uuid', 'favorited_date'],
+    booleans: [],
+    columns: ['uuid', 'card_uuid', 'child_uuid', 'favorited_date'],
+  },
+  // una riga per (carta o figlia): l'uuid è UUIDv5 di utente + target + flag (vedi learntUuid)
+  fc_study_learnt: {
+    order: 211,
+    readOnly: ['updated_at'],
+    createOnly: ['target_uuid', 'is_child'],
+    booleans: ['is_child'],
+    columns: ['uuid', 'target_uuid', 'is_child', 'learnt_date', 'updated_at'],
+  },
+  fc_study_examples: {
+    order: 212,
+    readOnly: ['example_image', 'example_audio'],
+    createOnly: ['card_uuid', 'child_uuid'],
+    booleans: [],
+    columns: ['uuid', 'card_uuid', 'child_uuid', 'example_text', 'example_image', 'example_audio'],
+  },
+  // le partite di studio (quelle di vocabolario arrivano con le lingue)
+  fc_games: {
+    order: 220,
+    readOnly: [],
+    createOnly: ['game_date', 'type', 'card_status', 'parent_uuid'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'game_date',
+      'score',
+      'type',
+      'card_status',
+      'parent_uuid',
+      'total_father_words',
+      'game_order',
+      'total_words_with_children',
+      'max_card_uuid',
+    ],
+    // togliere una partita toglie tempo, risposte, mazzi e sequenza; i ripassi restano senza legame
+    children: [
+      { table: 'fc_game_durations', column: 'game_uuid' },
+      { table: 'fc_study_plays', column: 'game_uuid' },
+      { table: 'fc_study_game_decks', column: 'game_uuid' },
+      { table: 'fc_study_sequence', column: 'game_uuid' },
+      { table: 'fc_games', column: 'parent_uuid', setNull: true },
+    ],
+  },
+  fc_game_durations: {
+    order: 221,
+    readOnly: ['updated_at'],
+    createOnly: ['game_uuid', 'start_time'],
+    booleans: [],
+    columns: ['uuid', 'game_uuid', 'start_time', 'duration_seconds', 'updated_at'],
+  },
+  fc_study_plays: {
+    order: 222,
+    readOnly: [],
+    createOnly: ['game_uuid', 'card_uuid', 'child_uuid', 'position'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'game_uuid',
+      'card_uuid',
+      'child_uuid',
+      'correct_answer',
+      'user_answer',
+      'position',
+      'play_date',
+    ],
+  },
+  fc_study_game_decks: {
+    order: 223,
+    readOnly: [],
+    createOnly: ['game_uuid', 'deck_uuid', 'category_order'],
+    booleans: [],
+    columns: ['uuid', 'game_uuid', 'deck_uuid', 'category_order'],
+  },
+  fc_study_sequence: {
+    order: 224,
+    readOnly: [],
+    createOnly: ['game_uuid', 'position', 'card_uuid'],
+    booleans: [],
+    columns: ['uuid', 'game_uuid', 'position', 'card_uuid'],
+  },
+  // un record per (utente, tipo); l'uuid è UUIDv5 (vedi studyRecordUuid)
+  fc_study_records: {
+    order: 230,
+    readOnly: ['updated_at'],
+    createOnly: ['kind'],
+    booleans: [],
+    columns: ['uuid', 'kind', 'value', 'game_uuid', 'achieved_at', 'updated_at'],
+  },
+  // una riga per utente: impostazioni di studio e obiettivo di ogni giorno
+  fc_settings: {
+    order: 240,
+    readOnly: ['updated_at'],
+    createOnly: [],
+    booleans: [],
+    columns: ['uuid', 'vocab_meaning', 'vocab_examples', 'voice_read', 'updated_at'],
+  },
+  fc_goals: {
+    order: 241,
+    readOnly: ['updated_at'],
+    createOnly: [],
+    booleans: [],
+    columns: ['uuid', 'daily_goal', 'updated_at'],
   },
 };
 

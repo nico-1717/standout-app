@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -36,6 +36,8 @@ export default function CardScreen() {
   const [draft, setDraft] = useState<{ q: string | null; a: string | null }>({ q: null, a: null });
   const [moving, setMoving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [newExample, setNewExample] = useState('');
+  const [editExample, setEditExample] = useState<{ uuid: string; text: string } | null>(null);
 
   const isNew = !params.id && !params.sub;
   const isSub = !!params.sub || !!params.parent;
@@ -89,6 +91,17 @@ export default function CardScreen() {
     }
     return null;
   }, [services, version, params.id, params.sub, params.deck, params.parent]);
+
+  const target = params.id ?? params.sub ?? null;
+  const study = useMemo(() => {
+    void version;
+    if (!services || !target) return null;
+    return {
+      learnt: services.study.isLearnt(target),
+      favorite: services.study.isFavorite(target),
+      examples: services.study.examples(target),
+    };
+  }, [services, version, target]);
 
   if (!services) return null;
   if (!data) {
@@ -259,6 +272,149 @@ export default function CardScreen() {
                 onPress={save}
               />
             </View>
+          </View>
+        ) : null}
+
+        {target && study ? (
+          <Card style={{ padding: 16, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ flex: 1, color: th.text, fontWeight: '600' }}>
+                {t('fc.gm_imparato')}
+              </Text>
+              <Switch
+                testID="fcc-learnt"
+                value={study.learnt}
+                onValueChange={(v) => {
+                  services.study.setLearnt(target, !!params.sub, v);
+                  changed();
+                }}
+                trackColor={{ true: th.brand }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ flex: 1, color: th.text, fontWeight: '600' }}>
+                {t('fc.gm_preferiti')}
+              </Text>
+              <Switch
+                testID="fcc-favorite"
+                value={study.favorite}
+                onValueChange={(v) => {
+                  services.study.setFavorite(target, !!params.sub, v);
+                  changed();
+                }}
+                trackColor={{ true: th.brand }}
+              />
+            </View>
+          </Card>
+        ) : null}
+
+        {target && study ? (
+          <View style={{ gap: 8 }}>
+            <SectionLabel>{t('fc.exm_conteggio', { n: study.examples.length })}</SectionLabel>
+            {study.examples.length ? (
+              <Card>
+                {study.examples.map((ex, i) => (
+                  <View
+                    key={ex.uuid}
+                    style={{
+                      padding: 12,
+                      gap: 8,
+                      borderTopWidth: i ? 0.5 : 0,
+                      borderTopColor: th.hairline,
+                    }}
+                  >
+                    {editExample?.uuid === ex.uuid ? (
+                      <>
+                        <TextInput
+                          testID={`fcc-ex-input-${ex.uuid}`}
+                          value={editExample.text}
+                          onChangeText={(v) => setEditExample({ uuid: ex.uuid, text: v })}
+                          multiline
+                          autoFocus
+                          placeholder={t('fc.exm_ph_testo')}
+                          placeholderTextColor={th.text3}
+                          style={{ color: th.text, fontSize: 16, minHeight: 60 }}
+                        />
+                        <View style={{ flexDirection: 'row', gap: 12 }}>
+                          <View style={{ flex: 1 }}>
+                            <TextButton
+                              testID={`fcc-ex-cancel-${ex.uuid}`}
+                              label={t('comune.annulla')}
+                              onPress={() => setEditExample(null)}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <PrimaryButton
+                              testID={`fcc-ex-save-${ex.uuid}`}
+                              label={t('fc.exm_salva')}
+                              disabled={!editExample.text.trim()}
+                              onPress={() => {
+                                if (services.study.updateExample(ex.uuid, editExample.text)) {
+                                  setEditExample(null);
+                                  changed();
+                                }
+                              }}
+                            />
+                          </View>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={{ color: th.text, fontSize: 16 }}>{ex.example_text}</Text>
+                        {ex.example_image || ex.example_audio ? (
+                          <Text style={{ color: th.text2, fontSize: 13 }}>
+                            🖼 🔊 {t('fc.app_media_sul_sito')}
+                          </Text>
+                        ) : null}
+                        <View style={{ flexDirection: 'row', gap: 18 }}>
+                          <Pressable
+                            testID={`fcc-ex-edit-${ex.uuid}`}
+                            accessibilityRole="button"
+                            onPress={() =>
+                              setEditExample({ uuid: ex.uuid, text: ex.example_text ?? '' })
+                            }
+                          >
+                            <Text style={{ color: th.brand }}>{t('comune.modifica')}</Text>
+                          </Pressable>
+                          <Pressable
+                            testID={`fcc-ex-delete-${ex.uuid}`}
+                            accessibilityRole="button"
+                            onPress={() => {
+                              services.study.removeExample(ex.uuid);
+                              changed();
+                            }}
+                          >
+                            <Text style={{ color: th.red }}>{t('comune.elimina')}</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                ))}
+              </Card>
+            ) : null}
+            <Card style={{ padding: 12, gap: 8 }}>
+              <TextInput
+                testID="fcc-ex-new"
+                value={newExample}
+                onChangeText={setNewExample}
+                multiline
+                placeholder={t('fc.exm_ph_testo')}
+                placeholderTextColor={th.text3}
+                style={{ color: th.text, fontSize: 16, minHeight: 44 }}
+              />
+              <TextButton
+                testID="fcc-ex-add"
+                label={t('fc.exm_aggiungi_nuovo')}
+                onPress={() => {
+                  if (!newExample.trim()) return;
+                  if (services.study.addExample(target, !!params.sub, newExample)) {
+                    setNewExample('');
+                    changed();
+                  }
+                }}
+              />
+            </Card>
           </View>
         ) : null}
 

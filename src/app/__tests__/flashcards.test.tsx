@@ -6,6 +6,7 @@ import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { stringifyDoc } from '@/features/flashcards/doc';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
+import { StudyRepo } from '@/features/flashcards/study';
 
 import CardScreen from '../fc-card';
 import DeckScreen from '../fc-deck';
@@ -41,8 +42,9 @@ function setup() {
   const db = memoryDb();
   migrate(db);
   const flashcards = new FlashcardsRepo(db);
-  mockServices = { db, flashcards };
-  return { db, flashcards };
+  const study = new StudyRepo(db, 7);
+  mockServices = { db, flashcards, study };
+  return { db, flashcards, study };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
@@ -258,5 +260,34 @@ describe('card page', () => {
     await fireEvent.press(screen.getByTestId('fcc-delete-confirm'));
     expect(flashcards.card(c)).toBeNull();
     expect(mockBack).toHaveBeenCalled();
+  });
+  test('learnt and favourite switches; examples are added, edited and removed', async () => {
+    const { flashcards, study } = setup();
+    const d = flashcards.createDeck({ name: 'D' })!;
+    const c = flashcards.addCard(d, 'q', 'a')!;
+    mockParams = { id: c };
+    const view = await render(wrap(<CardScreen />));
+    await fireEvent(screen.getByTestId('fcc-learnt'), 'valueChange', true);
+    await fireEvent(screen.getByTestId('fcc-favorite'), 'valueChange', true);
+    expect(study.isLearnt(c)).toBe(true);
+    expect(study.isFavorite(c)).toBe(true);
+
+    await fireEvent.changeText(screen.getByTestId('fcc-ex-new'), 'A real example');
+    await fireEvent.press(screen.getByTestId('fcc-ex-add'));
+    const ex = study.examples(c)[0]!;
+    expect(ex.example_text).toBe('A real example');
+    await view.rerender(wrap(<CardScreen />));
+    expect(screen.getByText('A real example')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId(`fcc-ex-edit-${ex.uuid}`));
+    await fireEvent.changeText(screen.getByTestId(`fcc-ex-input-${ex.uuid}`), 'Better');
+    await fireEvent.press(screen.getByTestId(`fcc-ex-save-${ex.uuid}`));
+    expect(study.examples(c)[0]!.example_text).toBe('Better');
+
+    await view.rerender(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId(`fcc-ex-delete-${ex.uuid}`));
+    expect(study.examples(c)).toHaveLength(0);
+    await fireEvent(screen.getByTestId('fcc-learnt'), 'valueChange', false);
+    expect(study.isLearnt(c)).toBe(false);
   });
 });

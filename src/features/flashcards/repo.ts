@@ -16,6 +16,7 @@ import {
   type Deck,
   type SubCard,
 } from './logic';
+import { dropCardDependents } from './study';
 
 const DECK_COLS =
   'uuid, parent_uuid, name, color, color_edited, archived, icon, notes, pinned, exam_date';
@@ -326,6 +327,16 @@ export class FlashcardsRepo {
           deleteRow(this.db, table as 'fc_study_decks', id);
         }
       }
+      dropCardDependents(this.db, {
+        cards: cards.map((c) => c.uuid),
+        children: subs.map((s) => s.uuid),
+      });
+      // le partite non perdono nulla: restano, ma senza il mazzo che avevano scelto
+      this.db.run(
+        `DELETE FROM outbox WHERE tbl = 'fc_study_game_decks' AND state = 'pending' AND uuid IN (SELECT uuid FROM fc_study_game_decks WHERE deck_uuid IN (${ph}))`,
+        ids,
+      );
+      this.db.run(`DELETE FROM fc_study_game_decks WHERE deck_uuid IN (${ph})`, ids);
       enqueue(this.db, { table: 'fc_study_decks', uuid, op: 'delete' }, now);
     });
     return true;
@@ -430,6 +441,7 @@ export class FlashcardsRepo {
     if (!this.card(uuid)) return;
     this.db.transaction(() => {
       const now = this.clock();
+      const kids = this.subcards(uuid).map((s) => s.uuid);
       for (const s of this.subcards(uuid)) {
         this.db.run(
           `DELETE FROM outbox WHERE tbl = 'fc_study_subcards' AND uuid = ? AND state = 'pending'`,
@@ -438,6 +450,10 @@ export class FlashcardsRepo {
         deleteRow(this.db, 'fc_study_subcards', s.uuid);
       }
       deleteRow(this.db, 'fc_study_cards', uuid);
+      dropCardDependents(this.db, {
+        cards: [uuid],
+        children: kids,
+      });
       enqueue(this.db, { table: 'fc_study_cards', uuid, op: 'delete' }, now);
     });
   }
@@ -515,6 +531,7 @@ export class FlashcardsRepo {
     this.db.transaction(() => {
       const now = this.clock();
       deleteRow(this.db, 'fc_study_subcards', uuid);
+      dropCardDependents(this.db, { children: [uuid] });
       this.refreshFather(cur.parent_uuid);
       enqueue(this.db, { table: 'fc_study_subcards', uuid, op: 'delete' }, now);
     });
