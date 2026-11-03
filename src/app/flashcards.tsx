@@ -50,6 +50,7 @@ export default function FlashcardsScreen() {
   const { decks, counts, stats } = data;
 
   const today = localToday();
+  const deckIds = new Set(decks.map((d) => d.uuid));
   const scopes = scopeCounts(decks);
   const rows = flattenDecks(decks, scope, collapsed);
   const found = query.trim() ? searchDecks(decks, query) : null;
@@ -290,6 +291,11 @@ export default function FlashcardsScreen() {
   };
 
   const resume = services?.games.unfinished() ?? null;
+  const goal = services.study.goal();
+  const todayPlayed = services.fcStats.activity().daily.get(today)?.played ?? 0;
+  const knownCards = decks
+    .filter((d) => !d.parent_uuid || !deckIds.has(d.parent_uuid))
+    .reduce((n, d) => n + (stats.get(d.uuid)?.known ?? 0), 0);
   const withKids = new Set(
     decks.filter((d) => decks.some((c) => c.parent_uuid === d.uuid)).map((d) => d.uuid),
   );
@@ -309,6 +315,39 @@ export default function FlashcardsScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 14 }}
         keyboardShouldPersistTaps="handled"
       >
+        <Pressable
+          testID="fc-summary"
+          accessibilityRole="button"
+          onPress={() => router.push('/fc-stats')}
+        >
+          <Card style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
+                {t('fc.obiettivo_di_oggi').toUpperCase()}
+              </Text>
+              <Text testID="fc-goal" style={{ color: th.text, fontSize: 20, fontWeight: '800' }}>
+                {todayPlayed} / {goal}
+              </Text>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: th.surface2 }}>
+                <View
+                  style={{
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: todayPlayed >= goal ? th.green : th.brand,
+                    width: `${Math.min(100, (todayPlayed / goal) * 100)}%`,
+                  }}
+                />
+              </View>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text testID="fc-known" style={{ color: th.text, fontSize: 20, fontWeight: '800' }}>
+                {knownCards}
+              </Text>
+              <Text style={{ color: th.text2, fontSize: 11 }}>{t('fc.carte_imparate')}</Text>
+            </View>
+          </Card>
+        </Pressable>
+
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
             <PrimaryButton

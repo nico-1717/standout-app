@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { stringifyDoc } from '@/features/flashcards/doc';
 import { GameRepo } from '@/features/flashcards/game';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
+import { StatsRepo } from '@/features/flashcards/stats';
 import { StudyRepo } from '@/features/flashcards/study';
 
 import CardScreen from '../fc-card';
@@ -44,7 +45,13 @@ function setup() {
   migrate(db);
   const flashcards = new FlashcardsRepo(db);
   const study = new StudyRepo(db, 7);
-  mockServices = { db, flashcards, study, games: new GameRepo(db, study) };
+  mockServices = {
+    db,
+    flashcards,
+    study,
+    games: new GameRepo(db, study),
+    fcStats: new StatsRepo(db),
+  };
   return { db, flashcards, study };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
@@ -59,6 +66,10 @@ describe('categories list', () => {
     expect(screen.getByText('Never played')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fc-play'));
     expect(mockPush).toHaveBeenCalledWith('/fc-setup');
+    expect(screen.getByTestId('fc-goal').props.children.join('')).toBe('0 / 20');
+    expect(screen.getByTestId('fc-known').props.children).toBe(0);
+    await fireEvent.press(screen.getByTestId('fc-summary'));
+    expect(mockPush).toHaveBeenCalledWith('/fc-stats');
   });
 
   test('empty message, then adds a subject; a sub-category opens its branch', async () => {

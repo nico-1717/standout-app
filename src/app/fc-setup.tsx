@@ -72,6 +72,7 @@ export default function GameSetupScreen() {
   const [order, setOrder] = useState<GameOrder>('in_order');
   const [status, setStatus] = useState<GameStatus>('0');
   const [levels, setLevels] = useState<Level[]>([]);
+  const [onlyHard, setOnlyHard] = useState(false);
   const [multi, setMulti] = useState(!!params.preselect);
   const [picked, setPicked] = useState<string[]>(() =>
     params.preselect && services ? deckBranch(services.flashcards.decks(), params.preselect) : [],
@@ -105,6 +106,7 @@ export default function GameSetupScreen() {
       status,
       order,
       levels: levels.length ? levels : undefined,
+      onlyHard: onlyHard || undefined,
     });
     if (r.kind === 'empty') {
       setEmpty(true);
@@ -305,6 +307,14 @@ export default function GameSetupScreen() {
               })}
             </View>
             <Text style={{ color: th.text2, fontSize: 12 }}>{t('fc.cg_livelli_sub')}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: th.text, fontWeight: '600' }}>
+                {t('fc.dk_gioca_difficili')}
+              </Text>
+            </View>
+            <Switch testID="fcs-hard" value={onlyHard} onValueChange={setOnlyHard} />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1 }}>

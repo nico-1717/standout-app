@@ -87,6 +87,29 @@ describe('game setup', () => {
     expect(games.game(call.params.game)).not.toBeNull();
   });
 
+  test('«only the hard ones» starts a random game over all statuses', async () => {
+    const { db, flashcards, games } = setup();
+    const d = flashcards.createDeck({ name: 'A' })!;
+    const c = flashcards.addCard(d, 'Q', 'A')!;
+    await render(wrap(<SetupScreen />));
+    await fireEvent(screen.getByTestId('fcs-hard'), 'valueChange', true);
+    // una carta nuova non è «difficile»: niente da giocare
+    await fireEvent.press(screen.getByTestId('fcs-play-all'));
+    expect(screen.getByTestId('fcs-empty')).toBeTruthy();
+    for (let i = 0; i < 3; i++) {
+      db.run(
+        `INSERT INTO fc_study_plays (uuid, game_uuid, card_uuid, user_answer, position, play_date) VALUES (?, 'old', ?, 'Wrong', ?, ?)`,
+        [`w${i}`, c, i + 1, `2026-11-0${i + 1} 10:00:00`],
+      );
+    }
+    await fireEvent.press(screen.getByTestId('fcs-play-all'));
+    const call = mockReplace.mock.calls[0]![0] as { params: { game: string } };
+    expect(games.game(call.params.game)).toMatchObject({
+      card_status: 'all',
+      game_order: 'random',
+    });
+  });
+
   test('preselect picks the deck and plays it', async () => {
     const { flashcards, games } = setup();
     const a = flashcards.createDeck({ name: 'A' })!;
