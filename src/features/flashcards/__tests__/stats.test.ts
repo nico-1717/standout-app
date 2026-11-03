@@ -92,3 +92,65 @@ describe('activity and per-deck numbers', () => {
     expect(day.get(parent)).toEqual({ played: 1, correct: 1, seconds: 0 });
   });
 });
+
+describe('drill: most missed cards and improvement after a mistake', () => {
+  test('missed needs two tries and a mistake; after-error counts the next try on the same card', () => {
+    const s = setup();
+    const maths = s.flashcards.createDeck({ name: 'Maths' })!;
+    const other = s.flashcards.createDeck({ name: 'Other' })!;
+    const hard = s.flashcards.addCard(maths, 'hard', 'a')!;
+    const easy = s.flashcards.addCard(maths, 'easy', 'a')!;
+    const once = s.flashcards.addCard(maths, 'once', 'a')!;
+    const far = s.flashcards.addCard(other, 'far', 'a')!;
+    const g = s.games.start({ decks: [maths], status: 'all', order: 'in_order' });
+    if (g.kind !== 'started') throw new Error('empty');
+    let n = 0;
+    const put = (card: string, ans: string) =>
+      s.db.run(
+        `INSERT INTO fc_study_plays (uuid, game_uuid, card_uuid, user_answer, position, play_date) VALUES (?, ?, ?, ?, ?, ?)`,
+        [`p${++n}`, g.game, card, ans, n, `2026-11-02 09:${String(10 + n)}:00`],
+      );
+    // hard: W W C  → 2 errori, dopo il 1° errore sbaglia ancora, dopo il 2° indovina
+    put(hard, 'Wrong');
+    put(hard, 'Wrong');
+    put(hard, 'Correct');
+    // easy: C C
+    put(easy, 'Correct');
+    put(easy, 'Correct');
+    // once: W (un solo tentativo)
+    put(once, 'Wrong');
+    // far: W C (altra materia)
+    put(far, 'Wrong');
+    put(far, 'Correct');
+
+    const all = s.stats.drill(null);
+    expect(all.missed.map((m) => [m.card_uuid, m.played, m.wrong, m.accuracy])).toEqual([
+      [hard, 3, 2, 33],
+      [far, 2, 1, 50],
+    ]);
+    expect(all.afterError).toEqual({ opportunities: 3, fixed: 2 });
+
+    const only = s.stats.drill(new Set([maths]));
+    expect(only.missed.map((m) => m.card_uuid)).toEqual([hard]);
+    expect(only.afterError).toEqual({ opportunities: 2, fixed: 1 });
+    expect(s.stats.drill(new Set(['nope'])).missed).toEqual([]);
+  });
+
+  test("a sub-card counts on its own, in its father's deck", () => {
+    const s = setup();
+    const d = s.flashcards.createDeck({ name: 'D' })!;
+    const father = s.flashcards.addCard(d, 'f', 'a')!;
+    const kid = s.flashcards.addSubcard(father, 'k', 'a')!;
+    const g = s.games.start({ decks: [d], status: 'all', order: 'in_order' });
+    if (g.kind !== 'started') throw new Error('empty');
+    for (let i = 1; i <= 2; i++) {
+      s.db.run(
+        `INSERT INTO fc_study_plays (uuid, game_uuid, card_uuid, child_uuid, user_answer, position, play_date) VALUES (?, ?, ?, ?, 'Wrong', ?, ?)`,
+        [`k${i}`, g.game, father, kid, i, `2026-11-02 09:0${i}:00`],
+      );
+    }
+    const r = s.stats.drill(new Set([d]));
+    expect(r.missed).toHaveLength(1);
+    expect(r.missed[0]).toMatchObject({ child_uuid: kid, card_uuid: null, wrong: 2 });
+  });
+});

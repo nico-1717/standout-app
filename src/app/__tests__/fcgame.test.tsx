@@ -307,6 +307,29 @@ describe('statistics screen', () => {
     expect(screen.getByTestId('fcst-played').props.children).toBe('1');
   });
 
+  test('most missed cards and the focus on one deck', async () => {
+    const s = started();
+    const { games, game, db } = s;
+    games.ensurePosition(game, 1);
+    const card = games.plays(game, 1)[0]!.card_uuid!;
+    const deck = games.gameDecks(game)[0]!;
+    const put = (n: number, ans: string) =>
+      db.run(
+        `INSERT INTO fc_study_plays (uuid, game_uuid, card_uuid, user_answer, position, play_date) VALUES (?, ?, ?, ?, ?, ?)`,
+        [`x${n}`, game, card, ans, 50 + n, `2026-11-02 09:0${n}:00`],
+      );
+    put(1, 'Wrong');
+    put(2, 'Wrong');
+    put(3, 'Correct');
+    await render(wrap(<StatsScreen />));
+    expect(screen.getByTestId(`fcst-missed-p${card}`)).toBeTruthy();
+    expect(screen.getByTestId('fcst-retry-pct').props.children).toBe('—'); // poche ripetizioni
+    await fireEvent.press(screen.getByTestId(`fcst-focus-${deck}`));
+    expect(screen.getByTestId(`fcst-missed-p${card}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcst-focus-all'));
+    expect(screen.getByTestId(`fcst-missed-p${card}`)).toBeTruthy();
+  });
+
   test('empty history shows the message', async () => {
     setup();
     await render(wrap(<StatsScreen />));

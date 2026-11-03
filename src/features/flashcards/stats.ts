@@ -39,6 +39,23 @@ export interface DeckBreakdown {
   seconds: number;
 }
 
+/** Una carta giocata spesso e sbagliata (per «carte più sbagliate»). */
+export interface MissedCard {
+  /** `p<uuid>` carta, `c<uuid>` carta figlia */
+  key: string;
+  card_uuid: string | null;
+  child_uuid: string | null;
+  played: number;
+  wrong: number;
+  accuracy: number;
+}
+
+export interface Drill {
+  missed: MissedCard[];
+  /** volte in cui dopo un errore la carta è stata riprovata, e quante volte la risposta dopo era giusta */
+  afterError: { opportunities: number; fixed: number };
+}
+
 export const MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365];
 
 const dayNumber = (iso: string): number => {
@@ -218,5 +235,75 @@ export class StatsRepo {
       }
     }
     return out;
+  }
+
+  /**
+   * Il dettaglio di una materia (il mazzo e i suoi sotto-mazzi; `null` = tutto): le carte più sbagliate (almeno due
+   * tentativi, almeno un errore, al massimo 8) e il «miglioramento dopo un errore» (quante volte, dopo aver sbagliato una
+   * carta, il tentativo subito dopo sulla stessa carta è giusto).
+   */
+  drill(subtree: ReadonlySet<string> | null, limit = 8): Drill {
+    const cardDeck = new Map<string, string>();
+    for (const r of this.db.all<{ uuid: string; d: string }>(
+      'SELECT uuid, category_uuid AS d FROM fc_study_cards',
+    )) {
+      cardDeck.set(`p${r.uuid}`, r.d);
+    }
+    for (const r of this.db.all<{ uuid: string; d: string }>(
+      `SELECT s.uuid, c.category_uuid AS d FROM fc_study_subcards s JOIN fc_study_cards c ON c.uuid = s.parent_uuid`,
+    )) {
+      cardDeck.set(`c${r.uuid}`, r.d);
+    }
+    // se la carta non c'è più, vale il mazzo della partita quando ne ha uno solo
+    const perGame = new Map<string, Set<string>>();
+    for (const r of this.db.all<{ game_uuid: string; deck_uuid: string }>(
+      'SELECT game_uuid, deck_uuid FROM fc_study_game_decks',
+    )) {
+      const set = perGame.get(r.game_uuid) ?? new Set<string>();
+      set.add(r.deck_uuid);
+      perGame.set(r.game_uuid, set);
+    }
+    const per = new Map<string, MissedCard>();
+    const last = new Map<string, string>();
+    const after = { opportunities: 0, fixed: 0 };
+    for (const r of this.db.all<{
+      g: string;
+      card: string | null;
+      child: string | null;
+      a: string;
+    }>(
+      `SELECT game_uuid AS g, card_uuid AS card, child_uuid AS child, user_answer AS a FROM fc_study_plays
+        WHERE play_date IS NOT NULL AND user_answer IN ('Correct', 'Wrong')
+        ORDER BY COALESCE(child_uuid, card_uuid), play_date, rowid`,
+    )) {
+      const key = r.child ? `c${r.child}` : r.card ? `p${r.card}` : '';
+      if (!key) continue;
+      const games = perGame.get(r.g);
+      const deck = cardDeck.get(key) ?? (games && games.size === 1 ? [...games][0] : undefined);
+      const inside = deck !== undefined && (!subtree || subtree.has(deck));
+      if (inside && last.get(key) === 'Wrong') {
+        after.opportunities += 1;
+        if (r.a === 'Correct') after.fixed += 1;
+      }
+      last.set(key, r.a);
+      if (!inside) continue;
+      const m = per.get(key) ?? {
+        key,
+        card_uuid: r.child ? null : r.card,
+        child_uuid: r.child,
+        played: 0,
+        wrong: 0,
+        accuracy: 0,
+      };
+      m.played += 1;
+      if (r.a === 'Wrong') m.wrong += 1;
+      per.set(key, m);
+    }
+    const missed = [...per.values()]
+      .filter((m) => m.played >= 2 && m.wrong > 0)
+      .map((m) => ({ ...m, accuracy: Math.round(((m.played - m.wrong) / m.played) * 100) }))
+      .sort((a, b) => b.wrong - a.wrong)
+      .slice(0, limit);
+    return { missed, afterError: after };
   }
 }

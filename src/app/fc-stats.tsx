@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
-import { flattenDecks } from '@/features/flashcards/logic';
+import { DocView } from '@/features/flashcards/DocView';
+import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
 import { badges, streaks } from '@/features/flashcards/stats';
 import { localToday } from '@/features/tasks/groups';
 import { Card, Header, SectionLabel } from '@/ui/kit';
@@ -80,6 +81,7 @@ export default function FlashcardStatsScreen() {
   const { services, version, changed } = useApp();
   const [period, setPeriod] = useState<Period>(30);
   const [today] = useState(() => localToday());
+  const [focus, setFocus] = useState<string | null>(null);
   void version;
   if (!services) return null;
   const { fcStats, flashcards, games, study } = services;
@@ -129,6 +131,12 @@ export default function FlashcardStatsScreen() {
   const breakdown = fcStats.byDeck(from, today);
   const rows = flattenDecks(flashcards.decks(), 'active');
   const none = played === 0 && act.totalPlayed === 0;
+  const allDecks = flashcards.decks();
+  const drill = fcStats.drill(focus ? new Set(deckBranch(allDecks, focus)) : null);
+  const retryPct =
+    drill.afterError.opportunities >= 3
+      ? Math.round((drill.afterError.fixed / drill.afterError.opportunities) * 100)
+      : null;
 
   const tile = (id: string, label: string, value: string, note: string) => (
     <Card key={id} style={{ flex: 1, padding: 12, gap: 2 }}>
@@ -325,6 +333,99 @@ export default function FlashcardStatsScreen() {
               </Text>
             </View>
           ))}
+        </Card>
+
+        <SectionLabel>{t('fc.carte_piu_sbagliate')}</SectionLabel>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8 }}
+        >
+          {[
+            { uuid: null as string | null, name: t('fc.tutto') },
+            ...rows.map((r) => ({
+              uuid: r.deck.uuid as string | null,
+              name: `${'· '.repeat(r.depth)}${r.deck.name}`,
+            })),
+          ].map((d) => (
+            <Pressable
+              key={d.uuid ?? 'all'}
+              testID={`fcst-focus-${d.uuid ?? 'all'}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: focus === d.uuid }}
+              onPress={() => setFocus(d.uuid)}
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                borderRadius: 16,
+                backgroundColor: focus === d.uuid ? th.brand : th.surface2,
+              }}
+            >
+              <Text style={{ color: focus === d.uuid ? '#fff' : th.text, fontWeight: '600' }}>
+                {d.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        <Card style={{ padding: 12, gap: 10 }}>
+          {drill.missed.length === 0 ? (
+            <Text testID="fcst-missed-empty" style={{ color: th.text2 }}>
+              {t('fc.st_poche_ripetizioni')}
+            </Text>
+          ) : (
+            drill.missed.map((m) => {
+              const card = m.child_uuid
+                ? flashcards.subcard(m.child_uuid)
+                : m.card_uuid
+                  ? flashcards.card(m.card_uuid)
+                  : null;
+              return (
+                <View
+                  key={m.key}
+                  testID={`fcst-missed-${m.key}`}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                >
+                  <View style={{ flex: 1, gap: 2 }}>
+                    {card?.question_desc ? (
+                      <DocView raw={card.question_desc} size={14} />
+                    ) : (
+                      <Text style={{ color: th.text2 }}>{t('fc.st_senza_descrizione')}</Text>
+                    )}
+                    <Text style={{ color: th.text2, fontSize: 12 }}>
+                      {t('fc.st_tentativi_prec', { played: m.played, acc: m.accuracy })}
+                    </Text>
+                  </View>
+                  <Text style={{ color: th.red, fontWeight: '800' }}>{m.wrong}×</Text>
+                </View>
+              );
+            })
+          )}
+        </Card>
+
+        <SectionLabel>{t('fc.miglioramento_dopo_un_errore')}</SectionLabel>
+        <Card style={{ padding: 12, gap: 4 }}>
+          <Text
+            testID="fcst-retry-pct"
+            style={{
+              color:
+                retryPct === null
+                  ? th.text2
+                  : retryPct >= 60
+                    ? th.green
+                    : retryPct >= 35
+                      ? th.text
+                      : th.red,
+              fontSize: 24,
+              fontWeight: '800',
+            }}
+          >
+            {retryPct === null ? '—' : `${retryPct}%`}
+          </Text>
+          <Text testID="fcst-retry-text" style={{ color: th.text2 }}>
+            {retryPct === null
+              ? t('fc.st_poche_ripetizioni')
+              : t('fc.st_dopo_errore', { pct: retryPct, n: drill.afterError.opportunities })}
+          </Text>
         </Card>
 
         <SectionLabel>{t('fc.panoramica_categorie')}</SectionLabel>
