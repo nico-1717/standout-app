@@ -45,6 +45,8 @@ function Shell() {
           <Stack.Screen name="planner-week" options={{ presentation: 'modal' }} />
           <Stack.Screen name="pomodoro" options={{ presentation: 'modal' }} />
           <Stack.Screen name="pomodoro-history" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="projects" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="project" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />

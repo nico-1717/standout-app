@@ -12,6 +12,7 @@ import {
   inheritedColor,
   nextStatus,
   subtreeIds,
+  withSessions,
   wouldCycle,
   type Project,
   type ProjectStatus,
@@ -57,6 +58,49 @@ export class ProjectsRepo {
 
   get(uuid: string): Project | null {
     return this.db.all<Project>(`SELECT ${COLS} FROM projects WHERE uuid = ?`, [uuid])[0] ?? null;
+  }
+
+  /** Chi ha almeno un Pomodoro (suo o più giù): per «solo quelli con pomodori». */
+  worked(): Set<string> {
+    const ids = this.db
+      .all<{ p: string }>(
+        'SELECT DISTINCT project_uuid AS p FROM pomodoro_sessions WHERE project_uuid IS NOT NULL',
+      )
+      .map((r) => r.p);
+    return withSessions(this.all(), ids);
+  }
+
+  /** I secondi di lavoro chiusi di ogni progetto, con quelli dei sotto-progetti dentro. */
+  totals(): Map<string, number> {
+    const own = new Map<string, number>();
+    for (const r of this.db.all<{ p: string; s: number }>(
+      'SELECT project_uuid AS p, SUM(duration_seconds) AS s FROM pomodoro_sessions WHERE project_uuid IS NOT NULL AND end_time IS NOT NULL GROUP BY project_uuid',
+    ))
+      own.set(r.p, r.s);
+    const all = this.all();
+    const map = byId(all);
+    const out = new Map<string, number>();
+    for (const [id, secs] of own) {
+      let cur: string | null = id;
+      for (let guard = 0; cur && guard < 60; guard++) {
+        if (!map.has(cur)) break;
+        out.set(cur, (out.get(cur) ?? 0) + secs);
+        cur = map.get(cur)!.parent_uuid;
+      }
+    }
+    return out;
+  }
+
+  /** Quante sessioni del Pomodoro hanno uno di questi progetti (serve a chiedere cosa farne prima di cancellare). */
+  sessionCount(projectUuids: string[]): number {
+    if (!projectUuids.length) return 0;
+    const ph = projectUuids.map(() => '?').join(',');
+    return (
+      this.db.all<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM pomodoro_sessions WHERE project_uuid IN (${ph})`,
+        projectUuids,
+      )[0]?.n ?? 0
+    );
   }
 
   private siblingKeys(parent: string | null): string[] {

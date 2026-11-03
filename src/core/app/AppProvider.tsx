@@ -31,6 +31,7 @@ import {
   PomodoroSettingsStore,
   type PomodoroSettings,
 } from '@/features/pomodoro/settings';
+import { ProjectOptionsStore } from '@/features/projects/options';
 import { ProjectsRepo } from '@/features/projects/repo';
 import {
   DEFAULT_DIARY_SETTINGS,
@@ -76,6 +77,7 @@ export interface Services {
   diary: DiaryRepo;
   planner: PlannerRepo;
   projects: ProjectsRepo;
+  projectOptions: ProjectOptionsStore;
   pomodoro: PomodoroRepo;
   scheduler: SyncScheduler;
 }
@@ -306,6 +308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             userId,
           ),
           projects: new ProjectsRepo(opened.db),
+          projectOptions: new ProjectOptionsStore(opened.db),
           pomodoro: new PomodoroRepo(opened.db, userId),
           scheduler,
         });

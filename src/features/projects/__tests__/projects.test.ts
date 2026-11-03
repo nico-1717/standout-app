@@ -3,7 +3,15 @@ import { migrate } from '@/core/db/migrations';
 import { nextBatch } from '@/core/sync/outbox';
 import { upsertRow } from '@/core/sync/rows';
 
-import { byId, flatten, inheritedColor, nextStatus, subtreeIds, wouldCycle } from '../logic';
+import {
+  byId,
+  flatten,
+  inheritedColor,
+  nextStatus,
+  subtreeIds,
+  withSessions,
+  wouldCycle,
+} from '../logic';
 import { ProjectsRepo } from '../repo';
 
 function setup() {
@@ -141,6 +149,42 @@ describe('projects tree', () => {
   });
 });
 
+describe('totals', () => {
+  test('time adds up the branch; only projects with sessions count as worked on', () => {
+    const { db, repo } = setup();
+    const a = repo.create({ name: 'A' })!;
+    const k = repo.create({ name: 'K', parent: a })!;
+    const other = repo.create({ name: 'Other' })!;
+    const sess = (
+      id: string,
+      project: string,
+      secs: number,
+      end: string | null = '2030-01-01 10:25:00',
+    ) =>
+      upsertRow(db, 'pomodoro_sessions', {
+        uuid: id,
+        mode: 0,
+        start_time: '2030-01-01 10:00:00',
+        end_time: end,
+        status: null,
+        resume_time: null,
+        duration_seconds: secs,
+        planned_duration_min: 25,
+        project_uuid: project,
+        is_manual: 0,
+        updated_at: null,
+      });
+    sess('s1', k, 1500);
+    sess('s2', a, 600);
+    sess('s3', other, 900, null); // ancora aperta: non è nei totali chiusi
+    const t = repo.totals();
+    expect(t.get(k)).toBe(1500);
+    expect(t.get(a)).toBe(2100);
+    expect(t.get(other)).toBeUndefined();
+    expect([...repo.worked()].sort()).toEqual([a, k, other].sort());
+  });
+});
+
 describe('logic', () => {
   const mk = (rows: [string, string | null, string?, number?][]) => {
     const { repo, db } = setup();
@@ -203,7 +247,7 @@ describe('logic', () => {
     ]);
     const o = {
       showCompleted: true,
-      onlyActive: false,
+      onlyWorked: null,
       order: 'manuale',
       collapsed: new Set<string>(),
     } as const;
@@ -223,6 +267,10 @@ describe('logic', () => {
       'a2',
       'b',
     ]);
+    // «solo quelli con pomodori»: il ramo di a2 resta (con il suo padre a), b e a1 spariscono
+    expect(
+      flatten(all, { ...o, onlyWorked: withSessions(all, ['a2']) }).map((r) => r.project.uuid),
+    ).toEqual(['a', 'a2']);
     const done = all.map((p) => (p.uuid === 'a1' ? { ...p, status: 'completed' as const } : p));
     expect(flatten(done, { ...o, showCompleted: false }).map((r) => r.project.uuid)).toEqual([
       'a',

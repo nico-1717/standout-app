@@ -24,7 +24,11 @@ const mockUpdate = jest.fn((patch: Partial<PomodoroSettings>) => {
   mockVersion += 1;
 });
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: mockBack, push: jest.fn() }) }));
+let mockParams: Record<string, string> = {};
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: mockBack, push: jest.fn() }),
+  useLocalSearchParams: () => mockParams,
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -45,6 +49,7 @@ jest.mock('@/core/app/AppProvider', () => ({
 
 function setup() {
   mockVersion = 0;
+  mockParams = {};
   mockSettings = DEFAULT_POMODORO_SETTINGS;
   const db = memoryDb();
   migrate(db);
@@ -93,6 +98,15 @@ describe('Pomodoro screen', () => {
     );
     await fireEvent.press(screen.getByTestId('pomodoro-resume'));
     expect(pomodoro.active()!.status).toBeNull();
+  });
+
+  test('opening it from a project starts on that project', async () => {
+    const { pomodoro, projects } = setup();
+    const proj = projects.create({ name: 'Maths' })!;
+    mockParams = { project: proj };
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-start'));
+    expect(pomodoro.active()).toMatchObject({ project_uuid: proj });
   });
 
   test('a stopwatch can start with no project', async () => {

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,7 +71,10 @@ export default function PomodoroScreen() {
   const [mode, setMode] = useState<0 | 1>(pomodoroSettings.last_mode);
   const [minutes, setMinutes] = useState(pomodoroSettings.last_pomodoro_duration_min);
   const [breakMin, setBreakMin] = useState(pomodoroSettings.last_break_duration_min);
-  const [project, setProject] = useState<string | null>(null);
+  const { project: projectParam } = useLocalSearchParams<{ project?: string }>();
+  const [project, setProject] = useState<string | null>(
+    typeof projectParam === 'string' ? projectParam : null,
+  );
   const [picking, setPicking] = useState(false);
   const [adding, setAdding] = useState<PresetKind | null>(null);
   const [addText, setAddText] = useState('');

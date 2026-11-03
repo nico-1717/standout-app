@@ -135,8 +135,8 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| J1 | Albero dei progetti (`progetti.php`: figli, nipoti, preferiti, date, colore, note, stato) | sync `projects` | Progetti | P3 | da fare | |
-| J2 | Selettore di progetto (`project_selector.php`) | locale | selettore | P3 | da fare | |
+| J1 | Albero dei progetti (`progetti.php`: figli, nipoti, preferiti, date, colore, note, stato) | sync `projects` | Progetti | P3 | in parte: albero con stato (anche a cascata e ripristino), preferiti, scadenze, tempo di lavoro, opzioni della pagina (solo su questo telefono), scheda del progetto (nome, colore, date, nota di testo, sposta, riordina, sotto-progetti, elimina con scelta sui Pomodoro). Mancano: nota con formato (si legge, non si riscrive), attività del progetto (todo_enabled), mazzi collegati, selezione multipla/azioni di gruppo, vista a griglia | |
+| J2 | Selettore di progetto (`project_selector.php`) | locale | selettore | P3 | fatto: scelta del progetto (albero con colori) nel Pomodoro, nello storico e per spostare un progetto | |
 | J3 | Vista Elenco / Calendario / Piano dentro un progetto | sync piano | Progetto | P3 | da fare | |
 | J4 | Piano: obiettivi (minuti, tipo, priorità, scadenza), divisione fra i figli con lucchetto | sync `plan_goals` | Progetto › Piano | P3 | da fare — **test d'oro** | |
 | J5 | Evidenziatore dei giorni (`plan_paint`) e blocchi del giorno (`plan_days`) | sync | Progetto › Calendario | P3 | da fare | |

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { dayOfMonth, monthOf, weekdayOf } from '@/features/planner/dates';
 import { human, type Session } from '@/features/pomodoro/logic';
 import type { HistoryFilter } from '@/features/pomodoro/repo';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
+import { subtreeIds } from '@/features/projects/logic';
 import { localToday } from '@/features/tasks/groups';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
@@ -37,6 +38,11 @@ export default function PomodoroHistory() {
   const { services, version, changed } = useApp();
   const today = localToday();
 
+  const { project: scopeParam } = useLocalSearchParams<{ project?: string }>();
+  // aperto da un progetto: si vedono i suoi Pomodoro e quelli dei suoi sotto-progetti, finché non si azzera
+  const [scope, setScope] = useState<string | null>(
+    typeof scopeParam === 'string' ? scopeParam : null,
+  );
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -52,16 +58,17 @@ export default function PomodoroHistory() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [bulkPick, setBulkPick] = useState(false);
 
-  const filter: HistoryFilter = useMemo(
-    () => ({
+  const filter: HistoryFilter = useMemo(() => {
+    void version;
+    return {
+      projects: scope && services ? subtreeIds(services.projects.all(), scope) : undefined,
       project: projectFilter === 'all' ? undefined : projectFilter,
       from: from || undefined,
       to: to || undefined,
       minMinutes: parseInt(minText, 10) || undefined,
       sort,
-    }),
-    [projectFilter, from, to, minText, sort],
-  );
+    };
+  }, [scope, services, version, projectFilter, from, to, minText, sort]);
 
   const data = useMemo(() => {
     void version;
@@ -539,6 +546,24 @@ export default function PomodoroHistory() {
               'sort-duration',
             )}
           </View>
+          {scope ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Text testID="hist-scope" style={{ color: th.text }}>
+                {t('pomodoro.ph_progetto_nome', { nome: nameOf(scope) ?? '' })}
+              </Text>
+              <TextButton
+                testID="hist-scope-clear"
+                label={t('pomodoro.storico_tutti')}
+                onPress={() => setScope(null)}
+              />
+            </View>
+          ) : null}
           {from || to || minText || projectFilter !== 'all' ? (
             <TextButton
               testID="hist-reset"

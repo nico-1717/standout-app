@@ -16,7 +16,11 @@ const mockChanged = jest.fn(() => {
   mockVersion += 1;
 });
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn() }) }));
+let mockParams: Record<string, string> = {};
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  useLocalSearchParams: () => mockParams,
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -26,6 +30,7 @@ jest.mock('@/core/app/AppProvider', () => ({
 
 function setup() {
   mockVersion = 0;
+  mockParams = {};
   const db = memoryDb();
   migrate(db);
   const pomodoro = new PomodoroRepo(db, 7);
@@ -133,6 +138,24 @@ describe('Pomodoro history', () => {
     expect(pomodoro.get(b)).not.toBeNull();
     await fireEvent.press(screen.getByTestId('bulk-delete-yes'));
     expect(pomodoro.get(b)).toBeNull();
+  });
+
+  test('opened from a project, it shows that project and its sub-projects until reset', async () => {
+    const { pomodoro, projects } = setup();
+    const a = projects.create({ name: 'A' })!;
+    const k = projects.create({ name: 'K', parent: a })!;
+    const x = projects.create({ name: 'X' })!;
+    const day = localToday();
+    const sa = pomodoro.addManual({ day, from: '08:00', to: '08:30', projectUuid: a })!;
+    const sk = pomodoro.addManual({ day, from: '09:00', to: '09:30', projectUuid: k })!;
+    const sx = pomodoro.addManual({ day, from: '10:00', to: '10:30', projectUuid: x })!;
+    mockParams = { project: a };
+    await renderIt();
+    expect(screen.getByTestId(`hist-row-${sa}`)).toBeTruthy();
+    expect(screen.getByTestId(`hist-row-${sk}`)).toBeTruthy();
+    expect(screen.queryByTestId(`hist-row-${sx}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('hist-scope-clear'));
+    expect(screen.getByTestId(`hist-row-${sx}`)).toBeTruthy();
   });
 
   test('loads more past twenty', async () => {

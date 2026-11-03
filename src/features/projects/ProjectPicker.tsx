@@ -70,7 +70,7 @@ export function ProjectPicker({
   const { t } = useTranslation();
   const rows = flatten(projects, {
     showCompleted: false,
-    onlyActive: false,
+    onlyWorked: null,
     order: 'manuale',
     collapsed: new Set<string>(),
   });

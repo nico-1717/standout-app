@@ -102,8 +102,8 @@ export interface TreeRow {
 export interface TreeOptions {
   /** i progetti completati si vedono? */
   showCompleted: boolean;
-  /** solo quelli in corso */
-  onlyActive: boolean;
+  /** «solo quelli con pomodori»: i progetti che vi compaiono (da `withSessions`); null = tutti */
+  onlyWorked: ReadonlySet<string> | null;
   order: 'manuale' | 'alfabetico' | 'recenti' | 'scadenza';
   /** i rami chiusi: i loro figli non si elencano */
   collapsed: ReadonlySet<string>;
@@ -112,11 +112,13 @@ export interface TreeOptions {
 /** L'albero come righe in fila, secondo le opzioni della pagina «Progetti». */
 export function flatten(all: Project[], o: TreeOptions): TreeRow[] {
   const sorter = (a: Project, b: Project) => {
-    if (o.order === 'alfabetico') return a.name.localeCompare(b.name);
+    if (o.order === 'alfabetico')
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
     if (o.order === 'recenti') return (b.created_at ?? '') < (a.created_at ?? '') ? -1 : 1;
     if (o.order === 'scadenza') {
-      const da = a.due_date ?? '9999-99-99';
-      const db = b.due_date ?? '9999-99-99';
+      // come sul sito: la scadenza, se manca la data obiettivo; chi non ha date va in fondo
+      const da = a.due_date ?? a.target_date ?? '9999-99-99';
+      const db = b.due_date ?? b.target_date ?? '9999-99-99';
       return da === db ? (a.sort_key < b.sort_key ? -1 : 1) : da < db ? -1 : 1;
     }
     return a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : 0;
@@ -124,8 +126,7 @@ export function flatten(all: Project[], o: TreeOptions): TreeRow[] {
   const kids = new Map<string | null, Project[]>();
   for (const p of all) kids.set(p.parent_uuid, [...(kids.get(p.parent_uuid) ?? []), p]);
   const visible = (p: Project) =>
-    !(o.onlyActive && p.status !== 'in_progress') &&
-    !(!o.showCompleted && p.status === 'completed');
+    !(o.onlyWorked && !o.onlyWorked.has(p.uuid)) && !(!o.showCompleted && p.status === 'completed');
   const out: TreeRow[] = [];
   const walk = (parent: string | null, depth: number) => {
     const list = (kids.get(parent) ?? []).sort(sorter);
@@ -143,5 +144,20 @@ export function flatten(all: Project[], o: TreeOptions): TreeRow[] {
     }
   };
   walk(null, 0);
+  return out;
+}
+
+/** I progetti che hanno almeno un Pomodoro loro o in un sotto-progetto: quelli che «solo quelli con pomodori» lascia vedere. */
+export function withSessions(all: Project[], sessionProjects: Iterable<string>): Set<string> {
+  const map = byId(all);
+  const out = new Set<string>();
+  for (const id of sessionProjects) {
+    let cur: string | null = id;
+    for (let guard = 0; cur && guard < 60 && !out.has(cur); guard++) {
+      if (!map.has(cur)) break;
+      out.add(cur);
+      cur = map.get(cur)!.parent_uuid;
+    }
+  }
   return out;
 }
