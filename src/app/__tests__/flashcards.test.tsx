@@ -226,8 +226,8 @@ describe('card page', () => {
     await render(wrap(<CardScreen />));
     await fireEvent.press(screen.getByTestId('fcc-save')); // spento: non fa niente
     expect(flashcards.cards(deck)).toHaveLength(0);
-    await fireEvent.changeText(screen.getByTestId('fcc-q-input'), 'Capital of Italy?');
-    await fireEvent.changeText(screen.getByTestId('fcc-a-input'), 'Rome');
+    await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'Capital of Italy?');
+    await fireEvent.changeText(screen.getByTestId('fcc-a-block-0'), 'Rome');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     const cards = flashcards.cards(deck);
     expect(cards).toHaveLength(1);
@@ -235,7 +235,7 @@ describe('card page', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  test('edit a plain card; a formatted side is kept unless replaced', async () => {
+  test('edit a card: the untouched formatted side stays as it is; editing it keeps the formatting', async () => {
     const { flashcards } = setup();
     const deck = flashcards.createDeck({ name: 'Chem' })!;
     const rich = stringifyDoc({ v: 2, blocks: [{ t: 'p', runs: [{ s: 'Bold', m: { b: 1 } }] }] });
@@ -243,21 +243,30 @@ describe('card page', () => {
     mockParams = { id: c };
     const view = await render(wrap(<CardScreen />));
     await fireEvent.press(screen.getByTestId('fcc-edit'));
-    expect(screen.getByTestId('fcc-q-input')).toBeTruthy();
-    expect(screen.queryByTestId('fcc-a-input')).toBeNull(); // formattato: non si riscrive
-    expect(screen.getByText('This text has formatting (bold, lists, formulas…).')).toBeTruthy();
-    await fireEvent.changeText(screen.getByTestId('fcc-q-input'), 'new question');
+    await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'new question');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     await view.rerender(wrap(<CardScreen />));
     expect(JSON.parse(flashcards.card(c)!.question_desc!).blocks[0].runs[0].s).toBe('new question');
     expect(flashcards.card(c)!.answer_desc).toBe(rich); // intatta
     await fireEvent.press(screen.getByTestId('fcc-edit'));
-    await fireEvent.press(screen.getByTestId('fcc-a-replace'));
-    await fireEvent.changeText(screen.getByTestId('fcc-a-input'), 'plain now');
+    await fireEvent.changeText(screen.getByTestId('fcc-a-block-0'), 'Bolder');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     expect(JSON.parse(flashcards.card(c)!.answer_desc!).blocks[0].runs[0]).toEqual({
-      s: 'plain now',
+      s: 'Bolder',
+      m: { b: 1 },
     });
+  });
+
+  test('clearing a side saves it as empty', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-edit'));
+    await fireEvent.changeText(screen.getByTestId('fcc-a-block-0'), '');
+    await fireEvent.press(screen.getByTestId('fcc-save'));
+    expect(flashcards.card(c)!.answer_desc).toBeNull();
   });
 
   test('child cards: add, open, delete; the parent becomes a father', async () => {
@@ -266,7 +275,7 @@ describe('card page', () => {
     const c = flashcards.addCard(deck, 'q', 'a')!;
     mockParams = { parent: c };
     const first = await render(wrap(<CardScreen />));
-    await fireEvent.changeText(screen.getByTestId('fcc-q-input'), 'child q');
+    await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'child q');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     await first.unmount();
     expect(flashcards.subcards(c)).toHaveLength(1);

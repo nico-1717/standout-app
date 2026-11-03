@@ -6,9 +6,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { docToPlain, isPlainDoc, parseDoc, plainToField } from '@/features/flashcards/doc';
+import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { DocView } from '@/features/flashcards/DocView';
+import { RichEditor } from '@/features/flashcards/RichEditor';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
@@ -122,17 +123,14 @@ export default function CardScreen() {
   const edit = isNew || editing;
 
   const raw = (s: Side) => (s === 'q' ? item.q : item.a);
-  const plainOk = (s: Side) => isPlainDoc(raw(s));
-  const value = (s: Side) => draft[s] ?? docToPlain(parseDoc(raw(s)));
-  const set = (s: Side, v: string) => setDraft({ ...draft, [s]: v });
+  const set = (s: Side, v: string | null) => setDraft({ ...draft, [s]: v ?? '' });
 
-  const canSave = isNew
-    ? !!(draft.q?.trim() || draft.a?.trim())
-    : draft.q !== null || draft.a !== null;
+  // la bozza è già il campo da salvare ('' = svuotato, null = non toccato)
+  const canSave = isNew ? !!(draft.q || draft.a) : draft.q !== null || draft.a !== null;
 
   const save = () => {
-    const q = draft.q !== null ? plainToField(draft.q) : undefined;
-    const a = draft.a !== null ? plainToField(draft.a) : undefined;
+    const q = draft.q !== null ? draft.q || null : undefined;
+    const a = draft.a !== null ? draft.a || null : undefined;
     if (isNew) {
       const id = params.parent
         ? repo.addSubcard(params.parent, q ?? null, a ?? null)
@@ -153,40 +151,18 @@ export default function CardScreen() {
 
   const field = (s: Side) => {
     const label = s === 'q' ? t('fc.ifc_domanda') : t('fc.ifc_risposta');
-    const rich = !plainOk(s) && draft[s] === null;
     return (
       <Card style={{ padding: 16, gap: 8 }}>
         <SectionLabel>{label}</SectionLabel>
-        {edit && !rich ? (
-          <TextInput
-            testID={`fcc-${s}-input`}
-            value={value(s)}
-            onChangeText={(v) => set(s, v)}
-            multiline
-            autoFocus={isNew && s === 'q'}
+        {edit ? (
+          <RichEditor
+            testID={`fcc-${s}`}
+            value={raw(s)}
+            onChange={(v) => set(s, v)}
             placeholder={label}
-            placeholderTextColor={th.text3}
-            style={{ color: th.text, fontSize: 17, minHeight: 80, textAlignVertical: 'top' }}
           />
         ) : (
-          <>
-            <DocView testID={`fcc-${s}-view`} raw={raw(s)} />
-            {edit && rich ? (
-              <View style={{ gap: 4 }}>
-                <Text style={{ color: th.text, fontWeight: '600' }}>
-                  {t('fc.app_testo_formattato')}
-                </Text>
-                <Text style={{ color: th.text2, fontSize: 13 }}>
-                  {t('fc.app_testo_formattato_sub')}
-                </Text>
-                <TextButton
-                  testID={`fcc-${s}-replace`}
-                  label={t('fc.app_sostituisci_testo')}
-                  onPress={() => set(s, docToPlain(parseDoc(raw(s))))}
-                />
-              </View>
-            ) : null}
-          </>
+          <DocView testID={`fcc-${s}-view`} raw={raw(s)} />
         )}
       </Card>
     );
