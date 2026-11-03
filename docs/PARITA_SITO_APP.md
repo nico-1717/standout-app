@@ -45,14 +45,14 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| H1 | Griglia di widget personalizzabile e ordine (`home_layout`, `home_core.js`) | sync `home_layout` | Home | P2 | da fare | |
-| H2 | Modalità «personalizza» (accendi/spegni, ordine, frecce delle scorciatoie) | sync `home_layout` | Home › Personalizza | P2 | da fare | |
-| H3 | Widget «Oggi»: ora, anelli abitudini, pastiglie in ritardo, prossima data importante, ore, to do/to buy di oggi | locale (da DB) | Home | P2 | da fare | |
-| H4 | Widget Note (nota veloce) | sync `todo_notes` | Home | P2 | da fare | |
-| H5 | Widget Flashcard, Progetti, Voti, «I tuoi numeri» | locale (da DB) | Home | P3 | da fare | |
-| H6 | Widget Trivia (`trivia.json`, `trivia_en.json`) | file nell'app | Home | P4 | da fare | |
+| H1 | Griglia di widget personalizzabile e ordine (`home_layout`, `home_core.js`) | sync `home_layout` | Home | P2 | fatto | Home è la prima scheda; ordine e on/off salvati sul telefono e sul sito (`home/layout`). Non è una griglia: sul telefono i riquadri vanno uno sotto l'altro. |
+| H2 | Modalità «personalizza» (accendi/spegni, ordine, frecce delle scorciatoie) | sync `home_layout` | Home › Personalizza | P2 | fatto | Personalizza: mostra/nascondi, su/giù, ◀ ▶ dei tasti rapidi, Ripristina. Mostra solo i tasti delle pagine che esistono già. |
+| H3 | Widget «Oggi»: ora, anelli abitudini, pastiglie in ritardo, prossima data importante, ore, to do/to buy di oggi | locale (da DB) | Home | P2 | fatto | Adesso/Libero, eventi di oggi e domani, anelli abitudini, pastiglie in ritardo (Presa/Salta), prossima data importante, to do di oggi (si spuntano), spesa. Mancano: blocchi del piano progetti, «ore della settimana». |
+| H4 | Widget Note (nota veloce) | sync `todo_notes` | Home | P2 | fatto | Stessa nota veloce del To do (si salva da sola). |
+| H5 | Widget Flashcard, Progetti, Voti, «I tuoi numeri» | locale (da DB) | Home | P3 | in parte | Progetti fatto (preferiti o in corso, con il tempo). Flashcard, Voti e «I tuoi numeri» restano nascosti finché non ci sono le loro pagine. |
+| H6 | Widget Trivia (`trivia.json`, `trivia_en.json`) | file nell'app | Home | P4 | fatto | Stessi file del sito nell'app; tocca per scoprire, «Presa bene / Mancata». |
 | H7 | Bozze veloci di flashcard (`fc_quick_drafts`: solo il fronte, finita dopo) | sync `fc_quick_drafts` | Home › Bozze | P3 | da fare | |
-| H8 | Colpo d'occhio all'avvio: ultimo stato subito, poi aggiornamento (cache in localStorage sul sito) | — | non serve: tutto viene dal DB locale | P2 | assorbito | |
+| H8 | Colpo d'occhio all'avvio: ultimo stato subito, poi aggiornamento (cache in localStorage sul sito) | — | non serve: tutto viene dal DB locale | P2 | assorbito | non serve: tutto viene dal DB locale |
 | H9 | Landing page pubblica (`landing_content.php`) | — | nessuna (è il sito) | — | non si porta | |
 
 ## 3. Planner (`planner/planner.php`, `lib/planner/`)
