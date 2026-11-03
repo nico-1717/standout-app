@@ -31,9 +31,9 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | A10 | Pagine legali (`legal/privacy.php`, `legal/termini.php`) | — | Impostazioni › Privacy / Condizioni (si aprono dal sito, nella lingua dell'utente) | P2 | scritto e provato con test, da provare sul telefono | |
 | A11 | Elenco e uscita dei dispositivi | `auth/devices` | Impostazioni › Dispositivi collegati | P1 | scritto e provato con test, da provare sul telefono | |
 | A12 | Uscita da tutti i dispositivi | `auth/logout_all` | Impostazioni › Dispositivi › Esci ovunque | P2 | scritto e provato con test, da provare sul telefono | |
-| A13 | Lingua (`partials/lang_picker.php`, `api/lingua.php`, `users.lang`) | `me` + sync impostazioni | Impostazioni › Lingua | P1 | da fare | |
+| A13 | Lingua (`partials/lang_picker.php`, `api/lingua.php`, `users.lang`) | `me` + sync impostazioni | Impostazioni › Lingua | P1 | fatto — italiano, inglese o automatica (sync impostazioni) | |
 | A14 | Stile standard / paper (`api/stile.php`, `users.ui_style`) | sync impostazioni | Impostazioni › Aspetto | P2 | scritto e provato con test (stile, colore, lingua), da provare sul telefono | |
-| A15 | Colore del sito (`api/accento.php`, `lib/accent.php`, `users.ui_accent`) | sync impostazioni | Impostazioni › Aspetto › Colore | P2 | da fare | |
+| A15 | Colore del sito (`api/accento.php`, `lib/accent.php`, `users.ui_accent`) | sync impostazioni | Impostazioni › Aspetto › Colore | P2 | fatto — scelta del colore (chiaro/scuro) nelle impostazioni | |
 | A16 | Menu dell'avatar: stile, colore, lingua, barre d'uso dell'IA (`partials/notifiche_widget.php`) | `home/ai_usage` (solo online) | Pannello profilo | P2 | da fare | |
 | A17 | Notifiche del widget (richieste di amicizia: sul sito il social è SPENTO) | — | rimandata alla fase social | — | da confermare | |
 | A18 | Barra laterale / menu (`partials/sidebar.php`, `sidebar.html`): scorciatoie «Inserisci» (`fc_corsi_lista.php`) | — | Barra a schede in basso + «Altro»; scorciatoia Inserisci | P2 | da fare | |
@@ -73,7 +73,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P12 | Routine (gruppi di righe, comprimi/ricompatta, inserisci) | sync `planner_routines`, `_items` | Planner › Routine | P2 | fatto (crea/cambia routine, inserisci a un'ora, apri/chiudi, elimina il blocco) | |
 | P13 | Preferiti | sync | Planner › Preferiti | P2 | da fare | |
 | P14 | Barra intelligente (data, ora, durata dalla frase: `04_barra_e_priorita.js`, `planner_smart.json`) | locale | Barra rapida | P2 | fatto: `planner/smart.ts`, test d'oro su 864 casi contro il vero codice del sito (`scripts/gen-planner-smart.mjs`); i nomi dalla rubrica arrivano con P6 | |
-| P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | archivio e sync fatti (`PlannerSettingsStore`, `/planner/settings`); la schermata per cambiarle e l'uso (palette, zoom, ora d'inizio) da fare | |
+| P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | fatto in parte — schermata Impostazioni (⚙ nel planner): colore della pagina, frasi, alberi e animali, scatti degli orari, contrasto, giorni affiancati (tablet); il planner usa colore, contrasto, zoom e ora d'inizio. Da fare: frasi/affermazioni sulla settimana e sfondi animati (P20) | |
 | P16 | Meteo (`meteo_api.php`: stato, attiva, anteprima, ricerca luogo) | `weather/*` (nuova) | Planner › Meteo | P4 | solo online | |
 | P17 | Google Calendar (`google_calendar.php`: collega, calendari, mappa, push, ripara, sincronizza, scollega) | `google/*` (nuova, OAuth da browser di sistema) | Impostazioni › Google Calendar | P4 | solo online | |
 | P18 | Pastiglie in scadenza dentro il planner (avvisi viola) | locale | Planner | P2 | da fare | |

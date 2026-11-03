@@ -42,6 +42,7 @@ function Shell() {
           <Stack.Screen name="categories" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-manage" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-routines" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="planner-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-week" options={{ presentation: 'modal' }} />
           <Stack.Screen name="pomodoro" options={{ presentation: 'modal' }} />
           <Stack.Screen name="pomodoro-history" options={{ presentation: 'modal' }} />

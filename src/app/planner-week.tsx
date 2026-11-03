@@ -30,7 +30,7 @@ export default function PlannerWeek() {
       : localToday();
   const today = localToday();
   const { services, version, changed, uiStyle, plannerSettings } = useApp();
-  const pt = plannerTheme(uiStyle, th);
+  const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const [tab, setTab] = useState<Tab>('todo');
   const [others, setOthers] = useState(false);
   const [draft, setDraft] = useState('');

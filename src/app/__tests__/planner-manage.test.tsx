@@ -26,6 +26,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     version: mockVersion,
     changed: mockChanged,
     uiStyle: 'standard',
+    plannerSettings: jest.requireActual('@/features/planner/settings').DEFAULT_PLANNER_SETTINGS,
   }),
 }));
 

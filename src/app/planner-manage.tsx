@@ -26,8 +26,8 @@ export default function PlannerManage() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed, uiStyle } = useApp();
-  const pt = plannerTheme(uiStyle, th);
+  const { services, version, changed, uiStyle, plannerSettings } = useApp();
+  const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const repo = services?.planner ?? null;
   const [newCal, setNewCal] = useState('');
   const [newCat, setNewCat] = useState('');

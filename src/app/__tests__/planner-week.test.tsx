@@ -34,7 +34,11 @@ jest.mock('@/core/app/AppProvider', () => ({
     version: mockVersion,
     changed: mockChanged,
     uiStyle: 'standard',
-    plannerSettings: { first_week_start: '2030-01-28', first_week_number: 1 },
+    plannerSettings: {
+      ...jest.requireActual('@/features/planner/settings').DEFAULT_PLANNER_SETTINGS,
+      first_week_start: '2030-01-28',
+      first_week_number: 1,
+    },
   }),
 }));
 

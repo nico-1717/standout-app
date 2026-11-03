@@ -36,8 +36,8 @@ export default function PlannerRoutines() {
     typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
       ? dateParam
       : localToday();
-  const { services, version, changed, uiStyle } = useApp();
-  const pt = plannerTheme(uiStyle, th);
+  const { services, version, changed, uiStyle, plannerSettings } = useApp();
+  const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const repo = services?.planner ?? null;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [startAt, setStartAt] = useState<{ uuid: string; time: string } | null>(null);

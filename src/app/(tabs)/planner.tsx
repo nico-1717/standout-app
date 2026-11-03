@@ -41,7 +41,7 @@ export default function PlannerScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { services, version, changed, uiStyle, plannerSettings } = useApp();
-  const pt = plannerTheme(uiStyle, th);
+  const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const today = localToday();
   const [date, setDate] = useState(today);
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day');
@@ -49,7 +49,7 @@ export default function PlannerScreen() {
   const [unclear, setUnclear] = useState(false);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   const scroller = useRef<ScrollViewInstance>(null);
-  const zoom = 'm30' as const;
+  const zoom = plannerSettings.zoom;
 
   const repo = services?.planner ?? null;
   const week = useMemo(() => {
@@ -94,7 +94,10 @@ export default function PlannerScreen() {
   useEffect(() => {
     // all'apertura: si parte un'ora prima di adesso (o dalle 6 se non è oggi)
     const d = new Date();
-    const startMin = date === today ? Math.max(0, d.getHours() * 60 + d.getMinutes() - 60) : 6 * 60;
+    const startMin =
+      date === today
+        ? Math.max(0, d.getHours() * 60 + d.getMinutes() - 60)
+        : plannerSettings.day_start_hour * 60;
     scroller.current?.scrollTo({ y: startMin * pxPerMinute(zoom), animated: false });
     // solo quando cambia il giorno mostrato
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -222,6 +225,15 @@ export default function PlannerScreen() {
             style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
           >
             <Text style={{ color: pt.ink2, fontSize: 20 }}>☰</Text>
+          </Pressable>
+          <Pressable
+            testID="planner-settings"
+            accessibilityRole="button"
+            accessibilityLabel={t('planner.impostazioni')}
+            onPress={() => router.push('/planner-settings')}
+            style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Text style={{ color: pt.ink2, fontSize: 20 }}>⚙</Text>
           </Pressable>
         </View>
         <View
