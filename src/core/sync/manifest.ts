@@ -26,7 +26,10 @@ export type SyncTable =
   | 'university_exam_groups'
   | 'university_exams'
   | 'university_bonuses'
-  | 'planner_events';
+  | 'planner_events'
+  | 'fc_study_decks'
+  | 'fc_study_cards'
+  | 'fc_study_subcards';
 
 export interface TableDef {
   /** nell'ordine di dipendenza: il padre prima del figlio */
@@ -501,6 +504,84 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'is_enabled',
       'sort_key',
       'created_at',
+      'updated_at',
+    ],
+  },
+  // le flashcard di studio: mazzi ad albero, carte (nel mazzo) e carte figlie (sotto una carta)
+  fc_study_decks: {
+    order: 200,
+    readOnly: ['updated_at'],
+    createOnly: [],
+    booleans: ['color_edited', 'archived', 'pinned'],
+    columns: [
+      'uuid',
+      'parent_uuid',
+      'name',
+      'color',
+      'color_edited',
+      'archived',
+      'icon',
+      'notes',
+      'pinned',
+      'exam_date',
+      'updated_at',
+    ],
+    // il sito cancella solo il mazzo e lascia le carte orfane: il telefono toglie il ramo intero
+    children: [
+      { table: 'fc_study_decks', column: 'parent_uuid' },
+      { table: 'fc_study_cards', column: 'category_uuid' },
+    ],
+  },
+  fc_study_cards: {
+    order: 201,
+    readOnly: [
+      'question_image',
+      'answer_image',
+      'question_audio',
+      'answer_audio',
+      'is_father',
+      'custom_order',
+      'updated_at',
+    ],
+    createOnly: [],
+    booleans: ['is_father'],
+    columns: [
+      'uuid',
+      'category_uuid',
+      'question_desc',
+      'answer_desc',
+      'question_image',
+      'answer_image',
+      'question_audio',
+      'answer_audio',
+      'is_father',
+      'custom_order',
+      'updated_at',
+    ],
+    children: [{ table: 'fc_study_subcards', column: 'parent_uuid' }],
+  },
+  fc_study_subcards: {
+    order: 202,
+    readOnly: [
+      'question_image',
+      'answer_image',
+      'question_audio',
+      'answer_audio',
+      'custom_order',
+      'updated_at',
+    ],
+    createOnly: ['parent_uuid'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'parent_uuid',
+      'question_desc',
+      'answer_desc',
+      'question_image',
+      'answer_image',
+      'question_audio',
+      'answer_audio',
+      'custom_order',
       'updated_at',
     ],
   },

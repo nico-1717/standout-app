@@ -1,0 +1,1149 @@
+[
+  {
+    "input": "",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": []
+        }
+      ]
+    },
+    "trimmed": "",
+    "plain": ""
+  },
+  {
+    "input": "   ",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "   "
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[]}]}",
+    "plain": "   "
+  },
+  {
+    "input": "Ciao",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Ciao"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Ciao\"}]}]}",
+    "plain": "Ciao"
+  },
+  {
+    "input": "Una riga\nseconda riga\n\nterza dopo un vuoto",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Una riga"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "seconda riga"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "terza dopo un vuoto"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Una riga\"}]},{\"t\":\"p\",\"runs\":[{\"s\":\"seconda riga\"}]},{\"t\":\"p\",\"runs\":[]},{\"t\":\"p\",\"runs\":[{\"s\":\"terza dopo un vuoto\"}]}]}",
+    "plain": "Una riga\nseconda riga\n\nterza dopo un vuoto"
+  },
+  {
+    "input": "  spazi ai bordi  ",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "  spazi ai bordi  "
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"spazi ai bordi\"}]}]}",
+    "plain": "  spazi ai bordi  "
+  },
+  {
+    "input": "/bold{grassetto} e /italic{corsivo} e /underline{sottolineato}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "grassetto",
+              "m": {
+                "b": 1
+              }
+            },
+            {
+              "s": " e "
+            },
+            {
+              "s": "corsivo",
+              "m": {
+                "i": 1
+              }
+            },
+            {
+              "s": " e "
+            },
+            {
+              "s": "sottolineato",
+              "m": {
+                "u": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"grassetto\",\"m\":{\"b\":1}},{\"s\":\" e \"},{\"s\":\"corsivo\",\"m\":{\"i\":1}},{\"s\":\" e \"},{\"s\":\"sottolineato\",\"m\":{\"u\":1}}]}]}",
+    "plain": "grassetto e corsivo e sottolineato"
+  },
+  {
+    "input": "/red{rosso} /blue{blu} /green{verde} /purple{viola} /orange{arancio} /gray{grigio}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "rosso",
+              "m": {
+                "c": "red"
+              }
+            },
+            {
+              "s": " "
+            },
+            {
+              "s": "blu",
+              "m": {
+                "c": "blue"
+              }
+            },
+            {
+              "s": " "
+            },
+            {
+              "s": "verde",
+              "m": {
+                "c": "green"
+              }
+            },
+            {
+              "s": " "
+            },
+            {
+              "s": "viola",
+              "m": {
+                "c": "purple"
+              }
+            },
+            {
+              "s": " "
+            },
+            {
+              "s": "arancio",
+              "m": {
+                "c": "orange"
+              }
+            },
+            {
+              "s": " "
+            },
+            {
+              "s": "grigio",
+              "m": {
+                "c": "gray"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"rosso\",\"m\":{\"c\":\"red\"}},{\"s\":\" \"},{\"s\":\"blu\",\"m\":{\"c\":\"blue\"}},{\"s\":\" \"},{\"s\":\"verde\",\"m\":{\"c\":\"green\"}},{\"s\":\" \"},{\"s\":\"viola\",\"m\":{\"c\":\"purple\"}},{\"s\":\" \"},{\"s\":\"arancio\",\"m\":{\"c\":\"orange\"}},{\"s\":\" \"},{\"s\":\"grigio\",\"m\":{\"c\":\"gray\"}}]}]}",
+    "plain": "rosso blu verde viola arancio grigio"
+  },
+  {
+    "input": "/yellow{evidenziato}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "evidenziato",
+              "m": {
+                "h": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"evidenziato\",\"m\":{\"h\":1}}]}]}",
+    "plain": "evidenziato"
+  },
+  {
+    "input": "/red{/bold{rosso e grassetto}} contro /bold{/red{grassetto e rosso}}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "rosso e grassetto",
+              "m": {
+                "c": "red",
+                "b": 1
+              }
+            },
+            {
+              "s": " contro "
+            },
+            {
+              "s": "grassetto e rosso",
+              "m": {
+                "b": 1,
+                "c": "red"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"rosso e grassetto\",\"m\":{\"c\":\"red\",\"b\":1}},{\"s\":\" contro \"},{\"s\":\"grassetto e rosso\",\"m\":{\"b\":1,\"c\":\"red\"}}]}]}",
+    "plain": "rosso e grassetto contro grassetto e rosso"
+  },
+  {
+    "input": "/bold{uno /italic{due /underline{tre}} quattro}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "uno ",
+              "m": {
+                "b": 1
+              }
+            },
+            {
+              "s": "due ",
+              "m": {
+                "b": 1,
+                "i": 1
+              }
+            },
+            {
+              "s": "tre",
+              "m": {
+                "b": 1,
+                "i": 1,
+                "u": 1
+              }
+            },
+            {
+              "s": " quattro",
+              "m": {
+                "b": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"uno \",\"m\":{\"b\":1}},{\"s\":\"due \",\"m\":{\"b\":1,\"i\":1}},{\"s\":\"tre\",\"m\":{\"b\":1,\"i\":1,\"u\":1}},{\"s\":\" quattro\",\"m\":{\"b\":1}}]}]}",
+    "plain": "uno due tre quattro"
+  },
+  {
+    "input": "/bold{non chiuso",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "non chiuso",
+              "m": {
+                "b": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"non chiuso\",\"m\":{\"b\":1}}]}]}",
+    "plain": "non chiuso"
+  },
+  {
+    "input": "/sconosciuto{ciao}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "/sconosciuto{ciao}"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"/sconosciuto{ciao}\"}]}]}",
+    "plain": "/sconosciuto{ciao}"
+  },
+  {
+    "input": "La formula $x^2 + y^2$ sta in linea",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "La formula "
+            },
+            {
+              "x": "x^2 + y^2"
+            },
+            {
+              "s": " sta in linea"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"La formula \"},{\"x\":\"x^2 + y^2\"},{\"s\":\" sta in linea\"}]}]}",
+    "plain": "La formula x^2 + y^2 sta in linea"
+  },
+  {
+    "input": "Prima\n$$E = mc^2$$\ndopo",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Prima"
+            }
+          ]
+        },
+        {
+          "t": "fx",
+          "tex": "E = mc^2"
+        },
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "dopo"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Prima\"}]},{\"t\":\"fx\",\"tex\":\"E = mc^2\"},{\"t\":\"p\",\"runs\":[]},{\"t\":\"p\",\"runs\":[{\"s\":\"dopo\"}]}]}",
+    "plain": "Prima\nE = mc^2\n\ndopo"
+  },
+  {
+    "input": "$$a+b$$",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "fx",
+          "tex": "a+b"
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"fx\",\"tex\":\"a+b\"}]}",
+    "plain": "a+b"
+  },
+  {
+    "input": "costa 5$ e 3$ ma è una formula $ aperta",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "costa 5"
+            },
+            {
+              "x": " e 3"
+            },
+            {
+              "s": " ma è una formula $ aperta"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"costa 5\"},{\"x\":\" e 3\"},{\"s\":\" ma è una formula $ aperta\"}]}]}",
+    "plain": "costa 5 e 3 ma è una formula $ aperta"
+  },
+  {
+    "input": "/list{\n- primo\n- secondo\n-- annidato\n- terzo\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "primo"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "secondo"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 2,
+          "runs": [
+            {
+              "s": "annidato"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "terzo"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"primo\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"secondo\"}]},{\"t\":\"li\",\"lvl\":2,\"runs\":[{\"s\":\"annidato\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"terzo\"}]}]}",
+    "plain": "primo\nsecondo\nannidato\nterzo"
+  },
+  {
+    "input": "/list-red{\n- rosso 1\n- rosso 2\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "rosso 1"
+            }
+          ],
+          "c": "red"
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "rosso 2"
+            }
+          ],
+          "c": "red"
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"rosso 1\"}],\"c\":\"red\"},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"rosso 2\"}],\"c\":\"red\"}]}",
+    "plain": "rosso 1\nrosso 2"
+  },
+  {
+    "input": "/list-viola{\n- colore sconosciuto\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "colore sconosciuto"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"colore sconosciuto\"}]}]}",
+    "plain": "colore sconosciuto"
+  },
+  {
+    "input": "/list{\n- punto con $$f(x)$$ dentro\ncontinua qui\n- altro\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "punto con "
+            },
+            {
+              "x": "f(x)"
+            },
+            {
+              "s": " dentro\ncontinua qui"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "altro"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"punto con \"},{\"x\":\"f(x)\"},{\"s\":\" dentro\\ncontinua qui\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"altro\"}]}]}",
+    "plain": "punto con f(x) dentro\ncontinua qui\naltro"
+  },
+  {
+    "input": "Testo prima\n/list{\n- uno\n- due\n}\nTesto dopo",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Testo prima"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "uno"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "due"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Testo dopo"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Testo prima\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"uno\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"due\"}]},{\"t\":\"p\",\"runs\":[]},{\"t\":\"p\",\"runs\":[{\"s\":\"Testo dopo\"}]}]}",
+    "plain": "Testo prima\nuno\ndue\n\nTesto dopo"
+  },
+  {
+    "input": "/list{\n• con pallino\n•• secondo livello\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "con pallino"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 2,
+          "runs": [
+            {
+              "s": "secondo livello"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"con pallino\"}]},{\"t\":\"li\",\"lvl\":2,\"runs\":[{\"s\":\"secondo livello\"}]}]}",
+    "plain": "con pallino\nsecondo livello"
+  },
+  {
+    "input": "/list{\nsenza trattino\n- con trattino\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "senza trattino"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "con trattino"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"senza trattino\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"con trattino\"}]}]}",
+    "plain": "senza trattino\ncon trattino"
+  },
+  {
+    "input": "/list{\n- /bold{grassetto} nel punto\n- /red{rosso} nel punto\n}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "grassetto",
+              "m": {
+                "b": 1
+              }
+            },
+            {
+              "s": " nel punto"
+            }
+          ]
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "rosso",
+              "m": {
+                "c": "red"
+              }
+            },
+            {
+              "s": " nel punto"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"grassetto\",\"m\":{\"b\":1}},{\"s\":\" nel punto\"}]},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"rosso\",\"m\":{\"c\":\"red\"}},{\"s\":\" nel punto\"}]}]}",
+    "plain": "grassetto nel punto\nrosso nel punto"
+  },
+  {
+    "input": "riga con\r\ncrlf\rcr",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "riga con"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "crlf"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "cr"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"riga con\"}]},{\"t\":\"p\",\"runs\":[{\"s\":\"crlf\"}]},{\"t\":\"p\",\"runs\":[{\"s\":\"cr\"}]}]}",
+    "plain": "riga con\ncrlf\ncr"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Ciao\",\"m\":{\"b\":1}}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Ciao",
+              "m": {
+                "b": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Ciao\",\"m\":{\"b\":1}}]}]}",
+    "plain": "Ciao"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"a\"},{\"s\":\"b\"},{\"s\":\"c\",\"m\":{\"i\":1}},{\"s\":\"d\",\"m\":{\"i\":1}}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "ab"
+            },
+            {
+              "s": "cd",
+              "m": {
+                "i": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"ab\"},{\"s\":\"cd\",\"m\":{\"i\":1}}]}]}",
+    "plain": "abcd"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":2,\"c\":\"red\",\"runs\":[{\"s\":\"punto\"}]},{\"t\":\"li\",\"lvl\":0,\"c\":\"viola\",\"runs\":[{\"s\":\"x\"}],\"ck\":1},{\"t\":\"li\",\"lvl\":99,\"runs\":[],\"ck\":5}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "li",
+          "lvl": 2,
+          "runs": [
+            {
+              "s": "punto"
+            }
+          ],
+          "c": "red"
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": [
+            {
+              "s": "x"
+            }
+          ],
+          "ck": 1
+        },
+        {
+          "t": "li",
+          "lvl": 12,
+          "runs": []
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":2,\"runs\":[{\"s\":\"punto\"}],\"c\":\"red\"},{\"t\":\"li\",\"lvl\":1,\"runs\":[{\"s\":\"x\"}],\"ck\":1}]}",
+    "plain": "punto\nx\n"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"fx\",\"tex\":\"a^2\"},{\"t\":\"fx\",\"tex\":\"b\",\"lvl\":3,\"c\":\"green\",\"m\":{\"b\":1}}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "fx",
+          "tex": "a^2"
+        },
+        {
+          "t": "fx",
+          "tex": "b",
+          "lvl": 3,
+          "c": "green",
+          "m": {
+            "b": 1
+          }
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"fx\",\"tex\":\"a^2\"},{\"t\":\"fx\",\"tex\":\"b\",\"lvl\":3,\"c\":\"green\",\"m\":{\"b\":1}}]}",
+    "plain": "a^2\nb"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"code\":\"python\",\"hl\":1,\"runs\":[{\"s\":\"print(1)\"}]},{\"t\":\"p\",\"code\":\"zzz\",\"runs\":[{\"s\":\"x\"}]},{\"t\":\"p\",\"q\":1,\"runs\":[{\"s\":\"citazione\"}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "print(1)"
+            }
+          ],
+          "code": "python",
+          "hl": 1
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "x"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "citazione"
+            }
+          ],
+          "q": 1
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"print(1)\"}],\"code\":\"python\",\"hl\":1},{\"t\":\"p\",\"runs\":[{\"s\":\"x\"}]},{\"t\":\"p\",\"runs\":[{\"s\":\"citazione\"}],\"q\":1}]}",
+    "plain": "print(1)\nx\ncitazione"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"lvl\":2,\"runs\":[{\"s\":\"continuo\"}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "continuo"
+            }
+          ],
+          "lvl": 2
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"continuo\"}],\"lvl\":2}]}",
+    "plain": "continuo"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"x\":\"x^2\"},{\"s\":\"\\u200Bdopo\\u200B\"},{\"s\":\"\"},{\"x\":\"  \",\"m\":{\"c\":\"red\"}}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "x": "x^2"
+            },
+            {
+              "s": "dopo"
+            },
+            {
+              "x": "  ",
+              "m": {
+                "c": "red"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"x\":\"x^2\"},{\"s\":\"dopo\"}]}]}",
+    "plain": "x^2dopo  "
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"\\n\"}]},{\"t\":\"p\",\"runs\":[]},{\"t\":\"p\",\"runs\":[{\"s\":\"  fine  \"}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "  fine  "
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"fine\"}]}]}",
+    "plain": "\n\n  fine  "
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": []
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[]}]}",
+    "plain": ""
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[null,5,{\"t\":\"p\"},{\"t\":\"li\"}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "li",
+          "lvl": 1,
+          "runs": []
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"li\",\"lvl\":1,\"runs\":[]}]}",
+    "plain": "\n"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"x\",\"m\":{\"b\":0,\"i\":false,\"u\":\"\",\"h\":\"red\",\"c\":\"gold\",\"zz\":1}}]}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "x",
+              "m": {
+                "b": 0,
+                "h": "red",
+                "c": "gold",
+                "zz": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"x\",\"m\":{\"b\":0,\"h\":\"red\",\"c\":\"gold\",\"zz\":1}}]}]}",
+    "plain": "x"
+  },
+  {
+    "input": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[]},{\"t\":\"p\",\"runs\":[{\"s\":\"  \"}]},{\"t\":\"p\",\"runs\":[{\"s\":\" dentro \"}]},{\"t\":\"p\",\"runs\":[]},{\"t\":\"fx\",\"tex\":\"  \"}]}",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "  "
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": " dentro "
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": []
+        },
+        {
+          "t": "fx",
+          "tex": "  "
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"dentro\"}]}]}",
+    "plain": "\n  \n dentro \n\n  "
+  },
+  {
+    "input": "{non è json \"blocks\"",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "{non è json \"blocks\""
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"{non è json \\\"blocks\\\"\"}]}]}",
+    "plain": "{non è json \"blocks\""
+  },
+  {
+    "input": "<b>html</b> & \"virgolette\" <script>",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "<b>html</b> & \"virgolette\" <script>"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"<b>html</b> & \\\"virgolette\\\" <script>\"}]}]}",
+    "plain": "<b>html</b> & \"virgolette\" <script>"
+  },
+  {
+    "input": "Domanda: $\\frac{1}{2}$?\n/bold{Risposta}: due",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Domanda: "
+            },
+            {
+              "x": "\\frac{1}{2}"
+            },
+            {
+              "s": "?"
+            }
+          ]
+        },
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Risposta",
+              "m": {
+                "b": 1
+              }
+            },
+            {
+              "s": ": due"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Domanda: \"},{\"x\":\"\\\\frac{1}{2}\"},{\"s\":\"?\"}]},{\"t\":\"p\",\"runs\":[{\"s\":\"Risposta\",\"m\":{\"b\":1}},{\"s\":\": due\"}]}]}",
+    "plain": "Domanda: \\frac{1}{2}?\nRisposta: due"
+  },
+  {
+    "input": "Emoji 😀 e accenti àèìòù — ok",
+    "parse": {
+      "v": 2,
+      "blocks": [
+        {
+          "t": "p",
+          "runs": [
+            {
+              "s": "Emoji 😀 e accenti àèìòù — ok"
+            }
+          ]
+        }
+      ]
+    },
+    "trimmed": "{\"v\":2,\"blocks\":[{\"t\":\"p\",\"runs\":[{\"s\":\"Emoji 😀 e accenti àèìòù — ok\"}]}]}",
+    "plain": "Emoji 😀 e accenti àèìòù — ok"
+  }
+]

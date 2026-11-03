@@ -172,19 +172,19 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 |---|---|---|---|---|---|---|
 | F1 | Hub (`fc_home.php`): scheda Studio, scheda Lingue (una riga per corso), anello obiettivo, «schede che conosci», grafico | locale | Flashcard | P3 | da fare | |
 | F2 | Lingue/corsi: aggiungi, variante, progetto, elimina, ordina (`fc_languages.*`) | sync `fc_vocab_courses` | Lingue | P3 | da fare | |
-| F3 | Mazzi e sotto-mazzi annidati: crea, rinomina, colore, icona (`fc_icone.php`), note, fissa, archivia, data d'esame con conto alla rovescia (`fc_decks.php`) | sync `fc_*_decks` | Mazzi | P3 | da fare | |
+| F3 | Mazzi e sotto-mazzi annidati: crea, rinomina, colore, icona (`fc_icone.php`), note, fissa, archivia, data d'esame con conto alla rovescia (`fc_decks.php`) | sync `fc_*_decks` | Mazzi | P3 | fatto — alberi, colore ereditato, icone (57), note, fissa, archivia, esame con conto alla rovescia, cerca. Come il sito, si elimina solo una categoria vuota. Mancano: vista a griglia, selezione multipla, ricerca nel testo delle carte | |
 | F4 | Numeri del mazzo e badge «da ripassare» (`fcm_badge_ripasso`, `fc_api_counts.php`) | locale | Mazzi | P3 | da fare — **test d'oro** | |
-| F5 | Inserisci schede (`fc_insert.php`, `fc_insert_card.php`, `fc_insert_save.php`): righe nuove/modificate/cancellate, salvataggio automatico (`fc_autosave_bar`) | sync `fc_*_cards` | Inserisci | P3 | da fare | |
-| F6 | Modifica carta (`fc_card_edit.php`, `fc_edit_popup`) e visualizza (`fc_view.php`) | sync | Carta | P3 | da fare | |
-| F7 | Editor ricco (`fc_parser.js`, `format_toolbar.php`): elenchi, checklist, citazioni, codice con colori, evidenziatore | modello documento in TS | Editor | P3 | da fare — **la parte più difficile da portare**: il modello del documento è JSON e si prova con test d'oro | |
+| F5 | Inserisci schede (`fc_insert.php`, `fc_insert_card.php`, `fc_insert_save.php`): righe nuove/modificate/cancellate, salvataggio automatico (`fc_autosave_bar`) | sync `fc_*_cards` | Inserisci | P3 | in corso — aggiungi una carta (testo semplice, in fondo al mazzo) fatto; righe multiple con salvataggio automatico, immagini e audio da fare | |
+| F6 | Modifica carta (`fc_card_edit.php`, `fc_edit_popup`) e visualizza (`fc_view.php`) | sync | Carta | P3 | in corso — vedi, modifica (testo semplice), sposta, elimina fatto; i testi con formato si leggono ma non si riscrivono ancora; immagini e audio per ora solo sul sito | |
+| F7 | Editor ricco (`fc_parser.js`, `format_toolbar.php`): elenchi, checklist, citazioni, codice con colori, evidenziatore | modello documento in TS | Editor | P3 | in corso — il motore del documento (stessi risultati del sito su 41 testi) e la lettura con colori/elenchi/citazioni/codice fatti; le formule si vedono come LaTeX; manca l'editor ricco | |
 | F8 | Immagini: caricamento e editor immagini (`fc_image_editor.*`), misure (`fc_image_sizes.php`) | coda media | Editor immagini | P3 | da fare | |
 | F9 | Audio: registratore (`fc_audio_recorder.js`) e lettore (`fc_audio_player`) | coda media | Audio | P3 | da fare | |
 | F10 | Esempi (`fc_examples_*`, `fc_vocab_examples.js`, parte nascosta, «Aggiungi esempio») e esempi con lacuna (`fc_vocab_gap`) | sync `fc_*_examples` | Esempi | P3 | da fare — **test d'oro** per la scelta della lacuna | |
-| F11 | Sotto-carte (padre/figlia, titoli di gruppo `fcv_titoli_studio`) | sync `fc_*_subcards` | Carta | P3 | da fare | |
+| F11 | Sotto-carte (padre/figlia, titoli di gruppo `fcv_titoli_studio`) | sync `fc_*_subcards` | Carta | P3 | fatto — carte figlie: aggiungi, apri, modifica, elimina; il padre diventa «padre» da solo. Mancano i titoli di gruppo | |
 | F12 | Importazione intelligente (`fc_smart_import.js`) e abbinamento (`fc_ai_match.js`) | locale + IA | Inserisci › Importa | P3 | da fare | |
 | F13 | Preferiti | sync `fc_*_favorites` | Carta | P3 | da fare | |
 | F14 | Imparate (`fc_learnt.php`: padre/figlio) | sync `fc_*_learnt` | Carta | P3 | da fare | |
-| F15 | Elenco/visualizza carte con filtri (imparate/da imparare), livelli | locale | Mazzo › Carte | P3 | da fare | |
+| F15 | Elenco/visualizza carte con filtri (imparate/da imparare), livelli | locale | Mazzo › Carte | P3 | in corso — elenco delle carte del mazzo fatto; filtri (imparate/da imparare) e livelli da fare con F14/F16 | |
 | F16 | Livelli delle carte (nuova, sembra facile, facile, difficile…: `fcv_livello_prefisso`, **gemello** `livello()` in `fc_game_juice.js`) | logica in TS | — | P3 | da fare — **test d'oro** | |
 | F17 | Impostazione del gioco (`fc_game_setup.php`: livelli, solo difficili, ordine casuale/in ordine) | sync `fc_settings` | Gioco › Imposta | P3 | da fare | |
 | F18 | Gioco (`fc_game.php`): studio e vocabolario, risposta velata, percorso a dischi con colori della categoria, checkpoint (`fc_game_juice.js`), round «boss», cronometro (`fc_game_durations`), pausa massima | sync `fc_games`, `fc_*_plays`, `fc_*_sequence` | Gioco | P3 | da fare — **serve il tuo OK sull'aspetto** (animazioni) | |

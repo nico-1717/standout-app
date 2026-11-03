@@ -454,6 +454,52 @@ CREATE TABLE university_bonuses (
 );
 `,
   },
+  {
+    version: 10,
+    sql: `
+CREATE TABLE fc_study_decks (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  parent_uuid TEXT,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '#A0A0A0',
+  color_edited INTEGER NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
+  icon TEXT,
+  notes TEXT,
+  pinned INTEGER NOT NULL DEFAULT 0,
+  exam_date TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_decks_parent ON fc_study_decks (parent_uuid);
+CREATE TABLE fc_study_cards (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  category_uuid TEXT NOT NULL,
+  question_desc TEXT,
+  answer_desc TEXT,
+  question_image TEXT,
+  answer_image TEXT,
+  question_audio TEXT,
+  answer_audio TEXT,
+  is_father INTEGER NOT NULL DEFAULT 0,
+  custom_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_cards_deck ON fc_study_cards (category_uuid, custom_order);
+CREATE TABLE fc_study_subcards (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  parent_uuid TEXT NOT NULL,
+  question_desc TEXT,
+  answer_desc TEXT,
+  question_image TEXT,
+  answer_image TEXT,
+  question_audio TEXT,
+  answer_audio TEXT,
+  custom_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_subcards_parent ON fc_study_subcards (parent_uuid, custom_order);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {
