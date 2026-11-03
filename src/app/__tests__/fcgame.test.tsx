@@ -265,6 +265,26 @@ describe('result and history', () => {
   });
 });
 
+describe('history filters', () => {
+  test('the filter panel narrows the list and the summary follows', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'wrong');
+    games.conclude(game);
+    await render(wrap(<HistoryScreen />));
+    expect(screen.getByTestId(`fch-game-${game}`)).toBeTruthy();
+    expect(screen.getByTestId('fch-summary')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fch-filters'));
+    await fireEvent.press(screen.getByTestId('fch-f-kind-1')); // solo imparate: nessuna
+    expect(screen.queryByTestId(`fch-game-${game}`)).toBeNull();
+    expect(screen.getByTestId('fch-empty')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fch-f-kind-any'));
+    expect(screen.getByTestId(`fch-game-${game}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fch-f-sort-errors'));
+    expect(screen.getByTestId(`fch-game-${game}`)).toBeTruthy();
+  });
+});
+
 describe('statistics screen', () => {
   test('shows totals, streak, goal and changes the goal', async () => {
     const s = started();
