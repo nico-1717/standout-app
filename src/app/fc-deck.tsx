@@ -190,6 +190,11 @@ export default function DeckScreen() {
             />
           </View>
 
+          <TextButton
+            testID="fcd-insert"
+            label={t('fc.ifc_inserisci')}
+            onPress={() => router.push({ pathname: '/fc-insert', params: { deck: id } })}
+          />
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton

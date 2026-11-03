@@ -63,6 +63,7 @@ function Shell() {
           <Stack.Screen name="fc-result" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-history" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-stats" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="fc-insert" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />
