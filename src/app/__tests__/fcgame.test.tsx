@@ -210,7 +210,7 @@ describe('result and history', () => {
     games.conclude(game);
     mockParams = { game };
     await render(wrap(<ResultScreen />));
-    expect(screen.getByText('75%')).toBeTruthy();
+    expect(screen.getByTestId('fcr-score')).toHaveTextContent('75%');
     expect(screen.getByTestId('fcr-correct')).toBeTruthy();
 
     await fireEvent(screen.getByTestId('fcr-only-wrong'), 'valueChange', true);
@@ -225,6 +225,18 @@ describe('result and history', () => {
     await fireEvent.press(screen.getByTestId(`fcr-verdict-${father2.uuid}`));
     expect(games.tally(game).wrong).toBe(0);
     expect(games.game(game)!.score).toBe(100);
+  });
+
+  test('result shows the road to 100% and opens another step', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'wrong');
+    games.conclude(game);
+    mockParams = { game };
+    await render(wrap(<ResultScreen />));
+    expect(screen.getByTestId('fcr-road-title')).toBeTruthy();
+    expect(screen.getByTestId('fcr-road-0')).toBeTruthy();
+    expect(screen.queryByTestId('fcr-compare')).toBeNull(); // nessuna partita prima
   });
 
   test('result of a game that does not exist says so', async () => {

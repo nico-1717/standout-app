@@ -957,6 +957,101 @@ export class GameRepo {
     return { correct, wrong, played, score: played > 0 ? (correct / played) * 100 : 0 };
   }
 
+  /**
+   * «La strada fino al 100%» (come sul sito): la partita da cui tutto è partito, i suoi ripassi in ordine e, per ognuno,
+   * la precisione e gli errori. Una partita senza risposte sta fuori, tranne questa.
+   */
+  road(gameUuid: string): {
+    steps: { uuid: string; pct: number | null; wrong: number; here: boolean }[];
+    state: 'open' | 'perfect' | 'conquered';
+    lastWrong: number;
+  } {
+    const all = new Map(
+      this.db
+        .all<{ uuid: string; parent_uuid: string | null; game_date: string | null }>(
+          'SELECT uuid, parent_uuid, game_date FROM fc_games',
+        )
+        .map((r) => [r.uuid, r]),
+    );
+    let root = gameUuid;
+    for (let i = 0; i < 60; i++) {
+      const p = all.get(root)?.parent_uuid;
+      if (!p || !all.has(p)) break;
+      root = p;
+    }
+    const children = new Map<string, string[]>();
+    for (const r of all.values()) {
+      if (r.parent_uuid)
+        children.set(r.parent_uuid, [...(children.get(r.parent_uuid) ?? []), r.uuid]);
+    }
+    const ids: string[] = [];
+    const queue = [root];
+    while (queue.length) {
+      const x = queue.shift()!;
+      if (ids.includes(x)) continue;
+      ids.push(x);
+      queue.push(...(children.get(x) ?? []));
+    }
+    ids.sort((x, y) => {
+      if (x === root) return -1;
+      if (y === root) return 1;
+      return (all.get(x)?.game_date ?? '').localeCompare(all.get(y)?.game_date ?? '');
+    });
+    const steps = ids
+      .map((id) => {
+        const t = this.tally(id);
+        return {
+          uuid: id,
+          pct: t.played ? Math.round((t.correct / t.played) * 100) : null,
+          wrong: t.wrong,
+          played: t.played,
+          here: id === gameUuid,
+        };
+      })
+      .filter((st) => st.played > 0 || st.here)
+      .map(({ played: _played, ...st }) => st);
+    const last = steps[steps.length - 1] ?? { uuid: gameUuid, pct: null, wrong: 0, here: true };
+    let state: 'open' | 'perfect' | 'conquered' = 'open';
+    if (last.wrong === 0 && last.pct !== null) state = steps.length === 1 ? 'perfect' : 'conquered';
+    return { steps, state, lastWrong: last.wrong };
+  }
+
+  /**
+   * «Rispetto all'ultima volta»: solo per una partita madre. La partita precedente con ESATTAMENTE gli stessi mazzi e la
+   * sua precisione; è un record se questa batte tutte le precedenti sugli stessi mazzi (almeno due).
+   */
+  compare(
+    gameUuid: string,
+  ): { delta: number; before: number; record: boolean; uuid: string } | null {
+    const game = this.game(gameUuid);
+    if (!game || game.parent_uuid) return null;
+    const mine = this.tally(gameUuid);
+    const decks = this.gameDecks(gameUuid);
+    if (!decks.length || mine.played <= 0) return null;
+    const key = (d: string[]): string => [...d].sort().join('|');
+    const want = key(decks);
+    const earlier = this.db.all<{ uuid: string }>(
+      `SELECT uuid FROM fc_games WHERE parent_uuid IS NULL AND uuid <> ? AND game_date < ?
+        ORDER BY game_date DESC, rowid DESC LIMIT 200`,
+      [gameUuid, game.game_date ?? '9999'],
+    );
+    const same: { uuid: string; pct: number }[] = [];
+    for (const g of earlier) {
+      if (key(this.gameDecks(g.uuid)) !== want) continue;
+      const t = this.tally(g.uuid);
+      if (t.played > 0) same.push({ uuid: g.uuid, pct: Math.round((t.correct / t.played) * 100) });
+    }
+    const prev = same[0];
+    if (!prev) return null;
+    const now = Math.round(mine.score);
+    return {
+      delta: now - prev.pct,
+      before: prev.pct,
+      record: same.length >= 2 && now > Math.max(...same.map((x) => x.pct)),
+      uuid: prev.uuid,
+    };
+  }
+
   /** Quante posizioni sono chiuse (hanno righe e nessuna ancora da rispondere). */
   closedPositions(gameUuid: string): number {
     return Number(

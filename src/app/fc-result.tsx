@@ -40,6 +40,19 @@ export default function ResultScreen() {
   const plays = games
     .allPlays(game)
     .filter((p) => p.user_answer === 'Correct' || p.user_answer === 'Wrong');
+  const compare = games.compare(game);
+  const road = games.road(game);
+  const showRoad = road.steps.length > 1 || (road.state === 'open' && tally.wrong > 0);
+  const barColor = (pct: number | null): string =>
+    pct === null
+      ? th.text2
+      : pct === 100
+        ? th.brand
+        : pct >= 80
+          ? th.green
+          : pct >= 50
+            ? th.text2
+            : th.red;
   const shown = onlyWrong ? plays.filter((p) => p.user_answer === 'Wrong') : plays;
 
   const retry = () => {
@@ -81,7 +94,118 @@ export default function ResultScreen() {
           <Text testID="fcr-time" style={{ color: th.text2 }}>
             {t('fc.res_durata')} {formatDuration(games.playedSeconds(game))}
           </Text>
+          {compare ? (
+            <View style={{ alignItems: 'center', gap: 4 }}>
+              <Pressable
+                testID="fcr-compare"
+                accessibilityRole="link"
+                onPress={() =>
+                  router.replace({ pathname: '/fc-result', params: { game: compare.uuid } })
+                }
+              >
+                <Text
+                  style={{
+                    fontWeight: '700',
+                    color: compare.delta > 0 ? th.green : compare.delta < 0 ? th.red : th.text2,
+                  }}
+                >
+                  {compare.delta > 0 ? '▲ ' : compare.delta < 0 ? '▼ ' : '＝ '}
+                  {compare.delta === 0
+                    ? t('fc.res_conf_pari')
+                    : t('fc.res_conf_delta', {
+                        n: `${compare.delta > 0 ? '+' : '−'}${Math.abs(compare.delta)}`,
+                      })}
+                </Text>
+              </Pressable>
+              {compare.record ? (
+                <Text testID="fcr-record" style={{ color: th.brand, fontWeight: '700' }}>
+                  🏆 {t('fc.res_conf_record')}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
         </Card>
+
+        {showRoad ? (
+          <Card style={{ padding: 16, gap: 10 }}>
+            <Text
+              testID="fcr-road-title"
+              style={{ color: th.text, fontWeight: '700', fontSize: 16 }}
+            >
+              {road.state === 'conquered' ? t('fc.sfc_strada_presa') : t('fc.sfc_strada')}
+            </Text>
+            <Text testID="fcr-road-sub" style={{ color: th.text2 }}>
+              {road.state === 'conquered'
+                ? t(road.steps.length - 1 === 1 ? 'fc.sfc_conquistata_1' : 'fc.sfc_conquistata_n', {
+                    n: road.steps.length - 1,
+                  })
+                : t(road.lastWrong === 1 ? 'fc.sfc_da_sistemare_1' : 'fc.sfc_da_sistemare_n', {
+                    n: road.lastWrong,
+                  })}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 110 }}>
+              {road.steps.map((st, i) => (
+                <Pressable
+                  key={st.uuid}
+                  testID={`fcr-road-${i}`}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    st.here
+                      ? undefined
+                      : router.replace({ pathname: '/fc-result', params: { game: st.uuid } })
+                  }
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    height: '100%',
+                  }}
+                >
+                  <Text
+                    style={{ color: th.text, fontSize: 11, fontWeight: st.here ? '800' : '500' }}
+                  >
+                    {st.pct === null ? '–' : `${st.pct}%`}
+                  </Text>
+                  <View
+                    style={{
+                      width: '70%',
+                      height: st.pct === null ? 8 : Math.max(10, st.pct * 0.7),
+                      borderRadius: 6,
+                      backgroundColor: barColor(st.pct),
+                      opacity: st.here ? 1 : 0.6,
+                    }}
+                  />
+                  <Text style={{ color: th.text2, fontSize: 11 }}>
+                    {i === 0 ? t('fc.sfc_strada_partita') : t('fc.sfc_strada_rip', { n: i })}
+                  </Text>
+                </Pressable>
+              ))}
+              {road.state !== 'conquered' ? (
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    height: '100%',
+                  }}
+                >
+                  <Text style={{ color: th.text, fontSize: 11 }}>100%</Text>
+                  <View
+                    style={{
+                      width: '70%',
+                      height: 70,
+                      borderRadius: 6,
+                      borderWidth: 2,
+                      borderStyle: 'dashed',
+                      borderColor: th.brand,
+                    }}
+                  />
+                  <Text style={{ color: th.text2, fontSize: 11 }}>{t('fc.sfc_strada_meta')}</Text>
+                </View>
+              ) : null}
+            </View>
+          </Card>
+        ) : null}
 
         {tally.wrong > 0 ? (
           <PrimaryButton testID="fcr-retry" label={t('fc.res_rigioca')} onPress={retry} />

@@ -518,3 +518,85 @@ describe('streak and records', () => {
     expect(s.games.mastered()).toBe(1);
   });
 });
+
+describe('road to 100% and comparison with last time', () => {
+  /** Gioca tutta la partita: `wrongs` = quali carte padre sbagliare (per numero 1..3). */
+  function play(s: S, game: string, wrong: number[]) {
+    const total = s.games.totalPositions(game);
+    for (let pos = 1; pos <= total; pos++) {
+      for (const p of s.games.ensurePosition(game, pos)!) {
+        if (p.user_answer) continue;
+        s.games.grade(
+          game,
+          pos,
+          (p.card_uuid ?? p.child_uuid)!,
+          !!p.child_uuid,
+          wrong.includes(pos) && p.card_uuid ? 'wrong' : 'correct',
+        );
+      }
+    }
+    s.games.conclude(game);
+  }
+
+  test('road: the first game and its retries, until nothing is wrong', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const g1 = start(s, [d.deck]);
+    play(s, g1, [1, 3]);
+    let road = s.games.road(g1);
+    expect(road.state).toBe('open');
+    expect(road.lastWrong).toBe(2);
+    expect(road.steps).toHaveLength(1);
+    const r1 = s.games.retry(g1) as { kind: 'started'; game: string };
+    s.db.run('UPDATE fc_games SET game_date = ? WHERE uuid = ?', ['2026-11-03 11:00:00', r1.game]);
+    play(s, r1.game, []);
+    road = s.games.road(r1.game);
+    expect(road.steps.map((x) => x.uuid)).toEqual([g1, r1.game]);
+    expect(road.steps.map((x) => x.pct)).toEqual([60, 100]);
+    expect(road.steps.map((x) => x.here)).toEqual([false, true]);
+    expect(road.state).toBe('conquered');
+    // la stessa strada si vede da qualunque tappa
+    expect(s.games.road(g1).steps).toHaveLength(2);
+  });
+
+  test('road: a perfect first game is "perfect"', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const g = start(s, [d.deck]);
+    play(s, g, []);
+    expect(s.games.road(g)).toMatchObject({ state: 'perfect', lastWrong: 0 });
+  });
+
+  test('compare: needs a game with the same decks before; record needs two before', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const other = s.flashcards.createDeck({ name: 'Other' })!;
+    s.flashcards.addCard(other, 'x', 'y');
+    const at = (g: string, when: string) =>
+      s.db.run('UPDATE fc_games SET game_date = ? WHERE uuid = ?', [when, g]);
+
+    const a = start(s, [d.deck]);
+    at(a, '2026-11-01 10:00:00');
+    play(s, a, [1, 2]); // 60% (cinque righe)
+    expect(s.games.compare(a)).toBeNull(); // niente prima
+
+    const x = start(s, [d.deck, other]); // altri mazzi: non conta
+    at(x, '2026-11-01 12:00:00');
+    play(s, x, []);
+
+    const b = start(s, [d.deck]);
+    at(b, '2026-11-02 10:00:00');
+    play(s, b, [1]); // 80%
+    expect(s.games.compare(b)).toEqual({ delta: 20, before: 60, record: false, uuid: a });
+
+    const c = start(s, [d.deck]);
+    at(c, '2026-11-03 10:00:00');
+    play(s, c, []); // 100%
+    expect(s.games.compare(c)).toEqual({ delta: 20, before: 80, record: true, uuid: b });
+
+    // un ripasso non si confronta
+    const retry = s.games.retry(a) as { kind: 'started'; game: string };
+    play(s, retry.game, []);
+    expect(s.games.compare(retry.game)).toBeNull();
+  });
+});
