@@ -159,12 +159,12 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| V1 | Esami: voto, lode, idoneità, CFU, stato, previsione, anno, media nazionale | sync `university_exams` | Voti | P3 | da fare | |
-| V2 | Gruppi di esami e media del gruppo | sync `university_exam_groups` | Voti | P3 | da fare | |
-| V3 | Bonus e tetti | sync `university_bonuses` | Voti › Bonus | P3 | da fare | |
-| V4 | Media, voto di laurea e previsioni | logica in TS | Voti | P3 | da fare — **test d'oro** | |
-| V5 | Catalogo degli esami (`exams_catalog.json`, `catalog_code`) | file nell'app | Voti › Aggiungi | P3 | da fare | |
-| V6 | Impostazioni (`university_settings`) e «oro dei Voti» (`lib/colore_voti.php`) | sync | Voti › Impostazioni | P3 | da fare | |
+| V1 | Esami: voto, lode, idoneità, CFU, stato, previsione, anno, media nazionale | sync `university_exams` | Voti | P3 | fatto — lista fatti / da fare / simulatore, editor, selezione e cancellazione | |
+| V2 | Gruppi di esami e media del gruppo | sync `university_exam_groups` | Voti | P3 | fatto — a scelta e suddiviso, quota, voto complessivo, scioglimento | |
+| V3 | Bonus e tetti | sync `university_bonuses` | Voti › Bonus | P3 | fatto — 5 tipi, tetto, soglia, interruttore | |
+| V4 | Media, voto di laurea e previsioni | logica in TS | Voti | P3 | fatto — **test d'oro** su 150 casi del codice vero del sito; media, /110, lodi, stima, obiettivo, andamento | |
+| V5 | Catalogo degli esami (`exams_catalog.json`, `catalog_code`) | file nell'app | Voti › Aggiungi | P3 | fatto — 43 corsi / 11 facoltà, carica «sostituisci / aggiungi» | |
+| V6 | Impostazioni (`university_settings`) e «oro dei Voti» (`lib/colore_voti.php`) | sync | Voti › Impostazioni | P3 | fatto — corso, colore facoltà, CFU, base, lode, tesi, arrotondamento (sync REST). Da fare: «oro» dei Voti (colore dei riquadri) | |
 
 ## 9. Flashcard (`fc/`, `lib/fc/`) — studio (`fc_study_*`) e lingue (`fc_vocab_*`)
 
@@ -221,3 +221,6 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | X4 | Mercato dei mazzi | Dopo l'app che replica il sito | rimandato |
 | X5 | Sincronizzazione, coda, «problemi di sincronizzazione», aggiornamento obbligatorio (`426`) | Nuovi, richiesti dal protocollo | P1 |
 | X6 | Blocco con biometria | Nuovo, spento di default | P4 |
+
+### Voti — cosa resta (semplificato o rimandato)
+- Scheda «Costo» (serve il collegamento esame ↔ progetto/pomodoro), blocco «Statistiche» (distribuzione, media per anno, confronto con la media nazionale), riordino con trascinamento, blocchi del simulatore per gruppo (si simula esame per esame).

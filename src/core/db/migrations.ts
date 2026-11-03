@@ -402,6 +402,58 @@ CREATE TABLE pomodoro_custom_durations (
 CREATE UNIQUE INDEX idx_pcd_key ON pomodoro_custom_durations (type, minutes);
 `,
   },
+  {
+    version: 9,
+    sql: `
+CREATE TABLE university_exam_groups (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL DEFAULT 'Gruppo',
+  group_type TEXT NOT NULL DEFAULT 'choice',
+  cfu REAL NOT NULL DEFAULT 0,
+  overall_grade INTEGER,
+  overall_honors INTEGER NOT NULL DEFAULT 0,
+  overall_predicted_grade INTEGER,
+  overall_predicted_honors INTEGER NOT NULL DEFAULT 0,
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE university_exams (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  cfu REAL NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'todo',
+  grade INTEGER,
+  has_honors INTEGER NOT NULL DEFAULT 0,
+  is_pass_fail INTEGER NOT NULL DEFAULT 0,
+  counts_for_graduation INTEGER NOT NULL DEFAULT 1,
+  exam_date TEXT,
+  predicted_grade INTEGER,
+  predicted_honors INTEGER NOT NULL DEFAULT 0,
+  catalog_code TEXT,
+  ssd TEXT,
+  study_year INTEGER,
+  national_avg REAL,
+  group_uuid TEXT,
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_uni_exams_group ON university_exams (group_uuid);
+CREATE TABLE university_bonuses (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL DEFAULT 'Bonus',
+  bonus_type TEXT NOT NULL DEFAULT 'fixed',
+  points REAL NOT NULL DEFAULT 0,
+  threshold_value INTEGER,
+  cap_points REAL NOT NULL DEFAULT 0,
+  is_enabled INTEGER NOT NULL DEFAULT 1,
+  sort_key TEXT NOT NULL DEFAULT 'a0',
+  created_at TEXT,
+  updated_at TEXT
+);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

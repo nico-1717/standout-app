@@ -10,6 +10,7 @@ import { DEFAULT_HOME_LAYOUT, type HomeWidget } from '@/features/home/layout';
 import { buildToday } from '@/features/home/today';
 import { pickTrivia } from '@/features/home/trivia';
 import {
+  GradesWidget,
   ProjectsWidget,
   Shortcuts,
   TodayWidget,
@@ -17,6 +18,7 @@ import {
   WidgetBox,
   type Shortcut,
 } from '@/features/home/widgets';
+import { base110, cfuStats, weighted } from '@/features/grades/logic';
 import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { todoTheme } from '@/features/tasks/todoTheme';
 
@@ -28,6 +30,7 @@ const SHORTCUTS: { href: string; route: string; key: string }[] = [
   { href: 'projects/pomodoro.php', route: '/pomodoro', key: 'sidebar.pomodoro' },
   { href: 'planner/habits.php', route: '/(tabs)/habits', key: 'sidebar.abitudini' },
   { href: 'planner/diario.php', route: '/diary', key: 'sidebar.diario' },
+  { href: 'exams/voti.php', route: '/grades', key: 'sidebar.voti' },
 ];
 
 const WIDGET_TITLE: Record<HomeWidget['id'], string> = {
@@ -42,7 +45,7 @@ const WIDGET_TITLE: Record<HomeWidget['id'], string> = {
 };
 
 /** Per ora non hanno pagine nell'app: restano nell'elenco (così l'ordine del sito si conserva) ma non si disegnano. */
-const NOT_YET: ReadonlySet<string> = new Set(['cards', 'grades', 'stats']);
+const NOT_YET: ReadonlySet<string> = new Set(['cards', 'stats']);
 
 export function greetingKey(hour: number): string {
   return hour < 5
@@ -59,7 +62,16 @@ export default function HomeScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed, uiStyle, authState, homeLayout, updateHomeLayout } = useApp();
+  const {
+    services,
+    version,
+    changed,
+    uiStyle,
+    authState,
+    homeLayout,
+    updateHomeLayout,
+    gradeSettings,
+  } = useApp();
   const td = todoTheme(uiStyle, th);
   const [editing, setEditing] = useState(false);
   const [trivia] = useState(() => pickTrivia(i18n.language));
@@ -185,6 +197,31 @@ export default function HomeScreen() {
           />
         </WidgetBox>
       );
+    if (w.id === 'grades' && services) {
+      const gd = services.grades.data(gradeSettings);
+      const gw = weighted(gd);
+      const gc = cfuStats(gd);
+      return (
+        <WidgetBox
+          td={td}
+          id="grades"
+          title={t(WIDGET_TITLE.grades)}
+          action={t('home.apri')}
+          onAction={() => go('/grades')}
+        >
+          <GradesWidget
+            td={td}
+            empty={gd.exams.length === 0}
+            avg={gw.n ? (Math.round(gw.avg * 100) / 100).toFixed(2) : '–'}
+            base={String(gd.settings.grade_base)}
+            baseValue={gw.n ? String(base110(gd, gw.avg)) : '–'}
+            cfuDone={String(Math.round(gc.done * 10) / 10)}
+            cfuTotal={String(Math.round(gc.total * 10) / 10)}
+            onOpen={() => go('/grades')}
+          />
+        </WidgetBox>
+      );
+    }
     if (w.id === 'trivia')
       return (
         <WidgetBox td={td} id="trivia" title={t(WIDGET_TITLE.trivia)}>

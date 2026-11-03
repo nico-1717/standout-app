@@ -1,6 +1,8 @@
 import type { HomeWidget } from '@/features/home/layout';
 import type { DiarySettings, DiarySettingsApi } from '@/features/diary/settings';
 import type { PlannerSettings, PlannerSettingsApi } from '@/features/planner/settings';
+import type { GradeSettings } from '@/features/grades/logic';
+import type { GradeSettingsApi } from '@/features/grades/settings';
 import type { PomodoroSettings, PomodoroSettingsApi } from '@/features/pomodoro/settings';
 import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
 import type { PutNoteResult, QuickNoteApi, ServerNote } from '@/features/notes/quickNote';
@@ -34,6 +36,7 @@ export class HttpSyncApi
     DiarySettingsApi,
     PlannerSettingsApi,
     PomodoroSettingsApi,
+    GradeSettingsApi,
     QuickNoteApi
 {
   constructor(
@@ -142,6 +145,15 @@ export class HttpSyncApi
 
   async patchPomodoroSettings(patch: Partial<PomodoroSettings>): Promise<PomodoroSettings> {
     return (await this.call<{ settings: PomodoroSettings }>('PATCH', '/pomodoro/settings', patch))
+      .settings;
+  }
+
+  async getGradeSettings(): Promise<GradeSettings> {
+    return (await this.call<{ settings: GradeSettings }>('GET', '/university/settings')).settings;
+  }
+
+  async patchGradeSettings(patch: Partial<GradeSettings>): Promise<GradeSettings> {
+    return (await this.call<{ settings: GradeSettings }>('PATCH', '/university/settings', patch))
       .settings;
   }
 

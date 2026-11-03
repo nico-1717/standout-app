@@ -4,6 +4,8 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { GradesRepo } from '@/features/grades/repo';
+import { DEFAULT_GRADE_SETTINGS as mockGradeSettings } from '@/features/grades/logic';
 import { HabitsRepo } from '@/features/habits/repo';
 import { DEFAULT_HOME_LAYOUT, type HomeWidget } from '@/features/home/layout';
 import { QuickNoteStore } from '@/features/notes/quickNote';
@@ -41,6 +43,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     authState: { status: 'signedIn', user: { id: 7, username: 'Nico' } },
     homeLayout: mockLayout,
     updateHomeLayout: mockUpdateLayout,
+    gradeSettings: mockGradeSettings,
   }),
 }));
 
@@ -68,6 +71,7 @@ function setup() {
     habits,
     pills,
     projects,
+    grades: new GradesRepo(db),
     notes: new QuickNoteStore(db),
     categories: { list: () => [] },
   };
@@ -94,11 +98,10 @@ describe('Home', () => {
     setup();
     await renderIt();
     expect(screen.getByTestId('home-greeting').props.children).toMatch(/Nico/);
-    for (const id of ['shortcuts', 'agenda', 'note', 'projects', 'trivia'])
+    for (const id of ['shortcuts', 'agenda', 'note', 'projects', 'grades', 'trivia'])
       expect(screen.getByTestId(`home-w-${id}`)).toBeTruthy();
-    // carte, voti, numeri non hanno ancora una pagina nell'app
-    for (const id of ['cards', 'grades', 'stats'])
-      expect(screen.queryByTestId(`home-w-${id}`)).toBeNull();
+    // carte e numeri non hanno ancora una pagina nell'app
+    for (const id of ['cards', 'stats']) expect(screen.queryByTestId(`home-w-${id}`)).toBeNull();
   });
 
   test('shortcuts open the app pages', async () => {

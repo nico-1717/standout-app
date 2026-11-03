@@ -23,6 +23,9 @@ export type SyncTable =
   | 'projects'
   | 'pomodoro_sessions'
   | 'pomodoro_custom_durations'
+  | 'university_exam_groups'
+  | 'university_exams'
+  | 'university_bonuses'
   | 'planner_events';
 
 export interface TableDef {
@@ -434,6 +437,72 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     createOnly: ['type', 'minutes'],
     booleans: [],
     columns: ['uuid', 'type', 'minutes', 'updated_at'],
+  },
+  // i voti: gruppi di esami, esami (puntano al gruppo) e bonus di laurea
+  university_exam_groups: {
+    order: 170,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: ['overall_honors', 'overall_predicted_honors'],
+    columns: [
+      'uuid',
+      'name',
+      'group_type',
+      'cfu',
+      'overall_grade',
+      'overall_honors',
+      'overall_predicted_grade',
+      'overall_predicted_honors',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
+    children: [{ table: 'university_exams', column: 'group_uuid', setNull: true }],
+  },
+  university_exams: {
+    order: 171,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: ['has_honors', 'is_pass_fail', 'counts_for_graduation', 'predicted_honors'],
+    columns: [
+      'uuid',
+      'name',
+      'cfu',
+      'status',
+      'grade',
+      'has_honors',
+      'is_pass_fail',
+      'counts_for_graduation',
+      'exam_date',
+      'predicted_grade',
+      'predicted_honors',
+      'catalog_code',
+      'ssd',
+      'study_year',
+      'national_avg',
+      'group_uuid',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  university_bonuses: {
+    order: 172,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: ['is_enabled'],
+    columns: [
+      'uuid',
+      'name',
+      'bonus_type',
+      'points',
+      'threshold_value',
+      'cap_points',
+      'is_enabled',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
   },
 };
 

@@ -47,6 +47,11 @@ function Shell() {
           <Stack.Screen name="pomodoro-history" options={{ presentation: 'modal' }} />
           <Stack.Screen name="projects" options={{ presentation: 'modal' }} />
           <Stack.Screen name="project" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="grades" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="grade-exam" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="grade-group" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="grade-bonus" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="grade-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />

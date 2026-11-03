@@ -319,6 +319,56 @@ export function ProjectsWidget({
   );
 }
 
+/** Il riquadro Voti: la media, i crediti e (se c'è) il voto di laurea stimato; senza esami invita ad aggiungerli. */
+export function GradesWidget({
+  td,
+  avg,
+  base,
+  baseValue,
+  cfuDone,
+  cfuTotal,
+  empty,
+  onOpen,
+}: {
+  td: TodoTheme;
+  avg: string;
+  base: string;
+  baseValue: string;
+  cfuDone: string;
+  cfuTotal: string;
+  empty: boolean;
+  onOpen: () => void;
+}) {
+  const { t } = useTranslation();
+  if (empty)
+    return (
+      <Pressable testID="home-grades-empty" onPress={onOpen}>
+        <Text style={{ color: td.ink3 }}>{t('home.voti_vuoti')}</Text>
+        <Text style={{ color: td.accent, fontWeight: '600' }}>{t('home.voti_aggiungi')}</Text>
+      </Pressable>
+    );
+  return (
+    <Pressable testID="home-grades" onPress={onOpen} style={{ flexDirection: 'row', gap: 20 }}>
+      <View>
+        <Text style={{ color: td.ink3, fontSize: 12 }}>{t('voti.media')}</Text>
+        <Text testID="home-grades-avg" style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>
+          {avg}
+        </Text>
+      </View>
+      <View>
+        <Text style={{ color: td.ink3, fontSize: 12 }}>/{base}</Text>
+        <Text style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>{baseValue}</Text>
+      </View>
+      <View>
+        <Text style={{ color: td.ink3, fontSize: 12 }}>{t('voti.cfu')}</Text>
+        <Text style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>
+          {cfuDone}/{cfuTotal}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export function TriviaWidget({ td, item }: { td: TodoTheme; item: Trivia }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);

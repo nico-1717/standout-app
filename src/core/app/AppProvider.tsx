@@ -31,6 +31,9 @@ import {
   PomodoroSettingsStore,
   type PomodoroSettings,
 } from '@/features/pomodoro/settings';
+import { GradesRepo } from '@/features/grades/repo';
+import { GradeSettingsStore } from '@/features/grades/settings';
+import { DEFAULT_GRADE_SETTINGS, type GradeSettings } from '@/features/grades/logic';
 import { DEFAULT_HOME_LAYOUT, HomeLayoutStore, type HomeWidget } from '@/features/home/layout';
 import { ProjectOptionsStore } from '@/features/projects/options';
 import { ProjectsRepo } from '@/features/projects/repo';
@@ -80,6 +83,7 @@ export interface Services {
   projects: ProjectsRepo;
   projectOptions: ProjectOptionsStore;
   pomodoro: PomodoroRepo;
+  grades: GradesRepo;
   scheduler: SyncScheduler;
 }
 
@@ -106,6 +110,8 @@ interface AppContextValue {
   updateDiarySettings: (patch: Partial<DiarySettings>) => void;
   pomodoroSettings: PomodoroSettings;
   updatePomodoroSettings: (patch: Partial<PomodoroSettings>) => void;
+  gradeSettings: GradeSettings;
+  updateGradeSettings: (patch: Partial<GradeSettings>) => void;
   homeLayout: HomeWidget[];
   updateHomeLayout: (layout: HomeWidget[]) => void;
   plannerSettings: PlannerSettings;
@@ -168,6 +174,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pomodoroSettings, setPomodoroSettings] =
     useState<PomodoroSettings>(DEFAULT_POMODORO_SETTINGS);
   const pomodoroSettingsStore = useRef<PomodoroSettingsStore | null>(null);
+  const [gradeSettings, setGradeSettings] = useState<GradeSettings>(DEFAULT_GRADE_SETTINGS);
+  const gradeSettingsStore = useRef<GradeSettingsStore | null>(null);
   const [homeLayout, setHomeLayout] = useState<HomeWidget[]>(DEFAULT_HOME_LAYOUT);
   const homeLayoutStore = useRef<HomeLayoutStore | null>(null);
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
@@ -227,6 +235,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const poStore = new PomodoroSettingsStore(opened.db);
         pomodoroSettingsStore.current = poStore;
         setPomodoroSettings(poStore.read());
+        const gsStore = new GradeSettingsStore(opened.db);
+        gradeSettingsStore.current = gsStore;
+        setGradeSettings(gsStore.read());
         const hoStore = new HomeLayoutStore(opened.db);
         homeLayoutStore.current = hoStore;
         setHomeLayout(hoStore.read());
@@ -280,6 +291,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               if (e instanceof TypeError) throw e;
             }
             try {
+              setGradeSettings(await gsStore.sync(api));
+            } catch (e) {
+              // come sopra: le impostazioni del corso; un server più vecchio può non avere la rotta
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
+            try {
               setHomeLayout(await hoStore.sync(api));
             } catch (e) {
               // come sopra: i riquadri della Home; un server più vecchio può non avere la rotta
@@ -326,6 +345,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           projects: new ProjectsRepo(opened.db),
           projectOptions: new ProjectOptionsStore(opened.db),
           pomodoro: new PomodoroRepo(opened.db, userId),
+          grades: new GradesRepo(opened.db),
           scheduler,
         });
       } catch (e) {
@@ -459,6 +479,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updateGradeSettings = useCallback(
+    (patch: Partial<GradeSettings>) => {
+      const store = gradeSettingsStore.current;
+      if (!store) return;
+      setGradeSettings(store.update(patch));
+      services?.scheduler.trigger();
+    },
+    [services],
+  );
   const updateHomeLayout = useCallback(
     (layout: HomeWidget[]) => {
       const store = homeLayoutStore.current;
@@ -502,6 +531,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       pomodoroSettingsStore.current = null;
       homeLayoutStore.current = null;
       setHomeLayout(DEFAULT_HOME_LAYOUT);
+      gradeSettingsStore.current = null;
+      setGradeSettings(DEFAULT_GRADE_SETTINGS);
       remindersStore.current = null;
       scheduledSig.current = null;
       setReminders(DEFAULT_REMINDERS);
@@ -535,6 +566,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatePlannerSettings,
       pomodoroSettings,
       updatePomodoroSettings,
+      gradeSettings,
+      updateGradeSettings,
       homeLayout,
       updateHomeLayout,
       reminders,
@@ -562,6 +595,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatePlannerSettings,
       pomodoroSettings,
       updatePomodoroSettings,
+      gradeSettings,
+      updateGradeSettings,
       homeLayout,
       updateHomeLayout,
       reminders,
