@@ -20,6 +20,37 @@ const COLS =
 
 export type PresetKind = 'pomodoro' | 'pausa';
 
+/** I filtri dello storico: progetto (uuid, 'none' = senza), un gruppo di progetti, periodo, durata minima, ordine. */
+export interface HistoryFilter {
+  project?: string | 'none' | null;
+  projects?: string[];
+  from?: string;
+  to?: string;
+  minMinutes?: number;
+  sort?: 'recent' | 'oldest' | 'duration';
+}
+
+export interface Insights {
+  today: { n: number; secs: number };
+  yesterday: { n: number; secs: number };
+  week: { day: string; n: number; secs: number }[];
+  month: Record<string, { n: number; secs: number }>;
+  topHour: number | null;
+  streak: number;
+  weekProject: { uuid: string; secs: number } | null;
+}
+
+/** Sposta un giorno «AAAA-MM-GG» di n giorni. */
+function shiftDay(day: string, n: number): string {
+  const d = new Date(
+    Number(day.slice(0, 4)),
+    Number(day.slice(5, 7)) - 1,
+    Number(day.slice(8, 10)) + n,
+    12,
+  );
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Le sessioni del Pomodoro sul telefono. Ogni azione fa quello che fa la stessa azione di pomodoro.php (avvia, pausa, riprendi,
  * interrompi, segna completato, estendi, archivia): le durate sono sempre al netto delle pause, e si scrive subito in locale e
@@ -253,6 +284,213 @@ export class PomodoroRepo {
     if (!p) return false;
     this.patch(s.uuid, p);
     return true;
+  }
+
+  /* ---------------- storico ---------------- */
+
+  private where(f: HistoryFilter): { sql: string; par: (string | number)[] } {
+    const w = ['end_time IS NOT NULL'];
+    const par: (string | number)[] = [];
+    if (f.projects && f.projects.length) {
+      w.push(`project_uuid IN (${f.projects.map(() => '?').join(',')})`);
+      par.push(...f.projects);
+    } else if (f.projects) {
+      w.push('0');
+    }
+    if (f.project === 'none') w.push('project_uuid IS NULL');
+    else if (f.project) {
+      w.push('project_uuid = ?');
+      par.push(f.project);
+    }
+    if (f.from) {
+      w.push('start_time >= ?');
+      par.push(`${f.from} 00:00:00`);
+    }
+    if (f.to) {
+      w.push('start_time <= ?');
+      par.push(`${f.to} 23:59:59`);
+    }
+    if (f.minMinutes && f.minMinutes > 0) {
+      w.push('duration_seconds >= ?');
+      par.push(f.minMinutes * 60);
+    }
+    return { sql: w.join(' AND '), par };
+  }
+
+  /** Le sessioni chiuse che passano il filtro (la lista dello storico). */
+  history(f: HistoryFilter = {}, limit = 20, offset = 0): Session[] {
+    const { sql, par } = this.where(f);
+    const order =
+      f.sort === 'oldest'
+        ? 'start_time ASC'
+        : f.sort === 'duration'
+          ? 'duration_seconds DESC, start_time DESC'
+          : 'start_time DESC';
+    return this.db.all<Session>(
+      `SELECT ${COLS} FROM pomodoro_sessions WHERE ${sql} ORDER BY ${order} LIMIT ? OFFSET ?`,
+      [...par, limit, offset],
+    );
+  }
+
+  /** Tutte le sessioni del filtro (per «seleziona tutti»), e quanto tempo per giorno d'inizio. */
+  historyIds(f: HistoryFilter = {}): string[] {
+    const { sql, par } = this.where(f);
+    return this.db
+      .all<{ uuid: string }>(`SELECT uuid FROM pomodoro_sessions WHERE ${sql}`, par)
+      .map((r) => r.uuid);
+  }
+
+  dayTotals(f: HistoryFilter = {}): Record<string, number> {
+    const { sql, par } = this.where(f);
+    const out: Record<string, number> = {};
+    for (const r of this.db.all<{ day: string; secs: number }>(
+      `SELECT substr(start_time,1,10) AS day, SUM(duration_seconds) AS secs FROM pomodoro_sessions WHERE ${sql} GROUP BY day`,
+      par,
+    ))
+      out[r.day] = r.secs;
+    return out;
+  }
+
+  /** Il quadro d'insieme (insights del sito): sempre su tutta la storia, il giorno è quello d'INIZIO. */
+  insights(today: string): Insights {
+    const rows = this.db.all<{
+      day: string;
+      hour: string;
+      project_uuid: string | null;
+      secs: number;
+    }>(
+      `SELECT substr(start_time,1,10) AS day, substr(start_time,12,2) AS hour, project_uuid, duration_seconds AS secs
+       FROM pomodoro_sessions WHERE end_time IS NOT NULL AND start_time >= ?`,
+      [`${shiftDay(today, -400)} 00:00:00`],
+    );
+    const per = (d: string) => {
+      const r = rows.filter((x) => x.day === d);
+      return { n: r.length, secs: r.reduce((n, x) => n + x.secs, 0) };
+    };
+    const week = Array.from({ length: 7 }, (_, i) => shiftDay(today, i - 6)).map((day) => ({
+      day,
+      ...per(day),
+    }));
+    const monthPrefix = today.slice(0, 7);
+    const month: Record<string, { n: number; secs: number }> = {};
+    for (const r of rows)
+      if (r.day.startsWith(monthPrefix)) {
+        const m = (month[r.day] ??= { n: 0, secs: 0 });
+        m.n += 1;
+        m.secs += r.secs;
+      }
+    const hours = new Array<number>(24).fill(0);
+    const from90 = shiftDay(today, -90);
+    for (const r of rows) if (r.day >= from90) hours[Number(r.hour)]! += r.secs;
+    const peak = Math.max(...hours);
+    const days = new Set(rows.map((r) => r.day));
+    let streak = 0;
+    let cur = days.has(today) ? today : shiftDay(today, -1);
+    while (days.has(cur)) {
+      streak += 1;
+      cur = shiftDay(cur, -1);
+    }
+    const byProject = new Map<string, number>();
+    const from7 = week[0]!.day;
+    for (const r of rows)
+      if (r.project_uuid && r.day >= from7)
+        byProject.set(r.project_uuid, (byProject.get(r.project_uuid) ?? 0) + r.secs);
+    const top = [...byProject.entries()].sort((a, b) => b[1] - a[1])[0];
+    return {
+      today: per(today),
+      yesterday: per(shiftDay(today, -1)),
+      week,
+      month,
+      topHour: peak > 0 ? hours.indexOf(peak) : null,
+      streak,
+      weekProject: top ? { uuid: top[0], secs: top[1] } : null,
+    };
+  }
+
+  /* ---------------- storico: scrivere ---------------- */
+
+  /** Giorno + «HH:MM» → inizio, fine (fine prima o uguale all'inizio = dopo mezzanotte) e secondi. Null se la forma è sbagliata. */
+  private span(day: string, from: string, to: string) {
+    const ok = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !ok.test(from) || !ok.test(to)) return null;
+    const start = `${day} ${from}:00`;
+    let end = `${day} ${to}:00`;
+    if (stampMs(end) <= stampMs(start)) end = `${shiftDay(day, 1)} ${to}:00`;
+    return { start, end, secs: Math.max(0, Math.round((stampMs(end) - stampMs(start)) / 1000)) };
+  }
+
+  /** «Aggiungi a mano». Ritorna l'uuid, o null se data/ore non vanno. */
+  addManual(input: {
+    day: string;
+    from: string;
+    to: string;
+    mode?: 0 | 1;
+    projectUuid?: string | null;
+  }): string | null {
+    const sp = this.span(input.day, input.from, input.to);
+    if (!sp) return null;
+    const uuid = this.newId();
+    const mode = input.mode === 1 ? 1 : 0;
+    const planned = Math.min(600, Math.max(1, Math.round(sp.secs / 60)));
+    const row = {
+      mode,
+      start_time: sp.start,
+      end_time: sp.end,
+      duration_seconds: sp.secs,
+      planned_duration_min: planned,
+      status: 'archiviato' as const,
+      project_uuid: input.projectUuid ?? null,
+      is_manual: 1,
+    };
+    this.db.transaction(() => {
+      upsertRow(this.db, 'pomodoro_sessions', {
+        uuid,
+        resume_time: null,
+        updated_at: this.clockIso(),
+        ...row,
+      });
+      enqueue(
+        this.db,
+        { table: 'pomodoro_sessions', uuid, op: 'upsert', isCreate: true, patch: row },
+        this.clockIso(),
+      );
+    });
+    return uuid;
+  }
+
+  /** Corregge una sessione chiusa (anche quella misurata dal timer): da qui gli orari li ha decisi l'utente. */
+  edit(
+    uuid: string,
+    input: { day: string; from: string; to: string; projectUuid?: string | null },
+  ): boolean {
+    const s = this.get(uuid);
+    if (!s || s.end_time === null) return false;
+    const sp = this.span(input.day, input.from, input.to);
+    if (!sp) return false;
+    this.patch(uuid, {
+      start_time: sp.start,
+      end_time: sp.end,
+      duration_seconds: sp.secs,
+      planned_duration_min: Math.min(600, Math.max(1, Math.round(sp.secs / 60))),
+      project_uuid: input.projectUuid ?? null,
+      status: 'archiviato',
+      is_manual: 1,
+    });
+    return true;
+  }
+
+  /** Collega (o scollega, con null) il progetto di una o più sessioni chiuse. */
+  setProjectMany(uuids: string[], projectUuid: string | null): void {
+    for (const u of uuids) {
+      const s = this.get(u);
+      if (s && s.project_uuid !== projectUuid) this.patch(u, { project_uuid: projectUuid });
+    }
+  }
+
+  removeMany(uuids: string[]): void {
+    this.db.transaction(() => {
+      for (const u of uuids) this.stop(u, true);
+    });
   }
 
   /* ---------------- durate salvate ---------------- */

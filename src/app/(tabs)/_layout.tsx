@@ -1,8 +1,9 @@
-import { Tabs } from 'expo-router';
+import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { PomodoroBar } from '@/features/pomodoro/PomodoroBar';
 
 /** Icone provvisorie disegnate con forme semplici; le definitive arrivano con la rifinitura (fase 4). */
 function Icon({
@@ -117,6 +118,12 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   return (
     <Tabs
+      tabBar={(props) => (
+        <View>
+          <PomodoroBar />
+          <BottomTabBar {...props} />
+        </View>
+      )}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: th.brand,

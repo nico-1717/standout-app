@@ -56,10 +56,16 @@ export function ProjectPicker({
   projects,
   value,
   onPick,
+  extras,
+  hideNone,
 }: {
   projects: Project[];
   value: string | null;
   onPick: (uuid: string | null) => void;
+  /** righe in più in cima (nei filtri: «tutti», «senza progetto»); `id` torna in `onPick` */
+  extras?: { id: string; label: string }[];
+  /** nasconde «nessun progetto» (quando le `extras` lo dicono già) */
+  hideNone?: boolean;
 }) {
   const { t } = useTranslation();
   const rows = flatten(projects, {
@@ -70,14 +76,27 @@ export function ProjectPicker({
   });
   return (
     <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-      <PickRow
-        label={t('pomodoro.nessun_progetto')}
-        color={null}
-        depth={0}
-        on={value === null}
-        id={null}
-        onPick={onPick}
-      />
+      {(extras ?? []).map((x) => (
+        <PickRow
+          key={x.id}
+          label={x.label}
+          color={null}
+          depth={0}
+          on={value === x.id}
+          id={x.id}
+          onPick={onPick}
+        />
+      ))}
+      {hideNone ? null : (
+        <PickRow
+          label={t('pomodoro.nessun_progetto')}
+          color={null}
+          depth={0}
+          on={value === null}
+          id={null}
+          onPick={onPick}
+        />
+      )}
       {rows.map((r) => (
         <PickRow
           key={r.project.uuid}

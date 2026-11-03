@@ -368,3 +368,105 @@ describe('settings store', () => {
     expect(sent[1]).toEqual({ current_break: null });
   });
 });
+
+describe('history', () => {
+  const seed = (repo: PomodoroRepo) => {
+    const a = repo.addManual({ day: '2030-03-01', from: '09:00', to: '09:30', projectUuid: null })!;
+    const b = repo.addManual({ day: '2030-02-28', from: '23:40', to: '00:10' })!;
+    const c = repo.addManual({ day: '2030-02-27', from: '10:00', to: '11:00', mode: 1 })!;
+    return { a, b, c };
+  };
+
+  test('a hand-added session gets its length from the times, crossing midnight if needed', () => {
+    const { repo, db } = setup();
+    const { a, b } = seed(repo);
+    expect(repo.get(a)).toMatchObject({
+      start_time: '2030-03-01 09:00:00',
+      end_time: '2030-03-01 09:30:00',
+      duration_seconds: 1800,
+      planned_duration_min: 30,
+      status: 'archiviato',
+      is_manual: 1,
+    });
+    expect(repo.get(b)).toMatchObject({ end_time: '2030-03-01 00:10:00', duration_seconds: 1800 });
+    expect(repo.addManual({ day: 'x', from: '09:00', to: '10:00' })).toBeNull();
+    expect(repo.addManual({ day: '2030-03-01', from: '9:00', to: '10:00' })).toBeNull();
+    const [m] = nextBatch(db, 1);
+    expect(m).toMatchObject({ table: 'pomodoro_sessions', op: 'upsert' });
+  });
+
+  test('filters: project, none, period, minimum length, sort, and day totals use the START day', () => {
+    const { repo } = setup();
+    const { a, b, c } = seed(repo);
+    repo.setProjectMany([c], 'p1');
+    expect(repo.history({}).map((s) => s.uuid)).toEqual([a, b, c]);
+    expect(repo.history({ sort: 'oldest' }).map((s) => s.uuid)).toEqual([c, b, a]);
+    expect(repo.history({ sort: 'duration' })[0]!.uuid).toBe(c);
+    expect(repo.history({ project: 'p1' }).map((s) => s.uuid)).toEqual([c]);
+    expect(repo.history({ project: 'none' }).map((s) => s.uuid)).toEqual([a, b]);
+    expect(repo.history({ projects: ['p1'] }).map((s) => s.uuid)).toEqual([c]);
+    expect(repo.history({ projects: [] })).toEqual([]);
+    expect(repo.history({ from: '2030-02-28', to: '2030-02-28' }).map((s) => s.uuid)).toEqual([b]);
+    expect(repo.history({ minMinutes: 45 }).map((s) => s.uuid)).toEqual([c]);
+    expect(repo.history({}, 1, 1).map((s) => s.uuid)).toEqual([b]);
+    expect(repo.dayTotals()).toEqual({
+      '2030-03-01': 1800,
+      '2030-02-28': 1800,
+      '2030-02-27': 3600,
+    });
+    expect(repo.historyIds({ project: 'none' }).sort()).toEqual([a, b].sort());
+  });
+
+  test('an open session is not in the history', () => {
+    const { repo } = setup();
+    repo.start({ mode: 1 });
+    expect(repo.history({})).toEqual([]);
+  });
+
+  test('editing any closed session makes it hand-set and archived; bulk project and delete', () => {
+    const { repo, db } = setup();
+    const id = repo.start({ mode: 1 })!;
+    expect(repo.edit(id, { day: '2030-03-01', from: '10:00', to: '10:20' })).toBe(false); // ancora aperta
+    at(10, 30);
+    repo.stop(id);
+    db.run('DELETE FROM outbox');
+    expect(
+      repo.edit(id, { day: '2030-03-01', from: '08:00', to: '08:45', projectUuid: 'p9' }),
+    ).toBe(true);
+    expect(repo.get(id)).toMatchObject({
+      start_time: '2030-03-01 08:00:00',
+      duration_seconds: 2700,
+      status: 'archiviato',
+      is_manual: 1,
+      project_uuid: 'p9',
+    });
+    expect(repo.edit(id, { day: '2030-03-01', from: '8:00', to: '09:00' })).toBe(false);
+    const [m] = nextBatch(db, 1);
+    expect(m!.patch).toMatchObject({ status: 'archiviato', is_manual: 1, duration_seconds: 2700 });
+    repo.setProjectMany([id], null);
+    expect(repo.get(id)!.project_uuid).toBeNull();
+    repo.removeMany([id]);
+    expect(repo.get(id)).toBeNull();
+  });
+
+  test('insights: today vs yesterday, week, streak that survives an empty today, top hour, week project', () => {
+    const { repo } = setup();
+    repo.addManual({ day: '2030-03-01', from: '09:00', to: '09:30', projectUuid: 'pa' });
+    repo.addManual({ day: '2030-02-28', from: '09:00', to: '10:00', projectUuid: 'pb' });
+    repo.addManual({ day: '2030-02-27', from: '09:00', to: '09:10' });
+    repo.addManual({ day: '2030-02-25', from: '15:00', to: '15:05' });
+    const i = repo.insights('2030-03-01');
+    expect(i.today).toEqual({ n: 1, secs: 1800 });
+    expect(i.yesterday).toEqual({ n: 1, secs: 3600 });
+    expect(i.week).toHaveLength(7);
+    expect(i.week[6]).toEqual({ day: '2030-03-01', n: 1, secs: 1800 });
+    expect(i.week[0]!.day).toBe('2030-02-23');
+    expect(i.streak).toBe(3);
+    expect(i.topHour).toBe(9);
+    expect(i.weekProject).toEqual({ uuid: 'pb', secs: 3600 });
+    expect(i.month['2030-03-01']).toEqual({ n: 1, secs: 1800 });
+    // oggi vuoto: la serie parte da ieri
+    expect(repo.insights('2030-03-02').streak).toBe(3);
+    expect(repo.insights('2030-03-05').streak).toBe(0);
+  });
+});

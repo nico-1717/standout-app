@@ -638,13 +638,22 @@ export default function PomodoroScreen() {
         top={insets.top}
         title={t('pomodoro.nuovo_pomodoro')}
         right={
-          <Pressable
-            testID="pomodoro-close"
-            accessibilityRole="button"
-            onPress={() => router.back()}
-          >
-            <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
+            <Pressable
+              testID="pomodoro-history"
+              accessibilityRole="button"
+              onPress={() => router.push('/pomodoro-history')}
+            >
+              <Text style={{ color: th.brand, fontSize: 15 }}>{t('pomodoro.storico')}</Text>
+            </Pressable>
+            <Pressable
+              testID="pomodoro-close"
+              accessibilityRole="button"
+              onPress={() => router.back()}
+            >
+              <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
+            </Pressable>
+          </View>
         }
       />
       <ScrollView

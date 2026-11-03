@@ -147,9 +147,9 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | J10 | «Porta le stime nel nuovo piano» (`import_old`) e salta/riporta (`skip_fix`) | logica | Piano | P4 | da fare | |
 | J11 | Registro giornaliero «Ho già fatto» e avvio con minuti preimpostati (`daily_log`) | sync `pomodoro_sessions` | Piano › Oggi | P3 | da fare | |
 | J12 | Pomodoro: timer, pausa, riprendi, ferma (chiede pausa/fine/scarta), durate personalizzate | sync `pomodoro_sessions`, `pomodoro_custom_durations`, `pomodoro_settings` | Pomodoro | P3 | fatto: schermata con timer/cronometro, pausa, ferma (pausa/fine/scarta, «molto breve»), durate personalizzate, progetto, pausa dopo lo studio (sessioni, durate e impostazioni si sincronizzano) | |
-| J13 | Barra globale del Pomodoro (`pomodoro_barra.*`) | locale | mini-barra sopra le schede | P3 | da fare | |
+| J13 | Barra globale del Pomodoro (`pomodoro_barra.*`) | locale | mini-barra sopra le schede | P3 | fatto: barretta sopra le schede con il tempo (Pomodoro, cronometro, pausa); tocco = apre il Pomodoro | |
 | J14 | Pause e scene (`pausa_scena.php`, `pomodoro_current_breaks`), clessidra (`clessidra.php`) | sync | Pomodoro › Pausa | P3 | da fare — **serve il tuo OK sull'aspetto** (scene animate) | |
-| J15 | Storico del Pomodoro (`pomodoro_storico.php`: modifica, cancella) | locale | Pomodoro › Storico | P3 | da fare | |
+| J15 | Storico del Pomodoro (`pomodoro_storico.php`: modifica, cancella) | locale | Pomodoro › Storico | P3 | fatto: panoramica (oggi/ieri, settimana, mese, serie, ora migliore, progetto della settimana), elenco per giorno con filtri e ordine, aggiungi/correggi/cancella a mano, azioni su più righe. Mancano: torta di «oggi» e giorni a pagine di progetto | |
 | J16 | Importazione Pomodoro (`pomodoro_import.php`) | `pomodoro/import` (nuova) | Pomodoro › Importa | P4 | da fare | |
 | J17 | Nota automatica (`nota_auto.js`) | locale | — | P3 | da fare | |
 | J18 | Notifica di fine Pomodoro | notifica locale | — | P3 | fatto: notifica locale all'ora di fine, anche con l'app chiusa; le pausa pure | |
