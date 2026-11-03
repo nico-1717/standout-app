@@ -321,3 +321,23 @@ export function monthlyCounts(logsList: HabitLog[], year: number): number[] {
   }
   return counts;
 }
+
+/**
+ * «Quando ti muovi»: i check-in per ora del giorno (0..23) negli ultimi `days` giorni. Conta i check-in fatti o in corso
+ * (come il sito, che conta gli eventi con delta positivo), all'ora locale in cui sono stati scritti.
+ */
+export function checkInHours(logsList: HabitLog[], today: string, days = 90): number[] {
+  const hours = new Array<number>(24).fill(0);
+  const from = addDays(today, -(days - 1));
+  for (const l of logsList) {
+    if (!l.first_logged_at || l.log_date < from || l.log_date > today) continue;
+    if (l.status !== 'done' && l.status !== 'partial') continue;
+    const at = new Date(l.first_logged_at);
+    // testo senza fuso («2026-11-03 09:10:00»): è già all'ora locale
+    const h = /[zZ]|[+-]\d\d:?\d\d$/.test(l.first_logged_at)
+      ? at.getHours()
+      : Number(l.first_logged_at.slice(11, 13));
+    if (Number.isFinite(h) && h >= 0 && h < 24) hours[h]!++;
+  }
+  return hours;
+}

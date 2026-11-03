@@ -46,6 +46,8 @@ export interface HabitLog {
   target_amount: number;
   note: string | null;
   mood: number | null;
+  /** quando il check-in è stato scritto la prima volta (testo ISO) */
+  first_logged_at?: string | null;
 }
 
 export type CheckInMode = 'increment' | 'decrement' | 'set' | 'toggle' | 'skip' | 'fail' | 'clear';

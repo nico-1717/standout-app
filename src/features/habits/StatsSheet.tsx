@@ -20,7 +20,7 @@ import { labelDate } from './labels';
 import { addDays, dayProgress, type Habit, type HabitLog } from './logic';
 import { HBars, LineChart, Radar, WeekGrid } from './overview';
 import { Sheet } from './Sheet';
-import { barsLast, heatmap, monthlyCounts, weekdayRates, WEEK_HUES } from './stats';
+import { barsLast, checkInHours, heatmap, monthlyCounts, weekdayRates, WEEK_HUES } from './stats';
 
 export interface StatsSheetProps {
   visible: boolean;
@@ -93,12 +93,14 @@ function Body(p: StatsSheetProps) {
       heat: heatmap((d) => dayProgress(list, d, all, today).pct, today),
       wd: weekdayRates(list, today, ctxOf, false),
       months: monthlyCounts(p.logs, Number(today.slice(0, 4))),
+      hours: checkInHours(p.logs, today),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list, all, ctxOf, today, range, p.categories, p.logs]);
 
   const wdMax = Math.max(0.01, ...data.wd);
   const monthMax = Math.max(1, ...data.months);
+  const hourMax = Math.max(1, ...data.hours);
   const days = t('abitudini.giorni_l');
 
   return (
@@ -224,6 +226,24 @@ function Body(p: StatsSheetProps) {
           <Text style={{ color: th.text2, fontSize: 12 }}>{today.slice(0, 4)}</Text>
           <Text style={{ color: th.text2, fontSize: 12 }}>max {monthMax}</Text>
         </View>
+      </StatCard>
+
+      <StatCard
+        th={th}
+        title={t('abitudini.quando_ti_muovi')}
+        note={t('abitudini.ultimi_90_giorni')}
+      >
+        <Bars
+          th={th}
+          testID="hours-bars"
+          max={80}
+          bars={data.hours.map((c, i) => ({
+            value: c / hourMax,
+            label: i % 6 === 0 ? String(i) : '',
+            color: WEEK_HUES[Math.floor(i / 5) % WEEK_HUES.length]!,
+            highlight: false,
+          }))}
+        />
       </StatCard>
 
       <StatCard th={th} title={t('abitudini.classifica_abitudini')}>
