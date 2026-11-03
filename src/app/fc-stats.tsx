@@ -106,6 +106,7 @@ export default function FlashcardStatsScreen() {
     .decks()
     .reduce((n, d) => n + (deckStats.get(d.uuid)?.known ?? 0) * (d.parent_uuid ? 0 : 1), 0);
   const goal = study.goal();
+  const records = study.records();
   const todayPlayed = act.daily.get(today)?.played ?? 0;
 
   // andamento: gli ultimi giorni (al massimo 30)
@@ -291,6 +292,24 @@ export default function FlashcardStatsScreen() {
             color={th.brand}
           />
         </Card>
+
+        {records.combo || records.padroneggiate ? (
+          <>
+            <SectionLabel>{t('fc.record')}</SectionLabel>
+            <Card style={{ padding: 14, gap: 6 }}>
+              {records.combo ? (
+                <Text testID="fcst-record-combo" style={{ color: th.text }}>
+                  🔥 {t('fcv.ck_serie')}: {records.combo}
+                </Text>
+              ) : null}
+              {records.padroneggiate ? (
+                <Text testID="fcst-record-mastered" style={{ color: th.text }}>
+                  🎓 {t('fcv.ck_padroneggiate_carte', { n: records.padroneggiate })}
+                </Text>
+              ) : null}
+            </Card>
+          </>
+        ) : null}
 
         <SectionLabel>{t('fc.traguardi')}</SectionLabel>
         <Card style={{ padding: 12, gap: 8 }}>

@@ -357,7 +357,7 @@ describe('resume, conclude, retry, remove', () => {
     s.db.run('DELETE FROM outbox');
     expect(s.games.conclude(g)).toBeCloseTo((4 / 5) * 100);
     expect(s.games.game(g)!.score).toBe(80);
-    const sent = nextBatch(s.db, 10);
+    const sent = nextBatch(s.db, 10).filter((m) => m.table === 'fc_games');
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ table: 'fc_games', patch: { score: 80 } });
   });
@@ -471,5 +471,50 @@ describe('deck stats (the numbers under each deck)', () => {
     expect(st.get(kid)!.last).toBe('2026-11-03 10:00:00');
     expect(st.get(parent)!.hard).toBe(st.get(kid)!.hard);
     expect(st.get(kid)!.hard).toBe(1);
+  });
+});
+
+describe('streak and records', () => {
+  test('streak counts right answers in a row; concluding saves the combo and the mastered count', () => {
+    const s = setup();
+    const { deck } = deckWithCards(s);
+    const g = start(s, [deck]);
+    const cards = s.db.all<{ position: number; card_uuid: string }>(
+      'SELECT position, card_uuid FROM fc_study_sequence WHERE game_uuid = ? ORDER BY position',
+      [g],
+    );
+    // tre carte: giusta, giusta, sbagliata (la seconda ha due sottocarte da votare)
+    s.games.ensurePosition(g, 1);
+    s.games.grade(g, 1, cards[0]!.card_uuid, false, 'correct');
+    s.games.ensurePosition(g, 2);
+    const p2 = s.games.plays(g, 2);
+    for (const p of p2)
+      s.games.grade(g, 2, (p.child_uuid ?? p.card_uuid)!, !!p.child_uuid, 'correct');
+    s.games.ensurePosition(g, 3);
+    s.games.grade(g, 3, cards[2]!.card_uuid, false, 'wrong');
+    expect(s.games.streak(g)).toEqual({ current: 0, best: 4, answers: 5 });
+    s.games.conclude(g);
+    expect(s.study.records().combo).toBe(4);
+    // una partita con una serie più corta non abbassa il record
+    const g2 = start(s, [deck]);
+    s.games.ensurePosition(g2, 1);
+    s.games.grade(g2, 1, s.games.plays(g2, 1)[0]!.card_uuid!, false, 'correct');
+    s.games.conclude(g2);
+    expect(s.study.records().combo).toBe(4);
+    expect(s.games.saveCombo(g2)).toEqual({ value: 1, changed: false, first: false });
+  });
+
+  test('mastered counts cards at level la_sai', () => {
+    const s = setup();
+    const { deck, c1 } = deckWithCards(s);
+    const g = start(s, [deck]);
+    expect(s.games.mastered()).toBe(0);
+    for (let i = 0; i < 5; i++) {
+      s.db.run(
+        `INSERT INTO fc_study_plays (uuid, game_uuid, card_uuid, user_answer, position, play_date) VALUES (?, ?, ?, 'Correct', ?, ?)`,
+        [`x${i}`, g, c1, 100 + i, `2026-11-0${i + 1} 10:00:00`],
+      );
+    }
+    expect(s.games.mastered()).toBe(1);
   });
 });

@@ -106,6 +106,25 @@ describe('categories list', () => {
 });
 
 describe('category page', () => {
+  test('cards show their level and the learnt filter hides the others', async () => {
+    const { flashcards, study } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const a = flashcards.addCard(id, 'QA', 'AA')!;
+    const b = flashcards.addCard(id, 'QB', 'AB')!;
+    study.setLearnt(a, false, true);
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    expect(screen.getByTestId(`fcd-level-${a}`)).toBeTruthy();
+    expect(screen.getByTestId(`fcd-learnt-${a}`)).toBeTruthy();
+    expect(screen.queryByTestId(`fcd-learnt-${b}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcd-filter-1'));
+    expect(screen.getByTestId(`fcd-card-${a}`)).toBeTruthy();
+    expect(screen.queryByTestId(`fcd-card-${b}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcd-filter-0'));
+    expect(screen.queryByTestId(`fcd-card-${a}`)).toBeNull();
+    expect(screen.getByTestId(`fcd-card-${b}`)).toBeTruthy();
+  });
+
   test('rename, colour, pin, archive and exam date are saved', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;

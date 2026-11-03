@@ -9,6 +9,8 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
+import type { GameStatus } from '@/features/flashcards/game';
+import { LEVEL_COLORS } from '@/features/flashcards/levels';
 import {
   DECK_ICON_KEYS,
   compareDecks,
@@ -62,6 +64,7 @@ export default function DeckScreen() {
   const [moving, setMoving] = useState(false);
   const [iconsOpen, setIconsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [filter, setFilter] = useState<GameStatus>('all');
 
   const data = useMemo(() => {
     void version;
@@ -77,6 +80,8 @@ export default function DeckScreen() {
       cards: repo.cards(id),
       counts: repo.cardCounts(),
       canDelete: repo.canDeleteDeck(id),
+      levels: services.games.cardLevels(repo.cards(id)),
+      learnt: services.study.learnt(),
     };
   }, [services, version, id]);
 
@@ -93,7 +98,9 @@ export default function DeckScreen() {
       </View>
     );
   }
-  const { deck, decks, kids, cards, counts } = data;
+  const { deck, decks, kids, counts, levels, learnt } = data;
+  const passes = services.games.cardFilter(filter);
+  const cards = filter === 'all' ? data.cards : data.cards.filter(passes);
   const repo = services.flashcards;
   const map = deckMap(decks);
   const crumbs = deckPath(map, id);
@@ -487,6 +494,33 @@ export default function DeckScreen() {
 
         <View style={{ gap: 8 }}>
           <SectionLabel>{t('fc.cfc_carte')}</SectionLabel>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(
+              [
+                ['all', t('fc.cg_tutti_stati')],
+                ['0', t('fc.cg_to_learn')],
+                ['1', t('fc.cg_learnt')],
+              ] as [GameStatus, string][]
+            ).map(([v, label]) => (
+              <Pressable
+                key={v}
+                testID={`fcd-filter-${v}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: filter === v }}
+                onPress={() => setFilter(v)}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 16,
+                  backgroundColor: filter === v ? th.brand : th.surface2,
+                }}
+              >
+                <Text style={{ color: filter === v ? '#fff' : th.text, fontWeight: '600' }}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
           {cards.length ? (
             <Card>
               {cards.map((c, i) => (
@@ -511,11 +545,39 @@ export default function DeckScreen() {
                   <Text style={{ color: th.text2, fontSize: 14 }} numberOfLines={2}>
                     {preview(c.answer_desc)}
                   </Text>
-                  {c.is_father ? (
-                    <Text style={{ color: th.text3, fontSize: 12 }}>
-                      {t('fc.app_carte_figlie')}
-                    </Text>
-                  ) : null}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {levels.get(c.uuid) ? (
+                      <View
+                        testID={`fcd-level-${c.uuid}`}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                      >
+                        <View
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: LEVEL_COLORS[levels.get(c.uuid)!],
+                          }}
+                        />
+                        <Text style={{ color: th.text2, fontSize: 12 }}>
+                          {t(`fcv.liv_${levels.get(c.uuid)}`)}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {learnt.has(c.uuid) ? (
+                      <Text
+                        testID={`fcd-learnt-${c.uuid}`}
+                        style={{ color: th.green, fontSize: 12 }}
+                      >
+                        ✓ {t('fc.cg_learnt')}
+                      </Text>
+                    ) : null}
+                    {c.is_father ? (
+                      <Text style={{ color: th.text3, fontSize: 12 }}>
+                        {t('fc.app_carte_figlie')}
+                      </Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               ))}
             </Card>

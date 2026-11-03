@@ -100,8 +100,13 @@ export default function GameScreen() {
   const total = games.totalPositions(game);
   const closed = games.closedPositions(game);
 
+  const streak = games.streak(game);
+  const record = study.records().combo ?? 0;
+
   const grade = (it: Item, g: Grade) => {
     const r = games.grade(game, pos, it.target, it.isChild, g);
+    // la serie si è spezzata: si salva se è un record
+    if (g === 'wrong' && streak.current >= 3) games.saveCombo(game);
     setShown(false);
     if (r.ok && r.unanswered === 0) go(r.next);
     else refresh();
@@ -157,13 +162,17 @@ export default function GameScreen() {
           testID="fcg-close"
           accessibilityRole="button"
           accessibilityLabel={t('comune.chiudi')}
-          onPress={() => router.back()}
+          onPress={() => {
+            games.saveCombo(game);
+            router.back();
+          }}
           hitSlop={10}
         >
           <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
         </Pressable>
         <Text testID="fcg-progress" style={{ color: th.text2, fontWeight: '600' }}>
           {t('fc.gm_posizione', { n: pos, tot: total })}
+          {streak.current >= 2 ? `  🔥 ${streak.current}` : ''}
         </Text>
         <Pressable
           testID="fcg-conclude"
@@ -192,6 +201,15 @@ export default function GameScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 40 }}
       >
+        {record >= 3 && streak.current > record ? (
+          <Text
+            testID="fcg-record"
+            style={{ color: th.green, fontWeight: '700', textAlign: 'center' }}
+          >
+            {t('fcv.gj_record_combo', { n: streak.current })}
+          </Text>
+        ) : null}
+
         {confirming ? (
           <Card style={{ padding: 16, gap: 10 }}>
             <Text style={{ color: th.text, fontSize: 16, fontWeight: '600' }}>

@@ -82,7 +82,7 @@ export interface CardHistory {
   u: string;
 }
 
-interface CardLite {
+export interface CardLite {
   uuid: string;
   category_uuid: string;
   question_desc: string | null;
@@ -354,6 +354,74 @@ export class GameRepo {
       t.games = gameSets.get(id)!.size;
     }
     return out;
+  }
+
+  /** Dice se una carta passa il filtro «imparate / da imparare» (per l'elenco delle carte di un mazzo). */
+  cardFilter(status: GameStatus): (c: CardLite) => boolean {
+    return this.statusFilter(status, this.childrenByParent());
+  }
+
+  /** Il livello di ogni carta (chiave: uuid); i titoli dei gruppi non ne hanno. */
+  cardLevels(cards: CardLite[]): Map<string, Level> {
+    const hist = this.histories();
+    const kids = this.childrenByParent();
+    const out = new Map<string, Level>();
+    for (const c of cards) {
+      if (isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc)) continue;
+      out.set(c.uuid, this.levelOfKey(`p${c.uuid}`, hist));
+    }
+    return out;
+  }
+
+  /* ---------------- serie e record ---------------- */
+
+  /** La serie di una partita: giuste di fila adesso, la serie più lunga e le risposte date (`fcv_serie_partita`). */
+  streak(gameUuid: string): { current: number; best: number; answers: number } {
+    let current = 0;
+    let best = 0;
+    let answers = 0;
+    for (const r of this.db.all<{ a: string }>(
+      `SELECT user_answer AS a FROM fc_study_plays
+        WHERE game_uuid = ? AND user_answer IN ('Correct', 'Wrong') ORDER BY play_date ASC, rowid ASC`,
+      [gameUuid],
+    )) {
+      answers += 1;
+      if (r.a === 'Correct') {
+        current += 1;
+        if (current > best) best = current;
+      } else current = 0;
+    }
+    return { current, best, answers };
+  }
+
+  /**
+   * Salva la serie migliore della partita come record «combo» (se è migliore di quello che c'è). Come il sito, il valore non
+   * supera le risposte date.
+   */
+  saveCombo(gameUuid: string): { value: number; changed: boolean; first: boolean } {
+    const s = this.streak(gameUuid);
+    const value = Math.min(s.best, s.answers);
+    if (value <= 0) return { value: 0, changed: false, first: false };
+    const r = this.study.bumpRecord('combo', value, gameUuid);
+    return { value, changed: r.changed && !r.first, first: r.first };
+  }
+
+  /** Quante carte sono «padroneggiate» adesso (livello la_sai, o facile dalla terza risposta; i titoli non contano). */
+  mastered(): number {
+    const hist = this.histories();
+    const kids = this.childrenByParent();
+    const titles = new Set<string>();
+    for (const c of this.cardsFor([])) {
+      if (isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc)) {
+        titles.add(`p${c.uuid}`);
+      }
+    }
+    let n = 0;
+    for (const [key, h] of hist) {
+      if (titles.has(key)) continue;
+      if (isKnown(this.levelOfKey(key, hist), h.c + h.w)) n += 1;
+    }
+    return n;
   }
 
   /* ---------------- avvio ---------------- */
@@ -931,6 +999,9 @@ export class GameRepo {
         );
       }
     });
+    this.saveCombo(gameUuid);
+    const mastered = this.mastered();
+    if (mastered > 0) this.study.bumpRecord('padroneggiate', mastered, gameUuid);
     return this.tally(gameUuid).score;
   }
 
