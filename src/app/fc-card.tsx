@@ -474,6 +474,7 @@ export default function CardScreen() {
                 <DeckPicker
                   decks={data.decks}
                   value={data.deckId}
+                  onCreate={(name, parent) => repo.createDeck({ name, parent })}
                   onPick={(d) => {
                     if (d) repo.moveCard(params.id!, d);
                     setMoving(false);

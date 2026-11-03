@@ -382,6 +382,7 @@ export default function DeckScreen() {
                   allowRoot
                   rootLabel={t('fc.cfc_tutte')}
                   exclude={new Set(deckBranch(decks, id))}
+                  onCreate={(name, parent) => repo.createDeck({ name, parent })}
                   onPick={(p) => {
                     repo.moveDeck(id, p);
                     setMoving(false);

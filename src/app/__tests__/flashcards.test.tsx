@@ -327,6 +327,41 @@ describe('card page', () => {
     expect(flashcards.card(c)).toBeNull();
     expect(mockBack).toHaveBeenCalled();
   });
+  test('move a card to a deck made on the spot (top level or under the current one)', async () => {
+    const { flashcards } = setup();
+    const d1 = flashcards.createDeck({ name: 'D1' })!;
+    const c = flashcards.addCard(d1, 'q', 'a')!;
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-move'));
+    await fireEvent.press(screen.getByTestId('deck-pick-new'));
+    await fireEvent.press(screen.getByTestId('deck-pick-new-save')); // senza nome
+    expect(screen.getByTestId('deck-pick-new-error')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('deck-pick-new-name'), 'Fresh');
+    await fireEvent.press(screen.getByTestId('deck-pick-new-parent-under'));
+    await fireEvent.press(screen.getByTestId('deck-pick-new-save'));
+    const moved = flashcards.card(c)!;
+    const fresh = flashcards.decks().find((d) => d.name === 'Fresh')!;
+    expect(moved.category_uuid).toBe(fresh.uuid);
+    expect(fresh.parent_uuid).toBe(d1);
+  });
+
+  test('the deck picker search narrows a long list', async () => {
+    const { flashcards } = setup();
+    const ids = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta'].map((n) =>
+      flashcards.createDeck({ name: n })!,
+    );
+    const c = flashcards.addCard(ids[0]!, 'q', 'a')!;
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-move'));
+    await fireEvent.changeText(screen.getByTestId('deck-pick-search'), 'eps');
+    expect(screen.getByTestId(`deck-pick-${ids[4]}`)).toBeTruthy();
+    expect(screen.queryByTestId(`deck-pick-${ids[1]}`)).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('deck-pick-search'), 'zzz');
+    expect(screen.getByTestId('deck-pick-none')).toBeTruthy();
+  });
+
   test('learnt and favourite switches; examples are added, edited and removed', async () => {
     const { flashcards, study } = setup();
     const d = flashcards.createDeck({ name: 'D' })!;
