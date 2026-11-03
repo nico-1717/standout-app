@@ -72,7 +72,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P11 | Priorità del giorno (`planner_priorities`) | sync | Planner › Priorità | P2 | fatto (scheda nel giorno: scrivi, spunta, fino a 6; sync con UUIDv5) | |
 | P12 | Routine (gruppi di righe, comprimi/ricompatta, inserisci) | sync `planner_routines`, `_items` | Planner › Routine | P2 | fatto (crea/cambia routine, inserisci a un'ora, apri/chiudi, elimina il blocco) | |
 | P13 | Preferiti | sync | Planner › Preferiti | P2 | da fare | |
-| P14 | Barra intelligente (data, ora, durata dalla frase: `04_barra_e_priorita.js`, `planner_smart.json`) | locale | Barra rapida | P2 | da fare — **test d'oro** (il parser sta in JS: si porta e si prova su frasi vere) | |
+| P14 | Barra intelligente (data, ora, durata dalla frase: `04_barra_e_priorita.js`, `planner_smart.json`) | locale | Barra rapida | P2 | fatto: `planner/smart.ts`, test d'oro su 864 casi contro il vero codice del sito (`scripts/gen-planner-smart.mjs`); i nomi dalla rubrica arrivano con P6 | |
 | P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | da fare | |
 | P16 | Meteo (`meteo_api.php`: stato, attiva, anteprima, ricerca luogo) | `weather/*` (nuova) | Planner › Meteo | P4 | solo online | |
 | P17 | Google Calendar (`google_calendar.php`: collega, calendari, mappa, push, ripara, sincronizza, scollega) | `google/*` (nuova, OAuth da browser di sistema) | Impostazioni › Google Calendar | P4 | solo online | |

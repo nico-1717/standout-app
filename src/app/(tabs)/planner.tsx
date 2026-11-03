@@ -18,6 +18,8 @@ import { localToday } from '@/features/tasks/groups';
 import { addDaysIso, addMonths, mondayOf, monthOf, yearOf } from '@/features/planner/dates';
 import type { EventView } from '@/features/planner/events';
 import type { Priority, Routine } from '@/features/planner/repo';
+import { SmartBar, SmartReport, type SmartNote } from '@/features/planner/SmartBar';
+import { smartEvent, smartParse } from '@/features/planner/smart';
 import { PrioritiesCard, RoutineBar, routineBlocks } from '@/features/planner/DayExtras';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
@@ -43,6 +45,8 @@ export default function PlannerScreen() {
   const today = localToday();
   const [date, setDate] = useState(today);
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day');
+  const [note, setNote] = useState<SmartNote | null>(null);
+  const [unclear, setUnclear] = useState(false);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   const scroller = useRef<ScrollViewInstance>(null);
   const zoom = 'm30' as const;
@@ -107,6 +111,32 @@ export default function PlannerScreen() {
   );
 
   if (!repo) return null;
+  const smartSubmit = (text: string): boolean => {
+    const parsed = smartParse(text, { today, focusDate: date });
+    if (!parsed.title) {
+      setUnclear(true);
+      return false;
+    }
+    setUnclear(false);
+    const input = smartEvent(parsed, repo.eventsInRange(parsed.date, parsed.date));
+    const uuid = repo.create(input);
+    changed();
+    setMode('day');
+    setDate(parsed.date);
+    const d = new Date(`${parsed.date}T12:00:00Z`);
+    setNote({
+      key: Date.now(),
+      parsed,
+      start: input.start ?? '',
+      end: input.end ?? '',
+      when: `${dayTitle(t, parsed.date)} ${d.getUTCDate()} ${t(`planner.mese_${d.getUTCMonth() + 1}`).toLowerCase()}`,
+      onOpen: () => {
+        const view = repo.eventsInRange(parsed.date, parsed.date).find((v) => v.uuid === uuid);
+        if (view) open(view);
+      },
+    });
+    return true;
+  };
   const blocks = routineBlocks(events, routines);
   const closed = new Set(blocks.filter((b) => b.collapsed).map((b) => b.group));
   const shown = events.filter((e) => !(e.routineGroup && closed.has(e.routineGroup)));
@@ -217,6 +247,15 @@ export default function PlannerScreen() {
             </Pressable>
           ))}
         </View>
+        <SmartBar pt={pt} onSubmit={smartSubmit} />
+        {unclear ? (
+          <Text
+            testID="smart-unclear"
+            style={{ color: pt.ink2, fontSize: 12, textAlign: 'center', marginBottom: 6 }}
+          >
+            {t('planner.non_ho_capito_cosa_scrivere')}
+          </Text>
+        ) : null}
         {mode === 'day' ? (
           <WeekStrip
             pt={pt}
@@ -418,6 +457,8 @@ export default function PlannerScreen() {
       >
         <Text style={{ color: pt.onAccent, fontSize: 30, lineHeight: 32 }}>+</Text>
       </Pressable>
+
+      <SmartReport pt={pt} note={note} onHide={() => setNote(null)} />
 
       {sheet ? (
         <EventSheet

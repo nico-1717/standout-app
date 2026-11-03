@@ -229,4 +229,29 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(alert).toHaveBeenCalled();
     expect(repo.rows()).toHaveLength(0);
   });
+  test('smart bar: a phrase becomes an event on the right day, and says what it understood', async () => {
+    const repo = setup();
+    await renderIt();
+    await fireEvent.changeText(screen.getByTestId('smart-input'), 'dentista oggi 15');
+    await fireEvent.press(screen.getByTestId('smart-go'));
+    const rows = repo.rows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      title: 'Dentista',
+      event_date: TODAY,
+      start_time: '15:00',
+      end_time: '16:00',
+    });
+    expect(screen.getByTestId('smart-report')).toBeTruthy();
+  });
+
+  test('smart bar: a phrase with no title creates nothing and keeps the text', async () => {
+    const repo = setup();
+    await renderIt();
+    await fireEvent.changeText(screen.getByTestId('smart-input'), 'domani alle 15');
+    await fireEvent.press(screen.getByTestId('smart-go'));
+    expect(repo.rows()).toHaveLength(0);
+    expect(screen.getByTestId('smart-unclear')).toBeTruthy();
+    expect(screen.getByTestId('smart-input').props.value).toBe('domani alle 15');
+  });
 });
