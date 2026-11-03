@@ -28,15 +28,18 @@ function Bars({
   color,
   testID,
   height = 80,
+  scale,
 }: {
   values: number[];
   labels?: string[];
   color: string;
   testID?: string;
   height?: number;
+  /** valore a cui la colonna arriva in cima (default: il più alto) */
+  scale?: number;
 }) {
   const th = useTheme();
-  const max = Math.max(1, ...values);
+  const max = scale ?? Math.max(1, ...values);
   return (
     <View testID={testID}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height, gap: 2 }}>
@@ -107,6 +110,21 @@ export default function FlashcardStatsScreen() {
   const knownTotal = flashcards
     .decks()
     .reduce((n, d) => n + (deckStats.get(d.uuid)?.known ?? 0) * (d.parent_uuid ? 0 : 1), 0);
+  const rootStats = flashcards
+    .decks()
+    .filter((d) => !d.parent_uuid)
+    .map((d) => deckStats.get(d.uuid));
+  const cardsTotal = rootStats.reduce((n, d) => n + (d?.total ?? 0), 0);
+  const cardsTried = rootStats.reduce((n, d) => n + (d?.tried ?? 0), 0);
+  const cardsNever = Math.max(0, cardsTotal - knownTotal - cardsTried);
+  const masteryPct = cardsTotal > 0 ? Math.round((knownTotal / cardsTotal) * 100) : 0;
+  // i punteggi delle partite (non i ripassi) nell'ordine in cui sono state giocate, al massimo gli ultimi 40
+  const scores = games
+    .games()
+    .filter((g) => g.score !== null && !g.parent_uuid)
+    .reverse()
+    .slice(-40)
+    .map((g) => Math.round(g.score ?? 0));
   const goal = study.goal();
   const records = study.records();
   const todayPlayed = act.daily.get(today)?.played ?? 0;
@@ -315,6 +333,55 @@ export default function FlashcardStatsScreen() {
                   🎓 {t('fcv.ck_padroneggiate_carte', { n: records.padroneggiate })}
                 </Text>
               ) : null}
+            </Card>
+          </>
+        ) : null}
+
+        <SectionLabel>{t('fc.padronanza_carte')}</SectionLabel>
+        <Card style={{ padding: 12, gap: 8 }}>
+          <Text style={{ color: th.text2, fontSize: 12 }}>
+            {t('fc.su_tutto_l_archivio_flashcard')}
+          </Text>
+          <Text
+            testID="fcst-mastery-pct"
+            style={{ color: th.text, fontSize: 24, fontWeight: '800' }}
+          >
+            {masteryPct}%{' '}
+            <Text style={{ fontSize: 13, fontWeight: '500' }}>{t('fc.completato')}</Text>
+          </Text>
+          <View
+            testID="fcst-mastery-bar"
+            style={{
+              flexDirection: 'row',
+              height: 12,
+              borderRadius: 6,
+              overflow: 'hidden',
+              backgroundColor: th.hairline2,
+            }}
+          >
+            <View style={{ flex: knownTotal, backgroundColor: th.green }} />
+            <View style={{ flex: cardsTried, backgroundColor: th.brand }} />
+            <View style={{ flex: Math.max(cardsNever, cardsTotal === 0 ? 1 : 0) }} />
+          </View>
+          <Text testID="fcst-mastery-known" style={{ color: th.text }}>
+            🟢 {t('fc.leg_imparate', { n: knownTotal })}
+          </Text>
+          <Text testID="fcst-mastery-tried" style={{ color: th.text }}>
+            🔵 {t('fc.leg_in_corso', { n: cardsTried })}
+          </Text>
+          <Text testID="fcst-mastery-never" style={{ color: th.text }}>
+            ⚪ {t('fc.leg_da_provare', { n: cardsNever })}
+          </Text>
+        </Card>
+
+        {scores.length > 0 ? (
+          <>
+            <SectionLabel>{t('fc.punteggio_partite')}</SectionLabel>
+            <Card style={{ padding: 12, gap: 6 }}>
+              <Text style={{ color: th.text2, fontSize: 12 }}>
+                {t('fc.ogni_punto_e_una_partita')}
+              </Text>
+              <Bars testID="fcst-scores" values={scores} color={th.brand} scale={100} />
             </Card>
           </>
         ) : null}

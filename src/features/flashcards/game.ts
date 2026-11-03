@@ -70,6 +70,8 @@ export interface DeckStat {
   /** carte «che sai» */
   known: number;
   total: number;
+  /** carte provate ma che ancora non «sai» (la fetta «in corso» della padronanza) */
+  tried: number;
   /** da ripassare: difficilissima, difficile, da imparare */
   hard: number;
   games: number;
@@ -269,8 +271,12 @@ export class GameRepo {
     const decks = this.db.all<{ uuid: string; parent_uuid: string | null }>(
       'SELECT uuid, parent_uuid FROM fc_study_decks',
     );
-    const own = new Map<string, { levels: Record<string, number>; known: number }>();
-    const empty = () => ({ levels: Object.fromEntries(LEVELS.map((l) => [l, 0])), known: 0 });
+    const own = new Map<string, { levels: Record<string, number>; known: number; tried: number }>();
+    const empty = () => ({
+      levels: Object.fromEntries(LEVELS.map((l) => [l, 0])),
+      known: 0,
+      tried: 0,
+    });
     for (const d of decks) own.set(d.uuid, empty());
     const hist = this.histories();
     const tap = this.study.learnt();
@@ -282,6 +288,7 @@ export class GameRepo {
       const level = this.levelOfKey(key, hist);
       o.levels[level] = (o.levels[level] ?? 0) + 1;
       if (isKnown(level, (h?.c ?? 0) + (h?.w ?? 0)) || tap.has(uuid)) o.known += 1;
+      else if (level !== 'nuova') o.tried += 1;
     };
     for (const c of this.cardsFor([])) {
       const ch = kids.get(c.uuid) ?? [];
@@ -310,6 +317,7 @@ export class GameRepo {
       out.set(d.uuid, {
         levels: Object.fromEntries(LEVELS.map((l) => [l, 0])) as Record<Level, number>,
         known: 0,
+        tried: 0,
         total: 0,
         hard: 0,
         games: 0,
@@ -329,6 +337,7 @@ export class GameRepo {
         if (!t) break;
         for (const l of LEVELS) t.levels[l] += o.levels[l] ?? 0;
         t.known += o.known;
+        t.tried += o.tried;
         if (g) {
           for (const id of g.ids) gameSets.get(up)!.add(id);
           if (g.last && (!t.last || g.last > t.last)) t.last = g.last;

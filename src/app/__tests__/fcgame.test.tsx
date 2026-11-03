@@ -301,6 +301,8 @@ describe('statistics screen', () => {
     expect(screen.getByTestId('fcst-accuracy').props.children).toBe('100%');
     expect(screen.getByTestId('fcst-goal').props.children.join('')).toBe('1 / 20');
     expect(screen.getByTestId('fcst-badge-10_giocate')).toBeTruthy();
+    expect(screen.getByTestId('fcst-mastery-pct')).toBeTruthy();
+    expect(screen.getByTestId('fcst-mastery-tried')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fcst-goal-more'));
     expect(study.goal()).toBe(25);
     await fireEvent.press(screen.getByTestId('fcst-period-7'));

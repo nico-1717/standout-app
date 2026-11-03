@@ -471,6 +471,9 @@ describe('deck stats (the numbers under each deck)', () => {
     expect(st.get(kid)!.last).toBe('2026-11-03 10:00:00');
     expect(st.get(parent)!.hard).toBe(st.get(kid)!.hard);
     expect(st.get(kid)!.hard).toBe(1);
+    // «B» provata e non ancora saputa: è «in corso»; «A» è saputa, «C» è nuova
+    expect(st.get(kid)!.tried).toBe(1);
+    expect(st.get(parent)!.tried).toBe(1);
   });
 });
 
