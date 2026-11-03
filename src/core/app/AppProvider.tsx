@@ -33,6 +33,7 @@ import {
 } from '@/features/pomodoro/settings';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { GameRepo } from '@/features/flashcards/game';
+import { StatsRepo } from '@/features/flashcards/stats';
 import { StudyRepo } from '@/features/flashcards/study';
 import { GradesRepo } from '@/features/grades/repo';
 import { GradeSettingsStore } from '@/features/grades/settings';
@@ -90,6 +91,7 @@ export interface Services {
   flashcards: FlashcardsRepo;
   study: StudyRepo;
   games: GameRepo;
+  fcStats: StatsRepo;
   scheduler: SyncScheduler;
 }
 
@@ -356,6 +358,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           flashcards: new FlashcardsRepo(opened.db),
           study,
           games: new GameRepo(opened.db, study),
+          fcStats: new StatsRepo(opened.db),
           scheduler,
         });
       } catch (e) {

@@ -7,12 +7,14 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
 import { GameRepo } from '@/features/flashcards/game';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
+import { StatsRepo } from '@/features/flashcards/stats';
 import { StudyRepo } from '@/features/flashcards/study';
 
 import GameScreen from '../fc-game';
 import HistoryScreen from '../fc-history';
 import ResultScreen from '../fc-result';
 import SetupScreen from '../fc-setup';
+import StatsScreen from '../fc-stats';
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -43,7 +45,7 @@ function setup() {
   const flashcards = new FlashcardsRepo(db);
   const study = new StudyRepo(db, 7);
   const games = new GameRepo(db, study);
-  mockServices = { db, flashcards, study, games };
+  mockServices = { db, flashcards, study, games, fcStats: new StatsRepo(db) };
   return { db, flashcards, study, games };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
@@ -225,5 +227,34 @@ describe('result and history', () => {
     await fireEvent.press(screen.getByTestId(`fch-del-yes-${game}`));
     expect(games.game(game)).toBeNull();
     expect(screen.getByTestId('fch-empty')).toBeTruthy();
+  });
+});
+
+describe('statistics screen', () => {
+  test('shows totals, streak, goal and changes the goal', async () => {
+    const s = started();
+    const { games, game, study } = s;
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())} 10:00:00`;
+    games.ensurePosition(game, 1);
+    const p1 = games.plays(game, 1)[0]!;
+    games.grade(game, 1, p1.card_uuid!, false, 'correct');
+    s.db.run('UPDATE fc_study_plays SET play_date = ?', [stamp]);
+    await render(wrap(<StatsScreen />));
+    expect(screen.getByTestId('fcst-played').props.children).toBe('1');
+    expect(screen.getByTestId('fcst-accuracy').props.children).toBe('100%');
+    expect(screen.getByTestId('fcst-goal').props.children.join('')).toBe('1 / 20');
+    expect(screen.getByTestId('fcst-badge-10_giocate')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcst-goal-more'));
+    expect(study.goal()).toBe(25);
+    await fireEvent.press(screen.getByTestId('fcst-period-7'));
+    expect(screen.getByTestId('fcst-played').props.children).toBe('1');
+  });
+
+  test('empty history shows the message', async () => {
+    setup();
+    await render(wrap(<StatsScreen />));
+    expect(screen.getByTestId('fcst-empty')).toBeTruthy();
   });
 });

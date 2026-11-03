@@ -325,6 +325,11 @@ export default function FlashcardsScreen() {
             />
           </View>
         </View>
+        <TextButton
+          testID="fc-stats"
+          label={t('fc.statistiche')}
+          onPress={() => router.push('/fc-stats')}
+        />
         {resume ? (
           <Pressable
             testID="fc-resume"
