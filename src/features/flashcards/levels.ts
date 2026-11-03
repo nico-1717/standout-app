@@ -110,3 +110,31 @@ export function levelOf(c: number, w: number, recent: string): Level {
 /** «La sai» per i conteggi (carte che sai, padroneggiate): il livello la_sai, e una carta «facile» dalla terza risposta. */
 export const isKnown = (level: string, n: number): boolean =>
   level === 'la_sai' || (level === 'facile' && n >= 3);
+
+/** Il colore di ogni livello (quelli delle etichette della pagina «nuova partita» del sito). */
+export const LEVEL_COLORS: Record<Level, string> = {
+  nuova: '#32ADE6',
+  da_imparare: '#5E5CE6',
+  sembra_facile: '#00C7BE',
+  facile: '#2FD39B',
+  insidiosa: '#FF9500',
+  difficile: '#FF3B30',
+  difficilissima: '#C9003B',
+  in_ripresa: '#AF52DE',
+  quasi: '#34C759',
+  la_sai: '#E0A800',
+};
+
+/** L'ordine in cui si offrono i livelli nella scelta della partita. */
+export const LEVEL_CHOICES: Level[] = [
+  'nuova',
+  'da_imparare',
+  'insidiosa',
+  'difficile',
+  'difficilissima',
+  'in_ripresa',
+  'quasi',
+  'sembra_facile',
+  'facile',
+  'la_sai',
+];

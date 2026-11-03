@@ -425,3 +425,18 @@ describe('resume, conclude, retry, remove', () => {
     expect(s.games.game(r.game)!.parent_uuid).toBeNull();
   });
 });
+
+describe('deck counts for the setup screen', () => {
+  test('counts the cards each deck would play, by status', () => {
+    const s = setup();
+    const { deck, c1 } = deckWithCards(s);
+    const other = s.flashcards.createDeck({ name: 'Other' })!;
+    s.flashcards.addCard(other, 'X', 'Y');
+    expect(s.games.deckCounts('all').byDeck.get(deck)).toBe(3);
+    expect(s.games.deckCounts('all').all).toBe(4);
+    s.study.setLearnt(c1, false, true);
+    expect(s.games.deckCounts('0').byDeck.get(deck)).toBe(2);
+    expect(s.games.deckCounts('1').byDeck.get(deck)).toBe(1);
+    expect(s.games.deckCounts('1').byDeck.get(other) ?? 0).toBe(0);
+  });
+});

@@ -201,6 +201,7 @@ export default function FlashcardsScreen() {
     );
   };
 
+  const resume = services?.games.unfinished() ?? null;
   const withKids = new Set(
     decks.filter((d) => decks.some((c) => c.parent_uuid === d.uuid)).map((d) => d.uuid),
   );
@@ -220,6 +221,41 @@ export default function FlashcardsScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 14 }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              testID="fc-play"
+              label={t('fc.cg_gioca')}
+              onPress={() => router.push('/fc-setup')}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <TextButton
+              testID="fc-history"
+              label={t('fc.js_storico')}
+              onPress={() => router.push('/fc-history')}
+            />
+          </View>
+        </View>
+        {resume ? (
+          <Pressable
+            testID="fc-resume"
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/fc-game',
+                params: { game: resume.game.uuid, position: String(resume.position) },
+              })
+            }
+            style={{ backgroundColor: th.surface2, borderRadius: 12, padding: 14 }}
+          >
+            <Text style={{ color: th.text, fontWeight: '700' }}>{t('fc.res_continua')}</Text>
+            <Text style={{ color: th.text2, fontSize: 13 }}>
+              {resume.closed} / {resume.total}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TextInput
             testID="fc-new"

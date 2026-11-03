@@ -186,6 +186,13 @@ export default function DeckScreen() {
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton
+                testID="fcd-play"
+                label={t('fc.cg_gioca')}
+                onPress={() => router.push({ pathname: '/fc-setup', params: { preselect: id } })}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
                 testID="fcd-add-card"
                 label={t('fc.app_aggiungi_carta')}
                 onPress={() => router.push({ pathname: '/fc-card', params: { deck: id } })}

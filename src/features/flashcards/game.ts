@@ -281,26 +281,49 @@ export class GameRepo {
     return a;
   }
 
+  /**
+   * «Questa carta ha almeno una parte che corrisponde allo stato»: imparata (il padre o una figlia), da imparare (il padre
+   * non imparato e non un titolo, o una figlia non imparata), tutte.
+   */
+  private statusFilter(status: GameStatus, kids: Map<string, string[]>): (c: CardLite) => boolean {
+    if (status === 'all') return () => true;
+    const learnt = this.study.learnt();
+    const isTitle = (c: CardLite): boolean =>
+      isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc);
+    return (c) => {
+      const ch = kids.get(c.uuid) ?? [];
+      if (status === '1') return learnt.has(c.uuid) || ch.some((k) => learnt.has(k));
+      // i titoli non si imparano: la loro parte non conta
+      return (!learnt.has(c.uuid) && !isTitle(c)) || ch.some((k) => !learnt.has(k));
+    };
+  }
+
+  /** Quante carte (padri) ci sono per ogni mazzo secondo lo stato scelto: i numeri accanto ai mazzi. */
+  deckCounts(status: GameStatus): { all: number; byDeck: Map<string, number> } {
+    const passes = this.statusFilter(status, this.childrenByParent());
+    const byDeck = new Map<string, number>();
+    let all = 0;
+    for (const c of this.cardsFor([]).filter(passes)) {
+      all += 1;
+      byDeck.set(c.category_uuid, (byDeck.get(c.category_uuid) ?? 0) + 1);
+    }
+    return { all, byDeck };
+  }
+
   /** Quali carte padre entrano in una partita con queste scelte, nell'ordine di gioco, e quante carte figlie portano. */
   select(input: StartInput): { fathers: string[]; children: number; decks: string[] } {
     const decksKnown = new Set(
       this.db.all<{ uuid: string }>('SELECT uuid FROM fc_study_decks').map((d) => d.uuid),
     );
     const decks = [...new Set(input.decks)].filter((d) => decksKnown.has(d));
-    const learnt = this.study.learnt();
     const kids = this.childrenByParent();
     const status: GameStatus = input.onlyHard ? 'all' : input.status;
     const cards = this.cardsFor(decks);
+    const passes = this.statusFilter(status, kids);
     const isTitle = (c: CardLite): boolean =>
       isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc);
 
-    let chosen = cards.filter((c) => {
-      if (status === 'all') return true;
-      const ch = kids.get(c.uuid) ?? [];
-      if (status === '1') return learnt.has(c.uuid) || ch.some((k) => learnt.has(k));
-      // i titoli non si imparano: la loro parte non conta
-      return (!learnt.has(c.uuid) && !isTitle(c)) || ch.some((k) => !learnt.has(k));
-    });
+    let chosen = cards.filter(passes);
     // le sottocarte di chi è padre vero
     let children = chosen.reduce(
       (n, c) => n + (c.is_father === 1 ? (kids.get(c.uuid)?.length ?? 0) : 0),

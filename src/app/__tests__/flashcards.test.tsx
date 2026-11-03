@@ -5,6 +5,7 @@ import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { stringifyDoc } from '@/features/flashcards/doc';
+import { GameRepo } from '@/features/flashcards/game';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { StudyRepo } from '@/features/flashcards/study';
 
@@ -43,7 +44,7 @@ function setup() {
   migrate(db);
   const flashcards = new FlashcardsRepo(db);
   const study = new StudyRepo(db, 7);
-  mockServices = { db, flashcards, study };
+  mockServices = { db, flashcards, study, games: new GameRepo(db, study) };
   return { db, flashcards, study };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;

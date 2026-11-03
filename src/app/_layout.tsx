@@ -55,6 +55,13 @@ function Shell() {
           <Stack.Screen name="flashcards" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-deck" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-card" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="fc-setup" options={{ presentation: 'modal' }} />
+          <Stack.Screen
+            name="fc-game"
+            options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+          />
+          <Stack.Screen name="fc-result" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="fc-history" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />
