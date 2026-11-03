@@ -1,4 +1,5 @@
 import type { DiarySettings, DiarySettingsApi } from '@/features/diary/settings';
+import type { PlannerSettings, PlannerSettingsApi } from '@/features/planner/settings';
 import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
 import type { PutNoteResult, QuickNoteApi, ServerNote } from '@/features/notes/quickNote';
 import type { Settings, SettingsApi } from '../settings/settings';
@@ -24,7 +25,13 @@ export type TokenSupplier = () => Promise<string>;
  * 426 upgrade_required). Errori: HTTP non 2xx → ApiError col `code` del server.
  */
 export class HttpSyncApi
-  implements SyncApi, SettingsApi, HabitSettingsApi, DiarySettingsApi, QuickNoteApi
+  implements
+    SyncApi,
+    SettingsApi,
+    HabitSettingsApi,
+    DiarySettingsApi,
+    PlannerSettingsApi,
+    QuickNoteApi
 {
   constructor(
     private readonly baseUrl: string,
@@ -106,6 +113,15 @@ export class HttpSyncApi
 
   async patchDiarySettings(patch: Partial<DiarySettings>): Promise<DiarySettings> {
     return (await this.call<{ settings: DiarySettings }>('PATCH', '/diary/settings', patch))
+      .settings;
+  }
+
+  async getPlannerSettings(): Promise<PlannerSettings> {
+    return (await this.call<{ settings: PlannerSettings }>('GET', '/planner/settings')).settings;
+  }
+
+  async patchPlannerSettings(patch: Partial<PlannerSettings>): Promise<PlannerSettings> {
+    return (await this.call<{ settings: PlannerSettings }>('PATCH', '/planner/settings', patch))
       .settings;
   }
 

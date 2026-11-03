@@ -60,7 +60,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
 | P1 | Vista giorno (`pl_giornata.php`) | sync planner | Planner › Giorno | P2 | fatto (giorno, ore, fasce, ora attuale) | |
-| P2 | Vista settimana + «settimana» con righe (`planner_weeks`, liste settimanali) | sync planner | Planner › Settimana | P2 | vista settimana fatta; righe settimanali (`planner_weeks`) da fare | |
+| P2 | Vista settimana + «settimana» con righe (`planner_weeks`, liste settimanali) | sync planner | Planner › Settimana | P2 | fatto: vista settimana, numero della settimana (si calcola come il sito e si cambia a mano, sync `planner_weeks`), pannello settimana (to do, to buy, pastiglie, diario coperto). Da fare: linguetta «to study» (con i progetti), frase e affermazione della settimana. Le vecchie `planner_week_lists` del sito non si usano più nemmeno lì | |
 | P3 | Vista mese | sync planner | Planner › Mese | P2 | fatto (griglia del mese, tocca per aprire il giorno) | |
 | P4 | Eventi: crea, modifica, sposta (`event_move`), copia giorno, spunta, cancella | `events` (pronta) → sync `planner_events` | Scheda evento | P2 | fatto: crea, modifica, spunta, cancella (spostare con trascina: da fare) | |
 | P5 | Ripetizioni (giornaliera, settimanale, mensile, annuale, personalizzata, `rrule`), eccezioni per una sola occorrenza (`original_date`, `is_cancelled`) | logica da portare in TS | (dentro Planner) | P2 | fatto — test d'oro contro PHP, DST sistemato anche sul sito | |
@@ -73,7 +73,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P12 | Routine (gruppi di righe, comprimi/ricompatta, inserisci) | sync `planner_routines`, `_items` | Planner › Routine | P2 | fatto (crea/cambia routine, inserisci a un'ora, apri/chiudi, elimina il blocco) | |
 | P13 | Preferiti | sync | Planner › Preferiti | P2 | da fare | |
 | P14 | Barra intelligente (data, ora, durata dalla frase: `04_barra_e_priorita.js`, `planner_smart.json`) | locale | Barra rapida | P2 | fatto: `planner/smart.ts`, test d'oro su 864 casi contro il vero codice del sito (`scripts/gen-planner-smart.mjs`); i nomi dalla rubrica arrivano con P6 | |
-| P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | da fare | |
+| P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | archivio e sync fatti (`PlannerSettingsStore`, `/planner/settings`); la schermata per cambiarle e l'uso (palette, zoom, ora d'inizio) da fare | |
 | P16 | Meteo (`meteo_api.php`: stato, attiva, anteprima, ricerca luogo) | `weather/*` (nuova) | Planner › Meteo | P4 | solo online | |
 | P17 | Google Calendar (`google_calendar.php`: collega, calendari, mappa, push, ripara, sincronizza, scollega) | `google/*` (nuova, OAuth da browser di sistema) | Impostazioni › Google Calendar | P4 | solo online | |
 | P18 | Pastiglie in scadenza dentro il planner (avvisi viola) | locale | Planner | P2 | da fare | |

@@ -19,6 +19,7 @@ export type SyncTable =
   | 'planner_priorities'
   | 'planner_routines'
   | 'planner_routine_items'
+  | 'planner_weeks'
   | 'planner_events';
 
 export interface TableDef {
@@ -286,6 +287,23 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     createOnly: ['routine_uuid'],
     booleans: [],
     columns: ['uuid', 'routine_uuid', 'name', 'duration_minutes', 'sort_key'],
+  },
+  // la settimana: una riga per (utente, lunedì). Il numero lo calcola il telefono come il sito; se lo scrivi tu, il server lo segna «a mano».
+  planner_weeks: {
+    order: 108,
+    readOnly: ['number_edited', 'created_at', 'updated_at'],
+    createOnly: ['week_start'],
+    booleans: ['number_edited', 'is_completed'],
+    columns: [
+      'uuid',
+      'week_start',
+      'week_number',
+      'number_edited',
+      'is_completed',
+      'learned_note',
+      'created_at',
+      'updated_at',
+    ],
   },
   // gli eventi: la riga com'è sul sito. Una serie = un capostipite con `rrule` (la scrive il server dai campi repeat_*);
   // «solo questa volta» / «questa volta no» = una riga con series_uuid + original_date (+ is_cancelled). Le occorrenze

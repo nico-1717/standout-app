@@ -336,6 +336,22 @@ CREATE INDEX idx_pri_routine ON planner_routine_items (routine_uuid);
 ALTER TABLE planner_events ADD COLUMN routine_uuid TEXT;
 `,
   },
+  {
+    version: 7,
+    sql: `
+CREATE TABLE planner_weeks (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  week_start TEXT NOT NULL,
+  week_number INTEGER NOT NULL DEFAULT 1,
+  number_edited INTEGER NOT NULL DEFAULT 0,
+  is_completed INTEGER NOT NULL DEFAULT 0,
+  learned_note TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE UNIQUE INDEX idx_pweek_start ON planner_weeks (week_start);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

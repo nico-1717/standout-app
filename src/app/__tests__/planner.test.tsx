@@ -30,6 +30,10 @@ jest.mock('@/core/app/AppProvider', () => ({
     version: mockVersion,
     changed: mockChanged,
     uiStyle: mockStyle,
+    plannerSettings: {
+      first_week_start: null,
+      first_week_number: 1,
+    },
   }),
 }));
 

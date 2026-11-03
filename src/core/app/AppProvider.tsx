@@ -19,6 +19,11 @@ import { askPermission, phoneNotifier } from '@/features/reminders/notifier';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '@/features/reminders/plan';
 import { rescheduleAll } from '@/features/reminders/scheduler';
 import { DiaryRepo } from '@/features/diary/repo';
+import {
+  PlannerSettingsStore,
+  DEFAULT_PLANNER_SETTINGS,
+  type PlannerSettings,
+} from '@/features/planner/settings';
 import { PlannerRepo } from '@/features/planner/repo';
 import {
   DEFAULT_DIARY_SETTINGS,
@@ -87,6 +92,8 @@ interface AppContextValue {
   updateHabitSettings: (patch: Partial<HabitSettings>) => void;
   diarySettings: DiarySettings;
   updateDiarySettings: (patch: Partial<DiarySettings>) => void;
+  plannerSettings: PlannerSettings;
+  updatePlannerSettings: (patch: Partial<Omit<PlannerSettings, 'first_week_start'>>) => void;
   /** I promemoria (pastiglie, abitudini): restano su questo telefono. Ritorna false se il telefono nega il permesso. */
   reminders: ReminderSettings;
   updateReminders: (patch: Partial<ReminderSettings>) => Promise<boolean>;
@@ -140,6 +147,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const habitSettingsStore = useRef<HabitSettingsStore | null>(null);
   const [diarySettings, setDiarySettings] = useState<DiarySettings>(DEFAULT_DIARY_SETTINGS);
   const diarySettingsStore = useRef<DiarySettingsStore | null>(null);
+  const [plannerSettings, setPlannerSettings] = useState<PlannerSettings>(DEFAULT_PLANNER_SETTINGS);
+  const plannerSettingsStore = useRef<PlannerSettingsStore | null>(null);
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const remindersStore = useRef<RemindersStore | null>(null);
   /** l'impronta delle notifiche già programmate (null = non si sa: si rifanno) */
@@ -191,6 +200,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const dStore = new DiarySettingsStore(opened.db);
         diarySettingsStore.current = dStore;
         setDiarySettings(dStore.read());
+        const pStore = new PlannerSettingsStore(opened.db);
+        plannerSettingsStore.current = pStore;
+        setPlannerSettings(pStore.read());
         const rStore = new RemindersStore(opened.db);
         remindersStore.current = rStore;
         scheduledSig.current = null;
@@ -218,6 +230,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             try {
               setDiarySettings(await dStore.sync(api));
+            } catch (e) {
+              // come sopra: estetica, e un server più vecchio può non avere la rotta
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
+            try {
+              setPlannerSettings(await pStore.sync(api));
             } catch (e) {
               // come sopra: estetica, e un server più vecchio può non avere la rotta
               if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
@@ -375,6 +395,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updatePlannerSettings = useCallback(
+    (patch: Partial<Omit<PlannerSettings, 'first_week_start'>>) => {
+      const store = plannerSettingsStore.current;
+      if (!store) return;
+      setPlannerSettings(store.update(patch));
+      services?.scheduler.trigger();
+    },
+    [services],
+  );
   const setUiStyle = useCallback(
     (st: UiStyle) => updateSettings({ ui_style: st }),
     [updateSettings],
@@ -405,6 +434,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       habitSettingsStore.current = null;
       setDiarySettings(DEFAULT_DIARY_SETTINGS);
       diarySettingsStore.current = null;
+      plannerSettingsStore.current = null;
       remindersStore.current = null;
       scheduledSig.current = null;
       setReminders(DEFAULT_REMINDERS);
@@ -434,6 +464,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateHabitSettings,
       diarySettings,
       updateDiarySettings,
+      plannerSettings,
+      updatePlannerSettings,
       reminders,
       updateReminders,
       changed,
@@ -455,6 +487,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateHabitSettings,
       diarySettings,
       updateDiarySettings,
+      plannerSettings,
+      updatePlannerSettings,
       reminders,
       updateReminders,
       changed,

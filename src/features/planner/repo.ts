@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { plannerPriorityUuid } from '@/core/sync/uuid5';
+import { plannerPriorityUuid, plannerWeekUuid } from '@/core/sync/uuid5';
 import { uuidv7 } from 'uuidv7';
 
 import type { SqlDb } from '@/core/db/sqldb';
@@ -9,6 +9,15 @@ import type { WireRow, WireValue } from '@/core/sync/types';
 
 import { eventsInRange, type EventRow, type EventView } from './events';
 import { inputOf, minutesOf, normalise, timeOf, type Context, type EventInput } from './model';
+
+export interface WeekRow {
+  uuid: string;
+  week_start: string;
+  week_number: number;
+  number_edited: number;
+  is_completed: number;
+  learned_note: string | null;
+}
 
 export interface Calendar {
   uuid: string;
@@ -656,6 +665,82 @@ export class PlannerRepo {
       );
     });
     return true;
+  }
+
+  /* ---------------- numero della settimana ---------------- */
+
+  /** La riga della settimana (se qualcuno ha scritto qualcosa), come `planner_weeks` sul sito. */
+  weekRow(monday: string): WeekRow | undefined {
+    return this.db.all<WeekRow>(
+      'SELECT uuid, week_start, week_number, number_edited, is_completed, learned_note FROM planner_weeks WHERE week_start = ?',
+      [monday],
+    )[0];
+  }
+
+  /**
+   * Il numero della settimana, come `pl_week_number` del sito: se l'hai scritto tu vale quello; altrimenti si conta
+   * dall'ultima settimana che hai numerato a mano, e se non ce n'è dalla «settimana 1» delle impostazioni.
+   */
+  weekNumber(
+    monday: string,
+    first: { first_week_start: string | null; first_week_number: number },
+  ): number {
+    const own = this.weekRow(monday);
+    if (own && own.number_edited) return own.week_number;
+    const weeks = (a: string, b: string) =>
+      Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 604800000);
+    const last = this.db.all<WeekRow>(
+      'SELECT uuid, week_start, week_number, number_edited, is_completed, learned_note FROM planner_weeks WHERE number_edited = 1 AND week_start <= ? ORDER BY week_start DESC LIMIT 1',
+      [monday],
+    )[0];
+    if (last) return Math.max(1, last.week_number + weeks(monday, last.week_start));
+    const base = first.first_week_start || monday;
+    return Math.max(1, (first.first_week_number || 1) + weeks(monday, base));
+  }
+
+  /** Scrive il numero a mano (1..9999): le settimane dopo si rinumerano da qui. */
+  setWeekNumber(monday: string, number: number): void {
+    const n = Math.max(1, Math.min(9999, Math.round(number) || 1));
+    const cur = this.weekRow(monday);
+    if (cur && cur.number_edited && cur.week_number === n) return;
+    this.db.transaction(() => {
+      const now = this.clock();
+      if (cur) {
+        patchRow(this.db, 'planner_weeks', cur.uuid, {
+          week_number: n,
+          number_edited: 1,
+          updated_at: now,
+        });
+        enqueue(
+          this.db,
+          { table: 'planner_weeks', uuid: cur.uuid, op: 'upsert', patch: { week_number: n } },
+          now,
+        );
+      } else {
+        const uuid = plannerWeekUuid(this.userId, monday);
+        upsertRow(this.db, 'planner_weeks', {
+          uuid,
+          week_start: monday,
+          week_number: n,
+          number_edited: 1,
+          is_completed: 0,
+          learned_note: '',
+          created_at: now,
+          updated_at: now,
+        });
+        enqueue(
+          this.db,
+          {
+            table: 'planner_weeks',
+            uuid,
+            op: 'upsert',
+            isCreate: true,
+            patch: { week_start: monday, week_number: n },
+          },
+          now,
+        );
+      }
+    });
   }
 
   /* ---------------- routine ---------------- */

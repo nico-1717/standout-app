@@ -40,7 +40,7 @@ export default function PlannerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { services, version, changed, uiStyle } = useApp();
+  const { services, version, changed, uiStyle, plannerSettings } = useApp();
   const pt = plannerTheme(uiStyle, th);
   const today = localToday();
   const [date, setDate] = useState(today);
@@ -57,36 +57,39 @@ export default function PlannerScreen() {
     return Array.from({ length: 7 }, (_, i) => addDaysIso(m, i));
   }, [date]);
 
-  const { events, busy, calendars, categories, span, priorities, routines } = useMemo(() => {
-    void version;
-    if (!repo) {
+  const { events, busy, calendars, categories, span, priorities, routines, weekNo } =
+    useMemo(() => {
+      void version;
+      if (!repo) {
+        return {
+          events: [] as EventView[],
+          busy: new Set<string>(),
+          calendars: [],
+          categories: [],
+          span: [] as EventView[],
+          priorities: [] as Priority[],
+          routines: [] as Routine[],
+          weekNo: 1,
+        };
+      }
+      const grid = monthGrid(date);
+      const from = mode === 'month' ? grid[0]![0]! : week[0]!;
+      const to = mode === 'month' ? grid[grid.length - 1]![6]! : week[6]!;
+      const inSpan = repo.visibleEventsInRange(from, to);
+      const days = new Set<string>();
+      for (const e of inSpan)
+        for (let d = e.date; d <= e.endDate && d <= to; d = addDaysIso(d, 1)) days.add(d);
       return {
-        events: [] as EventView[],
-        busy: new Set<string>(),
-        calendars: [],
-        categories: [],
-        span: [] as EventView[],
-        priorities: [] as Priority[],
-        routines: [] as Routine[],
+        events: mode === 'day' ? repo.visibleEventsInRange(date, date) : [],
+        busy: days,
+        calendars: repo.calendars(),
+        categories: repo.categories(),
+        span: inSpan,
+        priorities: repo.priorities(date),
+        routines: repo.routines(),
+        weekNo: repo.weekNumber(week[0]!, plannerSettings),
       };
-    }
-    const grid = monthGrid(date);
-    const from = mode === 'month' ? grid[0]![0]! : week[0]!;
-    const to = mode === 'month' ? grid[grid.length - 1]![6]! : week[6]!;
-    const inSpan = repo.visibleEventsInRange(from, to);
-    const days = new Set<string>();
-    for (const e of inSpan)
-      for (let d = e.date; d <= e.endDate && d <= to; d = addDaysIso(d, 1)) days.add(d);
-    return {
-      events: mode === 'day' ? repo.visibleEventsInRange(date, date) : [],
-      busy: days,
-      calendars: repo.calendars(),
-      categories: repo.categories(),
-      span: inSpan,
-      priorities: repo.priorities(date),
-      routines: repo.routines(),
-    };
-  }, [repo, version, date, week, mode]);
+    }, [repo, version, date, week, mode, plannerSettings]);
 
   useEffect(() => {
     // all'apertura: si parte un'ora prima di adesso (o dalle 6 se non è oggi)
@@ -194,6 +197,23 @@ export default function PlannerScreen() {
             </Text>
           </View>
           {arrow(t('planner.giorno_successivo'), 1, 'day-next')}
+          <Pressable
+            testID="planner-week"
+            accessibilityRole="button"
+            accessibilityLabel={t('planner.la_settimana')}
+            onPress={() => router.push({ pathname: '/planner-week', params: { date } })}
+            style={{ minWidth: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Text style={{ color: pt.ink3, fontSize: 9, letterSpacing: 1, fontFamily: pt.sans }}>
+              {t('planner.settimana_breve').toUpperCase()}
+            </Text>
+            <Text
+              testID="week-number"
+              style={{ color: pt.accentInk, fontSize: 17, fontFamily: pt.serif }}
+            >
+              {weekNo}
+            </Text>
+          </Pressable>
           <Pressable
             testID="planner-manage"
             accessibilityRole="button"

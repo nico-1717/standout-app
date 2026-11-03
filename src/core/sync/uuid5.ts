@@ -120,3 +120,8 @@ export function plannerPriorityUuid(
 ): string {
   return uuid5(`planner_priorities|${userId}|${day}|${position}`);
 }
+
+/** Una settimana del planner: una riga per (utente, lunedì), come sul server (sync_uuid_settimana). */
+export function plannerWeekUuid(userId: number | string, monday: string): string {
+  return uuid5(`planner_weeks|${userId}|${monday}`);
+}
