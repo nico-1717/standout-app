@@ -15,3 +15,7 @@ export const cardImageUrl = (name: string | null | undefined): string | null =>
 /** L'indirizzo dell'audio di una carta (cartella `flashcard_audio`). */
 export const cardAudioUrl = (name: string | null | undefined): string | null =>
   url('flashcard_audio', name);
+
+/** L'immagine di un esempio (cartella `example_images`). */
+export const exampleImageUrl = (name: string | null | undefined): string | null =>
+  url('example_images', name);

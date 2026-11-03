@@ -236,7 +236,7 @@ export default function CardScreen() {
 
         {item.media ? (
           <Text testID="fcc-media" style={{ color: th.text2, fontSize: 13 }}>
-            🖼 🔊 {t('fc.app_media_sul_sito')}
+            🔊 {t('fc.app_audio_sul_sito')}
           </Text>
         ) : null}
 
@@ -351,9 +351,15 @@ export default function CardScreen() {
                     ) : (
                       <>
                         <Text style={{ color: th.text, fontSize: 16 }}>{ex.example_text}</Text>
-                        {ex.example_image || ex.example_audio ? (
+                        <CardImage
+                          testID={`fcc-ex-image-${ex.uuid}`}
+                          folder="example"
+                          name={ex.example_image}
+                          height={150}
+                        />
+                        {ex.example_audio ? (
                           <Text style={{ color: th.text2, fontSize: 13 }}>
-                            🖼 🔊 {t('fc.app_media_sul_sito')}
+                            🔊 {t('fc.app_audio_sul_sito')}
                           </Text>
                         ) : null}
                         <View style={{ flexDirection: 'row', gap: 18 }}>
