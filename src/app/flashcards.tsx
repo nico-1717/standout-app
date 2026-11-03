@@ -7,8 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
+import { whenShort } from '@/features/flashcards/format';
+import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
 import {
   daysToExam,
+  deckBranch,
   deckIcon,
   examUrgency,
   flattenDecks,
@@ -37,10 +40,14 @@ export default function FlashcardsScreen() {
   const data = useMemo(() => {
     void version;
     if (!services) return null;
-    return { decks: services.flashcards.decks(), counts: services.flashcards.cardCounts() };
+    return {
+      decks: services.flashcards.decks(),
+      counts: services.flashcards.cardCounts(),
+      stats: services.games.deckStats(),
+    };
   }, [services, version]);
   if (!services || !data) return null;
-  const { decks, counts } = data;
+  const { decks, counts, stats } = data;
 
   const today = localToday();
   const scopes = scopeCounts(decks);
@@ -60,6 +67,65 @@ export default function FlashcardsScreen() {
     return true;
   };
   const open = (id: string) => router.push({ pathname: '/fc-deck', params: { id } });
+
+  const statsLine = (id: string) => {
+    const st = stats.get(id);
+    if (!st) return null;
+    const when = whenShort(st.last, today, t);
+    const order: Level[] = [...LEVELS.filter((l) => l !== 'nuova')].reverse();
+    order.push('nuova');
+    const known = st.total ? Math.round((st.known / st.total) * 100) : 0;
+    return (
+      <View testID={`fc-stats-${id}`} style={{ gap: 4, marginTop: 3 }}>
+        <Text style={{ color: th.text2, fontSize: 12 }}>
+          {st.games > 0
+            ? [t(st.games === 1 ? 'fc.dk_partite_1' : 'fc.dk_partite', { n: st.games }), when]
+                .filter(Boolean)
+                .join(' · ')
+            : st.total > 0 && st.total === st.levels.nuova
+              ? t('fc.dk_mai_giocato')
+              : ''}
+        </Text>
+        {st.total > st.levels.nuova ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                height: 6,
+                borderRadius: 3,
+                overflow: 'hidden',
+                backgroundColor: th.surface2,
+              }}
+            >
+              {order.map((l) =>
+                st.levels[l] ? (
+                  <View key={l} style={{ flex: st.levels[l], backgroundColor: LEVEL_COLORS[l] }} />
+                ) : null,
+              )}
+            </View>
+            {known > 0 ? (
+              <Text testID={`fc-known-${id}`} style={{ color: th.text2, fontSize: 12 }}>
+                {known}%
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  const playHard = (id: string) => {
+    const r = services.games.start({
+      decks: deckBranch(decks, id),
+      status: 'all',
+      order: 'random',
+      onlyHard: true,
+    });
+    if (r.kind === 'started') {
+      router.push({ pathname: '/fc-game', params: { game: r.game, position: '1' } });
+    }
+  };
 
   const examChip = (iso: string | null) => {
     const d = daysToExam(iso, today);
@@ -151,7 +217,29 @@ export default function FlashcardsScreen() {
                 </Text>
               ) : null}
               {examChip(d.exam_date)}
+              {statsLine(id)}
             </View>
+            {(stats.get(id)?.hard ?? 0) >= 2 ? (
+              <Pressable
+                testID={`fc-hard-${id}`}
+                accessibilityRole="button"
+                accessibilityLabel={t('fc.dk_da_ripassare', { n: stats.get(id)!.hard })}
+                onPress={() => playHard(id)}
+                hitSlop={6}
+                style={{
+                  minWidth: 24,
+                  paddingHorizontal: 7,
+                  paddingVertical: 3,
+                  borderRadius: 12,
+                  backgroundColor: th.red,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                  {stats.get(id)!.hard}
+                </Text>
+              </Pressable>
+            ) : null}
             <Text style={{ color: th.text2, fontSize: 13 }}>
               {n === 1 ? t('fc.app_n_carte_1') : t('fc.app_mostra_tutte_carte', { n })}
             </Text>

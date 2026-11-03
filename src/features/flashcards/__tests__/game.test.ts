@@ -440,3 +440,36 @@ describe('deck counts for the setup screen', () => {
     expect(s.games.deckCounts('1').byDeck.get(other) ?? 0).toBe(0);
   });
 });
+
+describe('deck stats (the numbers under each deck)', () => {
+  test('levels, known, hard, games and last date roll up through the branch', () => {
+    const s = setup();
+    const parent = s.flashcards.createDeck({ name: 'Maths' })!;
+    const kid = s.flashcards.createDeck({ name: 'Algebra', parent })!;
+    const a = s.flashcards.addCard(kid, 'A', 'a')!;
+    const b = s.flashcards.addCard(kid, 'B', 'b')!;
+    s.flashcards.addCard(kid, 'C', 'c');
+    s.flashcards.addCard(parent, 'D', 'd');
+    // «A» imparata col tastino; «B» sbagliata due volte
+    s.study.setLearnt(a, false, true);
+    const g = start(s, [kid]);
+    s.games.ensurePosition(g, 1);
+    const seq = s.db.all<{ position: number; card_uuid: string }>(
+      'SELECT position, card_uuid FROM fc_study_sequence WHERE game_uuid = ?',
+      [g],
+    );
+    const posB = seq.find((r) => r.card_uuid === b)!.position;
+    s.games.ensurePosition(g, posB);
+    s.games.grade(g, posB, b, false, 'wrong');
+    const st = s.games.deckStats();
+    expect(st.get(kid)!.total).toBe(3);
+    expect(st.get(parent)!.total).toBe(4); // il ramo comprende le carte dei sottomazzi
+    expect(st.get(kid)!.known).toBe(1);
+    expect(st.get(kid)!.levels.nuova).toBe(2);
+    expect(st.get(kid)!.games).toBe(1);
+    expect(st.get(parent)!.games).toBe(1); // la partita sul figlio conta anche per chi lo contiene
+    expect(st.get(kid)!.last).toBe('2026-11-03 10:00:00');
+    expect(st.get(parent)!.hard).toBe(st.get(kid)!.hard);
+    expect(st.get(kid)!.hard).toBe(1);
+  });
+});

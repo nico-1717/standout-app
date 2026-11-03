@@ -50,6 +50,17 @@ function setup() {
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
 describe('categories list', () => {
+  test('a deck row shows «never played» until a game exists; Play opens the setup', async () => {
+    const { flashcards } = setup();
+    const d = flashcards.createDeck({ name: 'Physics' })!;
+    flashcards.addCard(d, 'Q', 'A');
+    await render(wrap(<FlashcardsScreen />));
+    expect(screen.getByTestId(`fc-stats-${d}`)).toBeTruthy();
+    expect(screen.getByText('Never played')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fc-play'));
+    expect(mockPush).toHaveBeenCalledWith('/fc-setup');
+  });
+
   test('empty message, then adds a subject; a sub-category opens its branch', async () => {
     const { flashcards } = setup();
     const view = await render(wrap(<FlashcardsScreen />));

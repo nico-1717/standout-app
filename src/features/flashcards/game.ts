@@ -5,7 +5,15 @@ import { enqueue } from '@/core/sync/outbox';
 import { deleteRow, patchRow, upsertRow } from '@/core/sync/rows';
 import type { WireValue } from '@/core/sync/types';
 
-import { answerLetter, HISTORY_LENGTH, levelOf, needsReview, type Level } from './levels';
+import {
+  answerLetter,
+  HISTORY_LENGTH,
+  isKnown,
+  LEVELS,
+  levelOf,
+  needsReview,
+  type Level,
+} from './levels';
 import { stamp, type StudyRepo } from './study';
 
 /** Oltre questa pausa non si sta più giocando: il tempo non si conta (come sul sito: 5 minuti). */
@@ -55,6 +63,18 @@ export interface StartInput {
 }
 
 export type StartOutcome = { kind: 'started'; game: string } | { kind: 'empty' };
+
+/** I numeri di un mazzo (con il suo ramo). */
+export interface DeckStat {
+  levels: Record<Level, number>;
+  /** carte «che sai» */
+  known: number;
+  total: number;
+  /** da ripassare: difficilissima, difficile, da imparare */
+  hard: number;
+  games: number;
+  last: string | null;
+}
 
 export interface CardHistory {
   c: number;
@@ -238,6 +258,102 @@ export class GameRepo {
   levelOfKey(key: string, hist: Map<string, CardHistory> = this.histories()): Level {
     const h = hist.get(key) ?? { c: 0, w: 0, u: '' };
     return levelOf(h.c, h.w, h.u);
+  }
+
+  /**
+   * I numeri di ogni mazzo, con tutto quello che ha sotto (come `fcm_numeri` del sito): le carte per livello (i titoli non
+   * contano), quante «le sai» (tastino o livello), le partite giocate sul mazzo o su uno sopra, l'ultima, e le carte da
+   * ripassare (difficilissima, difficile, da imparare).
+   */
+  deckStats(): Map<string, DeckStat> {
+    const decks = this.db.all<{ uuid: string; parent_uuid: string | null }>(
+      'SELECT uuid, parent_uuid FROM fc_study_decks',
+    );
+    const own = new Map<string, { levels: Record<string, number>; known: number }>();
+    const empty = () => ({ levels: Object.fromEntries(LEVELS.map((l) => [l, 0])), known: 0 });
+    for (const d of decks) own.set(d.uuid, empty());
+    const hist = this.histories();
+    const tap = this.study.learnt();
+    const kids = this.childrenByParent();
+    const count = (deck: string, key: string, uuid: string): void => {
+      const o = own.get(deck);
+      if (!o) return;
+      const h = hist.get(key);
+      const level = this.levelOfKey(key, hist);
+      o.levels[level] = (o.levels[level] ?? 0) + 1;
+      if (isKnown(level, (h?.c ?? 0) + (h?.w ?? 0)) || tap.has(uuid)) o.known += 1;
+    };
+    for (const c of this.cardsFor([])) {
+      const ch = kids.get(c.uuid) ?? [];
+      if (!(isTitleCard(c, ch.length) && !isBlankField(c.question_desc))) {
+        count(c.category_uuid, `p${c.uuid}`, c.uuid);
+      }
+      for (const k of ch) count(c.category_uuid, `c${k}`, k);
+    }
+
+    // le partite: radici soltanto (un ripasso fa parte della sua partita)
+    const games = new Map<string, { ids: Set<string>; last: string | null }>();
+    for (const r of this.db.all<{ deck: string; id: string; date: string | null }>(
+      `SELECT gd.deck_uuid AS deck, g.uuid AS id, g.game_date AS date
+         FROM fc_study_game_decks gd JOIN fc_games g ON g.uuid = gd.game_uuid
+        WHERE g.parent_uuid IS NULL`,
+    )) {
+      const e = games.get(r.deck) ?? { ids: new Set<string>(), last: null };
+      e.ids.add(r.id);
+      if (r.date && (!e.last || r.date > e.last)) e.last = r.date;
+      games.set(r.deck, e);
+    }
+
+    const parentOf = new Map(decks.map((d) => [d.uuid, d.parent_uuid]));
+    const out = new Map<string, DeckStat>();
+    for (const d of decks) {
+      out.set(d.uuid, {
+        levels: Object.fromEntries(LEVELS.map((l) => [l, 0])) as Record<Level, number>,
+        known: 0,
+        total: 0,
+        hard: 0,
+        games: 0,
+        last: null,
+      });
+    }
+    const gameSets = new Map<string, Set<string>>();
+    for (const d of decks) gameSets.set(d.uuid, new Set());
+    // ogni mazzo somma il proprio ramo: si sale dagli antenati
+    for (const d of decks) {
+      const o = own.get(d.uuid)!;
+      const g = games.get(d.uuid);
+      let up: string | null = d.uuid;
+      let guard = 0;
+      while (up && guard++ < 40) {
+        const t = out.get(up);
+        if (!t) break;
+        for (const l of LEVELS) t.levels[l] += o.levels[l] ?? 0;
+        t.known += o.known;
+        if (g) {
+          for (const id of g.ids) gameSets.get(up)!.add(id);
+          if (g.last && (!t.last || g.last > t.last)) t.last = g.last;
+        }
+        up = parentOf.get(up) ?? null;
+      }
+      // …e le partite di un mazzo che lo contiene contano anche per lui
+      up = parentOf.get(d.uuid) ?? null;
+      guard = 0;
+      const t = out.get(d.uuid)!;
+      while (up && guard++ < 40) {
+        const above = games.get(up);
+        if (above) {
+          for (const id of above.ids) gameSets.get(d.uuid)!.add(id);
+          if (above.last && (!t.last || above.last > t.last)) t.last = above.last;
+        }
+        up = parentOf.get(up) ?? null;
+      }
+    }
+    for (const [id, t] of out) {
+      t.total = LEVELS.reduce((n, l) => n + t.levels[l], 0);
+      t.hard = LEVELS.filter(needsReview).reduce((n, l) => n + t.levels[l], 0);
+      t.games = gameSets.get(id)!.size;
+    }
+    return out;
   }
 
   /* ---------------- avvio ---------------- */

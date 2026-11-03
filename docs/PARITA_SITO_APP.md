@@ -182,16 +182,16 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | F10 | Esempi (`fc_examples_*`, `fc_vocab_examples.js`, parte nascosta, «Aggiungi esempio») e esempi con lacuna (`fc_vocab_gap`) | sync `fc_*_examples` | Esempi | P3 | da fare — **test d'oro** per la scelta della lacuna | |
 | F11 | Sotto-carte (padre/figlia, titoli di gruppo `fcv_titoli_studio`) | sync `fc_*_subcards` | Carta | P3 | fatto — carte figlie: aggiungi, apri, modifica, elimina; il padre diventa «padre» da solo. Mancano i titoli di gruppo | |
 | F12 | Importazione intelligente (`fc_smart_import.js`) e abbinamento (`fc_ai_match.js`) | locale + IA | Inserisci › Importa | P3 | da fare | |
-| F13 | Preferiti | sync `fc_*_favorites` | Carta | P3 | da fare | |
-| F14 | Imparate (`fc_learnt.php`: padre/figlio) | sync `fc_*_learnt` | Carta | P3 | da fare | |
+| F13 | Preferiti | sync `fc_*_favorites` | Carta | P3 | fatto — interruttore sulla carta e nel gioco | |
+| F14 | Imparate (`fc_learnt.php`: padre/figlio) | sync `fc_*_learnt` | Carta | P3 | fatto — interruttore «imparata» sulla carta e il tasto «Imparato» nel gioco | |
 | F15 | Elenco/visualizza carte con filtri (imparate/da imparare), livelli | locale | Mazzo › Carte | P3 | in corso — elenco delle carte del mazzo fatto; filtri (imparate/da imparare) e livelli da fare con F14/F16 | |
 | F16 | Livelli delle carte (nuova, sembra facile, facile, difficile…: `fcv_livello_prefisso`, **gemello** `livello()` in `fc_game_juice.js`) | logica in TS | — | P3 | da fare — **test d'oro** | |
-| F17 | Impostazione del gioco (`fc_game_setup.php`: livelli, solo difficili, ordine casuale/in ordine) | sync `fc_settings` | Gioco › Imposta | P3 | da fare | |
-| F18 | Gioco (`fc_game.php`): studio e vocabolario, risposta velata, percorso a dischi con colori della categoria, checkpoint (`fc_game_juice.js`), round «boss», cronometro (`fc_game_durations`), pausa massima | sync `fc_games`, `fc_*_plays`, `fc_*_sequence` | Gioco | P3 | da fare — **serve il tuo OK sull'aspetto** (animazioni) | |
-| F19 | Riprendi una partita lasciata a metà (`fc_ripresa.php`) e «carte aggiunte dopo» (`fc_nuove_carte.php`, `fc_game_nuove.php`) | locale | Gioco | P3 | da fare — **test d'oro** | |
-| F20 | Riprova gli errori (`fc_game_retry.php`: partita figlia) | sync | Risultato › Riprova | P3 | da fare | |
-| F21 | Risultato della partita (`fc_result.php`) | locale | Risultato | P3 | da fare | |
-| F22 | Cronologia (`fc_history.php`) | locale | Cronologia | P3 | da fare | |
+| F17 | Impostazione del gioco (`fc_game_setup.php`: livelli, solo difficili, ordine casuale/in ordine) | sync `fc_settings` | Gioco › Imposta | P3 | fatto — ordine, stato delle carte, livelli, più categorie; «solo le difficili» e le impostazioni salvate da fare | |
+| F18 | Gioco (`fc_game.php`): studio e vocabolario, risposta velata, percorso a dischi con colori della categoria, checkpoint (`fc_game_juice.js`), round «boss», cronometro (`fc_game_durations`), pausa massima | sync `fc_games`, `fc_*_plays`, `fc_*_sequence` | Gioco | P3 | in corso — versione semplice: un concetto alla volta, risposta, voto, imparato, preferito, cambia verdetto, concludi con conferma; riprendi dalla Home/Flashcard. Animazioni, percorso a dischi, checkpoint, boss: da fare con il tuo OK | |
+| F19 | Riprendi una partita lasciata a metà (`fc_ripresa.php`) e «carte aggiunte dopo» (`fc_nuove_carte.php`, `fc_game_nuove.php`) | locale | Gioco | P3 | in corso — «Continua» nella schermata Flashcard; «carte aggiunte dopo» non sul telefono | |
+| F20 | Riprova gli errori (`fc_game_retry.php`: partita figlia) | sync | Risultato › Riprova | P3 | fatto — «Rigioca errori» dal risultato | |
+| F21 | Risultato della partita (`fc_result.php`) | locale | Risultato | P3 | in corso — punteggio, giuste/sbagliate, durata, elenco con verdetto cambiabile, rigioca; confronto con l'ultima volta, strada verso il 100%, pagine da fare | |
+| F22 | Cronologia (`fc_history.php`) | locale | Cronologia | P3 | in corso — elenco per periodo, riprendi, apri, elimina; filtri, ordine, vista per materie da fare | |
 | F23 | Statistiche (`fc_stats.php`) calcolate dal registro delle risposte | locale | Statistiche | P3 | da fare — **test d'oro** | |
 | F24 | Record e obiettivi (`fc_*_records`, `fc_goals`) | sync | Statistiche | P3 | da fare | |
 | F25 | Selettore di mazzo (`fc_deck_selector.php`) | locale | selettore | P3 | da fare | |
