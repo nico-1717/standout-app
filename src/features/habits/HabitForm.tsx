@@ -107,6 +107,7 @@ function HabitFormBody(p: HabitFormProps) {
           <View style={styles.iconGrid}>
             {g.icons.map((ic) => (
               <Pressable
+                accessibilityRole="button"
                 key={ic}
                 testID={`icon-${ic}`}
                 onPress={() => {
@@ -147,6 +148,7 @@ function HabitFormBody(p: HabitFormProps) {
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {shown.map((x) => (
           <Pressable
+            accessibilityRole="button"
             key={x.key}
             testID={`preset-${x.key}`}
             onPress={() => {
@@ -547,6 +549,7 @@ function HabitFormBody(p: HabitFormProps) {
     <>
       <View style={[styles.backdrop, wide && { justifyContent: 'center', alignItems: 'center' }]}>
         <Pressable
+          accessibilityRole="button"
           style={StyleSheet.absoluteFill}
           onPress={p.onClose}
           testID="habit-form-backdrop"

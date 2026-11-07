@@ -152,7 +152,7 @@ export function TodoRow(p: {
         )}
         <View style={styles.main}>
           {p.selecting ? (
-            <Pressable onPress={() => actions.pick(task.uuid)}>
+            <Pressable accessibilityRole="button" onPress={() => actions.pick(task.uuid)}>
               <Text
                 style={[
                   styles.title,

@@ -369,6 +369,7 @@ export function DayPage(p: DayPageProps) {
         {p.weekdays[parts.wd]}
       </Text>
       <Pressable
+        accessibilityRole="button"
         testID="diary-month-btn"
         onPress={p.onOpenMonth}
         style={std ? [styles.monthStd, { backgroundColor: d.card }] : { marginTop: 7, padding: 3 }}

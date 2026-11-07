@@ -143,6 +143,7 @@ function HabitRowImpl(p: HabitRowProps) {
   const shadow = cardShadow(th.scheme === 'dark');
   return (
     <Pressable
+      accessibilityRole="button"
       testID={`habit-row-${h.uuid}`}
       onPress={p.onOpen}
       onLongPress={p.onLongPress}

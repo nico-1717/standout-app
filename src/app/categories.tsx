@@ -71,6 +71,7 @@ export default function Categories() {
                 style={{ flex: 1, color: th.text, fontSize: 16, paddingVertical: 4 }}
               />
               <Pressable
+                accessibilityRole="button"
                 hitSlop={8}
                 onPress={() =>
                   Alert.alert(t('comune.elimina'), c.name, [
@@ -92,6 +93,7 @@ export default function Categories() {
             <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
               {SWATCHES.map((s) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={s}
                   onPress={() => {
                     services?.categories.update(c.uuid, { color: s });

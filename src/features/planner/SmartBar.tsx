@@ -41,6 +41,7 @@ export function SmartBar(p: { pt: PlannerTheme; onSubmit: (text: string) => bool
         style={{ flex: 1, paddingVertical: 9, color: pt.ink, fontSize: 15, fontFamily: pt.sans }}
       />
       <Pressable
+        hitSlop={10}
         testID="smart-go"
         accessibilityRole="button"
         accessibilityLabel={t('planner.crea')}

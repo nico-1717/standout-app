@@ -34,7 +34,12 @@ export function WidgetBox({
       <View style={styles.boxHead}>
         <Text style={[styles.boxTitle, { color: td.ink2 }]}>{title}</Text>
         {action ? (
-          <Pressable testID={`home-open-${id}`} onPress={onAction} hitSlop={8}>
+          <Pressable
+            accessibilityRole="button"
+            testID={`home-open-${id}`}
+            onPress={onAction}
+            hitSlop={8}
+          >
             <Text style={{ color: td.accent, fontSize: 13, fontWeight: '600' }}>{action}</Text>
           </Pressable>
         ) : null}
@@ -63,6 +68,7 @@ export function Shortcuts({
     <View style={styles.wrap}>
       {items.map((s) => (
         <Pressable
+          accessibilityRole="button"
           key={s.href}
           testID={`home-go-${s.route.replace(/[^a-z]/gi, '')}`}
           onPress={() => onGo(s)}
@@ -139,6 +145,7 @@ export function TodayWidget({
       {shown.length ? (
         shown.map((e) => (
           <Pressable
+            accessibilityRole="button"
             key={e.uid}
             testID={`home-event-${e.uid}`}
             onPress={() => onOpenEvent(e.masterUuid, e.occDate)}
@@ -216,6 +223,7 @@ export function TodayWidget({
           </Text>
           <View style={styles.wrap}>
             <Pressable
+              accessibilityRole="button"
               testID={`home-pill-take-${d.uuid}`}
               onPress={() => onPill(d, 'taken')}
               style={[styles.btn, { backgroundColor: td.accent }]}
@@ -223,6 +231,7 @@ export function TodayWidget({
               <Text style={{ color: '#fff', fontWeight: '600' }}>{t('home.presa')}</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               testID={`home-pill-skip-${d.uuid}`}
               onPress={() => onPill(d, 'skipped')}
               style={[styles.btn, { borderColor: td.hair, borderWidth: 1 }]}
@@ -233,7 +242,11 @@ export function TodayWidget({
         </View>
       ))}
       {data.pillsLate.length > 1 && !showAllPills ? (
-        <Pressable testID="home-pill-more" onPress={() => setShowAllPills(true)}>
+        <Pressable
+          accessibilityRole="button"
+          testID="home-pill-more"
+          onPress={() => setShowAllPills(true)}
+        >
           <Text style={{ color: td.accent }}>
             {t('home.altre_n', { n: data.pillsLate.length - 1 })}
           </Text>
@@ -244,6 +257,7 @@ export function TodayWidget({
       {data.todos.length ? (
         data.todos.slice(0, 5).map((x) => (
           <Pressable
+            accessibilityRole="button"
             key={x.uuid}
             testID={`home-todo-${x.uuid}`}
             onPress={() => onToggleTodo(x)}
@@ -269,6 +283,7 @@ export function TodayWidget({
           <Text style={[styles.sub, { color: td.ink3 }]}>{t('home.tab_buy')}</Text>
           {data.buy.map((x) => (
             <Pressable
+              accessibilityRole="button"
               key={x.uuid}
               testID={`home-buy-${x.uuid}`}
               onPress={() => onToggleTodo(x)}
@@ -301,6 +316,7 @@ export function ProjectsWidget({
     <View style={{ gap: 6 }}>
       {rows.map(({ project: p, seconds }) => (
         <Pressable
+          accessibilityRole="button"
           key={p.uuid}
           testID={`home-project-${p.uuid}`}
           onPress={() => onOpen(p.uuid)}
@@ -342,13 +358,18 @@ export function GradesWidget({
   const { t } = useTranslation();
   if (empty)
     return (
-      <Pressable testID="home-grades-empty" onPress={onOpen}>
+      <Pressable accessibilityRole="button" testID="home-grades-empty" onPress={onOpen}>
         <Text style={{ color: td.ink3 }}>{t('home.voti_vuoti')}</Text>
         <Text style={{ color: td.accent, fontWeight: '600' }}>{t('home.voti_aggiungi')}</Text>
       </Pressable>
     );
   return (
-    <Pressable testID="home-grades" onPress={onOpen} style={{ flexDirection: 'row', gap: 20 }}>
+    <Pressable
+      accessibilityRole="button"
+      testID="home-grades"
+      onPress={onOpen}
+      style={{ flexDirection: 'row', gap: 20 }}
+    >
       <View>
         <Text style={{ color: td.ink3, fontSize: 12 }}>{t('voti.media')}</Text>
         <Text testID="home-grades-avg" style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>
@@ -375,7 +396,12 @@ export function TriviaWidget({ td, item }: { td: TodoTheme; item: Trivia }) {
   const [verdict, setVerdict] = useState<'' | 'ok' | 'miss'>('');
   const quote = isQuote(item);
   return (
-    <Pressable testID="home-trivia" onPress={() => setOpen(true)} style={{ gap: 8 }}>
+    <Pressable
+      accessibilityRole="button"
+      testID="home-trivia"
+      onPress={() => setOpen(true)}
+      style={{ gap: 8 }}
+    >
       <Text style={[styles.sub, { color: td.ink3 }]}>
         {quote ? t('home.citazione') : t('dashboard.curiosita')}
       </Text>
@@ -388,6 +414,7 @@ export function TriviaWidget({ td, item }: { td: TodoTheme; item: Trivia }) {
           {!quote && !verdict ? (
             <View style={styles.wrap}>
               <Pressable
+                accessibilityRole="button"
                 testID="home-trivia-ok"
                 onPress={() => setVerdict('ok')}
                 style={[styles.btn, { backgroundColor: td.accent }]}
@@ -395,6 +422,7 @@ export function TriviaWidget({ td, item }: { td: TodoTheme; item: Trivia }) {
                 <Text style={{ color: '#fff', fontWeight: '600' }}>{t('home.presa_bene')}</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 testID="home-trivia-miss"
                 onPress={() => setVerdict('miss')}
                 style={[styles.btn, { borderColor: td.hair, borderWidth: 1 }]}

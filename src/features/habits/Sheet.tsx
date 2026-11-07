@@ -37,6 +37,7 @@ export function Sheet(p: {
       {p.visible && (
         <View style={[styles.backdrop, wide && { justifyContent: 'center', alignItems: 'center' }]}>
           <Pressable
+            accessibilityRole="button"
             style={StyleSheet.absoluteFill}
             onPress={p.onClose}
             accessibilityLabel={t('comune.annulla')}

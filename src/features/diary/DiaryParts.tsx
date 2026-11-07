@@ -93,7 +93,12 @@ export function Pop({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.center}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} testID="diary-pop-backdrop" />
+        <Pressable
+          accessibilityRole="button"
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          testID="diary-pop-backdrop"
+        />
         <View
           testID={testID}
           style={[
@@ -253,6 +258,7 @@ export function FontPop({
       </ScrollView>
       <View style={styles.sizeRow}>
         <Pressable
+          accessibilityRole="button"
           testID="font-smaller"
           accessibilityLabel={t('diario.piu_piccolo')}
           onPress={() => onSize(Math.max(14, size - 1))}
@@ -273,6 +279,7 @@ export function FontPop({
           {size}
         </Text>
         <Pressable
+          accessibilityRole="button"
           testID="font-bigger"
           accessibilityLabel={t('diario.piu_grande')}
           onPress={() => onSize(Math.min(26, size + 1))}
@@ -396,6 +403,7 @@ export function HabitsSummary({
       </ScrollView>
       <View style={styles.acts}>
         <Pressable
+          accessibilityRole="button"
           testID="summary-close"
           onPress={onClose}
           style={[styles.actBtn, { backgroundColor: d.paper2 }]}
@@ -403,6 +411,7 @@ export function HabitsSummary({
           <Text style={{ color: d.ink2, fontSize: 14 }}>{t('comune.chiudi')}</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           testID="summary-go"
           onPress={onGo}
           style={[styles.actBtn, { backgroundColor: d.accent }]}

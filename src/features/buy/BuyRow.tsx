@@ -186,6 +186,7 @@ export const BuyRow = memo(function BuyRow({
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {[1, 2, 3].map((p) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={p}
                   onPress={() => actions.setPriority(task, p)}
                   style={[
@@ -218,6 +219,7 @@ export const BuyRow = memo(function BuyRow({
                 const on = (task.buy_category_uuid ?? null) === c.uuid;
                 return (
                   <Pressable
+                    accessibilityRole="button"
                     key={c.uuid ?? 'none'}
                     onPress={() => actions.setCategory(task, c.uuid)}
                     style={[
@@ -231,6 +233,7 @@ export const BuyRow = memo(function BuyRow({
                 );
               })}
               <Pressable
+                accessibilityRole="button"
                 onPress={actions.newCategory}
                 style={[styles.catChip, { backgroundColor: paper ? bt.panel : bt.card }]}
               >
@@ -262,6 +265,7 @@ export const BuyRow = memo(function BuyRow({
             />
             {task.buy_url ? (
               <Pressable
+                accessibilityRole="button"
                 onPress={() =>
                   void Linking.openURL(
                     /^https?:/i.test(task.buy_url!) ? task.buy_url! : 'https://' + task.buy_url!,
@@ -274,6 +278,7 @@ export const BuyRow = memo(function BuyRow({
             ) : null}
           </View>
           <Pressable
+            accessibilityRole="button"
             onPress={() => actions.remove(task)}
             style={{ alignSelf: 'flex-start', paddingVertical: 8 }}
           >

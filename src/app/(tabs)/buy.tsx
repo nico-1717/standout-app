@@ -166,7 +166,11 @@ export default function BuyScreen() {
             },
       ]}
     >
-      <Pressable onPress={() => setCartOpen((o) => !o)} style={styles.cartHead}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => setCartOpen((o) => !o)}
+        style={styles.cartHead}
+      >
         <Text
           style={[
             font,
@@ -181,6 +185,7 @@ export default function BuyScreen() {
         <View style={{ paddingBottom: 12 }}>
           {renderRows(cart, DEFAULT_CATEGORY_COLOR)}
           <Pressable
+            accessibilityRole="button"
             onPress={() => {
               services?.tasks.removeMany(cart.map((c) => c.uuid));
               changed();
@@ -288,6 +293,7 @@ export default function BuyScreen() {
             ) : null}
           </Text>
           <Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/categories')}
             style={
               paper
@@ -382,6 +388,7 @@ export default function BuyScreen() {
           </View>
           {cart.length ? (
             <Pressable
+              accessibilityRole="button"
               onPress={() => {
                 Keyboard.dismiss();
                 setCartOpen(true);

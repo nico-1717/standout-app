@@ -341,6 +341,7 @@ export function WhenModal(p: {
       statusBarTranslucent
     >
       <Pressable
+        accessibilityRole="button"
         style={[
           styles.overlay,
           { backgroundColor: td.dark ? 'rgba(0,0,0,.55)' : 'rgba(74,68,61,.28)' },
@@ -348,7 +349,11 @@ export function WhenModal(p: {
         onPress={p.onCancel}
       >
         {/* il tocco dentro la scheda non deve chiuderla */}
-        <Pressable style={[styles.card, { backgroundColor: td.card }]} onPress={() => undefined}>
+        <Pressable
+          accessibilityRole="button"
+          style={[styles.card, { backgroundColor: td.card }]}
+          onPress={() => undefined}
+        >
           {p.visible && <WhenBody {...p} />}
         </Pressable>
       </Pressable>

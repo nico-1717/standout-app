@@ -493,6 +493,7 @@ export default function HabitsScreen() {
                 </Text>
                 {future.map((h) => (
                   <Pressable
+                    accessibilityRole="button"
                     key={h.uuid}
                     testID={`future-${h.uuid}`}
                     onPress={() => setForm({ open: true, habit: h })}

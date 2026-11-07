@@ -126,6 +126,7 @@ function RowView({
   const s = row.summary;
   return (
     <Pressable
+      accessibilityRole="button"
       testID={`row-${row.key}`}
       onPress={onPress}
       style={[styles.row, { borderBottomColor: d.hair }]}
@@ -260,7 +261,11 @@ export function YearPage({
             const n = new Date(Date.UTC(data.year, mi + 1, 0)).getUTCDate();
             return (
               <View key={name} style={styles.month}>
-                <Pressable onPress={() => onOpenDay(first)} testID={`month-${mi + 1}`}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => onOpenDay(first)}
+                  testID={`month-${mi + 1}`}
+                >
                   <Text
                     style={{ color: d.ink2, fontFamily: d.serif, fontSize: 14, marginBottom: 3 }}
                   >
@@ -278,6 +283,7 @@ export function YearPage({
                     const lv = future ? null : levelOf(x, layer);
                     return (
                       <Pressable
+                        accessibilityRole="button"
                         key={date}
                         testID={`day-${date}`}
                         disabled={future}

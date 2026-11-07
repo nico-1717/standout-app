@@ -241,6 +241,7 @@ export function CalendarGrid(p: {
             return (
               <View key={ci} style={styles.calSlot}>
                 <Pressable
+                  accessibilityRole="button"
                   testID={`cal-${c.day}`}
                   disabled={c.future}
                   onPress={() => p.onTap(c.day)}

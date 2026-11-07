@@ -76,6 +76,7 @@ export default function DiaryYearScreen() {
           {t('diario.dn_titolo')}
         </Text>
         <Pressable
+          accessibilityRole="button"
           testID="year-prev"
           accessibilityLabel={t('diario.dn_anno_prima')}
           onPress={() => setYear(year - 1)}
@@ -96,6 +97,7 @@ export default function DiaryYearScreen() {
           {year}
         </Text>
         <Pressable
+          accessibilityRole="button"
           testID="year-next"
           accessibilityLabel={t('diario.dn_anno_dopo')}
           disabled={year >= thisYear}
@@ -114,6 +116,7 @@ export default function DiaryYearScreen() {
               {t('comune.errore_rete')}
             </Text>
             <Pressable
+              accessibilityRole="button"
               testID="year-retry"
               onPress={() => {
                 setLoad(null);

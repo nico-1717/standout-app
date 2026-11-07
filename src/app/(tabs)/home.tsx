@@ -250,6 +250,7 @@ export default function HomeScreen() {
           <Text style={{ color: td.ink3, textTransform: 'capitalize' }}>{dateText}</Text>
         </View>
         <Pressable
+          accessibilityRole="button"
           testID={editing ? 'home-done' : 'home-customise'}
           onPress={() => setEditing((v) => !v)}
           hitSlop={8}
@@ -279,13 +280,28 @@ export default function HomeScreen() {
                 >
                   {t(WIDGET_TITLE[w.id])}
                 </Text>
-                <Pressable testID={`home-up-${w.id}`} onPress={() => move(i, -1)} hitSlop={8}>
+                <Pressable
+                  accessibilityRole="button"
+                  testID={`home-up-${w.id}`}
+                  onPress={() => move(i, -1)}
+                  hitSlop={8}
+                >
                   <Text style={{ color: td.accent, fontSize: 18 }}>↑</Text>
                 </Pressable>
-                <Pressable testID={`home-down-${w.id}`} onPress={() => move(i, 1)} hitSlop={8}>
+                <Pressable
+                  accessibilityRole="button"
+                  testID={`home-down-${w.id}`}
+                  onPress={() => move(i, 1)}
+                  hitSlop={8}
+                >
                   <Text style={{ color: td.accent, fontSize: 18 }}>↓</Text>
                 </Pressable>
-                <Pressable testID={`home-toggle-${w.id}`} onPress={() => toggle(i)} hitSlop={8}>
+                <Pressable
+                  accessibilityRole="button"
+                  testID={`home-toggle-${w.id}`}
+                  onPress={() => toggle(i)}
+                  hitSlop={8}
+                >
                   <Text style={{ color: td.accent, fontWeight: '600' }}>
                     {w.on ? t('home.nascondi') : t('home.mostra')}
                   </Text>
@@ -296,6 +312,7 @@ export default function HomeScreen() {
                   {shortcutList(w).map((s) => (
                     <View key={s.href} style={styles.editRow}>
                       <Pressable
+                        accessibilityRole="button"
                         testID={`home-sc-left-${s.route.replace(/[^a-z]/gi, '')}`}
                         onPress={() => moveShortcut(s.href, -1)}
                         accessibilityLabel={t('home.sposta_sinistra')}
@@ -305,6 +322,7 @@ export default function HomeScreen() {
                       </Pressable>
                       <Text style={{ color: td.ink2 }}>{s.label}</Text>
                       <Pressable
+                        accessibilityRole="button"
                         testID={`home-sc-right-${s.route.replace(/[^a-z]/gi, '')}`}
                         onPress={() => moveShortcut(s.href, 1)}
                         accessibilityLabel={t('home.sposta_destra')}
@@ -319,6 +337,7 @@ export default function HomeScreen() {
             </View>
           ))}
           <Pressable
+            accessibilityRole="button"
             testID="home-reset"
             onPress={() => updateHomeLayout(DEFAULT_HOME_LAYOUT)}
             style={{ alignSelf: 'flex-start' }}

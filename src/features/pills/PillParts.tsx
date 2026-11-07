@@ -142,6 +142,7 @@ export function DoseRow(p: {
         ) : null}
       </Pressable>
       <Pressable
+        accessibilityRole="button"
         testID={`dose-text-${d.uuid}`}
         // toccando il nome si apre la terapia: è lì che uno tocca chiedendosi come sta andando
         onPress={() => p.onPlan(d)}
@@ -271,6 +272,7 @@ export function PillModal(p: {
       statusBarTranslucent
     >
       <Pressable
+        accessibilityRole="button"
         style={[
           styles.overlay,
           { backgroundColor: td.dark ? 'rgba(0,0,0,.55)' : 'rgba(74,68,61,.28)' },
@@ -279,6 +281,7 @@ export function PillModal(p: {
       >
         {/* il tocco dentro la scheda non deve chiuderla */}
         <Pressable
+          accessibilityRole="button"
           testID={p.testID}
           style={[styles.card, { backgroundColor: td.card }, p.wide && styles.cardWide]}
           onPress={() => undefined}

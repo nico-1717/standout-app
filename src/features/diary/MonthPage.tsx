@@ -186,7 +186,12 @@ export function MonthPage(p: {
           { backgroundColor: std ? d.card : d.paper2, borderRadius: std ? 20 : 6 },
         ]}
       >
-        <Pressable testID="taped-head" onPress={() => setOpen(!open)} style={styles.tapedHead}>
+        <Pressable
+          accessibilityRole="button"
+          testID="taped-head"
+          onPress={() => setOpen(!open)}
+          style={styles.tapedHead}
+        >
           <Text
             style={{
               flex: 1,

@@ -24,8 +24,14 @@ export function ActionSheet(p: {
   const { th } = p;
   return (
     <Modal visible={p.visible} transparent animationType="fade" onRequestClose={p.onClose}>
-      <Pressable style={styles.backdrop} onPress={p.onClose} testID="sheet-backdrop">
+      <Pressable
+        accessibilityRole="button"
+        style={styles.backdrop}
+        onPress={p.onClose}
+        testID="sheet-backdrop"
+      >
         <Pressable
+          accessibilityRole="button"
           onPress={() => undefined}
           style={[styles.sheet, { backgroundColor: th.surface, paddingBottom: insets.bottom + 12 }]}
         >

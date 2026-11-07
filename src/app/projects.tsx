@@ -38,7 +38,7 @@ function StatusDot({
   return (
     <Pressable
       testID={testID}
-      accessibilityRole="button"
+      accessibilityRole="checkbox"
       accessibilityState={{ checked: done }}
       hitSlop={10}
       onPress={onPress}

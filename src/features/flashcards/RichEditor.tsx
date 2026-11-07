@@ -144,6 +144,7 @@ export function RichEditor({
     style?: object,
   ) => (
     <Pressable
+      hitSlop={10}
       key={id}
       testID={`${testID}-${id}`}
       accessibilityRole="button"
