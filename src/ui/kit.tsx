@@ -14,7 +14,7 @@ import {
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { radius } from '@/core/theme/tokens';
 
-/** L'ombra delle carte del sito (--shadow-card). Su Android si usa `elevation`. */
+/** L'ombra delle carte del sito (--shadow-card). Ancora usata dalle pagine non ancora passate alle nuove vesti. */
 export function cardShadow(dark: boolean): ViewStyle {
   return Platform.select<ViewStyle>({
     ios: {
@@ -32,8 +32,15 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   return (
     <View
       style={[
-        { backgroundColor: th.surface, borderRadius: radius.card, overflow: 'hidden' },
-        cardShadow(th.scheme === 'dark'),
+        {
+          backgroundColor: th.surface,
+          borderRadius: th.radiusCard,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: th.cardEdge,
+          overflow: 'hidden',
+          // Glass: ombra morbida; Paper: nessuna ombra, solo la linea sottile
+          boxShadow: th.cardShadow,
+        },
         style,
       ]}
     >
@@ -67,8 +74,11 @@ export function PrimaryButton({
       style={({ pressed }) => [
         styles.btn,
         {
+          borderRadius: th.radiusButton,
           backgroundColor: danger ? th.red : th.brand,
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+          opacity: disabled ? 0.5 : 1,
+          // un piccolo «affondo» quando si preme, senza rimbalzo
+          transform: [{ scale: pressed ? 0.97 : 1 }],
         },
       ]}
     >
@@ -110,7 +120,12 @@ export function Field(props: TextInputProps) {
       {...props}
       style={[
         styles.field,
-        { backgroundColor: th.surface, borderColor: th.hairline, color: th.text },
+        {
+          backgroundColor: th.surface,
+          borderColor: th.hairline2,
+          borderRadius: th.radiusButton,
+          color: th.text,
+        },
         props.style,
       ]}
     />
@@ -150,7 +165,16 @@ export function Header({ title, right, top }: { title: string; right?: ReactNode
         justifyContent: 'space-between',
       }}
     >
-      <Text style={{ color: th.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.42 }}>
+      <Text
+        accessibilityRole="header"
+        style={{
+          color: th.text,
+          fontSize: th.titleSize,
+          fontWeight: th.display ? undefined : th.titleWeight,
+          fontFamily: th.display,
+          letterSpacing: th.display ? -0.8 : -0.6,
+        }}
+      >
         {title}
       </Text>
       {right}

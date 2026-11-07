@@ -4,6 +4,7 @@ import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium_Italic,
 } from '@expo-google-fonts/cormorant-garamond';
+import { Fraunces_400Regular, Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces';
 import { Jost_400Regular } from '@expo-google-fonts/jost';
 import { Kalam_400Regular } from '@expo-google-fonts/kalam';
 import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
@@ -78,7 +79,7 @@ function Shell() {
 function Themed() {
   const { settings } = useApp();
   return (
-    <ThemeProvider accent={settings.accent}>
+    <ThemeProvider accent={settings.accent} uiStyle={settings.ui_style}>
       <Shell />
     </ThemeProvider>
   );
@@ -91,6 +92,8 @@ export default function RootLayout() {
     CormorantGaramond_300Light,
     CormorantGaramond_400Regular,
     CormorantGaramond_500Medium_Italic,
+    Fraunces_400Regular,
+    Fraunces_400Regular_Italic,
     Jost_400Regular,
     Kalam_400Regular,
     PatrickHand_400Regular,

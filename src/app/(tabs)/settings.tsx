@@ -150,26 +150,35 @@ export default function SettingsScreen() {
         </Pressable>
         <Card style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {(['standard', 'paper'] as const).map((s) => (
-              <Pressable
-                key={s}
-                onPress={() => setUiStyle(s)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: uiStyle === s }}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  paddingVertical: 12,
-                  borderRadius: 14,
-                  backgroundColor: uiStyle === s ? th.brand : th.bg,
-                }}
-              >
-                <Text style={{ color: uiStyle === s ? '#fff' : th.text, fontWeight: '600' }}>
-                  {t(s === 'paper' ? 'stile.paper' : 'stile.standard')}
-                </Text>
-              </Pressable>
-            ))}
+          <Text style={{ color: th.text2, fontSize: 13 }}>{t('stile.app_nota')}</Text>
+          <View style={{ gap: 8 }}>
+            {(['standard', 'paper'] as const).map((s) => {
+              const on = uiStyle === s;
+              return (
+                <Pressable
+                  key={s}
+                  testID={`style-${s}`}
+                  onPress={() => setUiStyle(s)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  style={{
+                    padding: 14,
+                    borderRadius: th.radiusButton,
+                    borderWidth: on ? 2 : 1,
+                    borderColor: on ? th.brand : th.hairline2,
+                    backgroundColor: on ? th.brandSoft : th.surface2,
+                    gap: 2,
+                  }}
+                >
+                  <Text style={{ color: th.text, fontWeight: '700', fontSize: 16 }}>
+                    {t(s === 'paper' ? 'stile.paper' : 'stile.standard')}
+                  </Text>
+                  <Text style={{ color: th.text2, fontSize: 13 }}>
+                    {t(s === 'paper' ? 'stile.app_paper_desc' : 'stile.app_standard_desc')}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </Card>
         <Card style={{ padding: 16, gap: 10 }}>

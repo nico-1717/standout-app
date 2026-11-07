@@ -1,5 +1,5 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -139,18 +139,43 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   return (
     <Tabs
-      tabBar={(props) => (
-        <View>
-          <PomodoroBar />
-          <BottomTabBar {...props} />
-        </View>
-      )}
+      tabBar={(props) =>
+        th.floatingBar ? (
+          // Glass: la barra è una pillola sospesa sopra il bordo basso (lo spazio sicuro sta fuori dalla pillola)
+          <View style={{ backgroundColor: th.bg }}>
+            <PomodoroBar />
+            <View style={{ paddingHorizontal: 14, paddingBottom: props.insets.bottom + 6 }}>
+              <BottomTabBar {...props} insets={{ ...props.insets, bottom: 0 }} />
+            </View>
+          </View>
+        ) : (
+          <View>
+            <PomodoroBar />
+            <BottomTabBar {...props} />
+          </View>
+        )
+      }
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: th.brand,
         tabBarInactiveTintColor: th.text2,
-        tabBarStyle: { backgroundColor: th.headerGlass, borderTopColor: th.hairline },
-        tabBarLabelStyle: { fontSize: 11 },
+        tabBarStyle: th.floatingBar
+          ? {
+              backgroundColor: th.barBg,
+              borderRadius: 33,
+              borderTopWidth: 0,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: th.cardEdge,
+              boxShadow: th.cardShadow,
+              height: 66,
+            }
+          : {
+              backgroundColor: th.barBg,
+              borderTopColor: th.hairline,
+              borderTopWidth: StyleSheet.hairlineWidth,
+            },
+        tabBarItemStyle: th.floatingBar ? { borderRadius: 24, marginVertical: 5 } : undefined,
+        tabBarLabelStyle: { fontSize: 10.5, fontWeight: th.floatingBar ? '700' : '500' },
       }}
     >
       <Tabs.Screen

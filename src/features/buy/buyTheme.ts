@@ -1,6 +1,8 @@
 import type { Theme } from '@/core/theme/ThemeProvider';
 
-export type UiStyle = 'standard' | 'paper';
+import type { UiStyle } from '@/core/theme/skin';
+
+export type { UiStyle };
 
 /** Mescola due colori «#RRGGBB»: `ratio` è la parte del primo (come color-mix(in srgb) del sito). */
 export function mix(a: string, b: string, ratio: number): string {
