@@ -92,6 +92,27 @@ describe('Habits screen', () => {
     expect(habits.log(water, localToday())).toMatchObject({ status: 'done', amount: 2 });
   });
 
+  test('a new achievement pops up once; old ones do not on the first visit', async () => {
+    const { read } = setup();
+    await renderIt();
+    expect(screen.queryByTestId('award-popup-name')).toBeNull(); // niente festa per il passato
+    await fireEvent.press(screen.getByTestId(`habit-check-${read}`));
+    // la schermata vera si ridisegna da sola quando `version` cambia; qui il mock no, quindi la ridisegniamo noi
+    await screen.rerender(
+      <ThemeProvider>
+        <HabitsScreen />
+      </ThemeProvider>,
+    );
+    // un solo check-in al 100% sblocca tre traguardi (giornata perfetta e le due percentuali): uno alla volta
+    const seen: string[] = [];
+    for (let i = 0; i < 6 && screen.queryByTestId('award-popup-name'); i++) {
+      seen.push(String(screen.getByTestId('award-popup-name').props.children));
+      await fireEvent.press(screen.getByTestId('award-popup-ok'));
+    }
+    expect(seen).toEqual(['Giornata perfetta', 'Ottanta per cento', 'Quasi impeccabile']);
+    expect(screen.queryByTestId('award-popup-name')).toBeNull();
+  });
+
   test('long press opens the sheet: skip, then un-skip', async () => {
     const { habits, read } = setup();
     await renderIt();

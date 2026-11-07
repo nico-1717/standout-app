@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { AwardPopup } from '@/features/habits/AwardPopup';
+import { evaluateAchievements } from '@/features/habits/achievements';
+import { loadSeen, newlyUnlocked, saveSeen } from '@/features/habits/awardsSeen';
 import { ActionSheet, type SheetAction } from '@/features/habits/ActionSheet';
 import { HabitDetail } from '@/features/habits/HabitDetail';
 import { HabitForm } from '@/features/habits/HabitForm';
@@ -49,7 +52,7 @@ import { localToday } from '@/features/tasks/groups';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { mix } from '@/features/buy/buyTheme';
-import { Rise } from '@/ui/motion';
+import { haptic, Rise } from '@/ui/motion';
 import { SyncBadge } from '@/ui/SyncBadge';
 
 /** Come sul sito: tutte, da fare, oppure una fascia della giornata (compare solo se c'è un'abitudine in quella fascia). */
@@ -126,6 +129,32 @@ export default function HabitsScreen() {
     [services, version],
   );
   const logs = useMemo(() => allLogsOf(logList), [logList]);
+
+  // «Traguardo sbloccato»: i nuovi traguardi si mostrano una volta sola (i «visti» stanno sul telefono)
+  const [seenTick, setSeenTick] = useState(0);
+  const awards = useMemo(
+    () => evaluateAchievements(habits, logList, today),
+    [habits, logList, today],
+  );
+  const awardToShow = useMemo(() => {
+    if (!services) return null;
+    void seenTick;
+    return newlyUnlocked(awards, loadSeen(services.db))[0] ?? null;
+  }, [services, awards, seenTick]);
+  useEffect(() => {
+    // la prima volta si segnano come visti quelli già raggiunti, senza fare festa per il passato
+    if (services && loadSeen(services.db) === null) {
+      saveSeen(
+        services.db,
+        awards.filter((a) => a.unlocked).map((a) => a.code),
+      );
+    }
+  }, [services, awards]);
+  function closeAward() {
+    if (!services || !awardToShow) return;
+    saveSeen(services.db, [...(loadSeen(services.db) ?? []), awardToShow.code]);
+    setSeenTick((n) => n + 1);
+  }
 
   /** I giorni «fatti» di ogni abitudine non giornaliera (servono ad anello settimanale/mensile/intervallo) e la serie di ogni abitudine. */
   const history = useMemo(() => {
@@ -209,6 +238,7 @@ export default function HabitsScreen() {
     const mode: CheckInMode = h.goal_type === 'quantity' ? 'increment' : 'toggle';
     try {
       services.habits.checkIn(h.uuid, day, mode);
+      if (SETTINGS.haptics_enabled) haptic.tap();
       changed();
     } catch {
       /* giorno futuro: la fascia non lo mostra, quindi non succede */
@@ -219,6 +249,7 @@ export default function HabitsScreen() {
     if (!services) return;
     try {
       services.habits.checkIn(h.uuid, day, mode);
+      if (SETTINGS.haptics_enabled) haptic.select();
       changed();
     } catch {
       /* vedi sopra */
@@ -550,6 +581,7 @@ export default function HabitsScreen() {
           <Text style={{ color: '#fff', fontSize: 30, lineHeight: 33, fontWeight: '300' }}>+</Text>
         </LinearGradient>
       </Pressable>
+      <AwardPopup award={awardToShow} onClose={closeAward} />
       <StatsSheet
         visible={panel === 'stats'}
         habits={current}
