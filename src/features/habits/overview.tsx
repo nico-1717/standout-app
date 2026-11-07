@@ -20,6 +20,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
+import { useTheme } from '@/core/theme/ThemeProvider';
 import { alpha } from '@/features/buy/buyTheme';
 import { cardShadow } from '@/ui/kit';
 
@@ -71,6 +72,7 @@ export function HabitsHeader(p: {
   onSettings?: () => void;
 }) {
   const { th } = p;
+  const display = useTheme().display;
   const btn = (kind: 'table' | 'stats' | 'settings', onPress: () => void, label: string) => (
     <Pressable
       testID={`hb-${kind}`}
@@ -97,7 +99,16 @@ export function HabitsHeader(p: {
         <Text style={{ color: th.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.6 }}>
           {p.eyebrow.toUpperCase()}
         </Text>
-        <Text style={{ color: th.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.9 }}>
+        <Text
+          accessibilityRole="header"
+          style={{
+            color: th.text,
+            fontSize: display ? 38 : 32,
+            fontFamily: display,
+            fontWeight: display ? undefined : '800',
+            letterSpacing: display ? -1 : -0.9,
+          }}
+        >
           {p.title}
         </Text>
       </View>

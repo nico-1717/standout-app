@@ -224,3 +224,20 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 ### Voti — cosa resta (semplificato o rimandato)
 - Scheda «Costo» (serve il collegamento esame ↔ progetto/pomodoro), blocco «Statistiche» (distribuzione, media per anno, confronto con la media nazionale), riordino con trascinamento, blocchi del simulatore per gruppo (si simula esame per esame).
+
+
+## Nuovo aspetto dell'app (approvato da Nico il 7/11/2026)
+
+Due vesti scelte in Altro › Stile (stesso campo `ui_style` del sito: `standard` = **Glass**, `paper` = **Calm paper**). I campioni sono nell'artefatto «Standout app – new style samples».
+
+| Pezzo | Stato |
+|---|---|
+| Colori, forme e carattere dei titoli in un solo posto (`core/theme/skin.ts`), con chiaro/scuro | fatto, con test di contrasto (testo ≥ 4.5:1) |
+| Carte, pulsanti, campi, intestazioni (`ui/kit.tsx`) | fatto |
+| Barra delle schede: pillola di vetro (Glass) / piatta con linea (Paper) | fatto |
+| Movimento: entrata a cascata, affondo al tocco, vibrazioni leggere, rispetta «Riduci movimento» (`ui/motion.tsx`) | fatto; usato in Home e Abitudini |
+| Home, Abitudini, Statistiche con medaglie dei traguardi | fatto |
+| To do, To buy: carta segue il tema (anche scuro) | fatto |
+| Planner, Diario: carta in scuro | da fare |
+| Flashcards, Pomodoro, Voti, Progetti, Impostazioni, Login | da fare (i colori sono già nuovi; mancano forme, titoli e movimento) |
+| Vetro sfocato vero (`expo-blur`) e scheletri di caricamento | da fare (con le altre aggiunte native) |

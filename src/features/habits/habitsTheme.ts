@@ -1,3 +1,4 @@
+import { surfacesFor, type UiStyle } from '@/core/theme/skin';
 import type { SchemeName } from '@/core/theme/tokens';
 
 /**
@@ -31,7 +32,30 @@ export interface HabitsTheme {
 
 export const DEFAULT_HABIT_ACCENT = '#7C5CFF';
 
-export function habitsTheme(scheme: SchemeName, accent = DEFAULT_HABIT_ACCENT): HabitsTheme {
+export function habitsTheme(
+  scheme: SchemeName,
+  accent = DEFAULT_HABIT_ACCENT,
+  style: UiStyle = 'standard',
+): HabitsTheme {
+  // sfondi, testi e linee delle due vesti (Glass / Calm paper); le «pastiglie» fatte restano quelle del sito
+  const sf = surfacesFor(style, scheme);
+  const base = habitsBase(scheme, accent);
+  return {
+    ...base,
+    bg: sf.bg,
+    surface: sf.surface,
+    surface2: sf.surface2,
+    surface3: sf.hairline2,
+    text: sf.text,
+    text2: sf.text2,
+    text3: sf.text3,
+    hairline: sf.hairline,
+    hairline2: sf.hairline2,
+    headerGlass: sf.headerGlass,
+  };
+}
+
+function habitsBase(scheme: SchemeName, accent: string): HabitsTheme {
   if (scheme === 'dark') {
     return {
       scheme,

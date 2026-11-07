@@ -258,3 +258,14 @@ export function evaluateAchievements(
     return { ...a, value, unlocked: a.metric !== 'comeback' && value >= a.threshold };
   });
 }
+
+/** I colori dei livelli: due toni per la medaglia (Glass) e un colore per l'anello (Calm paper, chiaro/scuro). */
+export const TIER_COLORS: Record<
+  Tier,
+  { glass: [string, string]; ringLight: string; ringDark: string }
+> = {
+  bronze: { glass: ['#E0A267', '#B8743A'], ringLight: '#9A5A24', ringDark: '#D69A62' },
+  silver: { glass: ['#C7CEDB', '#8E98AB'], ringLight: '#5F6B80', ringDark: '#B9C0CE' },
+  gold: { glass: ['#F6D260', '#DDA11E'], ringLight: '#8F6A00', ringDark: '#E8C14F' },
+  platinum: { glass: ['#9CA8FF', '#6A5BE0'], ringLight: '#4A44B5', ringDark: '#9AA4FF' },
+};

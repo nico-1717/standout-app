@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { evaluateAchievements } from './achievements';
+import { useTheme } from '@/core/theme/ThemeProvider';
+import { evaluateAchievements, TIER_COLORS, type AchievementState } from './achievements';
 import { Bars, Heatmap, Kpi, StatCard } from './charts';
 import {
   allLogsOf,
@@ -247,7 +249,7 @@ function Body(p: StatsSheetProps) {
                 { backgroundColor: th.surface2, opacity: a.unlocked ? 1 : 0.42 },
               ]}
             >
-              <Text style={[styles.badgeIcon, a.unlocked ? null : { opacity: 0.6 }]}>{a.icon}</Text>
+              <Medal a={a} />
               <Text
                 style={{ color: th.text, fontSize: 11, fontWeight: '800', textAlign: 'center' }}
               >
@@ -304,6 +306,50 @@ function Body(p: StatsSheetProps) {
   );
 }
 
+/** La medaglia di un traguardo: tonda, con il colore del livello. Glass = sfumatura piena; Calm paper = anello sottile. */
+function Medal({ a }: { a: AchievementState }) {
+  const app = useTheme();
+  const c = TIER_COLORS[a.tier];
+  const ring = app.scheme === 'dark' ? c.ringDark : c.ringLight;
+  const base = {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 7,
+    // chi non l'ha ancora sbloccata la vede spenta e grigia
+    opacity: a.unlocked ? 1 : 0.6,
+  };
+  if (app.style === 'paper') {
+    return (
+      <View
+        style={[
+          base,
+          {
+            borderWidth: 1.5,
+            borderColor: ring,
+            borderStyle: a.unlocked ? 'solid' : 'dashed',
+            backgroundColor: a.unlocked ? ring + '1A' : 'transparent',
+          },
+        ]}
+      >
+        <Text style={styles.badgeIcon}>{a.icon}</Text>
+      </View>
+    );
+  }
+  return (
+    <LinearGradient
+      colors={a.unlocked ? c.glass : ['#B9BECB', '#8E94A5']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[base, { boxShadow: a.unlocked ? `0 4px 12px ${c.glass[1]}59` : undefined }]}
+    >
+      <Text style={styles.badgeIcon}>{a.icon}</Text>
+    </LinearGradient>
+  );
+}
+
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 30 },
   kpis: { flexDirection: 'row', gap: 12, marginBottom: 12 },
@@ -315,6 +361,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 18,
   },
-  badgeIcon: { fontSize: 26, marginBottom: 7 },
+  badgeIcon: { fontSize: 22 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
 });

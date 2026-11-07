@@ -49,6 +49,7 @@ import { localToday } from '@/features/tasks/groups';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { mix } from '@/features/buy/buyTheme';
+import { Rise } from '@/ui/motion';
 import { SyncBadge } from '@/ui/SyncBadge';
 
 /** Come sul sito: tutte, da fare, oppure una fascia della giornata (compare solo se c'è un'abitudine in quella fascia). */
@@ -69,8 +70,8 @@ export default function HabitsScreen() {
   const th = useTheme();
   const { services, version, changed, habitSettings: SETTINGS, updateHabitSettings } = useApp();
   const ht = useMemo(
-    () => habitsTheme(th.scheme, SETTINGS.accent_color),
-    [th.scheme, SETTINGS.accent_color],
+    () => habitsTheme(th.scheme, SETTINGS.accent_color, th.style),
+    [th.scheme, th.style, SETTINGS.accent_color],
   );
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -302,7 +303,7 @@ export default function HabitsScreen() {
       );
   }
 
-  function renderRow(h: Habit) {
+  function renderRow(h: Habit, index = 0) {
     const log = logs.get(`${h.uuid}|${day}`) ?? null;
     const st = stateOf(h, day, log, today);
     const meta: string[] = [];
@@ -327,7 +328,7 @@ export default function HabitsScreen() {
     }
     const quantity = h.goal_type === 'quantity';
     return (
-      <View key={h.uuid} style={{ marginHorizontal: 16, marginBottom: 10 }}>
+      <Rise key={h.uuid} index={index} style={{ marginHorizontal: 16, marginBottom: 10 }}>
         <SwipeRow
           th={ht}
           testID={`swipe-${h.uuid}`}
@@ -351,7 +352,7 @@ export default function HabitsScreen() {
             onOpen={() => setDetailId(h.uuid)}
           />
         </SwipeRow>
-      </View>
+      </Rise>
     );
   }
 
