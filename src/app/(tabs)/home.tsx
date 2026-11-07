@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
+import { Rise } from '@/ui/motion';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DEFAULT_HOME_LAYOUT, type HomeWidget } from '@/features/home/layout';
 import { buildToday } from '@/features/home/today';
@@ -243,11 +244,31 @@ export default function HomeScreen() {
       }}
     >
       <View style={styles.head}>
-        <View style={{ flex: 1 }}>
-          <Text testID="home-greeting" style={[styles.hello, { color: td.ink }]}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text
+            style={{
+              color: th.text2,
+              fontSize: 13,
+              fontWeight: '600',
+              letterSpacing: th.display ? 1.2 : 0.2,
+              textTransform: th.display ? 'uppercase' : 'capitalize',
+            }}
+          >
+            {dateText}
+          </Text>
+          <Text
+            testID="home-greeting"
+            accessibilityRole="header"
+            style={[
+              styles.hello,
+              { color: td.ink },
+              th.display
+                ? { fontFamily: th.display, fontWeight: undefined, fontSize: 36, lineHeight: 40 }
+                : null,
+            ]}
+          >
             {t(greetingKey(now.getHours()), { nome: name })}
           </Text>
-          <Text style={{ color: td.ink3, textTransform: 'capitalize' }}>{dateText}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -348,7 +369,11 @@ export default function HomeScreen() {
       ) : (
         homeLayout
           .filter((w) => w.on && !NOT_YET.has(w.id))
-          .map((w) => <View key={w.id}>{body(w)}</View>)
+          .map((w, i) => (
+            <Rise key={w.id} index={i + 1}>
+              {body(w)}
+            </Rise>
+          ))
       )}
     </ScrollView>
   );
@@ -356,7 +381,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  hello: { fontSize: 24, fontWeight: '800' },
+  hello: { fontSize: 30, fontWeight: '800', letterSpacing: -0.6 },
   edit: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
   editRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   editShort: { gap: 6, paddingLeft: 8 },

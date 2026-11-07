@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useTheme } from '@/core/theme/ThemeProvider';
 import type { TodoTheme } from '@/features/tasks/todoTheme';
 import type { DoseView } from '@/features/pills/repo';
 import type { Task } from '@/features/tasks/repo';
@@ -26,10 +27,19 @@ export function WidgetBox({
   onAction?: () => void;
   children: ReactNode;
 }) {
+  const th = useTheme();
   return (
     <View
       testID={`home-w-${id}`}
-      style={[styles.box, { backgroundColor: td.panel, borderColor: td.hair }]}
+      style={[
+        styles.box,
+        {
+          backgroundColor: td.card,
+          borderColor: th.cardEdge,
+          borderRadius: th.radiusCard,
+          boxShadow: th.cardShadow,
+        },
+      ]}
     >
       <View style={styles.boxHead}>
         <Text style={[styles.boxTitle, { color: td.ink2 }]}>{title}</Text>
@@ -440,7 +450,7 @@ export function TriviaWidget({ td, item }: { td: TodoTheme; item: Trivia }) {
 }
 
 const styles = StyleSheet.create({
-  box: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 10 },
+  box: { borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12 },
   boxHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   boxTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

@@ -51,7 +51,7 @@ export const BuyRow = memo(function BuyRow({
   const border = paper
     ? {
         borderBottomWidth: 1,
-        borderBottomColor: alpha('#4A443D', 0.22),
+        borderBottomColor: alpha(bt.ink, 0.22),
         borderStyle: 'dotted' as const,
       }
     : !last
@@ -81,7 +81,7 @@ export const BuyRow = memo(function BuyRow({
           style={[
             styles.check,
             paper
-              ? { width: 22, height: 22, borderRadius: 11, borderColor: alpha('#4A443D', 0.38) }
+              ? { width: 22, height: 22, borderRadius: 11, borderColor: alpha(bt.ink, 0.38) }
               : {
                   width: 26,
                   height: 26,
@@ -169,7 +169,7 @@ export const BuyRow = memo(function BuyRow({
         >
           <Text
             style={{
-              color: paper ? alpha('#4A443D', 0.4) : bt.ink3,
+              color: paper ? alpha(bt.ink, 0.4) : bt.ink3,
               fontSize: 16,
               width: 22,
               textAlign: 'center',

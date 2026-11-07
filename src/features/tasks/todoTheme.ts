@@ -17,13 +17,14 @@ export interface TodoTheme extends BuyTheme {
 export function todoTheme(style: UiStyle, th: Theme): TodoTheme {
   const bt = buyTheme(style, th);
   if (style === 'paper') {
+    const pd = th.scheme === 'dark';
     return {
       ...bt,
       accentSoft: mix(bt.accent, bt.card, 0.2),
-      lateSoft: '#F6E4E2',
-      delBg: '#F3DCDC',
-      delFg: '#8E5A5A',
-      dark: false,
+      lateSoft: pd ? '#3A2724' : '#F6E4E2',
+      delBg: pd ? '#3A2724' : '#F3DCDC',
+      delFg: pd ? '#E0928C' : '#8E5A5A',
+      dark: pd,
     };
   }
   const dark = th.scheme === 'dark';

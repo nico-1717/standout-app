@@ -333,7 +333,7 @@ export default function BuyScreen() {
                   <Text style={{ fontFamily: bt.serif, fontSize: 21, color: bt.ink }}>
                     {g.cat ? g.cat.name : t('todo.senza_categoria')}
                   </Text>
-                  <View style={[styles.lead, { borderColor: alpha('#4A443D', 0.28) }]} />
+                  <View style={[styles.lead, { borderColor: alpha(bt.ink, 0.28) }]} />
                   <Text style={[font, { color: bt.ink2, fontSize: 13 }]}>
                     {sumCents(g.items) ? euro(sumCents(g.items)) : ''}
                   </Text>

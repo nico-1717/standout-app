@@ -44,22 +44,24 @@ export interface BuyTheme {
  */
 export function buyTheme(style: UiStyle, th: Theme): BuyTheme {
   if (style === 'paper') {
+    // Calm paper: i colori vengono dal tema (carta calda in chiaro, carta scura in scuro)
+    const dark = th.scheme === 'dark';
     return {
       style,
-      page: '#F5F1EA',
-      card: '#FFFDFA',
-      panel: '#F5F1EA',
-      ink: '#4A443D',
-      ink2: '#8A8177',
-      ink3: '#B7AEA3',
-      hair: 'rgba(74,68,61,.12)',
+      page: th.bg,
+      card: th.surface,
+      panel: th.bg,
+      ink: th.text,
+      ink2: th.text2,
+      ink3: th.text3,
+      hair: th.hairline,
       accent: th.brand,
-      onAccent: '#FFFFFF',
-      late: '#B4645F',
-      footBg: '#4A443D',
-      footFg: '#FFFDFA',
+      onAccent: dark ? '#14120F' : '#FFFFFF',
+      late: dark ? '#E0928C' : '#B4645F',
+      footBg: th.text,
+      footFg: th.bg,
       sans: 'Jost_400Regular',
-      serif: 'CormorantGaramond_500Medium_Italic',
+      serif: 'Fraunces_400Regular_Italic',
       hand: 'Caveat_500Medium',
     };
   }
