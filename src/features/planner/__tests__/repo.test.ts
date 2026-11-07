@@ -245,3 +245,27 @@ describe('done, calendars and categories', () => {
     expect(repo.row(id)!.calendar_uuid).toBe('cal-main');
   });
 });
+
+describe('search by title', () => {
+  test('needs 2 letters, ignores case, puts the nearest to today first, escapes % and _', () => {
+    const { repo } = setup();
+    repo.create({ title: 'Dentist', date: '2026-11-20', start: '09:00', end: '10:00' });
+    const near = repo.create({
+      title: 'Dentist check',
+      date: '2026-11-04',
+      start: '15:30',
+      end: '16:00',
+    });
+    repo.create({ title: '100% sure', date: '2026-11-05', start: '09:00', end: '10:00' });
+    repo.create({ title: 'a_b', date: '2026-11-05', start: '11:00', end: '12:00' });
+    repo.create({ title: 'axb', date: '2026-11-05', start: '12:00', end: '13:00' });
+
+    expect(repo.search('d', '2026-11-03')).toEqual([]);
+    const hits = repo.search('DENT', '2026-11-03');
+    expect(hits.map((h) => h.title)).toEqual(['Dentist check', 'Dentist']);
+    expect(hits[0]).toMatchObject({ uuid: near, date: '2026-11-04', start: '15:30', all_day: 0 });
+    expect(repo.search('0% s', '2026-11-03').map((h) => h.title)).toEqual(['100% sure']);
+    expect(repo.search('a_b', '2026-11-03').map((h) => h.title)).toEqual(['a_b']); // «_» non vale «un carattere»
+    expect(repo.search('zzz', '2026-11-03')).toEqual([]);
+  });
+});

@@ -110,6 +110,17 @@ export type DeleteScope = 'one' | 'series';
  * rifà lo stesso lavoro del sito (lib/sync_planner.php) e rimanda la riga com'è. Le serie sono un capostipite
  * con una regola; «solo questa volta» e «questa volta no» sono righe a parte (eccezioni).
  */
+export interface SearchHit {
+  uuid: string;
+  title: string;
+  date: string;
+  start: string;
+  end: string;
+  all_day: number;
+  color: string | null;
+  category_uuid: string | null;
+}
+
 export class PlannerRepo {
   constructor(
     private readonly db: SqlDb,
@@ -137,6 +148,25 @@ export class PlannerRepo {
   }
   row(uuid: string): EventRow | null {
     return this.db.all<EventRow>('SELECT * FROM planner_events WHERE uuid = ?', [uuid])[0] ?? null;
+  }
+
+  /**
+   * La ricerca per titolo (come `search` del sito): almeno 2 lettere, i più vicini a oggi per primi, al massimo 60.
+   * Gli eventi annullati di una serie non contano.
+   */
+  search(q: string, today: string): SearchHit[] {
+    const text = q.trim();
+    if (text.length < 2) return [];
+    const like = '%' + text.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+    return this.db.all<SearchHit>(
+      `SELECT uuid, title, event_date AS date, start_time AS start, end_time AS end,
+              is_all_day AS all_day, color, category_uuid
+         FROM planner_events
+        WHERE title LIKE ? ESCAPE '\\' AND is_cancelled = 0
+        ORDER BY ABS(julianday(event_date) - julianday(?)), event_date, start_time
+        LIMIT 60`,
+      [like, today],
+    );
   }
 
   /** Cosa si vede nel periodo, come lo calcola il sito. */

@@ -77,7 +77,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P16 | Meteo (`meteo_api.php`: stato, attiva, anteprima, ricerca luogo) | `weather/*` (nuova) | Planner › Meteo | P4 | solo online | |
 | P17 | Google Calendar (`google_calendar.php`: collega, calendari, mappa, push, ripara, sincronizza, scollega) | `google/*` (nuova, OAuth da browser di sistema) | Impostazioni › Google Calendar | P4 | solo online | |
 | P18 | Pastiglie in scadenza dentro il planner (avvisi viola) | locale | Planner | P2 | da fare | |
-| P19 | Ricerca eventi (`search`) | locale (SQLite FTS) | Cerca | P2 | da fare | |
+| P19 | Ricerca eventi (`search`) | locale (SQLite LIKE, come il sito) | Cerca | P2 | fatto: lente nell'intestazione, almeno 2 lettere, i più vicini a oggi per primi (max 60), tocco = vai al giorno e all'ora; con test | |
 | P20 | Ambienti/sfondi (`planner_ambient.json`) | file nell'app | Planner | P4 | da fare | |
 
 ## 4. To do / To buy / Pastiglie (`planner/todo.php`: schede `todo`, `buy`, `pills`)

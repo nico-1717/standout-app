@@ -94,6 +94,23 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(screen.queryByTestId('day-empty')).toBeNull();
   });
 
+  test('search: finds an event on another day, tapping it jumps there', async () => {
+    const repo = setup();
+    const far = new Date(Date.now() + 9 * 86_400_000);
+    const farIso = `${far.getFullYear()}-${String(far.getMonth() + 1).padStart(2, '0')}-${String(far.getDate()).padStart(2, '0')}`;
+    const id = repo.create({ title: 'Dentist', date: farIso, start: '15:00', end: '16:00' });
+    await renderIt();
+    expect(screen.queryByTestId(`ev-${id}@${farIso}`)).toBeNull(); // oggi non c'è nulla
+    await fireEvent.press(screen.getByTestId('planner-search'));
+    await fireEvent.changeText(screen.getByTestId('search-input'), 'x');
+    expect(screen.queryByTestId('search-empty')).toBeNull(); // meno di 2 lettere: ancora niente
+    await fireEvent.changeText(screen.getByTestId('search-input'), 'zzz');
+    expect(screen.getByTestId('search-empty')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('search-input'), 'dent');
+    await fireEvent.press(screen.getByTestId(`search-hit-${id}`));
+    expect(screen.getByTestId(`ev-${id}@${farIso}`)).toBeTruthy();
+  });
+
   test('+ opens the sheet, saving creates the event', async () => {
     const repo = setup();
     await renderIt();

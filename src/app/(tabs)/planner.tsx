@@ -21,6 +21,9 @@ import type { Priority, Routine } from '@/features/planner/repo';
 import { SmartBar, SmartReport, type SmartNote } from '@/features/planner/SmartBar';
 import { smartEvent, smartParse } from '@/features/planner/smart';
 import { PrioritiesCard, RoutineBar, routineBlocks } from '@/features/planner/DayExtras';
+import Svg, { Circle, Path } from 'react-native-svg';
+
+import { SearchSheet } from '@/features/planner/SearchSheet';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
   BandEvent,
@@ -47,6 +50,7 @@ export default function PlannerScreen() {
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day');
   const [note, setNote] = useState<SmartNote | null>(null);
   const [unclear, setUnclear] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   const scroller = useRef<ScrollViewInstance>(null);
   const zoom = plannerSettings.zoom;
@@ -216,6 +220,18 @@ export default function PlannerScreen() {
             >
               {weekNo}
             </Text>
+          </Pressable>
+          <Pressable
+            testID="planner-search"
+            accessibilityRole="button"
+            accessibilityLabel={t('planner.cerca')}
+            onPress={() => setSearching(true)}
+            style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Circle cx={10.5} cy={10.5} r={6.5} stroke={pt.ink2} strokeWidth={2} />
+              <Path d="M15.5 15.5L20 20" stroke={pt.ink2} strokeWidth={2} strokeLinecap="round" />
+            </Svg>
           </Pressable>
           <Pressable
             testID="planner-manage"
@@ -492,6 +508,28 @@ export default function PlannerScreen() {
 
       <SmartReport pt={pt} note={note} onHide={() => setNote(null)} />
 
+      <SearchSheet
+        visible={searching}
+        repo={repo}
+        pt={pt}
+        today={today}
+        categories={categories}
+        onClose={() => setSearching(false)}
+        onPick={(d, start) => {
+          setSearching(false);
+          setMode('day');
+          setDate(d);
+          // se l'evento ha un'ora, la griglia scorre fin lì (un'ora prima, come sul sito)
+          if (start) {
+            const [hh, mm] = start.split(':').map(Number);
+            const startMin = Math.max(0, hh! * 60 + mm! - 60);
+            setTimeout(
+              () => scroller.current?.scrollTo({ y: startMin * pxPerMinute(zoom), animated: true }),
+              320,
+            );
+          }
+        }}
+      />
       {sheet ? (
         <EventSheet
           key={sheet.key}
