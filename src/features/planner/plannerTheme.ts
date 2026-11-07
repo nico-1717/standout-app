@@ -62,28 +62,30 @@ export function plannerTheme(
   const [accent, accentSoft, accentWash, accentInk] = PALETTES[palette] ?? PALETTES.sage;
   const k = contrast;
   if (style === 'paper') {
-    const ink = [76, 70, 63];
+    // Calm paper: in chiaro la carta dell'agenda; in scuro la stessa carta ma scura, con i pastelli più vivi
+    const night = th.scheme === 'dark';
+    const ink = night ? [242, 235, 221] : [76, 70, 63];
     const a = (v: number) => `rgba(${ink.join(',')},${v})`;
     return {
       style,
-      dark: false,
-      page: '#FBF9F6',
-      paper2: '#F5F1EA',
-      card: '#FFFDFA',
-      ink: '#4C463F',
+      dark: night,
+      page: night ? th.bg : '#FBF9F6',
+      paper2: night ? '#1A1713' : '#F5F1EA',
+      card: night ? th.surface : '#FFFDFA',
+      ink: night ? th.text : '#4C463F',
       ink2: a(0.52 + 0.1 * k),
       ink3: a(0.3 + 0.1 * k),
       hair: a(0.05 + 0.028 * k),
       hair2: a(0.1 + 0.045 * k),
       accent,
-      accentSoft,
-      accentWash,
-      accentInk,
-      onAccent: '#FFFDFA',
-      neutralEv: '#E4DDD3',
+      accentSoft: night ? mix(accent, th.surface, 0.3) : accentSoft,
+      accentWash: night ? mix(accent, th.surface, 0.14) : accentWash,
+      accentInk: night ? accent : accentInk,
+      onAccent: night ? '#14120F' : '#FFFDFA',
+      neutralEv: night ? '#3B352C' : '#E4DDD3',
       sans: 'Jost_400Regular',
-      serif: 'CormorantGaramond_400Regular',
-      serifLight: 'CormorantGaramond_300Light',
+      serif: 'Fraunces_400Regular',
+      serifLight: 'Fraunces_400Regular',
     };
   }
   const bt = buyTheme(style, th);

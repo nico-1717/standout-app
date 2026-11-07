@@ -238,6 +238,6 @@ Due vesti scelte in Altro › Stile (stesso campo `ui_style` del sito: `standard
 | Movimento: entrata a cascata, affondo al tocco, vibrazioni leggere, rispetta «Riduci movimento» (`ui/motion.tsx`) | fatto; usato in Home e Abitudini |
 | Home, Abitudini, Statistiche con medaglie dei traguardi | fatto |
 | To do, To buy: carta segue il tema (anche scuro) | fatto |
-| Planner, Diario: carta in scuro | da fare |
+| Planner, Diario: carta anche in scuro | fatto |
 | Flashcards, Pomodoro, Voti, Progetti, Impostazioni, Login | da fare (i colori sono già nuovi; mancano forme, titoli e movimento) |
 | Vetro sfocato vero (`expo-blur`) e scheletri di caricamento | da fare (con le altre aggiunte native) |

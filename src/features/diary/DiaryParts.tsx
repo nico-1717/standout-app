@@ -21,7 +21,7 @@ export function Rings({ rings, size, d }: { rings: Ring[]; size: number; d: Diar
     d.style === 'standard'
       ? { daily: d.accent, weekly: '#30D158', monthly: '#FF9F0A', interval: '#BF5AF2' }
       : { daily: d.accent, weekly: '#6E8C74', monthly: '#8A9E7E', interval: '#AFB79A' };
-  const track = alpha(d.style === 'paper' ? '#4A443D' : d.dark ? '#FFFFFF' : '#000000', 0.08);
+  const track = alpha(d.dark ? '#FFFFFF' : d.style === 'paper' ? '#4A443D' : '#000000', 0.08);
   const lanes: Ring[] =
     rings.length || d.style !== 'standard' ? rings : [{ key: 'daily', done: 0, total: 0 }];
   return (
