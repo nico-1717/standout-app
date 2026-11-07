@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { bigNumber } from '@/ui/kit';
 import type { TodoTheme } from '@/features/tasks/todoTheme';
 import type { DoseView } from '@/features/pills/repo';
 import type { Task } from '@/features/tasks/repo';
@@ -365,6 +366,7 @@ export function GradesWidget({
   empty: boolean;
   onOpen: () => void;
 }) {
+  const app = useTheme();
   const { t } = useTranslation();
   if (empty)
     return (
@@ -382,17 +384,17 @@ export function GradesWidget({
     >
       <View>
         <Text style={{ color: td.ink3, fontSize: 12 }}>{t('voti.media')}</Text>
-        <Text testID="home-grades-avg" style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>
+        <Text testID="home-grades-avg" style={[{ color: td.ink }, bigNumber(app, 26)]}>
           {avg}
         </Text>
       </View>
       <View>
         <Text style={{ color: td.ink3, fontSize: 12 }}>/{base}</Text>
-        <Text style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>{baseValue}</Text>
+        <Text style={[{ color: td.ink }, bigNumber(app, 26)]}>{baseValue}</Text>
       </View>
       <View>
         <Text style={{ color: td.ink3, fontSize: 12 }}>{t('voti.cfu')}</Text>
-        <Text style={{ color: td.ink, fontSize: 26, fontWeight: '800' }}>
+        <Text style={[{ color: td.ink }, bigNumber(app, 26)]}>
           {cfuDone}/{cfuTotal}
         </Text>
       </View>

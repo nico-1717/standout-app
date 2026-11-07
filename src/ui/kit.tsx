@@ -8,11 +8,14 @@ import {
   TextInput,
   View,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 
-import { useTheme } from '@/core/theme/ThemeProvider';
+import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
 import { radius } from '@/core/theme/tokens';
+
+import { Rise } from './motion';
 
 /** L'ombra delle carte del sito (--shadow-card). Ancora usata dalle pagine non ancora passate alle nuove vesti. */
 export function cardShadow(dark: boolean): ViewStyle {
@@ -27,9 +30,18 @@ export function cardShadow(dark: boolean): ViewStyle {
   })!;
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Card({
+  children,
+  style,
+  index,
+}: {
+  children: ReactNode;
+  style?: ViewStyle;
+  /** se c'è, la carta entra con dissolvenza dopo `index` passi (vedi ui/motion) */
+  index?: number;
+}) {
   const th = useTheme();
-  return (
+  const card = (
     <View
       style={[
         {
@@ -47,6 +59,7 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
       {children}
     </View>
   );
+  return index === undefined ? card : <Rise index={index}>{card}</Rise>;
 }
 
 export function PrimaryButton({
@@ -208,3 +221,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
+
+/** Un numero grande (media, serie, punteggio): in Calm paper è in serif sottile, in Glass in grassetto. */
+export function bigNumber(th: Pick<Theme, 'display'>, size: number): TextStyle {
+  return th.display
+    ? { fontSize: size, fontFamily: th.display, letterSpacing: -0.8, fontVariant: ['tabular-nums'] }
+    : { fontSize: size, fontWeight: '800', fontVariant: ['tabular-nums'] };
+}

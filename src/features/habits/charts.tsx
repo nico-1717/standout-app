@@ -3,7 +3,8 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { alpha } from '@/features/buy/buyTheme';
-import { cardShadow } from '@/ui/kit';
+import { useTheme } from '@/core/theme/ThemeProvider';
+import { bigNumber, cardShadow } from '@/ui/kit';
 
 import type { HabitsTheme } from './habitsTheme';
 import type { Bar, CalCell, HeatWeek } from './stats';
@@ -56,6 +57,7 @@ export function Kpi(p: {
   color: string;
 }) {
   const { th } = p;
+  const app = useTheme();
   return (
     <View style={[styles.kpi, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}>
       <LinearGradient
@@ -65,7 +67,7 @@ export function Kpi(p: {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      <Text style={{ color: th.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.6 }}>
+      <Text style={[{ color: th.text }, bigNumber(app, 30)]}>
         {p.value}
         {!!p.suffix && (
           <Text style={{ fontSize: 16, color: th.text2, fontWeight: '700' }}> {p.suffix}</Text>

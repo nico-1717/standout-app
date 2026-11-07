@@ -16,7 +16,7 @@ import {
   type ExamGroup,
 } from '@/features/grades/logic';
 import { Pill, Stepper, trimNum } from '@/features/grades/parts';
-import { Card, Field, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Card, Field, Header, PrimaryButton, SectionLabel, TextButton, bigNumber } from '@/ui/kit';
 
 function GroupForm({
   group,
@@ -194,7 +194,7 @@ function GroupForm({
             {type === 'split' ? t('voti.cfu_totali_gruppo') : t('voti.scegli_cfu_totali_gruppo')}
           </SectionLabel>
           {type === 'split' ? (
-            <Text testID="group-total" style={{ color: th.text, fontSize: 22, fontWeight: '800' }}>
+            <Text testID="group-total" style={[{ color: th.text }, bigNumber(th, 22)]}>
               {trimNum(total)}
             </Text>
           ) : sums.length === 0 ? (

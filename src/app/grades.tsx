@@ -46,7 +46,7 @@ import {
   gradeLabel,
   trimNum,
 } from '@/features/grades/parts';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Card, Header, PrimaryButton, SectionLabel, TextButton, bigNumber } from '@/ui/kit';
 
 type Tab = 'done' | 'todo' | 'sim';
 
@@ -105,7 +105,7 @@ function ExamRow({
         <Text style={{ color: th.text, fontSize: 16, fontWeight: '600' }}>{exam.name}</Text>
         {sub ? <Text style={{ color: th.text2, fontSize: 12 }}>{sub}</Text> : null}
       </View>
-      <Text style={{ color: th.text, fontSize: 17, fontWeight: '800' }}>{right}</Text>
+      <Text style={[{ color: th.text }, bigNumber(th, 17)]}>{right}</Text>
     </Pressable>
   );
 }
@@ -336,7 +336,7 @@ export default function GradesScreen() {
 
   const stat = (value: string, label: string, testID: string) => (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text testID={testID} style={{ color: th.text, fontSize: 20, fontWeight: '800' }}>
+      <Text testID={testID} style={[{ color: th.text }, bigNumber(th, 20)]}>
         {value}
       </Text>
       <Text style={{ color: th.text2, fontSize: 11 }}>{label}</Text>
@@ -407,7 +407,7 @@ export default function GradesScreen() {
                 <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                   <Ring done={doneCount} total={totalCount} color={accent} track={th.surface2} />
                   <View style={{ position: 'absolute', alignItems: 'center' }}>
-                    <Text style={{ color: th.text, fontSize: 18, fontWeight: '800' }}>
+                    <Text style={[{ color: th.text }, bigNumber(th, 18)]}>
                       {doneCount}/{totalCount}
                     </Text>
                     <Text style={{ color: th.text2, fontSize: 10 }}>{t('voti.esami')}</Text>
@@ -415,10 +415,7 @@ export default function GradesScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: th.text2, fontSize: 12 }}>{t('voti.media_ponderata')}</Text>
-                  <Text
-                    testID="grades-average"
-                    style={{ color: th.text, fontSize: 38, fontWeight: '800' }}
-                  >
+                  <Text testID="grades-average" style={[{ color: th.text }, bigNumber(th, 38)]}>
                     {w.n ? fmt2(w.avg) : '–'}
                   </Text>
                 </View>
@@ -448,10 +445,7 @@ export default function GradesScreen() {
               <SectionLabel>{t('voti.voto_di_laurea_stimato')}</SectionLabel>
               {w.n ? (
                 <>
-                  <Text
-                    testID="grades-final"
-                    style={{ color: th.text, fontSize: 30, fontWeight: '800' }}
-                  >
+                  <Text testID="grades-final" style={[{ color: th.text }, bigNumber(th, 30)]}>
                     {range.min === range.max
                       ? dispFinal(d, range.min)
                       : `${dispFinal(d, range.min)} – ${dispFinal(d, range.max)}`}

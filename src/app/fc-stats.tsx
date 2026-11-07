@@ -11,7 +11,7 @@ import { DocView } from '@/features/flashcards/DocView';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
 import { badges, streaks } from '@/features/flashcards/stats';
 import { localToday } from '@/features/tasks/groups';
-import { Card, Header, SectionLabel } from '@/ui/kit';
+import { Card, Header, SectionLabel, bigNumber } from '@/ui/kit';
 
 type Period = 7 | 30 | 90 | 0;
 
@@ -161,7 +161,7 @@ export default function FlashcardStatsScreen() {
       <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
         {label.toUpperCase()}
       </Text>
-      <Text testID={id} style={{ color: th.text, fontSize: 22, fontWeight: '800' }}>
+      <Text testID={id} style={[{ color: th.text }, bigNumber(th, 22)]}>
         {value}
       </Text>
       <Text style={{ color: th.text2, fontSize: 11 }}>{note}</Text>
@@ -232,7 +232,7 @@ export default function FlashcardStatsScreen() {
           <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
             {t('fc.streak_di_studio').toUpperCase()}
           </Text>
-          <Text testID="fcst-streak" style={{ color: th.text, fontSize: 26, fontWeight: '800' }}>
+          <Text testID="fcst-streak" style={[{ color: th.text }, bigNumber(th, 26)]}>
             🔥 {t('fc.n_giorni', { n: streak.current })}
           </Text>
           <Text testID="fcst-best" style={{ color: th.text2 }}>
@@ -252,7 +252,7 @@ export default function FlashcardStatsScreen() {
           <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
             {t('fc.obiettivo_di_oggi').toUpperCase()}
           </Text>
-          <Text testID="fcst-goal" style={{ color: th.text, fontSize: 22, fontWeight: '800' }}>
+          <Text testID="fcst-goal" style={[{ color: th.text }, bigNumber(th, 22)]}>
             {todayPlayed} / {goal}
           </Text>
           <View style={{ height: 8, borderRadius: 4, backgroundColor: th.surface2 }}>
@@ -342,10 +342,7 @@ export default function FlashcardStatsScreen() {
           <Text style={{ color: th.text2, fontSize: 12 }}>
             {t('fc.su_tutto_l_archivio_flashcard')}
           </Text>
-          <Text
-            testID="fcst-mastery-pct"
-            style={{ color: th.text, fontSize: 24, fontWeight: '800' }}
-          >
+          <Text testID="fcst-mastery-pct" style={[{ color: th.text }, bigNumber(th, 24)]}>
             {masteryPct}%{' '}
             <Text style={{ fontSize: 13, fontWeight: '500' }}>{t('fc.completato')}</Text>
           </Text>

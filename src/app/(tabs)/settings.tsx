@@ -58,7 +58,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/account')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={0} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {user?.username}
             </Text>
@@ -73,7 +73,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/diary')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={1} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('diario.titolo')}
             </Text>
@@ -85,7 +85,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/projects')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={2} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('progetti.progetti')}
             </Text>
@@ -97,7 +97,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/pomodoro')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={3} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('pomodoro.tipo_pomodoro')}
             </Text>
@@ -109,7 +109,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/grades')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={4} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('voti.voti')}
             </Text>
@@ -121,7 +121,7 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/flashcards')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={5} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('fc.flashcard')}
             </Text>
@@ -129,7 +129,7 @@ export default function SettingsScreen() {
           </Card>
         </Pressable>
         <Pressable testID="open-buy" accessibilityRole="button" onPress={() => router.push('/buy')}>
-          <Card style={{ padding: 16 }}>
+          <Card index={6} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('planner.to_buy')}
             </Text>
@@ -141,14 +141,14 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           onPress={() => router.push('/pills')}
         >
-          <Card style={{ padding: 16 }}>
+          <Card index={7} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('todo.tipo_pills')}
             </Text>
             <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
           </Card>
         </Pressable>
-        <Card style={{ padding: 16, gap: 10 }}>
+        <Card index={8} style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
           <Text style={{ color: th.text2, fontSize: 13 }}>{t('stile.app_nota')}</Text>
           <View style={{ gap: 8 }}>
@@ -181,7 +181,7 @@ export default function SettingsScreen() {
             })}
           </View>
         </Card>
-        <Card style={{ padding: 16, gap: 10 }}>
+        <Card index={9} style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.colore')}</Text>
           <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
             {(Object.keys(accents) as AccentId[]).map((a) => (
@@ -203,7 +203,7 @@ export default function SettingsScreen() {
             ))}
           </View>
         </Card>
-        <Card style={{ padding: 16, gap: 10 }}>
+        <Card index={10} style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('comune.lingua')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {(
@@ -237,7 +237,7 @@ export default function SettingsScreen() {
         </Card>
         <RemindersCard />
         {(problems > 0 || syncInfo.status === 'error') && (
-          <Card style={{ padding: 16 }}>
+          <Card index={11} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontWeight: '700' }}>{t('app.problemi_titolo')}</Text>
             <Text style={{ color: th.text2, marginTop: 4 }}>
               {problems > 0 ? t('app.attivita_ripristinata') : t('app.sync_errore')}

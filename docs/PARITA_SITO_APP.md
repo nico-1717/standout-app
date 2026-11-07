@@ -239,5 +239,5 @@ Due vesti scelte in Altro › Stile (stesso campo `ui_style` del sito: `standard
 | Home, Abitudini, Statistiche con medaglie dei traguardi | fatto |
 | To do, To buy: carta segue il tema (anche scuro) | fatto |
 | Planner, Diario: carta anche in scuro | fatto |
-| Flashcards, Pomodoro, Voti, Progetti, Impostazioni, Login | da fare (i colori sono già nuovi; mancano forme, titoli e movimento) |
-| Vetro sfocato vero (`expo-blur`) e scheletri di caricamento | da fare (con le altre aggiunte native) |
+| Flashcards, Pomodoro, Voti, Progetti, Impostazioni: colori, intestazioni, numeri grandi in serif (Paper), entrata a cascata delle carte | fatto; le forme interne delle singole pagine si rifiniscono sul telefono |
+| Vetro sfocato vero e scheletri di caricamento | non servono ora: nulla scorre sotto la barra e i dati sono locali (si rivede se cambia) |

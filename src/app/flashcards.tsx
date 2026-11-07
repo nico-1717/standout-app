@@ -20,7 +20,7 @@ import {
   type DeckScope,
 } from '@/features/flashcards/logic';
 import { localToday } from '@/features/tasks/groups';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Card, Header, PrimaryButton, SectionLabel, TextButton, bigNumber } from '@/ui/kit';
 
 /** Le categorie delle flashcard di studio ad albero (fc_decks.php): materie, sottocategorie, archivio, ricerca. */
 export default function FlashcardsScreen() {
@@ -325,7 +325,7 @@ export default function FlashcardsScreen() {
               <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
                 {t('fc.obiettivo_di_oggi').toUpperCase()}
               </Text>
-              <Text testID="fc-goal" style={{ color: th.text, fontSize: 20, fontWeight: '800' }}>
+              <Text testID="fc-goal" style={[{ color: th.text }, bigNumber(th, 20)]}>
                 {todayPlayed} / {goal}
               </Text>
               <View style={{ height: 6, borderRadius: 3, backgroundColor: th.surface2 }}>
@@ -340,7 +340,7 @@ export default function FlashcardsScreen() {
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text testID="fc-known" style={{ color: th.text, fontSize: 20, fontWeight: '800' }}>
+              <Text testID="fc-known" style={[{ color: th.text }, bigNumber(th, 20)]}>
                 {knownCards}
               </Text>
               <Text style={{ color: th.text2, fontSize: 11 }}>{t('fc.carte_imparate')}</Text>
@@ -486,7 +486,7 @@ export default function FlashcardsScreen() {
             </Text>
           )
         ) : rows.length ? (
-          <Card>
+          <Card index={0}>
             {rows.map((r, i) => (
               <View
                 key={r.deck.uuid}
