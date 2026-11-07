@@ -233,4 +233,33 @@ describe('pastiglie: telefono ↔ server', () => {
     expect(rows).toHaveLength(1);
     expect(id).toBeTruthy();
   });
+
+  describe('le prese da chiedere nel planner (due)', () => {
+    it('chiede solo le prese di oggi la cui ora è passata, e smette dopo la risposta', () => {
+      const { pills } = phone(new FakeServer());
+      pills.createPlan(plan({ start_date: TODAY }));
+      const due = pills.due();
+      expect(due.map((d) => `${d.due_date} ${d.due_time}`)).toEqual([`${TODAY} 08:00`]);
+      pills.setStatus(due[0]!.uuid, 'skipped');
+      expect(pills.due()).toEqual([]);
+    });
+
+    it('include i giorni scorsi, le più vecchie per prime', () => {
+      const { pills } = phone(new FakeServer());
+      pills.createPlan(plan({ start_date: '2026-11-03' }));
+      expect(pills.due().map((d) => `${d.due_date} ${d.due_time}`)).toEqual([
+        '2026-11-03 08:00',
+        '2026-11-03 20:00',
+        '2026-11-04 08:00',
+        '2026-11-04 20:00',
+        '2026-11-05 08:00',
+      ]);
+    });
+
+    it('non ne chiede più di sei', () => {
+      const { pills } = phone(new FakeServer());
+      pills.createPlan(plan({ start_date: '2026-10-25', times: '06:00,08:00,09:00' }));
+      expect(pills.due()).toHaveLength(6);
+    });
+  });
 });

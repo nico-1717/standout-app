@@ -295,6 +295,22 @@ export class PillsRepo {
     );
   }
 
+  /**
+   * Le prese da chiedere nel planner (pl_pills_due): in sospeso, con l'ora già passata (oggi) o di uno dei sette
+   * giorni scorsi. Al massimo sei, le più vecchie per prime. Come per `late()`, si scrivono prima le prese mancanti.
+   */
+  due(): DoseView[] {
+    const today = this.today();
+    const time = this.nowLocal().slice(11, 16);
+    this.db.transaction(() => this.ensureDays([...daysBefore(today, CATCH_UP_DAYS), today]));
+    return this.db.all<DoseView>(
+      `${DOSE_SELECT} WHERE d.status = 'pending'
+         AND (d.due_date < ? OR (d.due_date = ? AND d.due_time <= ?)) AND d.due_date >= ?
+       ORDER BY d.due_date, d.due_time LIMIT 6`,
+      [today, today, time, addDays(today, -CATCH_UP_DAYS)],
+    );
+  }
+
   /** Segna una presa (presa / saltata / di nuovo da prendere). L'ora vera della spunta non è mai nel futuro. */
   setStatus(uuid: string, status: DoseStatus, takenAt?: string): void {
     this.db.transaction(() => this.apply([this.change(uuid, status, takenAt)]));

@@ -24,6 +24,7 @@ import { PrioritiesCard, RoutineBar, routineBlocks } from '@/features/planner/Da
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { SearchSheet } from '@/features/planner/SearchSheet';
+import { PillNotices } from '@/features/planner/PillNotices';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
   BandEvent,
@@ -56,6 +57,7 @@ export default function PlannerScreen() {
   const zoom = plannerSettings.zoom;
 
   const repo = services?.planner ?? null;
+  const pillsRepo = services?.pills ?? null;
   const week = useMemo(() => {
     const m = mondayOf(date);
     return Array.from({ length: 7 }, (_, i) => addDaysIso(m, i));
@@ -94,6 +96,12 @@ export default function PlannerScreen() {
         weekNo: repo.weekNumber(week[0]!, plannerSettings),
       };
     }, [repo, version, date, week, mode, plannerSettings]);
+
+  // le pastiglie la cui ora è passata e nessuno ha risposto (solo nella vista giorno, come sul sito)
+  const dueDoses = useMemo(() => {
+    void version;
+    return pillsRepo ? pillsRepo.due() : [];
+  }, [pillsRepo, version]);
 
   useEffect(() => {
     // all'apertura: si parte un'ora prima di adesso (o dalle 6 se non è oggi)
@@ -505,6 +513,19 @@ export default function PlannerScreen() {
       >
         <Text style={{ color: pt.onAccent, fontSize: 30, lineHeight: 32 }}>+</Text>
       </Pressable>
+
+      {mode === 'day' ? (
+        <PillNotices
+          doses={dueDoses}
+          today={today}
+          pt={pt}
+          bottom={18}
+          onAnswer={(uuid, status) => {
+            pillsRepo?.setStatus(uuid, status);
+            changed();
+          }}
+        />
+      ) : null}
 
       <SmartReport pt={pt} note={note} onHide={() => setNote(null)} />
 

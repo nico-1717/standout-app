@@ -76,7 +76,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P15 | Impostazioni del planner (`planner_settings`) | sync | Planner › Impostazioni | P2 | fatto in parte — schermata Impostazioni (⚙ nel planner): colore della pagina, frasi, alberi e animali, scatti degli orari, contrasto, giorni affiancati (tablet); il planner usa colore, contrasto, zoom e ora d'inizio. Da fare: frasi/affermazioni sulla settimana e sfondi animati (P20) | |
 | P16 | Meteo (`meteo_api.php`: stato, attiva, anteprima, ricerca luogo) | `weather/*` (nuova) | Planner › Meteo | P4 | solo online | |
 | P17 | Google Calendar (`google_calendar.php`: collega, calendari, mappa, push, ripara, sincronizza, scollega) | `google/*` (nuova, OAuth da browser di sistema) | Impostazioni › Google Calendar | P4 | solo online | |
-| P18 | Pastiglie in scadenza dentro il planner (avvisi viola) | locale | Planner | P2 | da fare | |
+| P18 | Pastiglie la cui ora è passata, chieste in basso nel planner (✓ presa, Saltato, × per ora, Chiudi tutti) | locale | Planner | P2 | fatto | Come `renderAvvisi` del sito; solo vista giorno |
 | P19 | Ricerca eventi (`search`) | locale (SQLite LIKE, come il sito) | Cerca | P2 | fatto: lente nell'intestazione, almeno 2 lettere, i più vicini a oggi per primi (max 60), tocco = vai al giorno e all'ora; con test | |
 | P20 | Ambienti/sfondi (`planner_ambient.json`) | file nell'app | Planner | P4 | da fare | |
 
