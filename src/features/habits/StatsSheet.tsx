@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { evaluateAchievements } from './achievements';
 import { Bars, Heatmap, Kpi, StatCard } from './charts';
 import {
   allLogsOf,
@@ -94,6 +95,7 @@ function Body(p: StatsSheetProps) {
       wd: weekdayRates(list, today, ctxOf, false),
       months: monthlyCounts(p.logs, Number(today.slice(0, 4))),
       hours: checkInHours(p.logs, today),
+      awards: evaluateAchievements(p.habits, p.logs, today),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list, all, ctxOf, today, range, p.categories, p.logs]);
@@ -230,6 +232,46 @@ function Body(p: StatsSheetProps) {
 
       <StatCard
         th={th}
+        title={t('abitudini.traguardi')}
+        note={`${data.awards.filter((a) => a.unlocked).length}/${data.awards.length}`}
+      >
+        <View style={styles.badges} testID="achievements">
+          {data.awards.map((a) => (
+            <View
+              key={a.code}
+              testID={`award-${a.code}`}
+              accessible
+              accessibilityLabel={`${a.name}. ${a.description}. ${a.tier}${a.unlocked ? '' : ' (bloccato)'}`}
+              style={[
+                styles.badge,
+                { backgroundColor: th.surface2, opacity: a.unlocked ? 1 : 0.42 },
+              ]}
+            >
+              <Text style={[styles.badgeIcon, a.unlocked ? null : { opacity: 0.6 }]}>{a.icon}</Text>
+              <Text
+                style={{ color: th.text, fontSize: 11, fontWeight: '800', textAlign: 'center' }}
+              >
+                {a.name}
+              </Text>
+              <Text
+                style={{
+                  color: th.text3,
+                  fontSize: 8.5,
+                  fontWeight: '800',
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  marginTop: 4,
+                }}
+              >
+                {a.tier}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </StatCard>
+
+      <StatCard
+        th={th}
         title={t('abitudini.quando_ti_muovi')}
         note={t('abitudini.ultimi_90_giorni')}
       >
@@ -265,5 +307,14 @@ function Body(p: StatsSheetProps) {
 const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 30 },
   kpis: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  badge: {
+    width: '30.5%',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 18,
+  },
+  badgeIcon: { fontSize: 26, marginBottom: 7 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
 });

@@ -119,6 +119,8 @@ describe('Habits screen', () => {
     await renderIt();
     await fireEvent.press(screen.getByTestId('hb-stats'));
     expect(screen.getByTestId('stats-sheet')).toBeTruthy();
+    expect(screen.getByTestId('achievements')).toBeTruthy();
+    expect(screen.getByTestId('award-streak_3')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Cancel'));
   });
 
