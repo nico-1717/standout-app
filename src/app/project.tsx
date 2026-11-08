@@ -14,6 +14,7 @@ import { ancestors, byId, childrenOf, subtreeIds, type Project } from '@/feature
 import { isRichNote, noteText } from '@/features/projects/notes';
 import { useAutosave } from '@/ui/useAutosave';
 import { localToday } from '@/features/tasks/groups';
+import { ProjectTasksCard } from '@/features/tasks/ProjectTasksCard';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { ReorderList, reorderKeys } from '@/ui/ReorderList';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
@@ -232,6 +233,17 @@ export default function ProjectScreen() {
                 params: { project: me.uuid, min: String(min), ...(auto ? { auto: '1' } : {}) },
               })
             }
+          />
+        ) : null}
+
+        {services.tasks ? (
+          <ProjectTasksCard
+            repo={services.tasks}
+            project={me.uuid}
+            enabled={!!me.todo_enabled}
+            version={version}
+            onToggle={(on) => patch({ todo_enabled: on })}
+            changed={changed}
           />
         ) : null}
 

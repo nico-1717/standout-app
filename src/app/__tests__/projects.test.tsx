@@ -9,6 +9,7 @@ import { ProjectOptionsStore } from '@/features/projects/options';
 import { ProjectsRepo } from '@/features/projects/repo';
 import { nextBatch } from '@/core/sync/outbox';
 import { localToday } from '@/features/tasks/groups';
+import { TasksRepo } from '@/features/tasks/repo';
 
 import ProjectsScreen from '../projects';
 import ProjectScreen from '../project';
@@ -42,8 +43,9 @@ function setup() {
   migrate(db);
   const projects = new ProjectsRepo(db);
   const pomodoro = new PomodoroRepo(db, 7);
-  mockServices = { db, projects, pomodoro, projectOptions: new ProjectOptionsStore(db) };
-  return { db, projects, pomodoro };
+  const tasks = new TasksRepo(db);
+  mockServices = { db, projects, pomodoro, tasks, projectOptions: new ProjectOptionsStore(db) };
+  return { db, projects, pomodoro, tasks };
 }
 const renderList = () =>
   render(
@@ -251,5 +253,39 @@ describe('project page', () => {
     await fireEvent.press(screen.getAllByTestId('proj-delete').pop()!);
     await fireEvent.press(screen.getByTestId('proj-del-yes'));
     expect(projects.get(b)).toBeNull();
+  });
+
+  test('the Activities switch shows the linked tasks: tick one, add one', async () => {
+    const { projects, tasks } = setup();
+    const a = projects.create({ name: 'Alpha' })!;
+    const mine = tasks.create({ title: 'Read chapter 1', project_uuid: a });
+    tasks.create({ title: 'Other project task' });
+    mockParams = { id: a };
+    const view = await renderOne();
+    // spento: nessuna lista
+    expect(screen.queryByTestId('proj-task-new')).toBeNull();
+    await fireEvent(screen.getByTestId('proj-todo-switch'), 'valueChange', true);
+    expect(projects.get(a)!.todo_enabled).toBe(1);
+    await view.rerender(
+      <ThemeProvider>
+        <ProjectScreen />
+      </ThemeProvider>,
+    );
+    expect(screen.getByText('Read chapter 1')).toBeTruthy();
+    expect(screen.queryByText('Other project task')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`proj-task-${mine}`));
+    expect(tasks.get(mine)!.is_done).toBe(1);
+
+    await fireEvent.changeText(screen.getByTestId('proj-task-new'), '  Write summary ');
+    await fireEvent.press(screen.getByTestId('proj-task-add'));
+    const linked = tasks.ofProject(a).map((x) => x.title);
+    expect(linked).toContain('Write summary');
+    // titolo vuoto: non crea niente
+    await fireEvent.press(screen.getByTestId('proj-task-add'));
+    expect(tasks.ofProject(a)).toHaveLength(2);
+
+    await fireEvent(screen.getByTestId('proj-todo-switch'), 'valueChange', false);
+    expect(projects.get(a)!.todo_enabled).toBe(0);
   });
 });

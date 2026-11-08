@@ -64,6 +64,14 @@ export class TasksRepo {
     );
   }
 
+  /** Le attività (to do) collegate a un progetto, quelle da fare prima. */
+  ofProject(projectUuid: string): Task[] {
+    return this.db.all<Task>(
+      `SELECT * FROM todos WHERE list_type = 'todo' AND parent_uuid IS NULL AND project_uuid = ? ORDER BY is_done, sort_key`,
+      [projectUuid],
+    );
+  }
+
   subtasks(parentUuid: string): Task[] {
     return this.db.all<Task>(`SELECT * FROM todos WHERE parent_uuid = ? ORDER BY sort_key`, [
       parentUuid,

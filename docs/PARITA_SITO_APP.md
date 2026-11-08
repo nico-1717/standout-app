@@ -135,7 +135,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 
 | # | Funzione | Area API | Schermata app | Fase | Stato | Firma |
 |---|---|---|---|---|---|---|
-| J1 | Albero dei progetti (`progetti.php`: figli, nipoti, preferiti, date, colore, note, stato) | sync `projects` | Progetti | P3 | in parte: albero con stato (anche a cascata e ripristino), preferiti, scadenze, tempo di lavoro, opzioni della pagina (solo su questo telefono), scheda del progetto (nome, colore, date, nota di testo, sposta, riordina, sotto-progetti, elimina con scelta sui Pomodoro). Mancano: nota con formato (si legge, non si riscrive), attività del progetto (todo_enabled), mazzi collegati, selezione multipla/azioni di gruppo, vista a griglia | |
+| J1 | Albero dei progetti (`progetti.php`: figli, nipoti, preferiti, date, colore, note, stato) | sync `projects` | Progetti | P3 | in parte: albero con stato (anche a cascata e ripristino), preferiti, scadenze, tempo di lavoro, opzioni della pagina (solo su questo telefono), scheda del progetto (nome, colore, date, nota di testo, sposta, riordina, sotto-progetti, elimina con scelta sui Pomodoro). attività del progetto: interruttore «Attività» (todo_enabled) con la lista delle attività collegate (spunta e aggiunta rapida). Mancano: nota con formato (si legge, non si riscrive), selezione multipla/azioni di gruppo, vista a griglia | |
 | J2 | Selettore di progetto (`project_selector.php`) | locale | selettore | P3 | fatto: scelta del progetto (albero con colori) nel Pomodoro, nello storico e per spostare un progetto | |
 | J3 | Vista Elenco / Calendario / Piano dentro un progetto | sync piano | Progetto › Piano (scheda) + pagina Piano con `project` | P3 | **fatto** (solo da provare sul telefono) | scheda «Piano» nel progetto; la pagina Piano da solo il ramo |
 | J4 | Piano: obiettivi (minuti, tipo, priorità, scadenza), divisione fra i figli con lucchetto | sync `plan_goals` | Progetto › Piano | P3 | **fatto** — test d'oro (400 casi) | al posto dello slider: −/+ 15 min o scrivi le ore |
@@ -164,7 +164,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | V3 | Bonus e tetti | sync `university_bonuses` | Voti › Bonus | P3 | fatto — 5 tipi, tetto, soglia, interruttore | |
 | V4 | Media, voto di laurea e previsioni | logica in TS | Voti | P3 | fatto — **test d'oro** su 150 casi del codice vero del sito; media, /110, lodi, stima, obiettivo, andamento | |
 | V5 | Catalogo degli esami (`exams_catalog.json`, `catalog_code`) | file nell'app | Voti › Aggiungi | P3 | fatto — 43 corsi / 11 facoltà, carica «sostituisci / aggiungi» | |
-| V6 | Impostazioni (`university_settings`) e «oro dei Voti» (`lib/colore_voti.php`) | sync | Voti › Impostazioni | P3 | fatto — corso, colore facoltà, CFU, base, lode, tesi, arrotondamento (sync REST). Da fare: «oro» dei Voti (colore dei riquadri) | |
+| V6 | Impostazioni (`university_settings`) e «oro dei Voti» (`lib/colore_voti.php`) | sync | Voti › Impostazioni | P3 | fatto — corso, colore facoltà, CFU, base, lode, tesi, arrotondamento (sync REST). la pagina Voti usa il colore scelto (se mai scelto, segue l'app); da fare solo il colore «oro» del tasto Voti nella Home (ritocco) | |
 
 ## 9. Flashcard (`fc/`, `lib/fc/`) — studio (`fc_study_*`) e lingue (`fc_vocab_*`)
 
