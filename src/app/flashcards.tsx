@@ -13,6 +13,8 @@ import {
   daysToExam,
   deckBranch,
   deckIcon,
+  deckMap,
+  deckPath,
   examUrgency,
   flattenDecks,
   scopeCounts,
@@ -33,6 +35,7 @@ export default function FlashcardsScreen() {
 
   const [scope, setScope] = useState<DeckScope>('active');
   const [query, setQuery] = useState('');
+  const [inCards, setInCards] = useState(false);
   const [draft, setDraft] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [addingUnder, setAddingUnder] = useState<string | null>(null);
@@ -55,6 +58,23 @@ export default function FlashcardsScreen() {
   const scopes = scopeCounts(decks);
   const rows = flattenDecks(decks, scope, collapsed);
   const found = query.trim() ? searchDecks(decks, query) : null;
+  const cardHits =
+    inCards && query.trim().length >= 2 ? services.flashcards.searchText(query.trim()) : [];
+  const hitGroups = [...Map.groupBy(cardHits, (h) => h.deck).entries()].flatMap(([deck, hits]) => {
+    const d = decks.find((x) => x.uuid === deck);
+    return d
+      ? [
+          {
+            deck: d,
+            hits,
+            path: deckPath(deckMap(decks), deck)
+              .slice(0, -1)
+              .map((x) => x.name)
+              .join(' › '),
+          },
+        ]
+      : [];
+  });
   const totalCards = [...counts.values()].reduce((a, b) => a + b, 0);
 
   const add = (parent: string | null, name: string) => {
@@ -484,6 +504,27 @@ export default function FlashcardsScreen() {
           }}
         />
 
+        {found ? (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable
+              testID="fc-search-cards"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: inCards }}
+              onPress={() => setInCards(!inCards)}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                backgroundColor: inCards ? th.brand : th.surface2,
+              }}
+            >
+              <Text style={{ color: inCards ? '#fff' : th.text, fontWeight: '600' }}>
+                {t('fc.cfc_f_testo_carte')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {!found ? (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             {(['active', 'archived'] as const).map((s) => (
@@ -514,6 +555,56 @@ export default function FlashcardsScreen() {
               />
             ) : null}
           </View>
+        ) : null}
+
+        {found && inCards ? (
+          hitGroups.length ? (
+            <View style={{ gap: 12 }}>
+              <Text testID="fc-hits-count" style={{ color: th.text2 }}>
+                {t('fc.app_n_carte_trovate', { n: cardHits.length })}
+              </Text>
+              {hitGroups.map((g) => (
+                <Card key={g.deck.uuid}>
+                  <View style={{ padding: 12, gap: 2 }}>
+                    <Text style={{ color: th.text, fontWeight: '700' }}>{g.deck.name}</Text>
+                    {g.path ? (
+                      <Text style={{ color: th.text3, fontSize: 12 }}>{g.path}</Text>
+                    ) : null}
+                  </View>
+                  {g.hits.map((h) => (
+                    <Pressable
+                      key={h.uuid}
+                      testID={`fc-hit-${h.uuid}`}
+                      accessibilityRole="button"
+                      onPress={() =>
+                        router.push({
+                          pathname: '/fc-card',
+                          params: h.child ? { sub: h.uuid } : { id: h.uuid },
+                        })
+                      }
+                      style={{
+                        padding: 12,
+                        borderTopWidth: 0.5,
+                        borderTopColor: th.hairline,
+                      }}
+                    >
+                      <Text style={{ color: th.text }} numberOfLines={3}>
+                        {h.excerpt}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </Card>
+              ))}
+            </View>
+          ) : query.trim().length >= 2 && !found.length ? (
+            <Text style={{ color: th.text2, textAlign: 'center', padding: 24 }}>
+              {t('fc.cfc_nessun_risultato')}
+            </Text>
+          ) : null
+        ) : null}
+
+        {found && inCards && found.length ? (
+          <SectionLabel>{t('vocab.cat_categorie')}</SectionLabel>
         ) : null}
 
         {found ? (

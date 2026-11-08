@@ -16,6 +16,7 @@ import {
   type Deck,
   type SubCard,
 } from './logic';
+import { searchCardRows, type CardHit } from './cardSearch';
 import { dropCardDependents } from './study';
 
 const DECK_COLS =
@@ -100,6 +101,34 @@ export class FlashcardsRepo {
     return (
       this.db.all<SubCard>(`SELECT ${SUB_COLS} FROM fc_study_subcards WHERE uuid = ?`, [uuid])[0] ??
       null
+    );
+  }
+
+  /** Le carte e le sottocarte il cui testo (domanda o risposta) contiene la parola, con il mazzo di ognuna. */
+  searchText(query: string, limit = 200): CardHit[] {
+    if (query.trim().length < 2) return [];
+    const cards = this.db.all<{
+      uuid: string;
+      deck: string;
+      question_desc: string | null;
+      answer_desc: string | null;
+    }>(
+      'SELECT uuid, category_uuid AS deck, question_desc, answer_desc FROM fc_study_cards ORDER BY custom_order, rowid',
+    );
+    const kids = this.db.all<{
+      uuid: string;
+      deck: string;
+      question_desc: string | null;
+      answer_desc: string | null;
+    }>(
+      `SELECT s.uuid AS uuid, c.category_uuid AS deck, s.question_desc, s.answer_desc
+         FROM fc_study_subcards s JOIN fc_study_cards c ON c.uuid = s.parent_uuid
+        ORDER BY s.custom_order, s.rowid`,
+    );
+    return searchCardRows(
+      [...cards.map((r) => ({ ...r, child: false })), ...kids.map((r) => ({ ...r, child: true }))],
+      query,
+      limit,
     );
   }
 

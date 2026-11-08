@@ -152,6 +152,25 @@ describe('categories list', () => {
   });
 });
 
+describe('card text search', () => {
+  test('the Card text chip searches inside the cards and opens one', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const a = flashcards.addCard(deck, 'Oxygen symbol', 'O')!;
+    flashcards.addCard(deck, 'Helium symbol', 'He');
+    const s = flashcards.addSubcard(a, 'Oxygen number', '8')!;
+    await render(wrap(<FlashcardsScreen />));
+    await fireEvent.changeText(screen.getByTestId('fc-search'), 'oxyg');
+    expect(screen.queryByTestId(`fc-hit-${a}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('fc-search-cards'));
+    expect(screen.getByTestId('fc-hits-count')).toHaveTextContent('2 cards found');
+    await fireEvent.press(screen.getByTestId(`fc-hit-${s}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-card', params: { sub: s } });
+    await fireEvent.press(screen.getByTestId(`fc-hit-${a}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-card', params: { id: a } });
+  });
+});
+
 describe('category page', () => {
   test('cards show their level and the learnt filter hides the others', async () => {
     const { flashcards, study } = setup();
