@@ -413,3 +413,42 @@ describe('card page', () => {
     expect(study.isLearnt(c)).toBe(false);
   });
 });
+
+describe('cards you know chart', () => {
+  test('shows the tapped cards on their day, with the +N chips and the type tiles', async () => {
+    const { db, flashcards, study, languages } = setup();
+    const deck = flashcards.createDeck({ name: 'D' })!;
+    const card = flashcards.addCard(deck, 'Q', 'A')!;
+    study.setLearnt(card, false, true);
+    const course = languages.addCourse('fr', 'en-GB', 'en') as string;
+    const ldeck = languages.createDeck(course, { name: 'Home' })!;
+    const word = languages.addWord(ldeck, { word: 'house', translation: 'maison' })!;
+    languages.setLearnt(word, false, true);
+    // both learnt today (the repos stamp today), so today's bar and chips show 2
+    await render(wrap(<FlashcardsScreen />));
+    expect(screen.getByTestId('fc-learned-chip-today')).toHaveTextContent(/^\+2/);
+    expect(screen.getByTestId('fc-learned-bar-13')).toBeTruthy();
+    // tile "study" keeps only the study cards, tapping again shows all
+    await fireEvent.press(screen.getByTestId('fc-learned-tile-study'));
+    expect(screen.getByTestId('fc-learned-chip-today')).toHaveTextContent(/^\+1/);
+    await fireEvent.press(screen.getByTestId('fc-learned-tile-vocab'));
+    expect(screen.getByTestId('fc-learned-chip-today')).toHaveTextContent(/^\+1/);
+    await fireEvent.press(screen.getByTestId('fc-learned-tile-vocab'));
+    expect(screen.getByTestId('fc-learned-chip-today')).toHaveTextContent(/^\+2/);
+    // weeks and months: 8 and 6 bars
+    await fireEvent.press(screen.getByTestId('fc-learned-step-week'));
+    expect(screen.getByTestId('fc-learned-bar-7')).toBeTruthy();
+    expect(screen.queryByTestId('fc-learned-bar-8')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fc-learned-step-month'));
+    expect(screen.getByTestId('fc-learned-bar-5')).toBeTruthy();
+    expect(screen.queryByTestId('fc-learned-bar-6')).toBeNull();
+    void db;
+  });
+
+  test('without a language course there is no languages tile', async () => {
+    setup();
+    await render(wrap(<FlashcardsScreen />));
+    expect(screen.queryByTestId('fc-learned-tile-vocab')).toBeNull();
+    expect(screen.getByTestId('fc-learned-tile-study')).toBeTruthy();
+  });
+});

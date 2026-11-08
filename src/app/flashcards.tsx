@@ -21,11 +21,12 @@ import {
 } from '@/features/flashcards/logic';
 import { localToday } from '@/features/tasks/groups';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton, bigNumber } from '@/ui/kit';
+import { LearnedCard } from '@/features/flashcards/LearnedCard';
 
 /** Le categorie delle flashcard di studio ad albero (fc_decks.php): materie, sottocategorie, archivio, ricerca. */
 export default function FlashcardsScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services, version, changed } = useApp();
@@ -298,6 +299,16 @@ export default function FlashcardsScreen() {
   const knownCards = decks
     .filter((d) => !d.parent_uuid || !deckIds.has(d.parent_uuid))
     .reduce((n, d) => n + (stats.get(d.uuid)?.known ?? 0), 0);
+  const vocabKnown = langCourses.length
+    ? langCourses.reduce((sum, c) => {
+        const vs = services.languages.games(c.uuid).deckStats();
+        const top = services.languages
+          .decks(c.uuid)
+          .filter((d) => !d.parent_uuid)
+          .reduce((n, d) => n + (vs.get(d.uuid)?.known ?? 0), 0);
+        return sum + top;
+      }, 0)
+    : null;
   const withKids = new Set(
     decks.filter((d) => decks.some((c) => c.parent_uuid === d.uuid)).map((d) => d.uuid),
   );
@@ -349,6 +360,14 @@ export default function FlashcardsScreen() {
             </View>
           </Card>
         </Pressable>
+
+        <LearnedCard
+          db={services.db}
+          today={today}
+          lang={i18n.language}
+          study={knownCards}
+          vocab={vocabKnown}
+        />
 
         <Pressable
           testID="fc-languages"

@@ -66,7 +66,7 @@ export function levelOfPrefix(s: string, n: number, rec: boolean, err?: boolean)
   return window();
 }
 
-interface Step {
+export interface LevelStep {
   s: string;
   n: number;
   rec: boolean;
@@ -74,8 +74,11 @@ interface Step {
   liv: Level;
 }
 
+/** Il punto di partenza di una carta mai giocata. */
+export const START_STEP: LevelStep = { s: '', n: 0, rec: false, err: false, liv: 'nuova' };
+
 /** Un passo: lo stato dopo una risposta in più ('C', 'W', 'c', 'w'). */
-function advance(st: Step, r: string): Step {
+export function advance(st: LevelStep, r: string): LevelStep {
   const s = (st.s + r).slice(-HISTORY_LENGTH);
   const n = st.n + 1;
   const err = st.err || r.toUpperCase() === 'W';
@@ -89,7 +92,7 @@ function advance(st: Step, r: string): Step {
 /** Il livello da una storia (`recent`) e dal numero di risposte di sempre (`total`). */
 export function levelFromHistory(recent: string, total: number, wrongBefore = false): Level {
   if (total <= 0 || recent === '') return 'nuova';
-  let st: Step = {
+  let st: LevelStep = {
     s: '',
     n: Math.max(0, total - recent.length),
     rec: false,
