@@ -317,6 +317,41 @@ describe('project page', () => {
     expect(projects.get(a)!.todo_enabled).toBe(0);
   });
 
+  test('sub-projects can be shown as a grid of cards, and the choice stays', async () => {
+    const { db, projects, pomodoro } = setup();
+    const store = new ProjectOptionsStore(db);
+    const a = projects.create({ name: 'Alpha' })!;
+    const k1 = projects.create({ name: 'Kid 1', parent: a })!;
+    const k2 = projects.create({ name: 'Kid 2', parent: a })!;
+    projects.create({ name: 'Grand 1', parent: k1 });
+    const g2 = projects.create({ name: 'Grand 2', parent: k1 })!;
+    projects.setStatus(g2, 'completed');
+    pomodoro.addManual({ day: '2030-01-01', from: '09:00', to: '09:30', projectUuid: k1 });
+    mockParams = { id: a };
+    const view = await renderOne();
+    expect(screen.queryByTestId('sub-grid')).toBeNull();
+    await fireEvent.press(screen.getByTestId('sub-view-toggle'));
+    await view.rerender(
+      <ThemeProvider>
+        <ProjectScreen />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('sub-grid')).toBeTruthy();
+    // la scheda mostra il tempo e quanti sotto-progetti sono fatti; l'altra ha un trattino
+    expect(screen.getByTestId(`kid-bar-${k1}`)).toBeTruthy();
+    expect(screen.queryByTestId(`kid-bar-${k2}`)).toBeNull();
+    expect(screen.getByText('1 of 2')).toBeTruthy();
+    expect(screen.getByText('–')).toBeTruthy();
+    // toccare una scheda apre il sotto-progetto
+    await fireEvent.press(screen.getByTestId(`kid-${k2}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/project', params: { id: k2 } });
+    // la scelta resta sul telefono
+    expect(store.subView()).toBe('grid');
+    // dalla griglia si torna all'elenco
+    await fireEvent.press(screen.getByTestId('sub-view-toggle'));
+    expect(store.subView()).toBe('list');
+  });
+
   test('selecting sub-projects: colour, move and delete them together', async () => {
     const { projects, pomodoro } = setup();
     const a = projects.create({ name: 'Alpha' })!;

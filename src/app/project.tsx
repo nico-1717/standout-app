@@ -82,6 +82,8 @@ export default function ProjectScreen() {
       siblings: childrenOf(all, me.parent_uuid),
       crumbs: ancestors(byId(all), id),
       secs: services.projects.totals().get(id) ?? 0,
+      totals: services.projects.totals(),
+      subView: services.projectOptions.subView(),
       sessions: services.projects.sessionCount(ids),
     };
   }, [services, version, id]);
@@ -377,6 +379,12 @@ export default function ProjectScreen() {
               swatches={SWATCHES}
               onOpen={open}
               changed={changed}
+              totals={data.totals}
+              view={data.subView}
+              onView={(v) => {
+                services.projectOptions.setSubView(v);
+                changed();
+              }}
             />
           )}
           <View style={{ flexDirection: 'row', gap: 8 }}>

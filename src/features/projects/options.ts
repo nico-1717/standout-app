@@ -38,6 +38,9 @@ export function cleanProjectOptions(raw: unknown): ProjectOptions {
 
 const OPTIONS = 'projects_options';
 const BRANCHES = 'projects_collapsed';
+const VIEW = 'projects_sub_view';
+
+export type SubView = 'list' | 'grid';
 
 /**
  * Le scelte della pagina e i rami chiusi, tenuti sul telefono. (Sul sito stanno in `planner_settings`; l'API delle
@@ -59,6 +62,19 @@ export class ProjectOptionsStore {
     const next = cleanProjectOptions({ ...this.read(), ...patch });
     setState(this.db, OPTIONS, JSON.stringify(next));
     return next;
+  }
+
+  /** Come si vedono i sotto-progetti nella scheda: a elenco o a griglia (la scelta resta, come sul sito). */
+  subView(): SubView {
+    try {
+      return getState(this.db, VIEW) === 'grid' ? 'grid' : 'list';
+    } catch {
+      return 'list';
+    }
+  }
+
+  setSubView(view: SubView): void {
+    setState(this.db, VIEW, view);
   }
 
   /** I rami chiusi. Se «ricorda i rami» è spento, si parte sempre con tutti chiusi (come il sito). */
