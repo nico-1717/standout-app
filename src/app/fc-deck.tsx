@@ -18,6 +18,7 @@ import {
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import type { GameStatus } from '@/features/flashcards/game';
 import { studyView } from '@/features/flashcards/gameKit';
+import { isTitleCard } from '@/features/flashcards/game';
 import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
 import {
   DECK_ICON_KEYS,
@@ -90,6 +91,7 @@ export default function DeckScreen() {
       counts: repo.cardCounts(),
       canDelete: repo.canDeleteDeck(id),
       levels: services.games.cardLevels(repo.cards(id)),
+      childCounts: repo.childCounts(id),
       learnt: services.study.learnt(),
     };
   }, [services, version, id]);
@@ -107,7 +109,7 @@ export default function DeckScreen() {
       </View>
     );
   }
-  const { deck, decks, kids, counts, levels, learnt } = data;
+  const { deck, decks, kids, counts, levels, learnt, childCounts } = data;
   const passes = services.games.cardFilter(filter);
   const byStatus = filter === 'all' ? data.cards : data.cards.filter(passes);
   const cards = filterCards(byStatus, levels, { text, level, sort });
@@ -779,7 +781,9 @@ export default function DeckScreen() {
             <CardViewer
               testID="fcd-viewer"
               onClose={() => setViewing(false)}
-              cards={cards.map((c) => studyView(c))}
+              cards={cards
+                .filter((c) => !isTitleCard(c, childCounts.get(c.uuid) ?? 0))
+                .map((c) => studyView(c))}
             />
           ) : null}
           {cards.length ? (
@@ -808,16 +812,45 @@ export default function DeckScreen() {
                     borderTopColor: th.hairline,
                   }}
                 >
-                  <Text
-                    style={{ color: th.text, fontSize: 16, fontWeight: '600' }}
-                    numberOfLines={2}
-                  >
-                    {selecting ? (picked.has(c.uuid) ? '☑ ' : '☐ ') : ''}
-                    {preview(c.question_desc) || '—'}
-                  </Text>
-                  <Text style={{ color: th.text2, fontSize: 14 }} numberOfLines={2}>
-                    {preview(c.answer_desc)}
-                  </Text>
+                  {isTitleCard(c, childCounts.get(c.uuid) ?? 0) &&
+                  (preview(c.question_desc) || '').length > 0 ? (
+                    <View testID={`fcd-title-${c.uuid}`} style={{ gap: 2 }}>
+                      <Text
+                        style={{
+                          color: th.text3,
+                          fontSize: 11,
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.6,
+                        }}
+                      >
+                        {t('fc.vis_titolo')}
+                      </Text>
+                      <Text
+                        style={{ color: th.text, fontSize: 18, fontWeight: '800' }}
+                        numberOfLines={2}
+                      >
+                        {selecting ? (picked.has(c.uuid) ? '☑ ' : '☐ ') : ''}
+                        {preview(c.question_desc)}
+                      </Text>
+                      <Text style={{ color: th.text2, fontSize: 13 }}>
+                        {t('fc.vis_n_sottocarte', { n: childCounts.get(c.uuid) ?? 0 })}
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <Text
+                        style={{ color: th.text, fontSize: 16, fontWeight: '600' }}
+                        numberOfLines={2}
+                      >
+                        {selecting ? (picked.has(c.uuid) ? '☑ ' : '☐ ') : ''}
+                        {preview(c.question_desc) || '—'}
+                      </Text>
+                      <Text style={{ color: th.text2, fontSize: 14 }} numberOfLines={2}>
+                        {preview(c.answer_desc)}
+                      </Text>
+                    </>
+                  )}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     {levels.get(c.uuid) ? (
                       <View
@@ -845,7 +878,7 @@ export default function DeckScreen() {
                         ✓ {t('fc.cg_learnt')}
                       </Text>
                     ) : null}
-                    {c.is_father ? (
+                    {c.is_father && !isTitleCard(c, childCounts.get(c.uuid) ?? 0) ? (
                       <Text style={{ color: th.text3, fontSize: 12 }}>
                         {t('fc.app_carte_figlie')}
                       </Text>

@@ -172,6 +172,24 @@ describe('category page', () => {
     expect(screen.getByTestId(`fcd-card-${b}`)).toBeTruthy();
   });
 
+  test('a father card with an empty answer shows as a group title', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const t = flashcards.addCard(id, 'Chapter one', '')!;
+    flashcards.addSubcard(t, 'child q', 'child a');
+    const n = flashcards.addCard(id, 'Normal q', 'normal a')!;
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    expect(screen.getByTestId(`fcd-title-${t}`)).toHaveTextContent(/1 sub-cards/);
+    expect(screen.queryByTestId(`fcd-level-${t}`)).toBeNull();
+    expect(screen.queryByTestId(`fcd-title-${n}`)).toBeNull();
+    expect(screen.getByTestId(`fcd-level-${n}`)).toBeTruthy();
+    // il visore non mostra i titoli
+    await fireEvent.press(screen.getByTestId('fcd-view'));
+    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 1');
+    expect(screen.getByTestId('fcd-viewer-question')).toHaveTextContent('Normal q');
+  });
+
   test('text search narrows the list and the counter follows', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;

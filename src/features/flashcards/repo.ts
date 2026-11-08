@@ -114,6 +114,18 @@ export class FlashcardsRepo {
     return out;
   }
 
+  /** Quante sottocarte ha ogni carta padre di un mazzo (le carte senza figlie non compaiono). */
+  childCounts(deckUuid: string): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const r of this.db.all<{ p: string; n: number }>(
+      `SELECT s.parent_uuid AS p, COUNT(*) AS n FROM fc_study_subcards s
+         JOIN fc_study_cards c ON c.uuid = s.parent_uuid WHERE c.category_uuid = ? GROUP BY s.parent_uuid`,
+      [deckUuid],
+    ))
+      out.set(r.p, r.n);
+    return out;
+  }
+
   /** Le carte di un mazzo e di tutti i suoi sotto-mazzi (il «ramo»). */
   branchCardCount(deckUuid: string): number {
     const ids = deckBranch(this.decks(), deckUuid);
