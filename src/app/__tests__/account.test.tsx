@@ -15,6 +15,7 @@ const mockSignOut = jest.fn(async () => ({ blocked: 0 }));
 let mockUser = { id: 1, username: 'nico', email: 'n@x.it', email_verified: true, lang: 'en' };
 const mockAccount = {
   devices: jest.fn(),
+  aiUsage: jest.fn(),
   changePassword: jest.fn(),
   deleteAccount: jest.fn(),
   exportData: jest.fn(),
@@ -68,6 +69,34 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 1, username: 'nico', email: 'n@x.it', email_verified: true, lang: 'en' };
   mockAccount.devices.mockResolvedValue([dev(1, true), dev(2)]);
+  mockAccount.aiUsage.mockResolvedValue(null);
+});
+
+describe('AI usage card', () => {
+  test('shows the plan and the three bars with the limit or "unlimited"', async () => {
+    mockAccount.aiUsage.mockResolvedValue({
+      name: 'Pro',
+      resets: '2026-12-01',
+      audio: { used: 12400, limit: 50000 },
+      images: { used: 3, limit: null },
+      tokens: { used: 90000, limit: 60000 },
+    });
+    await ui(<AccountScreen />);
+    expect((await screen.findByTestId('ai-plan')).props.children).toBe('Pro');
+    expect(screen.getByTestId('ai-audio-text')).toHaveTextContent(/12,400 \/ 50,000/);
+    expect(screen.getByTestId('ai-images-text')).toHaveTextContent(/3 \/ unlimited/);
+    expect(screen.getByTestId('ai-audio-bar').props.accessibilityValue.now).toBe(25);
+    expect(screen.getByTestId('ai-images-bar').props.accessibilityValue.now).toBe(0);
+    expect(screen.getByTestId('ai-tokens-bar').props.accessibilityValue.now).toBe(100); // oltre il limite: piena
+    expect(screen.getByText(/Resets on/)).toBeTruthy();
+  });
+
+  test('no plan or no network: the card is simply not there', async () => {
+    mockAccount.aiUsage.mockRejectedValue(new Error('offline'));
+    await ui(<AccountScreen />);
+    await screen.findByText('nico');
+    expect(screen.queryByTestId('ai-plan')).toBeNull();
+  });
 });
 
 describe('exportName', () => {

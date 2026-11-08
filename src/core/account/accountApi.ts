@@ -28,6 +28,21 @@ export class FieldsError extends ApiError {
   }
 }
 
+/** Una voce dei consumi dell'IA: usato nel mese e limite del piano (null = illimitato). */
+export interface AiMeter {
+  used: number;
+  limit: number | null;
+}
+
+export interface AiUsage {
+  name: string;
+  /** il primo giorno del mese dopo, `AAAA-MM-GG` */
+  resets: string;
+  audio: AiMeter;
+  images: AiMeter;
+  tokens: AiMeter;
+}
+
 export type TokenSupplier = () => Promise<string>;
 
 export class AccountApi {
@@ -102,6 +117,14 @@ export class AccountApi {
   async devices(): Promise<Device[]> {
     return (await this.json<{ devices: Device[] }>(await this.send('GET', '/api/v1/auth/devices')))
       .devices;
+  }
+
+  /** Il piano e i consumi dell'IA del mese; null se l'utente non ha un piano. Serve rete. */
+  async aiUsage(): Promise<AiUsage | null> {
+    const r = await this.json<{ plan: AiUsage | null }>(
+      await this.send('GET', '/api/v1/home/ai_usage'),
+    );
+    return r.plan ?? null;
   }
 
   /** Esce da TUTTI i dispositivi, anche questo (il server chiude ogni sessione). */

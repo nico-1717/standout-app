@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { FieldsError, type Device } from '@/core/account/accountApi';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { AiUsageCard } from '@/features/account/AiUsageCard';
 import { Card, Field, Header, PrimaryButton, TextButton } from '@/ui/kit';
 
 import { legalUrl } from './register';
@@ -234,6 +235,8 @@ export default function AccountScreen() {
             </View>
           ) : null}
         </Card>
+
+        <AiUsageCard />
 
         <Card style={{ padding: 16, gap: 10 }}>
           {h(t('privacydati.cambia_t'))}
