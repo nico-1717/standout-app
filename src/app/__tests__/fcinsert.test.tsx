@@ -4,10 +4,14 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { MediaQueue } from '@/core/media/mediaQueue';
+import { pickImage } from '@/core/media/pickImage';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 
 import InsertScreen from '../fc-insert';
 
+jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
+const mockTrigger = jest.fn();
 let mockServices: unknown;
 let mockParams: Record<string, string> = {};
 const mockChanged = jest.fn();
@@ -26,11 +30,21 @@ function setup() {
   const db = memoryDb();
   migrate(db);
   const flashcards = new FlashcardsRepo(db);
-  mockServices = { db, flashcards };
+  mockServices = {
+    db,
+    flashcards,
+    media: new MediaQueue(
+      db,
+      { put: async () => ({ name: 'x.jpg' }), remove: async () => undefined },
+      { delete: () => undefined },
+    ),
+    scheduler: { trigger: mockTrigger },
+  };
+  mockTrigger.mockClear();
   const deck = flashcards.createDeck({ name: 'Maths' })!;
   mockParams = { deck };
   mockChanged.mockClear();
-  return { flashcards, deck };
+  return { flashcards, deck, db };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
@@ -109,6 +123,62 @@ describe('insert many cards', () => {
       'Kid 1',
       'Kid 2',
     ]);
+  });
+
+  test('rows mode: a photo for the question or answer goes to the queue once the card exists', async () => {
+    const { flashcards, deck, db } = setup();
+    (pickImage as jest.Mock)
+      .mockResolvedValueOnce({ uri: 'file:///docs/q.jpg', mime: 'image/jpeg' })
+      .mockResolvedValueOnce({ uri: 'file:///docs/kid.jpg', mime: 'image/jpeg' });
+    await render(wrap(<InsertScreen />));
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    // una riga con una sola foto (niente testo) si può salvare
+    await fireEvent.press(screen.getByTestId('fci-qimg-0-library'));
+    expect(pickImage).toHaveBeenCalledWith('library');
+    expect(screen.getByTestId('fci-qimg-0')).toBeTruthy();
+    expect(screen.queryByTestId('fci-qimg-0-library')).toBeNull();
+    // una figlia con la foto della risposta
+    await fireEvent.press(screen.getByTestId('fci-kid-0'));
+    await fireEvent.press(screen.getByTestId('fci-aimg-1-library'));
+    // togliere e rimettere non lascia nulla in giro
+    await fireEvent.press(screen.getByTestId('fci-save'));
+    const [card] = flashcards.cards(deck);
+    expect(card).toBeTruthy();
+    const kid = flashcards.subcards(card!.uuid)[0]!;
+    expect(
+      db.all('SELECT tbl, row_uuid, slot, op, file FROM media_queue ORDER BY tbl DESC'),
+    ).toEqual([
+      {
+        tbl: 'fc_study_subcards',
+        row_uuid: kid.uuid,
+        slot: 'answer_image',
+        op: 'put',
+        file: 'file:///docs/kid.jpg',
+      },
+      {
+        tbl: 'fc_study_cards',
+        row_uuid: card!.uuid,
+        slot: 'question_image',
+        op: 'put',
+        file: 'file:///docs/q.jpg',
+      },
+    ]);
+    expect(mockTrigger).toHaveBeenCalled();
+  });
+
+  test('rows mode: a chosen photo can be removed again', async () => {
+    const { flashcards, deck } = setup();
+    (pickImage as jest.Mock).mockResolvedValueOnce({
+      uri: 'file:///docs/z.jpg',
+      mime: 'image/jpeg',
+    });
+    await render(wrap(<InsertScreen />));
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    await fireEvent.press(screen.getByTestId('fci-qimg-0-library'));
+    await fireEvent.press(screen.getByTestId('fci-qimg-del-0'));
+    expect(screen.getByTestId('fci-qimg-0-library')).toBeTruthy();
+    expect(screen.getByTestId('fci-save').props.accessibilityState?.disabled).toBe(true);
+    expect(flashcards.cards(deck)).toHaveLength(0);
   });
 
   test('rows mode: removing a father removes its children; a child of an empty father is not saved', async () => {

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -5,11 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
+import { pickImage } from '@/core/media/pickImage';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { PasteImport } from '@/features/flashcards/PasteImport';
 import {
   loadInsertDraft,
   rowsToCreate,
+  type NewCard,
   saveInsertDraft,
   type Row,
 } from '@/features/flashcards/insertRows';
@@ -61,22 +64,54 @@ export default function InsertScreen() {
   const deck = services.flashcards.deck(deckId);
   if (!deck) return null;
 
-  const saveAll = (list: { q: string; a: string; kid?: boolean }[]) => {
+  const saveAll = (list: NewCard[] | { q: string; a: string; kid?: boolean }[]) => {
     let n = 0;
     let parent: string | null = null;
-    for (const c of list) {
+    let photos = 0;
+    // le foto scelte per le righe: partono verso il sito dopo che la carta c'è (il sito vuole la riga prima del file)
+    const attach = (
+      table: 'fc_study_cards' | 'fc_study_subcards',
+      uuid: string,
+      c: { qi?: string; ai?: string },
+    ) => {
+      if (c.qi) services.media.putFile(table, uuid, 'question_image', c.qi, 'image/jpeg');
+      if (c.ai) services.media.putFile(table, uuid, 'answer_image', c.ai, 'image/jpeg');
+      if (c.qi || c.ai) photos += 1;
+    };
+    for (const c of list as NewCard[]) {
       if (c.kid && parent) {
-        if (services.flashcards.addSubcard(parent, c.q || null, c.a || null)) n += 1;
+        const kid = services.flashcards.addSubcard(parent, c.q || null, c.a || null);
+        if (kid) {
+          n += 1;
+          attach('fc_study_subcards', kid, c);
+        }
         continue;
       }
       parent = services.flashcards.addCard(deckId, c.q || null, c.a || null);
-      if (parent) n += 1;
+      if (parent) {
+        n += 1;
+        attach('fc_study_cards', parent, c);
+      }
     }
+    if (photos > 0) services.scheduler.trigger(0);
     if (n > 0) changed();
     setDone(n);
     return n;
   };
 
+  const setPhoto = (i: number, key: 'qi' | 'ai', uri: string | null) =>
+    setRows((cur) =>
+      cur.map((x, k) => {
+        if (k !== i) return x;
+        const { [key]: _old, ...rest } = x;
+        void _old;
+        return uri ? { ...rest, [key]: uri } : rest;
+      }),
+    );
+  const choosePhoto = async (i: number, key: 'qi' | 'ai', source: 'library' | 'camera') => {
+    const file = await pickImage(source);
+    if (file) setPhoto(i, key, file.uri);
+  };
   const rowsToSave = rowsToCreate(rows);
   const input = {
     backgroundColor: th.surface2,
@@ -171,6 +206,56 @@ export default function InsertScreen() {
                   multiline
                   style={input}
                 />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 18 }}>
+                  {(['q', 'a'] as const).map((side) => {
+                    const key = side === 'q' ? 'qi' : 'ai';
+                    const uri = r[key];
+                    const label = side === 'q' ? t('fc.ifc_img_domanda') : t('fc.ifc_img_risposta');
+                    return uri ? (
+                      <View
+                        key={side}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                      >
+                        <Image
+                          testID={`fci-${side}img-${i}`}
+                          source={{ uri }}
+                          contentFit="cover"
+                          accessibilityIgnoresInvertColors
+                          style={{ width: 36, height: 36, borderRadius: 6 }}
+                        />
+                        <Pressable
+                          testID={`fci-${side}img-del-${i}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t('vocab.mi_rimuovi_immagine')}: ${label}`}
+                          onPress={() => setPhoto(i, key, null)}
+                          hitSlop={8}
+                        >
+                          <Text style={{ color: th.red, fontSize: 13 }}>✕</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <View key={side} style={{ flexDirection: 'row', columnGap: 12 }}>
+                        <Pressable
+                          testID={`fci-${side}img-${i}-library`}
+                          accessibilityRole="button"
+                          onPress={() => void choosePhoto(i, key, 'library')}
+                          hitSlop={6}
+                        >
+                          <Text style={{ color: th.brand, fontSize: 13 }}>🖼 {label}</Text>
+                        </Pressable>
+                        <Pressable
+                          testID={`fci-${side}img-${i}-camera`}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t('comune.app_foto_scatta')}: ${label}`}
+                          onPress={() => void choosePhoto(i, key, 'camera')}
+                          hitSlop={6}
+                        >
+                          <Text style={{ color: th.brand, fontSize: 13 }}>📷</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
                 <View style={{ flexDirection: 'row', gap: 18 }}>
                   {!r.kid ? (
                     <Pressable

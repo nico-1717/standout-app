@@ -1,17 +1,32 @@
 import type { SqlDb } from '@/core/db/sqldb';
 import { getState, setState } from '@/core/sync/engine';
 
-/** Una riga scritta a mano: `kid` = è una carta figlia della riga sopra (o delle sue sorelle) che non è figlia. */
-export type Row = { q: string; a: string; kid?: boolean };
+/**
+ * Una riga scritta a mano: `kid` = è una carta figlia della riga sopra (o delle sue sorelle) che non è figlia.
+ * `qi` e `ai` sono le foto scelte per la domanda e la risposta (file già sul telefono, JPEG): partono dopo che la carta c'è.
+ */
+export type Row = { q: string; a: string; kid?: boolean; qi?: string; ai?: string };
 
-/** Le righe da salvare: quelle con del testo; una figlia solo se il suo padre ha del testo. */
-export function rowsToCreate(rows: readonly Row[]): { q: string; a: string; kid: boolean }[] {
-  const out: { q: string; a: string; kid: boolean }[] = [];
+export type NewCard = { q: string; a: string; kid: boolean; qi?: string; ai?: string };
+
+/** La riga ha qualcosa: del testo o una foto. */
+const filled = (r: Row): boolean => !!(r.q.trim() || r.a.trim() || r.qi || r.ai);
+
+/** Le righe da salvare: quelle con del testo o una foto; una figlia solo se il suo padre ha qualcosa. */
+export function rowsToCreate(rows: readonly Row[]): NewCard[] {
+  const out: NewCard[] = [];
   let parentOk = false;
   for (const r of rows) {
-    const has = !!(r.q.trim() || r.a.trim());
+    const has = filled(r);
     if (!r.kid) parentOk = has;
-    if (has && (!r.kid || parentOk)) out.push({ q: r.q, a: r.a, kid: !!r.kid });
+    if (has && (!r.kid || parentOk))
+      out.push({
+        q: r.q,
+        a: r.a,
+        kid: !!r.kid,
+        ...(r.qi ? { qi: r.qi } : {}),
+        ...(r.ai ? { ai: r.ai } : {}),
+      });
   }
   return out;
 }
@@ -34,6 +49,8 @@ export function loadInsertDraft(db: SqlDb, deck: string): Row[] | null {
         q: typeof r.q === 'string' ? r.q : '',
         a: typeof r.a === 'string' ? r.a : '',
         ...(r.kid === true ? { kid: true } : {}),
+        ...(typeof r.qi === 'string' && r.qi ? { qi: r.qi } : {}),
+        ...(typeof r.ai === 'string' && r.ai ? { ai: r.ai } : {}),
       }));
     return rows.length ? rows : null;
   } catch {
@@ -43,7 +60,7 @@ export function loadInsertDraft(db: SqlDb, deck: string): Row[] | null {
 
 /** Salva le righe; se non c'è niente di scritto la bozza si toglie. */
 export function saveInsertDraft(db: SqlDb, deck: string, rows: readonly Row[]): void {
-  if (!rows.some((r) => r.q.trim() || r.a.trim())) {
+  if (!rows.some(filled)) {
     db.run('DELETE FROM sync_state WHERE k = ?', [draftKey(deck)]);
     return;
   }
