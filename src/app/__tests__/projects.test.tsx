@@ -174,14 +174,42 @@ describe('project page', () => {
     expect(nextBatch(db, 50).length).toBeGreaterThan(0);
   });
 
-  test('a note with formatting is shown as text and cannot be overwritten from the phone', async () => {
+  test('a note with formatting opens in the rich editor and keeps its format when edited', async () => {
     const { projects } = setup();
-    const rich = JSON.stringify({ v: 2, blocks: [{ t: 'p', runs: [{ s: 'Bold idea' }] }] });
+    const rich = JSON.stringify({
+      v: 2,
+      blocks: [{ t: 'p', runs: [{ s: 'Bold', m: { b: 1 } }, { s: ' idea' }] }],
+    });
     const a = projects.create({ name: 'Alpha', notes: rich })!;
     mockParams = { id: a };
     await renderOne();
-    expect(screen.getByTestId('proj-note-rich').props.children).toBe('Bold idea');
     expect(screen.queryByTestId('proj-note')).toBeNull();
+    jest.useFakeTimers();
+    await fireEvent.changeText(screen.getByTestId('proj-note-rich-block-0'), 'Bold ideas');
+    await act(async () => {
+      jest.advanceTimersByTime(700);
+    });
+    jest.useRealTimers();
+    const saved = JSON.parse(projects.get(a)!.notes) as {
+      blocks: { runs: { s: string; m?: object }[] }[];
+    };
+    expect(saved.blocks[0]!.runs).toEqual([{ s: 'Bold', m: { b: 1 } }, { s: ' ideas' }]);
+  });
+
+  test('a formatted note over the limit is not saved (it would be cut in the middle)', async () => {
+    const { projects } = setup();
+    const rich = JSON.stringify({ v: 2, blocks: [{ t: 'p', runs: [{ s: 'short' }] }] });
+    const a = projects.create({ name: 'Alpha', notes: rich })!;
+    mockParams = { id: a };
+    await renderOne();
+    jest.useFakeTimers();
+    await fireEvent.changeText(screen.getByTestId('proj-note-rich-block-0'), 'x'.repeat(8100));
+    await act(async () => {
+      jest.advanceTimersByTime(700);
+    });
+    jest.useRealTimers();
+    expect(screen.getByTestId('proj-note-long')).toBeTruthy();
+    expect(projects.get(a)!.notes).toBe(rich);
   });
 
   test('moves under another project (never inside itself) and back to the top', async () => {

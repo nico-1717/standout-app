@@ -12,7 +12,8 @@ import { human } from '@/features/pomodoro/logic';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
 import { SubProjects } from '@/features/projects/SubProjects';
 import { ancestors, byId, childrenOf, subtreeIds, type Project } from '@/features/projects/logic';
-import { isRichNote, noteText } from '@/features/projects/notes';
+import { RichEditor } from '@/features/flashcards/RichEditor';
+import { isRichNote } from '@/features/projects/notes';
 import { useAutosave } from '@/ui/useAutosave';
 import { localToday } from '@/features/tasks/groups';
 import { ProjectTasksCard } from '@/features/tasks/ProjectTasksCard';
@@ -41,6 +42,9 @@ const STATUS_KEY = {
   planned: 'progetti.future',
 } as const;
 
+/** Quanti caratteri al massimo ha una nota (il sito e il server tagliano oltre). */
+const NOTE_MAX = 8000;
+
 /** La scheda di un progetto: nome, stato, colore, date, nota, sotto-progetti, spostamento, Pomodoro, eliminazione. */
 export default function ProjectScreen() {
   const th = useTheme();
@@ -55,7 +59,9 @@ export default function ProjectScreen() {
   const [sub, setSub] = useState('');
   // la nota si salva da sola mentre si scrive (J17), anche se si chiude la pagina con il testo in mano
   useAutosave(note, (text) => {
-    if (services && typeof id === 'string') services.projects.update(id, { notes: text });
+    // una nota con formato è un documento: tagliata a metà si romperebbe, quindi oltre il limite non si salva
+    if (services && typeof id === 'string' && text.length <= NOTE_MAX)
+      services.projects.update(id, { notes: text });
   });
   const [moving, setMoving] = useState(false);
   const [ordering, setOrdering] = useState(false);
@@ -262,10 +268,17 @@ export default function ProjectScreen() {
           <SectionLabel>{t('progetti.nota')}</SectionLabel>
           {rich ? (
             <>
-              <Text testID="proj-note-rich" style={{ color: th.text }}>
-                {noteText(me.notes) || t('progetti.nota_vuota')}
-              </Text>
-              <Text style={{ color: th.text2, fontSize: 12 }}>{t('progetti.nota_formattata')}</Text>
+              <RichEditor
+                testID="proj-note-rich"
+                value={me.notes}
+                placeholder={t('progetti.note_placeholder')}
+                onChange={(field) => setNote(field ?? '')}
+              />
+              {note !== null && note.length > NOTE_MAX ? (
+                <Text testID="proj-note-long" style={{ color: th.red, fontSize: 12 }}>
+                  {t('progetti.app_nota_troppo_lunga')}
+                </Text>
+              ) : null}
             </>
           ) : (
             <TextInput
