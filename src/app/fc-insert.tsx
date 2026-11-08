@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,12 @@ import {
   type Field,
   type Table,
 } from '@/features/flashcards/smartImport';
-import { rowsToCreate, type Row } from '@/features/flashcards/insertRows';
+import {
+  loadInsertDraft,
+  rowsToCreate,
+  saveInsertDraft,
+  type Row,
+} from '@/features/flashcards/insertRows';
 import { Card, Header, PrimaryButton, SectionLabel } from '@/ui/kit';
 
 type Mode = 'paste' | 'rows';
@@ -30,11 +35,35 @@ export default function InsertScreen() {
   const params = useLocalSearchParams<{ deck?: string }>();
   const deckId = params.deck ?? '';
 
-  const [mode, setMode] = useState<Mode>('paste');
+  const latest = useRef<Row[] | null>(null);
+  const [mode, setMode] = useState<Mode>(() =>
+    services && loadInsertDraft(services.db, deckId) ? 'rows' : 'paste',
+  );
   const [text, setText] = useState('');
   const [override, setOverride] = useState<{ text: string; campi: Field[] } | null>(null);
-  const [rows, setRows] = useState<Row[]>([{ q: '', a: '' }]);
+  const [rows, setRows] = useState<Row[]>(
+    () => (services ? loadInsertDraft(services.db, deckId) : null) ?? [{ q: '', a: '' }],
+  );
   const [done, setDone] = useState<number | null>(null);
+
+  // le righe scritte restano sul telefono mentre si scrive (salvataggio automatico)
+  useEffect(() => {
+    if (!services || !deckId) return;
+    latest.current = rows;
+    const id = setTimeout(() => {
+      saveInsertDraft(services.db, deckId, rows);
+      latest.current = null;
+    }, 400);
+    return () => clearTimeout(id);
+  }, [services, deckId, rows]);
+  // uscendo dalla pagina si salva subito quello che il timer non ha ancora scritto
+  useEffect(
+    () => () => {
+      if (services && deckId && latest.current)
+        saveInsertDraft(services.db, deckId, latest.current);
+    },
+    [services, deckId],
+  );
 
   const analysis = useMemo(() => analyze(text, (n) => t('fc.smi_colonna_n', { n })), [text, t]);
   if (!services) return null;
@@ -344,7 +373,10 @@ export default function InsertScreen() {
               }
               disabled={!rowsToSave.length}
               onPress={() => {
-                if (saveAll(rowsToSave) > 0) setRows([{ q: '', a: '' }]);
+                if (saveAll(rowsToSave) > 0) {
+                  setRows([{ q: '', a: '' }]);
+                  saveInsertDraft(services.db, deckId, []);
+                }
               }}
             />
           </View>

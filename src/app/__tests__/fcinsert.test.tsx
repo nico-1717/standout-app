@@ -129,4 +129,25 @@ describe('insert many cards', () => {
     expect(screen.getByTestId('fci-q-0')).toBeTruthy();
     expect(screen.queryByTestId('fci-q-1')).toBeNull();
   });
+
+  test('rows you wrote and did not create are kept for next time, and go away once created', async () => {
+    const { flashcards, deck } = setup();
+    const first = await render(wrap(<InsertScreen />));
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-0'), 'Unsaved question');
+    await fireEvent.press(screen.getByTestId('fci-kid-0'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-1'), 'Unsaved kid');
+    // si esce subito, prima che passi il timer: le righe si salvano comunque
+    await first.unmount();
+    const second = await render(wrap(<InsertScreen />));
+    expect(screen.getByTestId('fci-q-0').props.value).toBe('Unsaved question');
+    expect(screen.getByTestId('fci-q-1').props.value).toBe('Unsaved kid');
+    await fireEvent.press(screen.getByTestId('fci-save'));
+    expect(flashcards.cards(deck)).toHaveLength(1);
+    await second.unmount();
+    await render(wrap(<InsertScreen />));
+    expect(screen.getByTestId('fci-mode-paste')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    expect(screen.getByTestId('fci-q-0').props.value).toBe('');
+  });
 });
