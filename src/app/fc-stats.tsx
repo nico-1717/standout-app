@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
 import { DocView } from '@/features/flashcards/DocView';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
+import { finishForecast, learningCurve } from '@/features/flashcards/forecast';
 import { badges, streaks } from '@/features/flashcards/stats';
 import { localToday } from '@/features/tasks/groups';
 import { Card, Header, SectionLabel, bigNumber } from '@/ui/kit';
@@ -29,6 +30,7 @@ function Bars({
   testID,
   height = 80,
   scale,
+  fadeFrom,
 }: {
   values: number[];
   labels?: string[];
@@ -37,6 +39,8 @@ function Bars({
   height?: number;
   /** valore a cui la colonna arriva in cima (default: il più alto) */
   scale?: number;
+  /** dalla colonna con questo indice in poi le barre sono sbiadite (la proiezione) */
+  fadeFrom?: number;
 }) {
   const th = useTheme();
   const max = scale ?? Math.max(1, ...values);
@@ -50,6 +54,7 @@ function Bars({
               flex: 1,
               height: Math.max(v > 0 ? 3 : 1, (v / max) * height),
               backgroundColor: v > 0 ? color : th.hairline2,
+              opacity: fadeFrom !== undefined && i >= fadeFrom ? 0.4 : 1,
               borderRadius: 2,
             }}
           />
@@ -117,6 +122,9 @@ export default function FlashcardStatsScreen() {
   const cardsTotal = rootStats.reduce((n, d) => n + (d?.total ?? 0), 0);
   const cardsTried = rootStats.reduce((n, d) => n + (d?.tried ?? 0), 0);
   const cardsNever = Math.max(0, cardsTotal - knownTotal - cardsTried);
+  const knownDays = games.knownByDay();
+  const forecast = finishForecast(knownDays, knownTotal, cardsTotal, today);
+  const curve = learningCurve(knownDays, cardsTotal);
   const masteryPct = cardsTotal > 0 ? Math.round((knownTotal / cardsTotal) * 100) : 0;
   // i punteggi delle partite (non i ripassi) nell'ordine in cui sono state giocate, al massimo gli ultimi 40
   const scores = games
@@ -369,6 +377,41 @@ export default function FlashcardStatsScreen() {
           <Text testID="fcst-mastery-never" style={{ color: th.text }}>
             ⚪ {t('fc.leg_da_provare', { n: cardsNever })}
           </Text>
+        </Card>
+
+        <Card style={{ padding: 12 }}>
+          <Text testID="fcst-forecast" style={{ color: th.text }}>
+            {forecast
+              ? t('fc.previsione_fine', {
+                  settimane: t('fc.n_settimane', { n: forecast.weeks }),
+                  data: forecast.date,
+                })
+              : cardsTotal > 0 && knownTotal >= cardsTotal
+                ? t('fc.tutte_imparate')
+                : t('fc.continua_previsione')}
+          </Text>
+        </Card>
+
+        <SectionLabel>{t('fc.proiezione_apprendimento')}</SectionLabel>
+        <Card style={{ padding: 12, gap: 6 }}>
+          {curve.hist.length >= 2 ? (
+            <>
+              <Text style={{ color: th.text2, fontSize: 12 }}>
+                {t('fc.storico_linea_piena_e_proiezione')}
+              </Text>
+              <Bars
+                testID="fcst-curve"
+                values={[...curve.hist, ...curve.proj]}
+                color={th.green}
+                scale={Math.max(cardsTotal, 1)}
+                fadeFrom={curve.hist.length}
+              />
+            </>
+          ) : (
+            <Text testID="fcst-curve-empty" style={{ color: th.text2 }}>
+              {t('fc.servono_piu_dati_storici_per')}
+            </Text>
+          )}
         </Card>
 
         {scores.length > 0 ? (

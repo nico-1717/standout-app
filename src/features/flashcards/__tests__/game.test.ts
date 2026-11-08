@@ -665,3 +665,34 @@ describe('cards added after the game started', () => {
     expect(s.games.newCards(toLearn)).toEqual([fresh]);
   });
 });
+
+describe('cards that became known, day by day', () => {
+  test('the learnt tap and a run of correct answers each count once, on the earliest day', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const g = start(s, [d.deck]);
+    expect(s.games.knownByDay()).toEqual([]);
+
+    s.study.setLearnt(d.c1, false, true);
+    s.db.run("UPDATE fc_study_learnt SET learnt_date = '2026-10-05 08:00:00'");
+    // c3: tre giuste di fila in tre partite = «facile» dalla terza risposta
+    const days = ['2026-10-01', '2026-10-02', '2026-10-03'];
+    days.forEach((day, i) => {
+      const game = i === 0 ? g : start(s, [d.deck]);
+      for (let pos = 1; pos <= 3; pos++) {
+        const plays = s.games.ensurePosition(game, pos)!;
+        if (plays[0]!.card_uuid !== d.c3) continue;
+        s.games.grade(game, pos, d.c3, false, 'correct');
+      }
+      s.db.run('UPDATE fc_study_plays SET play_date = ? WHERE game_uuid = ?', [
+        `${day} 10:00:00`,
+        game,
+      ]);
+    });
+    const out = s.games.knownByDay();
+    expect(out).toEqual([
+      { date: '2026-10-03', count: 1 },
+      { date: '2026-10-05', count: 1 },
+    ]);
+  });
+});

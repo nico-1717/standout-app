@@ -6,13 +6,16 @@ import { deleteRow, patchRow, upsertRow } from '@/core/sync/rows';
 import type { WireValue } from '@/core/sync/types';
 
 import {
+  advance,
   answerLetter,
   HISTORY_LENGTH,
   isKnown,
   LEVELS,
   levelOf,
   needsReview,
+  START_STEP,
   type Level,
+  type LevelStep,
 } from './levels';
 import { stamp } from './study';
 
@@ -381,6 +384,62 @@ export class GameRepo {
       out.set(key, h);
     }
     return out;
+  }
+
+  /**
+   * Quante carte «le sai» sono diventate tali in ogni giorno (come `fcv_conosciute` del sito): per ogni carta il primo
+   * giorno in cui il tastino «imparata» o la storia delle risposte la porta a «la sai», il più presto dei due.
+   * I titoli non contano. Serve alla previsione di fine e alla proiezione dell'apprendimento.
+   */
+  knownByDay(): { date: string; count: number }[] {
+    const units = new Set<string>();
+    const kids = this.childrenByParent();
+    for (const c of this.cardsFor([])) {
+      const ch = kids.get(c.uuid) ?? [];
+      if (!this.isTitle(c, ch.length)) units.add(`p${c.uuid}`);
+      for (const k of ch) units.add(`c${k}`);
+    }
+    const tapped = new Map<string, string>();
+    for (const r of this.db.all<{ t: string; d: string | null }>(
+      `SELECT target_uuid AS t, MIN(learnt_date) AS d FROM fc_${this.scope.kind}_learnt GROUP BY target_uuid`,
+    )) {
+      if (r.d) tapped.set(r.t, r.d.slice(0, 10));
+    }
+    const state = new Map<string, LevelStep>();
+    const first = new Map<string, string>();
+    for (const r of this.db.all<{
+      card_uuid: string | null;
+      child_uuid: string | null;
+      user_answer: string;
+      d: string;
+      retry: number;
+    }>(
+      `SELECT p.card_uuid, p.child_uuid, p.user_answer, substr(p.play_date, 1, 10) AS d,
+              (g.parent_uuid IS NOT NULL) AS retry
+         FROM ${this.scope.plays} p LEFT JOIN fc_games g ON g.uuid = p.game_uuid
+        WHERE p.user_answer IN ('Correct', 'Wrong') AND p.play_date IS NOT NULL${
+          this.isVocab ? ' AND g.course_uuid = ?' : ''
+        }
+        ORDER BY p.play_date ASC, p.rowid ASC`,
+      this.isVocab ? [this.scope.course!] : [],
+    )) {
+      const key = r.child_uuid ? `c${r.child_uuid}` : r.card_uuid ? `p${r.card_uuid}` : null;
+      if (!key || !units.has(key)) continue;
+      const st = advance(
+        state.get(key) ?? START_STEP,
+        answerLetter(r.user_answer === 'Correct', !!r.retry),
+      );
+      state.set(key, st);
+      if (isKnown(st.liv, st.n) && !first.has(key)) first.set(key, r.d);
+    }
+    const days = new Map<string, number>();
+    for (const key of units) {
+      const a = tapped.get(key.slice(1));
+      const b = first.get(key);
+      const when = a && b ? (a < b ? a : b) : (a ?? b);
+      if (when) days.set(when, (days.get(when) ?? 0) + 1);
+    }
+    return [...days.entries()].sort().map(([date, count]) => ({ date, count }));
   }
 
   /** Il livello di una carta (`p<uuid>`) o carta figlia (`c<uuid>`). */

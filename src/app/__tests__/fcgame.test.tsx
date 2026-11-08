@@ -469,6 +469,8 @@ describe('statistics screen', () => {
     expect(screen.getByTestId('fcst-goal').props.children.join('')).toBe('1 / 20');
     expect(screen.getByTestId('fcst-badge-10_giocate')).toBeTruthy();
     expect(screen.getByTestId('fcst-mastery-pct')).toBeTruthy();
+    expect(screen.getByTestId('fcst-forecast')).toHaveTextContent(/Keep playing/);
+    expect(screen.getByTestId('fcst-curve-empty')).toBeTruthy();
     expect(screen.getByTestId('fcst-mastery-tried')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fcst-goal-more'));
     expect(study.goal()).toBe(25);
