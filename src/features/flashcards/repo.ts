@@ -469,6 +469,51 @@ export class FlashcardsRepo {
     });
   }
 
+  /**
+   * «Unisci» del sito: le carte scelte diventano carte figlie di `parentUuid` (testo copiato, la carta vecchia sparisce).
+   * Non si uniscono la carta padre stessa, le carte che hanno già figlie, e quelle con un'immagine o un audio (i file li
+   * attacca il server: una figlia nuova nascerebbe senza). Ritorna quante se ne sono unite e quante no.
+   */
+  joinCards(parentUuid: string, uuids: string[]): { joined: number; skipped: number } {
+    let joined = 0;
+    let skipped = 0;
+    if (!this.card(parentUuid)) return { joined, skipped: uuids.length };
+    this.db.transaction(() => {
+      for (const u of uuids) {
+        const c = this.card(u);
+        if (!c || u === parentUuid) continue;
+        if (this.subcards(u).length || hasMedia(c)) {
+          skipped++;
+          continue;
+        }
+        if (!this.addSubcard(parentUuid, c.question_desc, c.answer_desc)) {
+          skipped++;
+          continue;
+        }
+        this.removeCard(u);
+        joined++;
+      }
+    });
+    return { joined, skipped };
+  }
+
+  /**
+   * «Separa» del sito: la carta figlia torna una carta del mazzo del suo padre. Una figlia con immagine o audio resta
+   * dov'è (ritorna null). Ritorna l'uuid della carta nuova.
+   */
+  unjoinSubcard(subUuid: string): string | null {
+    const sub = this.subcard(subUuid);
+    if (!sub || hasMedia(sub)) return null;
+    const parent = this.card(sub.parent_uuid);
+    if (!parent) return null;
+    let made: string | null = null;
+    this.db.transaction(() => {
+      made = this.addCard(parent.category_uuid, sub.question_desc, sub.answer_desc);
+      if (made) this.removeSubcard(subUuid);
+    });
+    return made;
+  }
+
   /* ---------------- bozze veloci ---------------- */
 
   /** Le bozze della Home, dalla più recente: solo il fronte, il resto si completa dopo. */
@@ -711,6 +756,16 @@ export class FlashcardsRepo {
       enqueue(this.db, { table: 'fc_study_subcards', uuid, op: 'delete' }, now);
     });
   }
+}
+
+/** La carta ha un file (immagine o audio) attaccato dal server. */
+function hasMedia(c: {
+  question_image: string | null;
+  answer_image: string | null;
+  question_audio: string | null;
+  answer_audio: string | null;
+}): boolean {
+  return !!(c.question_image || c.answer_image || c.question_audio || c.answer_audio);
 }
 
 /** Un documento di carta: vuoto, o testo non troppo lungo e senza byte nulli (il server rifiuta il resto). */

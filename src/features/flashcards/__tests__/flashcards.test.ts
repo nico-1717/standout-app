@@ -337,3 +337,46 @@ describe('icons', () => {
     expect(deckIconSvg('bogus')).toBe(deckIconSvg('cartella'));
   });
 });
+
+describe('join and split cards', () => {
+  test('join turns plain cards into sub-cards; the parent, parents and cards with files stay', () => {
+    const { db, repo } = setup();
+    const deck = repo.createDeck({ name: 'Deck' })!;
+    const parent = repo.addCard(deck, 'Parent Q', 'Parent A')!;
+    const plain1 = repo.addCard(deck, 'One Q', 'One A')!;
+    const plain2 = repo.addCard(deck, 'Two Q', 'Two A')!;
+    const withKids = repo.addCard(deck, 'Has kids', 'x')!;
+    repo.addSubcard(withKids, 'kid', 'kid');
+    const withImage = repo.addCard(deck, 'Pic Q', 'Pic A')!;
+    db.run('UPDATE fc_study_cards SET question_image = ? WHERE uuid = ?', ['pic.jpg', withImage]);
+
+    const r = repo.joinCards(parent, [parent, plain1, plain2, withKids, withImage]);
+    expect(r).toEqual({ joined: 2, skipped: 2 });
+    expect(repo.card(plain1)).toBeNull();
+    expect(repo.card(plain2)).toBeNull();
+    expect(repo.card(withKids)).not.toBeNull();
+    expect(repo.card(withImage)).not.toBeNull();
+    expect(repo.subcards(parent).map((x) => x.question_desc)).toEqual(['One Q', 'Two Q']);
+    expect(repo.card(parent)!.is_father).toBeTruthy();
+  });
+
+  test('split gives the sub-card back as a card of the same deck and clears the parent flag', () => {
+    const { db, repo } = setup();
+    const deck = repo.createDeck({ name: 'Deck' })!;
+    const parent = repo.addCard(deck, 'Parent Q', 'Parent A')!;
+    const kid = repo.addSubcard(parent, 'Kid Q', 'Kid A')!;
+    const made = repo.unjoinSubcard(kid)!;
+    expect(repo.subcard(kid)).toBeNull();
+    expect(repo.card(made)).toMatchObject({
+      category_uuid: deck,
+      question_desc: 'Kid Q',
+      answer_desc: 'Kid A',
+    });
+    expect(repo.card(parent)!.is_father).toBeFalsy();
+
+    const pic = repo.addSubcard(parent, 'Pic', 'x')!;
+    db.run('UPDATE fc_study_subcards SET answer_audio = ? WHERE uuid = ?', ['a.mp3', pic]);
+    expect(repo.unjoinSubcard(pic)).toBeNull();
+    expect(repo.subcard(pic)).not.toBeNull();
+  });
+});

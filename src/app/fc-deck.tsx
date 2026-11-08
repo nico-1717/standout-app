@@ -71,7 +71,8 @@ export default function DeckScreen() {
   const [sort, setSort] = useState<CardSort>('position');
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [bulk, setBulk] = useState<'move' | 'delete' | null>(null);
+  const [bulk, setBulk] = useState<'move' | 'delete' | 'join' | null>(null);
+  const [joinNote, setJoinNote] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
 
   const data = useMemo(() => {
@@ -671,6 +672,15 @@ export default function DeckScreen() {
                       </Text>
                     </Pressable>
                     <Pressable
+                      testID="fcd-bulk-join"
+                      accessibilityRole="button"
+                      onPress={() => setBulk(bulk === 'join' ? null : 'join')}
+                    >
+                      <Text style={{ color: th.brand, fontWeight: '600' }}>
+                        {t('vocab.vi_unisci')}
+                      </Text>
+                    </Pressable>
+                    <Pressable
                       testID="fcd-bulk-delete"
                       accessibilityRole="button"
                       onPress={() => setBulk(bulk === 'delete' ? null : 'delete')}
@@ -694,6 +704,38 @@ export default function DeckScreen() {
                     changed();
                   }}
                 />
+              ) : null}
+              {bulk === 'join' && picked.size ? (
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: th.text2, fontSize: 13 }}>{t('fc.vis_tocca_padre')}</Text>
+                  {cards
+                    .filter((c) => !picked.has(c.uuid))
+                    .map((c) => (
+                      <Pressable
+                        key={c.uuid}
+                        testID={`fcd-join-${c.uuid}`}
+                        accessibilityRole="button"
+                        onPress={() => {
+                          const r = repo.joinCards(c.uuid, [...picked]);
+                          setJoinNote(
+                            [
+                              t('fc.app_unite_n', { n: r.joined }),
+                              r.skipped ? t('fc.app_unite_saltate', { n: r.skipped }) : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' · '),
+                          );
+                          stopSelecting();
+                          changed();
+                        }}
+                        style={{ paddingVertical: 8 }}
+                      >
+                        <Text style={{ color: th.text }} numberOfLines={1}>
+                          {preview(c.question_desc)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                </View>
               ) : null}
               {bulk === 'delete' && picked.size ? (
                 <View style={{ gap: 8 }}>
@@ -727,6 +769,11 @@ export default function DeckScreen() {
                 </View>
               ) : null}
             </Card>
+          ) : null}
+          {joinNote ? (
+            <Text testID="fcd-join-note" style={{ color: th.text2, fontSize: 13 }}>
+              {joinNote}
+            </Text>
           ) : null}
           {viewing ? (
             <CardViewer

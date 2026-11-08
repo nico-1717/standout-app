@@ -482,6 +482,19 @@ export default function CardScreen() {
 
         {params.sub && data.parentCard ? (
           <TextButton
+            testID="fcc-split"
+            label={t('vocab.vi_separa')}
+            onPress={() => {
+              const made = repo.unjoinSubcard(params.sub!);
+              if (!made) return;
+              changed();
+              router.replace({ pathname: '/fc-card', params: { id: made } });
+            }}
+          />
+        ) : null}
+
+        {params.sub && data.parentCard ? (
+          <TextButton
             testID="fcc-to-parent"
             label={t('fc.vis_una_carta')}
             onPress={() =>

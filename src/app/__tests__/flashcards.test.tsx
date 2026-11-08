@@ -247,6 +247,26 @@ describe('category page', () => {
     expect(flashcards.card(b)).toBeFalsy();
   });
 
+  test('selected cards are merged into a chosen parent card as sub-cards', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const father = flashcards.addCard(id, 'Parent', 'PA')!;
+    const a = flashcards.addCard(id, 'Child A', 'AA')!;
+    const b = flashcards.addCard(id, 'Child B', 'AB')!;
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-select'));
+    await fireEvent.press(screen.getByTestId(`fcd-card-${a}`));
+    await fireEvent.press(screen.getByTestId(`fcd-card-${b}`));
+    await fireEvent.press(screen.getByTestId('fcd-bulk-join'));
+    // le carte scelte non si offrono come padre
+    expect(screen.queryByTestId(`fcd-join-${a}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId(`fcd-join-${father}`));
+    expect(flashcards.subcards(father).map((x) => x.question_desc)).toEqual(['Child A', 'Child B']);
+    expect(flashcards.card(a)).toBeNull();
+    expect(screen.getByTestId('fcd-join-note')).toHaveTextContent(/Cards merged: 2/);
+  });
+
   test('rename, colour, pin, archive and exam date are saved', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;
@@ -522,6 +542,23 @@ describe('card page', () => {
     await fireEvent.press(screen.getByTestId('fcc-delete-confirm'));
     expect(flashcards.subcards(c)).toHaveLength(0);
     expect(flashcards.card(c)!.is_father).toBe(0);
+  });
+
+  test('a sub-card can be split back into a card of the deck', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    const s = flashcards.addSubcard(c, 'child q', 'child a')!;
+    mockParams = { sub: s };
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-split'));
+    expect(flashcards.subcard(s)).toBeNull();
+    expect(flashcards.cards(deck).map((x) => x.question_desc)).toContain('child q');
+    expect(flashcards.card(c)!.is_father).toBeFalsy();
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/fc-card',
+      params: { id: expect.any(String) },
+    });
   });
 
   test('move a card to another deck and delete it', async () => {
