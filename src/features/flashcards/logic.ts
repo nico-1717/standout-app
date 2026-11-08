@@ -5,6 +5,22 @@
  */
 import iconData from './icons.json';
 
+/** Le dodici tinte del sito (fc_decks.php, $colorPalette). */
+export const DECK_SWATCHES = [
+  '#FF3B30',
+  '#FF9500',
+  '#FFCC00',
+  '#34C759',
+  '#00C7BE',
+  '#30B0C7',
+  '#32ADE6',
+  '#007AFF',
+  '#5856D6',
+  '#AF52DE',
+  '#FF2D55',
+  '#A2845E',
+];
+
 /** Il colore di un mazzo che non ne ha scelto uno (e non lo ha nessun antenato). */
 export const DEFAULT_DECK_COLOR = '#A0A0A0';
 

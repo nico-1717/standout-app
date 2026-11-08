@@ -36,6 +36,7 @@ import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { GameRepo } from '@/features/flashcards/game';
 import { StatsRepo } from '@/features/flashcards/stats';
 import { StudyRepo } from '@/features/flashcards/study';
+import { LanguagesRepo } from '@/features/languages/repo';
 import { GradesRepo } from '@/features/grades/repo';
 import { GradeSettingsStore } from '@/features/grades/settings';
 import { DEFAULT_GRADE_SETTINGS, type GradeSettings } from '@/features/grades/logic';
@@ -94,6 +95,7 @@ export interface Services {
   grades: GradesRepo;
   flashcards: FlashcardsRepo;
   study: StudyRepo;
+  languages: LanguagesRepo;
   games: GameRepo;
   fcStats: StatsRepo;
   scheduler: SyncScheduler;
@@ -335,6 +337,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         scheduler.subscribe(setSyncInfo);
         scheduler.start();
         const study = new StudyRepo(opened.db, userId);
+        const projectsRepo = new ProjectsRepo(opened.db);
         setServices({
           db: opened.db,
           tasks: new TasksRepo(opened.db),
@@ -356,13 +359,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             userId,
           ),
           book: new BookRepo(opened.db),
-          projects: new ProjectsRepo(opened.db),
+          projects: projectsRepo,
           plan: new PlanRepo(opened.db, userId),
           projectOptions: new ProjectOptionsStore(opened.db),
           pomodoro: new PomodoroRepo(opened.db, userId),
           grades: new GradesRepo(opened.db),
           flashcards: new FlashcardsRepo(opened.db),
           study,
+          languages: new LanguagesRepo(opened.db, userId, projectsRepo),
           games: new GameRepo(opened.db, study),
           fcStats: new StatsRepo(opened.db),
           scheduler,

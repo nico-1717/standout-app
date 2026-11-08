@@ -9,6 +9,8 @@ import { GameRepo } from '@/features/flashcards/game';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { StatsRepo } from '@/features/flashcards/stats';
 import { StudyRepo } from '@/features/flashcards/study';
+import { LanguagesRepo } from '@/features/languages/repo';
+import { ProjectsRepo } from '@/features/projects/repo';
 
 import CardScreen from '../fc-card';
 import DeckScreen from '../fc-deck';
@@ -49,14 +51,33 @@ function setup() {
     db,
     flashcards,
     study,
+    languages: new LanguagesRepo(db, 7, new ProjectsRepo(db)),
     games: new GameRepo(db, study),
     fcStats: new StatsRepo(db),
   };
-  return { db, flashcards, study };
+  return {
+    db,
+    flashcards,
+    study,
+    languages: (mockServices as { languages: LanguagesRepo }).languages,
+  };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
 describe('categories list', () => {
+  test('the Languages card shows the count and opens the Languages page', async () => {
+    const { languages } = setup();
+    const view = await render(wrap(<FlashcardsScreen />));
+    expect(screen.getByTestId('fc-languages-sub').props.children).toMatch(/Words, translations/);
+    const course = languages.addCourse('en', 'de') as string;
+    const deck = languages.createDeck(course, { name: 'Food' })!;
+    languages.addWord(deck, { word: 'Brot' });
+    await view.rerender(wrap(<FlashcardsScreen />));
+    expect(screen.getByTestId('fc-languages-sub').props.children).toBe('1 language · 1 words');
+    await fireEvent.press(screen.getByTestId('fc-languages'));
+    expect(mockPush).toHaveBeenCalledWith('/languages');
+  });
+
   test('a deck row shows «never played» until a game exists; Play opens the setup', async () => {
     const { flashcards } = setup();
     const d = flashcards.createDeck({ name: 'Physics' })!;

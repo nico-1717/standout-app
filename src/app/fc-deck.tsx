@@ -13,6 +13,7 @@ import type { GameStatus } from '@/features/flashcards/game';
 import { LEVEL_COLORS } from '@/features/flashcards/levels';
 import {
   DECK_ICON_KEYS,
+  DECK_SWATCHES,
   compareDecks,
   daysToExam,
   deckBranch,
@@ -27,22 +28,6 @@ import { isRichNote, noteText } from '@/features/projects/notes';
 import { localToday } from '@/features/tasks/groups';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
-
-/** Le dodici tinte del sito (fc_decks.php, $colorPalette). */
-const SWATCHES = [
-  '#FF3B30',
-  '#FF9500',
-  '#FFCC00',
-  '#34C759',
-  '#00C7BE',
-  '#30B0C7',
-  '#32ADE6',
-  '#007AFF',
-  '#5856D6',
-  '#AF52DE',
-  '#FF2D55',
-  '#A2845E',
-];
 
 const preview = (raw: string | null): string => {
   const t = docToPlain(parseDoc(raw)).replace(/\s+/g, ' ').trim();
@@ -265,7 +250,7 @@ export default function DeckScreen() {
               >
                 <Text style={{ color: th.text, fontSize: 13 }}>{t('comune.automatico')}</Text>
               </Pressable>
-              {SWATCHES.map((c) => {
+              {DECK_SWATCHES.map((c) => {
                 const on = !!deck.color_edited && deck.color.toUpperCase() === c;
                 return (
                   <Pressable

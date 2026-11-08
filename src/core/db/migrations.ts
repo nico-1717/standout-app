@@ -728,6 +728,90 @@ CREATE TABLE planner_places (
 );
 `,
   },
+  {
+    version: 17,
+    // le lingue: corsi, mazzi, parole (con le figlie), esempi, preferiti e imparate
+    sql: `
+CREATE TABLE fc_vocab_courses (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  known_lang TEXT NOT NULL,
+  learn_lang TEXT NOT NULL,
+  project_uuid TEXT,
+  sort_key TEXT NOT NULL DEFAULT '',
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE fc_vocab_decks (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  course_uuid TEXT NOT NULL,
+  parent_uuid TEXT,
+  name TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '#A0A0A0',
+  color_edited INTEGER NOT NULL DEFAULT 0,
+  archived INTEGER NOT NULL DEFAULT 0,
+  icon TEXT,
+  notes TEXT,
+  pinned INTEGER NOT NULL DEFAULT 0,
+  exam_date TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_vdecks_course ON fc_vocab_decks (course_uuid);
+CREATE INDEX idx_fc_vdecks_parent ON fc_vocab_decks (parent_uuid);
+CREATE TABLE fc_vocab_cards (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  category_uuid TEXT NOT NULL,
+  word TEXT NOT NULL,
+  translation TEXT,
+  meaning TEXT,
+  notes TEXT,
+  image TEXT,
+  is_father INTEGER NOT NULL DEFAULT 0,
+  custom_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_vcards_deck ON fc_vocab_cards (category_uuid, custom_order);
+CREATE TABLE fc_vocab_subcards (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  parent_uuid TEXT NOT NULL,
+  word TEXT NOT NULL,
+  translation TEXT,
+  meaning TEXT,
+  notes TEXT,
+  image TEXT,
+  custom_order INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_vsub_parent ON fc_vocab_subcards (parent_uuid, custom_order);
+CREATE TABLE fc_vocab_favorites (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  card_uuid TEXT,
+  child_uuid TEXT,
+  favorited_date TEXT
+);
+CREATE INDEX idx_fc_vfav_card ON fc_vocab_favorites (card_uuid);
+CREATE INDEX idx_fc_vfav_child ON fc_vocab_favorites (child_uuid);
+CREATE TABLE fc_vocab_learnt (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  target_uuid TEXT NOT NULL,
+  is_child INTEGER NOT NULL DEFAULT 0,
+  learnt_date TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_vlearnt_target ON fc_vocab_learnt (target_uuid);
+CREATE TABLE fc_vocab_examples (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  card_uuid TEXT,
+  child_uuid TEXT,
+  example_text TEXT,
+  gap_text TEXT,
+  example_image TEXT,
+  example_audio TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_vex_card ON fc_vocab_examples (card_uuid);
+CREATE INDEX idx_fc_vex_child ON fc_vocab_examples (child_uuid);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

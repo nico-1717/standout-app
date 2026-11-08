@@ -35,6 +35,13 @@ export type SyncTable =
   | 'contacts'
   | 'planner_places'
   | 'event_guests'
+  | 'fc_vocab_courses'
+  | 'fc_vocab_decks'
+  | 'fc_vocab_cards'
+  | 'fc_vocab_subcards'
+  | 'fc_vocab_favorites'
+  | 'fc_vocab_learnt'
+  | 'fc_vocab_examples'
   | 'fc_study_decks'
   | 'fc_study_cards'
   | 'fc_study_subcards'
@@ -483,6 +490,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'pomodoro_sessions', column: 'project_uuid', setNull: true },
       { table: 'todos', column: 'project_uuid', setNull: true },
       { table: 'fc_study_deck_projects', column: 'project_uuid' },
+      { table: 'fc_vocab_courses', column: 'project_uuid', setNull: true },
       { table: 'plan_goals', column: 'project_uuid' },
       { table: 'plan_paint', column: 'project_uuid' },
       { table: 'plan_days', column: 'project_uuid' },
@@ -640,6 +648,124 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'is_enabled',
       'sort_key',
       'created_at',
+      'updated_at',
+    ],
+  },
+  // le lingue. Un corso nasce con il suo progetto (lo crea il server se il telefono non ne indica uno).
+  // Togliere un corso toglie mazzi, parole e tutto il resto: il telefono rifà lo stesso giro.
+  fc_vocab_courses: {
+    order: 300,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: ['known_lang'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'known_lang',
+      'learn_lang',
+      'project_uuid',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
+    children: [{ table: 'fc_vocab_decks', column: 'course_uuid' }],
+  },
+  fc_vocab_decks: {
+    order: 301,
+    readOnly: ['updated_at'],
+    createOnly: ['course_uuid'],
+    booleans: ['color_edited', 'archived', 'pinned'],
+    columns: [
+      'uuid',
+      'course_uuid',
+      'parent_uuid',
+      'name',
+      'color',
+      'color_edited',
+      'archived',
+      'icon',
+      'notes',
+      'pinned',
+      'exam_date',
+      'updated_at',
+    ],
+    children: [
+      { table: 'fc_vocab_decks', column: 'parent_uuid' },
+      { table: 'fc_vocab_cards', column: 'category_uuid' },
+    ],
+  },
+  fc_vocab_cards: {
+    order: 302,
+    readOnly: ['image', 'is_father', 'custom_order', 'updated_at'],
+    createOnly: [],
+    booleans: ['is_father'],
+    columns: [
+      'uuid',
+      'category_uuid',
+      'word',
+      'translation',
+      'meaning',
+      'notes',
+      'image',
+      'is_father',
+      'custom_order',
+      'updated_at',
+    ],
+    children: [
+      { table: 'fc_vocab_subcards', column: 'parent_uuid' },
+      { table: 'fc_vocab_favorites', column: 'card_uuid' },
+      { table: 'fc_vocab_learnt', column: 'target_uuid' },
+      { table: 'fc_vocab_examples', column: 'card_uuid' },
+    ],
+  },
+  fc_vocab_subcards: {
+    order: 303,
+    readOnly: ['image', 'custom_order', 'updated_at'],
+    createOnly: ['parent_uuid'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'parent_uuid',
+      'word',
+      'translation',
+      'meaning',
+      'notes',
+      'image',
+      'custom_order',
+      'updated_at',
+    ],
+    children: [
+      { table: 'fc_vocab_favorites', column: 'child_uuid' },
+      { table: 'fc_vocab_learnt', column: 'target_uuid' },
+      { table: 'fc_vocab_examples', column: 'child_uuid' },
+    ],
+  },
+  fc_vocab_favorites: {
+    order: 304,
+    readOnly: [],
+    createOnly: ['card_uuid', 'child_uuid', 'favorited_date'],
+    booleans: [],
+    columns: ['uuid', 'card_uuid', 'child_uuid', 'favorited_date'],
+  },
+  fc_vocab_learnt: {
+    order: 305,
+    readOnly: ['updated_at'],
+    createOnly: ['target_uuid', 'is_child'],
+    booleans: ['is_child'],
+    columns: ['uuid', 'target_uuid', 'is_child', 'learnt_date', 'updated_at'],
+  },
+  fc_vocab_examples: {
+    order: 306,
+    readOnly: ['example_image', 'example_audio', 'updated_at'],
+    createOnly: ['card_uuid', 'child_uuid'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'card_uuid',
+      'child_uuid',
+      'example_text',
+      'gap_text',
+      'example_image',
+      'example_audio',
       'updated_at',
     ],
   },

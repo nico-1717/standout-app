@@ -290,6 +290,8 @@ export default function FlashcardsScreen() {
     );
   };
 
+  const langCourses = services.languages.courses();
+  const langWords = [...services.languages.courseStats().values()].reduce((a, s) => a + s.words, 0);
   const resume = services?.games.unfinished() ?? null;
   const goal = services.study.goal();
   const todayPlayed = services.fcStats.activity().daily.get(today)?.played ?? 0;
@@ -345,6 +347,33 @@ export default function FlashcardsScreen() {
               </Text>
               <Text style={{ color: th.text2, fontSize: 11 }}>{t('fc.carte_imparate')}</Text>
             </View>
+          </Card>
+        </Pressable>
+
+        <Pressable
+          testID="fc-languages"
+          accessibilityRole="button"
+          onPress={() => router.push('/languages')}
+        >
+          <Card style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Text style={{ fontSize: 28 }}>🌍</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+                {t('fchub.lingue')}
+              </Text>
+              <Text testID="fc-languages-sub" style={{ color: th.text2, fontSize: 13 }}>
+                {langCourses.length
+                  ? t(
+                      langCourses.length === 1 ? 'fchub.n_lingua_parole' : 'fchub.n_lingue_parole',
+                      {
+                        n: langCourses.length,
+                        parole: langWords,
+                      },
+                    )
+                  : t('fchub.lingue_sub_vuoto')}
+              </Text>
+            </View>
+            <Text style={{ color: th.text3, fontSize: 18 }}>›</Text>
           </Card>
         </Pressable>
 

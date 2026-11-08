@@ -69,6 +69,10 @@ function Shell() {
           <Stack.Screen name="fc-history" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-stats" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-insert" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="languages" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="lang-course" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="lang-deck" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="lang-word" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />
