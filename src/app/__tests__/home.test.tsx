@@ -200,8 +200,11 @@ describe('Home', () => {
   });
 
   test('today shows what is on now, a due task can be ticked off, a late pill can be taken', async () => {
-    const { planner, tasks, pills, today } = setup();
     const n = new Date();
+    // il test vuole un'ora dentro la giornata (evento 00:00–23:59, pastiglia delle 00:01 «in ritardo»): a cavallo della mezzanotte non ha senso
+    const minutes = n.getHours() * 60 + n.getMinutes();
+    if (minutes < 2 || minutes > 1437) return;
+    const { planner, tasks, pills, today } = setup();
     // un evento che dura tutto il giorno «in corso»: comincia a mezzanotte e finisce a mezzanotte
     planner.create({ title: 'Long day', date: today, start: '00:00', end: '23:59' });
     const task = tasks.create({ title: 'Pay rent', due_date: today });
@@ -220,7 +223,6 @@ describe('Home', () => {
       is_active: true,
     });
     const view = await renderIt();
-    expect(n.getHours() * 60 + n.getMinutes()).toBeGreaterThan(1);
     expect(screen.getByText('Long day', { exact: false })).toBeTruthy();
     expect(screen.getByText('Pay rent')).toBeTruthy();
     // la pastiglia delle 00:01 è in ritardo

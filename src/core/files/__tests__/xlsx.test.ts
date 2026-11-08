@@ -24,7 +24,14 @@ describe('readXlsx', () => {
     ]);
     expect(read.rows[3]).toEqual(['2026-11-01', '07:30', 'Completed', '1', '3', 'ok']);
     // una data e un'ora scritte da Excel come numeri con il loro formato
-    expect(read.rows[4]).toEqual(['2026-11-02', '08:05:00', 'Completed', '2', '', 'Line "1" & <2>']);
+    expect(read.rows[4]).toEqual([
+      '2026-11-02',
+      '08:05:00',
+      'Completed',
+      '2',
+      '',
+      'Line "1" & <2>',
+    ]);
     // un numero senza formato resta un numero
     expect(read.rows[5]).toEqual(['46325', '', 'Skipped', '1']);
     expect(run.rows[1]).toEqual(['2026-10-31 06:45', '12.5']);

@@ -34,17 +34,26 @@ function build(lengths: ArrayLike<number>, n: number): Huffman {
 let fixedLit: Huffman | null = null;
 let fixedDist: Huffman | null = null;
 
-/** Decomprime un flusso DEFLATE grezzo (senza intestazione zlib). Lancia un errore se i dati sono rotti. */
-export function inflate(src: Uint8Array, sizeHint = 0): Uint8Array {
-  let out = new Uint8Array(Math.max(sizeHint, src.length * 3, 1024));
+/** Quanto può diventare grande, in tutto, il contenuto di un file ZIP aperto (una «bomba» ZIP da pochi KB riempirebbe la memoria). */
+export const MAX_UNZIPPED = 150 * 1024 * 1024;
+
+/**
+ * Decomprime un flusso DEFLATE grezzo (senza intestazione zlib). Lancia un errore se i dati sono rotti
+ * o se superano `maxOut` byte (il `sizeHint` scritto nel file non è da credere: può mentire).
+ */
+export function inflate(src: Uint8Array, sizeHint = 0, maxOut = MAX_UNZIPPED): Uint8Array {
+  let out = new Uint8Array(
+    Math.min(maxOut, Math.max(Math.min(sizeHint, maxOut), src.length * 3, 1024)),
+  );
   let outLen = 0;
   let pos = 0;
   let bitBuf = 0;
   let bitCnt = 0;
 
   const need = (extra: number) => {
+    if (outLen + extra > maxOut) throw new Error('inflate: il file è troppo grande');
     if (outLen + extra > out.length) {
-      const bigger = new Uint8Array(Math.max(out.length * 2, outLen + extra));
+      const bigger = new Uint8Array(Math.min(maxOut, Math.max(out.length * 2, outLen + extra)));
       bigger.set(out.subarray(0, outLen));
       out = bigger;
     }
@@ -175,6 +184,7 @@ export function unzip(bytes: Uint8Array): ZipFiles {
   let at = v.getUint32(end + 16, true);
   const out: ZipFiles = new Map();
   const dec = new TextDecoder();
+  let budget = MAX_UNZIPPED;
   for (let i = 0; i < count; i++) {
     if (v.getUint32(at, true) !== 0x02014b50) throw new Error('zip: elenco rotto');
     const method = v.getUint16(at + 10, true);
@@ -189,9 +199,13 @@ export function unzip(bytes: Uint8Array): ZipFiles {
     if (name.endsWith('/')) continue;
     const start = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
     const raw = bytes.subarray(start, start + csize);
-    if (method === 0) out.set(name, raw);
-    else if (method === 8) out.set(name, inflate(raw, usize));
+    let data: Uint8Array;
+    if (method === 0) data = raw;
+    else if (method === 8) data = inflate(raw, usize, budget);
     else throw new Error(`zip: compressione ${method} non supportata`);
+    budget -= data.length;
+    if (budget < 0) throw new Error('zip: il contenuto è troppo grande');
+    out.set(name, data);
   }
   return out;
 }

@@ -83,7 +83,7 @@ export default function HabitImportScreen() {
     } catch (e) {
       const code = e instanceof Error ? e.message : '';
       setError(
-        ['xls_vecchio', 'xlsx_non_valido', 'file_vuoto'].includes(code)
+        ['xls_vecchio', 'xlsx_non_valido', 'file_vuoto', 'troppo_grande'].includes(code)
           ? t(`import.${code}`)
           : t('import.illeggibile'),
       );

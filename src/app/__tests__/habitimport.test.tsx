@@ -87,6 +87,15 @@ describe('habit import screen', () => {
     );
   });
 
+  test('a file that is too big is refused with a clear message', async () => {
+    setup();
+    (pickDocument as jest.Mock).mockRejectedValueOnce(new Error('troppo_grande'));
+    await render(wrap(<HabitImportScreen />));
+    await fireEvent.press(screen.getByTestId('hi-pick'));
+    await waitFor(() => expect(screen.getByTestId('hi-error')).toBeTruthy());
+    expect(screen.getByTestId('hi-error').props.children).toMatch(/too large/);
+  });
+
   test('cancelling the picker changes nothing', async () => {
     setup();
     (pickDocument as jest.Mock).mockResolvedValueOnce(null);
