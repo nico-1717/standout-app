@@ -124,6 +124,12 @@ export default function FlashcardStatsScreen() {
   const cardsNever = Math.max(0, cardsTotal - knownTotal - cardsTried);
   const knownDays = games.knownByDay();
   const forecast = finishForecast(knownDays, knownTotal, cardsTotal, today);
+  const speeds = games.speedByDeck();
+  const deckName = new Map(flashcards.decks().map((d) => [d.uuid, d.name]));
+  // i 5 più veloci e i 5 più lenti, dal più veloce (come il sito)
+  const speedRows = [
+    ...new Map([...speeds.slice(0, 5), ...speeds.slice(-5)].map((r) => [r.deck, r])).values(),
+  ];
   const curve = learningCurve(knownDays, cardsTotal);
   const masteryPct = cardsTotal > 0 ? Math.round((knownTotal / cardsTotal) * 100) : 0;
   // i punteggi delle partite (non i ripassi) nell'ordine in cui sono state giocate, al massimo gli ultimi 40
@@ -413,6 +419,37 @@ export default function FlashcardStatsScreen() {
             </Text>
           )}
         </Card>
+
+        {speedRows.length > 0 ? (
+          <>
+            <SectionLabel>{t('fc.piu_veloci_e_da_allenare')}</SectionLabel>
+            <Card style={{ padding: 12, gap: 8 }}>
+              <Text style={{ color: th.text2, fontSize: 12 }}>
+                {t('fc.secondi_medi_per_carta_tutta')}
+              </Text>
+              {speedRows.map((r) => (
+                <View key={r.deck} testID={`fcst-speed-${r.deck}`} style={{ gap: 3 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: th.text, flex: 1 }} numberOfLines={1}>
+                      {deckName.get(r.deck) ?? '—'}
+                    </Text>
+                    <Text style={{ color: th.text2 }}>{r.spc}s</Text>
+                  </View>
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: th.hairline2 }}>
+                    <View
+                      style={{
+                        height: 8,
+                        borderRadius: 4,
+                        width: `${Math.max(3, (r.spc / Math.max(...speedRows.map((x) => x.spc))) * 100)}%`,
+                        backgroundColor: th.brand,
+                      }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </Card>
+          </>
+        ) : null}
 
         {scores.length > 0 ? (
           <>

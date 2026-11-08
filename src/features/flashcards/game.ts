@@ -442,6 +442,60 @@ export class GameRepo {
     return [...days.entries()].sort().map(([date, count]) => ({ date, count }));
   }
 
+  /**
+   * Quanto sei veloce per mazzo: i secondi medi per carta delle partite di quel mazzo (`catSpeedPoints` del sito).
+   * Una partita sta in un mazzo se tutte le sue carte stanno in uno solo, o se ne ha scelto uno solo. Contano le partite con
+   * almeno 2 carte e fra 0 e 10 minuti a carta (oltre sono quasi di sicuro lasciate aperte). Servono 3 partite per mazzo.
+   */
+  speedByDeck(): { deck: string; spc: number; games: number }[] {
+    const cond = this.gameCond('g');
+    const decksOf = new Map<string, Set<string>>();
+    for (const r of this.db.all<{ game: string; deck: string }>(
+      `SELECT DISTINCT p.game_uuid AS game, c.category_uuid AS deck
+         FROM ${this.scope.plays} p JOIN ${this.scope.cards} c ON c.uuid = p.card_uuid
+         JOIN fc_games g ON g.uuid = p.game_uuid WHERE ${cond.sql}`,
+      cond.params,
+    )) {
+      const set = decksOf.get(r.game) ?? new Set<string>();
+      set.add(r.deck);
+      decksOf.set(r.game, set);
+    }
+    const chosen = new Map<string, string[]>();
+    for (const r of this.db.all<{ game: string; deck: string }>(
+      `SELECT gd.game_uuid AS game, gd.deck_uuid AS deck FROM ${this.scope.gameDecks} gd`,
+    )) {
+      chosen.set(r.game, [...(chosen.get(r.game) ?? []), r.deck]);
+    }
+    const points = new Map<string, number[]>();
+    for (const r of this.db.all<{ game: string; cards: number; secs: number }>(
+      `SELECT g.uuid AS game,
+              (SELECT COUNT(*) FROM ${this.scope.plays} p WHERE p.game_uuid = g.uuid) AS cards,
+              (SELECT COALESCE(SUM(d.duration_seconds), 0) FROM fc_game_durations d WHERE d.game_uuid = g.uuid) AS secs
+         FROM fc_games g WHERE ${cond.sql}`,
+      cond.params,
+    )) {
+      const own = decksOf.get(r.game);
+      const deck =
+        own?.size === 1
+          ? [...own][0]
+          : chosen.get(r.game)?.length === 1
+            ? chosen.get(r.game)![0]
+            : null;
+      if (!deck || r.cards < 2 || r.secs <= 0) continue;
+      const spc = r.secs / r.cards;
+      if (spc <= 0 || spc >= 600) continue;
+      points.set(deck, [...(points.get(deck) ?? []), spc]);
+    }
+    return [...points.entries()]
+      .filter(([, v]) => v.length >= 3)
+      .map(([deck, v]) => ({
+        deck,
+        spc: Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10,
+        games: v.length,
+      }))
+      .sort((a, b) => a.spc - b.spc || (a.deck < b.deck ? -1 : 1));
+  }
+
   /** Il livello di una carta (`p<uuid>`) o carta figlia (`c<uuid>`). */
   levelOfKey(key: string, hist: Map<string, CardHistory> = this.histories()): Level {
     const h = hist.get(key) ?? { c: 0, w: 0, u: '' };

@@ -696,3 +696,35 @@ describe('cards that became known, day by day', () => {
     ]);
   });
 });
+
+describe('speed per deck', () => {
+  test('needs 3 games, at least 2 cards and a sane time per card', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const other = s.flashcards.createDeck({ name: 'Other' })!;
+    s.flashcards.addCard(other, 'X', 'Y');
+    s.flashcards.addCard(other, 'Z', 'W');
+    const run = (decks: string[], secs: number) => {
+      const g = start(s, decks);
+      const total = s.games.totalPositions(g);
+      for (let pos = 1; pos <= total; pos++) {
+        const p = s.games.ensurePosition(g, pos)!;
+        s.games.grade(g, pos, p[0]!.card_uuid!, false, 'correct');
+      }
+      s.db.run('UPDATE fc_game_durations SET duration_seconds = ? WHERE game_uuid = ?', [secs, g]);
+    };
+    run([d.deck], 30);
+    run([d.deck], 60);
+    expect(s.games.speedByDeck()).toEqual([]); // solo due partite
+    run([d.deck], 90);
+    const out = s.games.speedByDeck();
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ deck: d.deck, games: 3 });
+    expect(out[0]!.spc).toBeGreaterThan(0);
+    // partite su due mazzi insieme non contano per nessuno dei due
+    run([d.deck, other], 20);
+    run([d.deck, other], 20);
+    run([d.deck, other], 20);
+    expect(s.games.speedByDeck()).toHaveLength(1);
+  });
+});
