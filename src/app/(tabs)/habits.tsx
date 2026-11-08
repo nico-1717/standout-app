@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { AwardPopup } from '@/features/habits/AwardPopup';
-import { Confetti, newBurst, type Burst } from '@/features/habits/Confetti';
+import { Confetti, cancelLater, later, newBurst, type Burst } from '@/features/habits/Confetti';
 import { playBlip } from '@/features/habits/playBlip';
 import { evaluateAchievements } from '@/features/habits/achievements';
 import { loadSeen, newlyUnlocked, saveSeen } from '@/features/habits/awardsSeen';
@@ -104,6 +104,8 @@ export default function HabitsScreen() {
   const [showFuture, setShowFuture] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
   const screen = useWindowDimensions();
+  // chiudendo la pagina, il lancio d'oro in attesa non parte
+  useEffect(() => cancelLater, []);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [panel, setPanel] = useState<'stats' | 'table' | 'settings' | 'reorder' | null>(null);
   const [noteFor, setNoteFor] = useState<{ habit: Habit; day: string } | null>(null);
@@ -277,7 +279,7 @@ export default function HabitsScreen() {
           : isSuccess(x, stateOf(x, day, logs.get(`${x.uuid}|${day}`) ?? null, today)),
       );
     if (perfect && daily.some((x) => x.uuid === h.uuid)) {
-      setTimeout(() => {
+      later(() => {
         throwConfetti(screen.width * 0.5, screen.height * 0.34, '#FFCC00', 70);
         if (SETTINGS.sound_enabled) playBlip(true);
       }, 360);

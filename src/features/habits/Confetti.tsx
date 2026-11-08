@@ -11,6 +11,22 @@ import Animated, {
 
 import { FRAMES, makeBurst, particleAt, type Particle } from './confetti';
 
+const pendingLater = new Set<ReturnType<typeof setTimeout>>();
+
+/** Fa qualcosa fra un po' (il lancio d'oro dopo il primo); `cancelLater` lo ferma se la pagina si chiude prima. */
+export function later(fn: () => void, ms: number): void {
+  const id = setTimeout(() => {
+    pendingLater.delete(id);
+    fn();
+  }, ms);
+  pendingLater.add(id);
+}
+
+export function cancelLater(): void {
+  for (const id of pendingLater) clearTimeout(id);
+  pendingLater.clear();
+}
+
 let lastBurstId = 0;
 
 /** Un nuovo lancio con un numero tutto suo (fuori dal render, così resta puro). */
