@@ -26,6 +26,9 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true, assets: null })),
   launchCameraAsync: jest.fn(() => Promise.resolve({ canceled: true, assets: null })),
 }));
+jest.mock('expo-document-picker', () => ({
+  getDocumentAsync: jest.fn(() => Promise.resolve({ canceled: true, assets: null })),
+}));
 jest.mock('expo-image-manipulator', () => {
   const ctx = {
     resize: jest.fn(),

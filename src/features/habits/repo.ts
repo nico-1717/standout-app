@@ -15,6 +15,7 @@ import {
   type HabitLog,
   type LogStatus,
 } from './logic';
+import type { ImportLog } from './importFile';
 
 export interface HabitCategory {
   uuid: string;
@@ -417,6 +418,86 @@ export class HabitsRepo {
           amount: 0,
         });
       enqueue(this.db, { table: 'habit_logs', uuid, op: 'upsert', patch, isCreate: !cur }, now);
+    });
+  }
+
+  /* ---------------- import da file ---------------- */
+
+  /**
+   * Scrive i check-in letti da un file (stesse regole di `habits_import.php`): le righe dello stesso giorno si sommano
+   * (una riga = un check-in), i giorni futuri si scartano, e se il giorno c'era già si tiene il massimo, così un import
+   * ripetuto non raddoppia niente e non cancella un check-in vero. Torna i giorni scritti.
+   */
+  importLogs(habitUuid: string, rows: ImportLog[]): number {
+    const today = this.today();
+    return this.db.transaction(() => {
+      const h = this.get(habitUuid);
+      if (!h) return 0;
+      const target = h.target_amount;
+      const days = new Map<
+        string,
+        {
+          amount: number;
+          completions: number;
+          mood: number | null;
+          note: string;
+          time: string | null;
+        }
+      >();
+      for (const r of rows) {
+        if (r.date > today) continue;
+        const perRow = h.goal_type === 'quantity' ? h.step_amount * r.count : target;
+        const d = days.get(r.date) ?? {
+          amount: 0,
+          completions: 0,
+          mood: null,
+          note: '',
+          time: null,
+        };
+        d.amount += perRow;
+        d.completions += 1;
+        const mood = Number(r.mood);
+        if (r.mood !== '' && Number.isFinite(mood))
+          d.mood = Math.min(5, Math.max(1, Math.trunc(mood)));
+        if (r.note !== '' && d.note === '') d.note = r.note.slice(0, 500);
+        if (r.time && (d.time === null || r.time < d.time)) d.time = r.time;
+        days.set(r.date, d);
+      }
+      const now = this.clock();
+      for (const [day, d] of days) {
+        const cur = this.log(habitUuid, day);
+        const uuid = checkInUuid(habitUuid, day);
+        const amount = Math.max(cur?.amount ?? 0, d.amount);
+        const completions = Math.max(cur?.completions ?? 0, d.completions);
+        const status: LogStatus = !cur || amount >= target ? 'done' : cur.status;
+        const note = cur?.note ? cur.note : d.note || null;
+        const mood = cur?.mood ?? d.mood;
+        const had = cur
+          ? (this.db.all<{ f: string | null }>(
+              'SELECT first_logged_at AS f FROM habit_logs WHERE uuid = ?',
+              [uuid],
+            )[0]?.f ?? null)
+          : null;
+        // l'ora del file è l'ora locale del telefono, come «Quando ti muovi» la legge
+        const first = had ?? (d.time ? `${day} ${d.time}` : null);
+        upsertRow(this.db, 'habit_logs', {
+          uuid,
+          habit_uuid: habitUuid,
+          log_date: day,
+          status,
+          amount,
+          completions,
+          target_amount: target,
+          note,
+          mood,
+          first_logged_at: first,
+          updated_at: now,
+        });
+        const patch: Record<string, WireValue> = { status, amount, note, mood };
+        if (!cur) Object.assign(patch, { habit_uuid: habitUuid, log_date: day });
+        enqueue(this.db, { table: 'habit_logs', uuid, op: 'upsert', patch, isCreate: !cur }, now);
+      }
+      return days.size;
     });
   }
 }

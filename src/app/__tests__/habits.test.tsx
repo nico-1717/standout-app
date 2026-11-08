@@ -159,6 +159,15 @@ describe('Habits screen', () => {
     expect(String(mockWritten[1]!.data)).toContain('Read,');
   });
 
+  test('settings: Import opens the import page', async () => {
+    setup();
+    mockPush.mockClear();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hb-settings'));
+    await fireEvent.press(screen.getByTestId('import-open'));
+    expect(mockPush).toHaveBeenCalledWith('/habit-import');
+  });
+
   test('a new achievement pops up once; old ones do not on the first visit', async () => {
     const { read } = setup();
     await renderIt();

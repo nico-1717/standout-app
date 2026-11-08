@@ -698,6 +698,10 @@ export default function HabitsScreen() {
         }}
         onReorder={() => setPanel('reorder')}
         onExport={(f) => void exportHistory(f)}
+        onImport={() => {
+          setPanel(null);
+          router.push('/habit-import');
+        }}
         onClose={() => setPanel(null)}
       />
       <ReorderSheet

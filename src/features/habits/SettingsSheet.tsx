@@ -21,6 +21,8 @@ export interface SettingsSheetProps {
   onReorder: () => void;
   /** scrive lo storico in un file e lo offre a «Condividi» */
   onExport?: (format: 'xlsx' | 'csv') => void;
+  /** apre la pagina «Importa» (check-in da un file di un'altra app) */
+  onImport?: () => void;
   onClose: () => void;
 }
 
@@ -166,6 +168,37 @@ export function SettingsSheet(p: SettingsSheetProps) {
                   style={[styles.btn, { backgroundColor: th.surface2 }]}
                 >
                   <Text style={{ color: th.text, fontWeight: '700', fontSize: 13 }}>CSV</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+
+          {p.onImport ? (
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: th.surface },
+                cardShadow(th.scheme === 'dark'),
+              ]}
+            >
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: th.text, fontWeight: '700', fontSize: 15.5 }}>
+                    {t('import.importa')}
+                  </Text>
+                  <Text style={{ color: th.text2, fontSize: 13, marginTop: 2 }}>
+                    {t('import.sub_abitudini')}
+                  </Text>
+                </View>
+                <Pressable
+                  testID="import-open"
+                  accessibilityRole="button"
+                  onPress={() => p.onImport?.()}
+                  style={[styles.btn, { backgroundColor: th.surface2 }]}
+                >
+                  <Text style={{ color: th.text, fontWeight: '700', fontSize: 13 }}>
+                    {t('import.sfoglia')}
+                  </Text>
                 </Pressable>
               </View>
             </View>
