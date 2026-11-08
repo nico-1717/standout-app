@@ -10,6 +10,7 @@ import { human } from '@/features/pomodoro/logic';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
 import { ancestors, byId, childrenOf, subtreeIds, type Project } from '@/features/projects/logic';
 import { isRichNote, noteText } from '@/features/projects/notes';
+import { useAutosave } from '@/ui/useAutosave';
 import { localToday } from '@/features/tasks/groups';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { ReorderList, reorderKeys } from '@/ui/ReorderList';
@@ -48,6 +49,10 @@ export default function ProjectScreen() {
   const [name, setName] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [sub, setSub] = useState('');
+  // la nota si salva da sola mentre si scrive (J17), anche se si chiude la pagina con il testo in mano
+  useAutosave(note, (text) => {
+    if (services && typeof id === 'string') services.projects.update(id, { notes: text });
+  });
   const [moving, setMoving] = useState(false);
   const [ordering, setOrdering] = useState(false);
   const [deleting, setDeleting] = useState(false);

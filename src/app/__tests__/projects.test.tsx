@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -144,6 +144,16 @@ describe('project page', () => {
     await fireEvent.changeText(screen.getByTestId('proj-note'), 'remember the sources');
     await fireEvent(screen.getByTestId('proj-note'), 'blur');
     expect(projects.get(a)!.notes).toBe('remember the sources');
+
+    // la nota si salva anche senza toccare fuori: mezzo secondo dopo l'ultimo tasto
+    jest.useFakeTimers();
+    await fireEvent.changeText(screen.getByTestId('proj-note'), 'remember the sources, again');
+    expect(projects.get(a)!.notes).toBe('remember the sources');
+    await act(async () => {
+      jest.advanceTimersByTime(700);
+    });
+    expect(projects.get(a)!.notes).toBe('remember the sources, again');
+    jest.useRealTimers();
 
     // sin qui nessuna data: toccare il campo mette quella di oggi, poi il selettore la cambia
     await fireEvent.press(screen.getByTestId('proj-due'));
