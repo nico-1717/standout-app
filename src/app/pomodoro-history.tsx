@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import Svg, { Circle } from 'react-native-svg';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -16,6 +17,7 @@ import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
 const PAGE = 20;
+const PIE_C = 2 * Math.PI * 34;
 const GREY = '#8E8E93';
 
 type Sort = NonNullable<HistoryFilter['sort']>;
@@ -170,6 +172,19 @@ export default function PomodoroHistory() {
         : ins.today.n > ins.yesterday.n
           ? t('pomodoro.storico_oggi_in_piu', { n: ins.today.n - ins.yesterday.n })
           : t('pomodoro.storico_oggi_in_meno', { n: ins.yesterday.n - ins.today.n });
+  const pieTotal = ins.todayProjects.reduce((n, p) => n + p.secs, 0);
+  const pieArcs = ins.todayProjects.map((p, i) => ({
+    key: p.uuid ?? 'none',
+    color: colorOf(p.uuid),
+    len: PIE_C * (p.secs / pieTotal),
+    from: PIE_C * (ins.todayProjects.slice(0, i).reduce((n, x) => n + x.secs, 0) / pieTotal),
+  }));
+  const pieFirst = ins.todayProjects[0];
+  const pieName = pieFirst ? (nameOf(pieFirst.uuid) ?? t('pomodoro.storico_nessun_progetto')) : '';
+  const pieCaption =
+    ins.todayProjects.length > 1
+      ? t('pomodoro.storico_torta_e_altri', { progetto: pieName, n: ins.todayProjects.length - 1 })
+      : pieName;
   const maxWeek = Math.max(1, ...ins.week.map((d) => d.secs));
   const maxMonth = Math.max(1, ...Object.values(ins.month).map((d) => d.secs));
 
@@ -382,6 +397,56 @@ export default function PomodoroHistory() {
               </View>
             ) : null}
           </View>
+          <SectionLabel>{t('pomodoro.storico_panoramica_giorno')}</SectionLabel>
+          {pieTotal > 0 ? (
+            <View
+              testID="ins-pie"
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}
+              accessible
+              accessibilityLabel={`${pieCaption} · ${human(pieTotal)}`}
+            >
+              <View style={{ width: 96, height: 96 }}>
+                <Svg
+                  width={96}
+                  height={96}
+                  viewBox="0 0 80 80"
+                  style={{ transform: [{ rotate: '-90deg' }] }}
+                >
+                  <Circle cx={40} cy={40} r={34} fill="none" stroke={th.hairline} strokeWidth={6} />
+                  {pieArcs.map((a) => (
+                    <Circle
+                      key={a.key}
+                      cx={40}
+                      cy={40}
+                      r={34}
+                      fill="none"
+                      stroke={a.color}
+                      strokeWidth={6}
+                      strokeDasharray={`${a.len} ${PIE_C - a.len}`}
+                      strokeDashoffset={-a.from}
+                    />
+                  ))}
+                </Svg>
+                <View
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: th.text, fontSize: 16, fontWeight: '800' }}>
+                    {human(pieTotal)}
+                  </Text>
+                </View>
+              </View>
+              <Text testID="ins-pie-caption" style={{ color: th.text2, flex: 1 }}>
+                {pieCaption}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: th.text2 }}>{t('pomodoro.storico_oggi_vuoto')}</Text>
+          )}
           <SectionLabel>{t('pomodoro.storico_panoramica_settimana')}</SectionLabel>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 70 }}>
             {ins.week.map((d) => (
@@ -392,9 +457,18 @@ export default function PomodoroHistory() {
                     width: '100%',
                     height: Math.max(3, Math.round((d.secs / maxWeek) * 48)),
                     borderRadius: 4,
+                    overflow: 'hidden',
+                    flexDirection: 'column-reverse',
                     backgroundColor: d.secs ? th.brand : th.hairline,
                   }}
-                />
+                >
+                  {(ins.weekProjects[d.day] ?? []).map((p) => (
+                    <View
+                      key={p.uuid ?? 'none'}
+                      style={{ flex: p.secs / d.secs, backgroundColor: colorOf(p.uuid) }}
+                    />
+                  ))}
+                </View>
                 <Text style={{ color: th.text3, fontSize: 10 }}>
                   {t(`planner.gg_${weekdayOf(d.day)}`).slice(0, 1)}
                 </Text>

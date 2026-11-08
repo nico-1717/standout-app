@@ -38,6 +38,10 @@ export interface Insights {
   topHour: number | null;
   streak: number;
   weekProject: { uuid: string; secs: number } | null;
+  /** oggi diviso per progetto (la torta), dal più lungo; `uuid` null = senza progetto */
+  todayProjects: { uuid: string | null; secs: number }[];
+  /** ogni giorno della settimana diviso per progetto (le barre impilate) */
+  weekProjects: Record<string, { uuid: string | null; secs: number }[]>;
 }
 
 /** Sposta un giorno «AAAA-MM-GG» di n giorni. */
@@ -396,6 +400,15 @@ export class PomodoroRepo {
       if (r.project_uuid && r.day >= from7)
         byProject.set(r.project_uuid, (byProject.get(r.project_uuid) ?? 0) + r.secs);
     const top = [...byProject.entries()].sort((a, b) => b[1] - a[1])[0];
+    const split = (day: string): { uuid: string | null; secs: number }[] => {
+      const m = new Map<string | null, number>();
+      for (const r of rows)
+        if (r.day === day) m.set(r.project_uuid, (m.get(r.project_uuid) ?? 0) + r.secs);
+      return [...m.entries()]
+        .map(([uuid, secs]) => ({ uuid, secs }))
+        .filter((x) => x.secs > 0)
+        .sort((a, b) => b.secs - a.secs);
+    };
     return {
       today: per(today),
       yesterday: per(shiftDay(today, -1)),
@@ -404,6 +417,8 @@ export class PomodoroRepo {
       topHour: peak > 0 ? hours.indexOf(peak) : null,
       streak,
       weekProject: top ? { uuid: top[0], secs: top[1] } : null,
+      todayProjects: split(today),
+      weekProjects: Object.fromEntries(week.map((w) => [w.day, split(w.day)])),
     };
   }
 

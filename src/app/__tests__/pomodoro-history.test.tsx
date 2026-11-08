@@ -53,10 +53,33 @@ describe('Pomodoro history', () => {
     const today = localToday();
     pomodoro.addManual({ day: today, from: '09:00', to: '09:30' });
     await renderIt();
-    // il totale del giorno e la riga dicono la stessa durata
-    expect(screen.getAllByText('30 min')).toHaveLength(2);
+    // il totale del giorno, la riga e il centro della torta dicono la stessa durata
+    expect(screen.getAllByText('30 min')).toHaveLength(3);
     expect(screen.getByTestId('ins-today').props.children.join('')).toContain('1 · 30 min');
     expect(screen.getByTestId('ins-streak')).toBeTruthy();
+  });
+
+  test('the day pie splits today by project and the bars are stacked by project', async () => {
+    const { pomodoro, projects } = setup();
+    const a = projects.create({ name: 'Physics' })!;
+    const today = localToday();
+    pomodoro.addManual({ day: today, from: '09:00', to: '09:30', projectUuid: a });
+    pomodoro.addManual({ day: today, from: '10:00', to: '10:20' });
+    const ins = pomodoro.insights(today);
+    expect(ins.todayProjects).toEqual([
+      { uuid: a, secs: 1800 },
+      { uuid: null, secs: 1200 },
+    ]);
+    expect(ins.weekProjects[today]).toHaveLength(2);
+    await renderIt();
+    expect(screen.getByTestId('ins-pie')).toBeTruthy();
+    expect(screen.getByTestId('ins-pie-caption')).toHaveTextContent('Physics and 1 more');
+  });
+
+  test('with nothing today there is no pie', async () => {
+    setup();
+    await renderIt();
+    expect(screen.queryByTestId('ins-pie')).toBeNull();
   });
 
   test('adds a session by hand and edits it', async () => {
