@@ -87,4 +87,46 @@ describe('insert many cards', () => {
     await fireEvent.press(screen.getByTestId('fci-save'));
     expect(flashcards.cards(deck).map((c) => c.question_desc)).toEqual(['Q1', 'Q3']);
   });
+
+  test('rows mode: a child row becomes a sub-card of the row above, and goes with it when removed', async () => {
+    const { flashcards, deck } = setup();
+    await render(wrap(<InsertScreen />));
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-0'), 'Father');
+    await fireEvent.press(screen.getByTestId('fci-kid-0'));
+    await fireEvent.press(screen.getByTestId('fci-kid-0'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-1'), 'Kid 1');
+    await fireEvent.changeText(screen.getByTestId('fci-q-2'), 'Kid 2');
+    // un figlio non ha il tasto «figlio»
+    expect(screen.queryByTestId('fci-kid-1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fci-add-row'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-3'), 'Other');
+    await fireEvent.press(screen.getByTestId('fci-save'));
+    const cards = flashcards.cards(deck);
+    expect(cards.map((c) => c.question_desc)).toEqual(['Father', 'Other']);
+    const father = cards.find((c) => c.question_desc === 'Father')!;
+    expect(flashcards.subcards(father.uuid).map((k) => k.question_desc)).toEqual([
+      'Kid 1',
+      'Kid 2',
+    ]);
+  });
+
+  test('rows mode: removing a father removes its children; a child of an empty father is not saved', async () => {
+    const { flashcards, deck } = setup();
+    await render(wrap(<InsertScreen />));
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    await fireEvent.press(screen.getByTestId('fci-kid-0'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-1'), 'Lonely kid');
+    await fireEvent.press(screen.getByTestId('fci-add-row'));
+    await fireEvent.changeText(screen.getByTestId('fci-q-2'), 'Real card');
+    await fireEvent.press(screen.getByTestId('fci-save'));
+    expect(flashcards.cards(deck).map((c) => c.question_desc)).toEqual(['Real card']);
+
+    await fireEvent.press(screen.getByTestId('fci-kid-0'));
+    expect(screen.getByTestId('fci-q-1')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fci-add-row'));
+    await fireEvent.press(screen.getByTestId('fci-del-0'));
+    expect(screen.getByTestId('fci-q-0')).toBeTruthy();
+    expect(screen.queryByTestId('fci-q-1')).toBeNull();
+  });
 });

@@ -13,10 +13,10 @@ import {
   type Field,
   type Table,
 } from '@/features/flashcards/smartImport';
+import { rowsToCreate, type Row } from '@/features/flashcards/insertRows';
 import { Card, Header, PrimaryButton, SectionLabel } from '@/ui/kit';
 
 type Mode = 'paste' | 'rows';
-
 /**
  * Inserisci molte carte in un mazzo (fc_insert.php, fc_smart_import.js): o si incolla un testo e si capisce da solo il formato
  * (Excel, CSV, JSON, «domanda - risposta»), oppure si scrivono le righe una sotto l'altra. Parametro `deck`.
@@ -33,7 +33,7 @@ export default function InsertScreen() {
   const [mode, setMode] = useState<Mode>('paste');
   const [text, setText] = useState('');
   const [override, setOverride] = useState<{ text: string; campi: Field[] } | null>(null);
-  const [rows, setRows] = useState<{ q: string; a: string }[]>([{ q: '', a: '' }]);
+  const [rows, setRows] = useState<Row[]>([{ q: '', a: '' }]);
   const [done, setDone] = useState<number | null>(null);
 
   const analysis = useMemo(() => analyze(text, (n) => t('fc.smi_colonna_n', { n })), [text, t]);
@@ -67,17 +67,23 @@ export default function InsertScreen() {
     setOverride({ text, campi: next as Field[] });
   };
 
-  const saveAll = (list: { q: string; a: string }[]) => {
+  const saveAll = (list: { q: string; a: string; kid?: boolean }[]) => {
     let n = 0;
+    let parent: string | null = null;
     for (const c of list) {
-      if (services.flashcards.addCard(deckId, c.q || null, c.a || null)) n += 1;
+      if (c.kid && parent) {
+        if (services.flashcards.addSubcard(parent, c.q || null, c.a || null)) n += 1;
+        continue;
+      }
+      parent = services.flashcards.addCard(deckId, c.q || null, c.a || null);
+      if (parent) n += 1;
     }
     if (n > 0) changed();
     setDone(n);
     return n;
   };
 
-  const rowsToSave = rows.filter((r) => r.q.trim() || r.a.trim());
+  const rowsToSave = rowsToCreate(rows);
   const input = {
     backgroundColor: th.surface2,
     borderRadius: 10,
@@ -260,7 +266,7 @@ export default function InsertScreen() {
         ) : (
           <View style={{ gap: 12 }}>
             {rows.map((r, i) => (
-              <Card key={i} style={{ padding: 12, gap: 8 }}>
+              <Card key={i} style={{ padding: 12, gap: 8, marginLeft: r.kid ? 24 : 0 }}>
                 <TextInput
                   testID={`fci-q-${i}`}
                   value={r.q}
@@ -279,15 +285,43 @@ export default function InsertScreen() {
                   multiline
                   style={input}
                 />
-                {rows.length > 1 ? (
-                  <Pressable
-                    testID={`fci-del-${i}`}
-                    accessibilityRole="button"
-                    onPress={() => setRows(rows.filter((_, k) => k !== i))}
-                  >
-                    <Text style={{ color: th.red, fontSize: 13 }}>{t('comune.elimina')}</Text>
-                  </Pressable>
-                ) : null}
+                <View style={{ flexDirection: 'row', gap: 18 }}>
+                  {!r.kid ? (
+                    <Pressable
+                      testID={`fci-kid-${i}`}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        // la figlia va dopo le figlie che il padre ha già
+                        let at = i + 1;
+                        while (rows[at]?.kid) at += 1;
+                        setRows([
+                          ...rows.slice(0, at),
+                          { q: '', a: '', kid: true },
+                          ...rows.slice(at),
+                        ]);
+                      }}
+                    >
+                      <Text style={{ color: th.brand, fontSize: 13 }}>
+                        ↳ {t('fc.ifc_aggiungi_figlio')}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  {rows.length > 1 ? (
+                    <Pressable
+                      testID={`fci-del-${i}`}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        // togliendo un padre se ne vanno anche le sue figlie
+                        let end = i + 1;
+                        if (!r.kid) while (rows[end]?.kid) end += 1;
+                        const rest = [...rows.slice(0, i), ...rows.slice(end)];
+                        setRows(rest.length ? rest : [{ q: '', a: '' }]);
+                      }}
+                    >
+                      <Text style={{ color: th.red, fontSize: 13 }}>{t('comune.elimina')}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </Card>
             ))}
             <Pressable
