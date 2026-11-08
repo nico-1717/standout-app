@@ -64,10 +64,10 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | P3 | Vista mese | sync planner | Planner › Mese | P2 | fatto (griglia del mese, tocca per aprire il giorno) | |
 | P4 | Eventi: crea, modifica, sposta (`event_move`), copia giorno, spunta, cancella | `events` (pronta) → sync `planner_events` | Scheda evento | P2 | fatto: crea, modifica, spunta, cancella (spostare con trascina: da fare) | |
 | P5 | Ripetizioni (giornaliera, settimanale, mensile, annuale, personalizzata, `rrule`), eccezioni per una sola occorrenza (`original_date`, `is_cancelled`) | logica da portare in TS | (dentro Planner) | P2 | fatto — test d'oro contro PHP, DST sistemato anche sul sito | |
-| P6 | Invitati (`event_guests`) e rubrica (`contacts`) | sync | Scheda evento › Invitati | P2 | da fare | |
+| P6 | Invitati (`event_guests`) e rubrica (`contacts`) | sync | Scheda evento › Invitati | P2 | fatto: invitati nella scheda evento (da rubrica o scritti a mano, fino a 30, nome copiato dalla rubrica), rubrica nella pagina Calendari e categorie, la barra intelligente invita «con luchino». Sync `contacts`, `event_guests` | |
 | P7 | Calendari (colore, visibilità, solo uno, regole) | sync `planner_calendars` | Planner › Calendari | P2 | fatto (schermata Calendari e categorie) | |
 | P8 | Categorie e parole chiave | sync `planner_categories`, `_keywords` | Planner › Categorie | P2 | fatto (schermata Calendari e categorie) | |
-| P9 | Luoghi e rubrica dei luoghi; ricerca luoghi e dettaglio | sync `planner_places`; ricerca **solo online** | Scheda luogo + mappa | P2 | da fare | |
+| P9 | Luoghi e rubrica dei luoghi; ricerca luoghi e dettaglio | sync `planner_places`; ricerca **solo online** | Scheda luogo + mappa | P2 | fatto in parte: luoghi salvati (nome, parole d'aggancio, indirizzo; sync `planner_places`), scelte rapide nella scheda evento con il luogo che il titolo nomina evidenziato, coordinate che si copiano nell'evento. Da fare: cerca un luogo (solo online) e la mappa (P10) | |
 | P10 | Mappa dei luoghi | — (`react-native-maps`) | Mappa | P2 | da fare (serve la chiave Google Maps per Android: vedi §8) | |
 | P11 | Priorità del giorno (`planner_priorities`) | sync | Planner › Priorità | P2 | fatto (scheda nel giorno: scrivi, spunta, fino a 6; sync con UUIDv5) | |
 | P12 | Routine (gruppi di righe, comprimi/ricompatta, inserisci) | sync `planner_routines`, `_items` | Planner › Routine | P2 | fatto (crea/cambia routine, inserisci a un'ora, apri/chiudi, elimina il blocco) | |

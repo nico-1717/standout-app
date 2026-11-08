@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { BookSections } from '@/features/planner/BookSections';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 
 /** Le stesse tinte che il sito offre per calendari e categorie. */
@@ -29,6 +30,7 @@ export default function PlannerManage() {
   const { services, version, changed, uiStyle, plannerSettings } = useApp();
   const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const repo = services?.planner ?? null;
+  const book = services?.book ?? null;
   const [newCal, setNewCal] = useState('');
   const [newCat, setNewCat] = useState('');
   const [words, setWords] = useState<Record<string, string>>({});
@@ -36,9 +38,15 @@ export default function PlannerManage() {
   const data = useMemo(() => {
     void version;
     return repo
-      ? { cals: repo.calendars(), cats: repo.categories(), kws: repo.keywords() }
-      : { cals: [], cats: [], kws: [] };
-  }, [repo, version]);
+      ? {
+          cals: repo.calendars(),
+          cats: repo.categories(),
+          kws: repo.keywords(),
+          contacts: book?.contacts() ?? [],
+          places: book?.places() ?? [],
+        }
+      : { cals: [], cats: [], kws: [], contacts: [], places: [] };
+  }, [repo, book, version]);
   if (!repo) return null;
 
   const swatches = (current: string | null, pick: (c: string) => void, id: string) => (
@@ -354,6 +362,15 @@ export default function PlannerManage() {
             <Text style={{ color: pt.accentInk, fontSize: 22 }}>＋</Text>
           </Pressable>
         </View>
+        {book ? (
+          <BookSections
+            book={book}
+            contacts={data.contacts}
+            places={data.places}
+            look={{ pt, card, input, heading }}
+            changed={changed}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

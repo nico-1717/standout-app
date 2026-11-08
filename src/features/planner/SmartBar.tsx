@@ -120,6 +120,15 @@ export function SmartReport(p: { pt: PlannerTheme; note: SmartNote | null; onHid
           ? t('planner.virgola_tutto_il_giorno')
           : t('planner.dalle_alle', { da: note.start, a: note.end })}
       </Text>
+      {q.guests.length ? (
+        <Text
+          testID="smart-guests"
+          numberOfLines={1}
+          style={{ color: pt.ink2, fontSize: 13, fontFamily: pt.sans }}
+        >
+          {t('planner.con_invitati', { chi: q.guests.map((g) => g.name || g.email).join(', ') })}
+        </Text>
+      ) : null}
       <Text style={{ color: pt.ink3, fontSize: 11.5, fontFamily: pt.sans }}>
         {hints.join(' · ')}
       </Text>

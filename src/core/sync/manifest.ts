@@ -32,6 +32,9 @@ export type SyncTable =
   | 'university_exams'
   | 'university_bonuses'
   | 'planner_events'
+  | 'contacts'
+  | 'planner_places'
+  | 'event_guests'
   | 'fc_study_decks'
   | 'fc_study_cards'
   | 'fc_study_subcards'
@@ -395,7 +398,47 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'created_at',
       'updated_at',
     ],
-    children: [{ table: 'planner_events', column: 'series_uuid' }],
+    children: [
+      { table: 'planner_events', column: 'series_uuid' },
+      { table: 'event_guests', column: 'event_uuid' },
+    ],
+  },
+  // la rubrica: un indirizzo e-mail solo per utente. Se un contatto sparisce, gli invitati restano scritti a mano.
+  contacts: {
+    order: 120,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: [],
+    columns: ['uuid', 'name', 'email', 'created_at', 'updated_at'],
+    children: [{ table: 'event_guests', column: 'contact_uuid', setNull: true }],
+  },
+  // i luoghi salvati: nome, parole d'aggancio, indirizzo e, se ci sono, le coordinate (vanno in coppia)
+  planner_places: {
+    order: 121,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: [],
+    columns: [
+      'uuid',
+      'label',
+      'keywords',
+      'place_name',
+      'address',
+      'place_lat',
+      'place_lon',
+      'place_ref',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  // gli invitati di un evento: l'evento non si cambia dopo la creazione
+  event_guests: {
+    order: 131,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: ['event_uuid', 'email'],
+    booleans: [],
+    columns: ['uuid', 'event_uuid', 'contact_uuid', 'email', 'name', 'created_at', 'updated_at'],
   },
   // i progetti: un albero. Il colore si eredita dal padre finché non lo scegli tu (color_edited). I campi study_* li scrive il
   // piano di studio del sito: qui si leggono e basta (tranne la stima dei pomodori).

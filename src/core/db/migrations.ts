@@ -691,6 +691,43 @@ CREATE INDEX idx_fc_deckproj_project ON fc_study_deck_projects (project_uuid);
 CREATE INDEX idx_fc_deckproj_deck ON fc_study_deck_projects (deck_uuid);
 `,
   },
+  {
+    version: 16,
+    // la rubrica, gli invitati degli eventi e i luoghi salvati
+    sql: `
+CREATE TABLE contacts (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_contacts_email ON contacts (email);
+CREATE TABLE event_guests (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  event_uuid TEXT NOT NULL,
+  contact_uuid TEXT,
+  email TEXT NOT NULL,
+  name TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_event_guests_event ON event_guests (event_uuid);
+CREATE TABLE planner_places (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  label TEXT NOT NULL,
+  keywords TEXT NOT NULL DEFAULT '',
+  place_name TEXT,
+  address TEXT NOT NULL DEFAULT '',
+  place_lat REAL,
+  place_lon REAL,
+  place_ref TEXT,
+  sort_key TEXT NOT NULL DEFAULT '',
+  created_at TEXT,
+  updated_at TEXT
+);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

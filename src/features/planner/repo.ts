@@ -7,6 +7,7 @@ import { enqueue } from '@/core/sync/outbox';
 import { deleteRow, patchRow, upsertRow } from '@/core/sync/rows';
 import type { WireRow, WireValue } from '@/core/sync/types';
 
+import { dropGuestsOf } from './book';
 import { eventsInRange, type EventRow, type EventView } from './events';
 import { inputOf, minutesOf, normalise, timeOf, type Context, type EventInput } from './model';
 
@@ -404,6 +405,15 @@ export class PlannerRepo {
           : null;
       if (scope === 'series' && (master || view.isException)) {
         const head = master ?? view.seriesUuid!;
+        dropGuestsOf(
+          this.db,
+          this.db
+            .all<{ uuid: string }>(
+              'SELECT uuid FROM planner_events WHERE series_uuid = ? OR uuid = ?',
+              [head, head],
+            )
+            .map((r) => r.uuid),
+        );
         this.db.run('DELETE FROM planner_events WHERE series_uuid = ? OR uuid = ?', [head, head]);
         enqueue(this.db, { table: 'planner_events', uuid: head, op: 'delete' }, now);
         return;
@@ -436,6 +446,7 @@ export class PlannerRepo {
         );
         return;
       }
+      dropGuestsOf(this.db, [view.uuid]);
       deleteRow(this.db, 'planner_events', view.uuid);
       enqueue(this.db, { table: 'planner_events', uuid: view.uuid, op: 'delete' }, now);
     });

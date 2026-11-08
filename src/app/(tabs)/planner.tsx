@@ -141,7 +141,8 @@ export default function PlannerScreen() {
 
   if (!repo) return null;
   const smartSubmit = (text: string): boolean => {
-    const parsed = smartParse(text, { today, focusDate: date });
+    const book = services?.book ?? null;
+    const parsed = smartParse(text, { today, focusDate: date, contacts: book?.contacts() });
     if (!parsed.title) {
       setUnclear(true);
       return false;
@@ -149,6 +150,11 @@ export default function PlannerScreen() {
     setUnclear(false);
     const input = smartEvent(parsed, repo.eventsInRange(parsed.date, parsed.date));
     const uuid = repo.create(input);
+    if (book && parsed.guests.length)
+      book.setGuests(
+        uuid,
+        parsed.guests.map((g) => ({ email: g.email, name: g.name })),
+      );
     changed();
     setMode('day');
     setDate(parsed.date);
@@ -611,6 +617,7 @@ export default function PlannerScreen() {
           key={sheet.key}
           pt={pt}
           repo={repo}
+          book={services?.book}
           calendars={calendars}
           categories={categories}
           target={sheet.target}

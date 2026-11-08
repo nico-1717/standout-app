@@ -24,6 +24,7 @@ import {
   DEFAULT_PLANNER_SETTINGS,
   type PlannerSettings,
 } from '@/features/planner/settings';
+import { BookRepo } from '@/features/planner/book';
 import { PlannerRepo } from '@/features/planner/repo';
 import { PomodoroRepo } from '@/features/pomodoro/repo';
 import {
@@ -85,6 +86,7 @@ export interface Services {
   notes: QuickNoteStore;
   diary: DiaryRepo;
   planner: PlannerRepo;
+  book: BookRepo;
   projects: ProjectsRepo;
   plan: PlanRepo;
   projectOptions: ProjectOptionsStore;
@@ -353,6 +355,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             () => i18n.t('planner.tit_senza_titolo'),
             userId,
           ),
+          book: new BookRepo(opened.db),
           projects: new ProjectsRepo(opened.db),
           plan: new PlanRepo(opened.db, userId),
           projectOptions: new ProjectOptionsStore(opened.db),

@@ -15,6 +15,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { GuestsField, PlacesField, type PickedPlace } from './BookParts';
+import type { BookRepo, GuestInput, Place } from './book';
 import type { EventView } from './events';
 import {
   addDaysIso,
@@ -210,6 +212,8 @@ const IMPORTANCE: { id: 'normal' | 'high' | 'highest'; key: string }[] = [
 export function EventSheet(p: {
   pt: PlannerTheme;
   repo: PlannerRepo;
+  /** la rubrica e i luoghi salvati; senza, la scheda non mostra invitati né scelte rapide */
+  book?: BookRepo;
   calendars: Calendar[];
   categories: Category[];
   target: SheetTarget;
@@ -269,6 +273,30 @@ export function EventSheet(p: {
     };
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
+  const book = p.book ?? null;
+  // gli invitati di una ripetizione sono quelli della serie; una modifica «solo questa volta» li porta nell'eccezione
+  const ownerUuid = view ? (view.isOccurrence ? view.masterUuid : view.uuid) : null;
+  const [guests, setGuests] = useState<GuestInput[]>(() =>
+    book && ownerUuid
+      ? book
+          .guests(ownerUuid)
+          .map((g) => ({ email: g.email, name: g.name, contactUuid: g.contact_uuid }))
+      : [],
+  );
+  const [contacts] = useState(() => book?.contacts() ?? []);
+  const [places] = useState(() => book?.places() ?? []);
+  // il luogo scelto dalle scelte rapide; 'keep' = non toccato (resta quello che l'evento ha già)
+  const [place, setPlace] = useState<PickedPlace | null | 'keep'>('keep');
+  const suggested = book && !view?.location ? (book.suggestPlace(f.title)?.uuid ?? null) : null;
+  const pickPlace = (pl: Place) => {
+    set('location', pl.address || pl.label);
+    setPlace({
+      name: pl.place_name ?? pl.label,
+      lat: pl.place_lat,
+      lon: pl.place_lon,
+      ref: pl.place_ref,
+    });
+  };
   const inSeries = !!view && (view.isOccurrence || view.isException || view.repeat !== 'none');
 
   const input = (): EventInput => ({
@@ -290,6 +318,14 @@ export function EventSheet(p: {
     notifyMin: f.notifyMin,
     location: f.location,
     notes: f.notes,
+    ...(place === 'keep'
+      ? {}
+      : {
+          placeName: place?.name ?? null,
+          placeLat: place?.lat ?? null,
+          placeLon: place?.lon ?? null,
+          placeRef: place?.ref ?? null,
+        }),
   });
 
   const finish = () => {
@@ -297,9 +333,13 @@ export function EventSheet(p: {
     p.onClose();
   };
 
+  const saveGuests = (eventUuid: string) => {
+    if (book) book.setGuests(eventUuid, guests);
+  };
+
   const save = () => {
     if (!view) {
-      p.repo.create(input());
+      saveGuests(p.repo.create(input()));
       return finish();
     }
     if (view.isOccurrence) {
@@ -311,14 +351,14 @@ export function EventSheet(p: {
           {
             text: t('planner.solo_questo'),
             onPress: () => {
-              p.repo.update(view, input(), 'one');
+              saveGuests(p.repo.update(view, input(), 'one'));
               finish();
             },
           },
           {
             text: t('planner.tutta_la_serie'),
             onPress: () => {
-              p.repo.update(view, input(), 'all');
+              saveGuests(p.repo.update(view, input(), 'all'));
               finish();
             },
           },
@@ -326,7 +366,7 @@ export function EventSheet(p: {
       );
       return;
     }
-    p.repo.update(view, input(), 'all');
+    saveGuests(p.repo.update(view, input(), 'all'));
     finish();
   };
 
@@ -669,10 +709,26 @@ export function EventSheet(p: {
           <TextInput
             testID="sheet-location"
             value={f.location}
-            onChangeText={(v) => set('location', v)}
+            onChangeText={(v) => {
+              set('location', v);
+              setPlace(null);
+            }}
             placeholderTextColor={pt.ink3}
             style={inputStyle}
           />
+          <PlacesField
+            pt={pt}
+            places={places}
+            suggested={suggested}
+            chosenName={place !== 'keep' && place ? place.name : null}
+            onPick={pickPlace}
+          />
+          {book ? (
+            <>
+              <Label pt={pt}>{t('planner.invitati')}</Label>
+              <GuestsField pt={pt} contacts={contacts} guests={guests} onChange={setGuests} />
+            </>
+          ) : null}
           <Label pt={pt}>{t('planner.note')}</Label>
           <TextInput
             testID="sheet-notes"
