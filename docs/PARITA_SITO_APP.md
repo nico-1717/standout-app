@@ -38,7 +38,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | A17 | Notifiche del widget (richieste di amicizia: sul sito il social è SPENTO) | — | rimandata alla fase social | — | da confermare | |
 | A18 | Barra laterale / menu (`partials/sidebar.php`, `sidebar.html`): scorciatoie «Inserisci» (`fc_corsi_lista.php`) | — | Barra a schede in basso + «Altro»; scorciatoia Inserisci | P2 | da fare | |
 | A19 | Blocco con Face ID / impronta | — (solo locale) | Impostazioni › Sicurezza (NUOVO rispetto al sito, spento di default) | P4 | da fare | |
-| A20 | Coda «problemi di sincronizzazione» e «conservate entrambe le versioni» | `sync/*` | Impostazioni › Sincronizzazione (NUOVO: serve al protocollo) | P1 | da fare | |
+| A20 | Coda «problemi di sincronizzazione» e «conservate entrambe le versioni» | `sync/*` | Impostazioni › Sincronizzazione (NUOVO: serve al protocollo) | P1 | fatto | Pagina «Sincronizzazione»: stato, «Sincronizza ora», modifiche rifiutate con motivo semplice e «Ho capito». «Conservate entrambe le versioni»: il protocollo non le crea (vince il server), quindi non c'è altro da mostrare |
 | A21 | Quota immagini/audio e spazio usato | `sync/quota` (nuova) | Impostazioni › Spazio | P2 | da fare | |
 
 ## 2. Home (`home/`)

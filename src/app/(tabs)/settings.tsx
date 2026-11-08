@@ -236,14 +236,27 @@ export default function SettingsScreen() {
           </View>
         </Card>
         <RemindersCard />
-        {(problems > 0 || syncInfo.status === 'error') && (
+        <Pressable
+          testID="open-sync"
+          accessibilityRole="button"
+          onPress={() => router.push('/sync')}
+        >
           <Card index={11} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontWeight: '700' }}>{t('app.problemi_titolo')}</Text>
-            <Text style={{ color: th.text2, marginTop: 4 }}>
-              {problems > 0 ? t('app.attivita_ripristinata') : t('app.sync_errore')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: th.text, fontWeight: '700' }}>{t('app.sync_pagina')}</Text>
+                {problems > 0 || syncInfo.status === 'error' ? (
+                  <Text style={{ color: th.red, fontSize: 13 }}>
+                    {problems > 0 ? t('app.attivita_ripristinata') : t('app.sync_errore')}
+                  </Text>
+                ) : (
+                  <SyncBadge />
+                )}
+              </View>
+              <Text style={{ color: th.text3, fontSize: 20 }}>›</Text>
+            </View>
           </Card>
-        )}
+        </Pressable>
         <PrimaryButton label={t('notifiche.logout')} onPress={logout} danger />
       </ScrollView>
     </View>

@@ -41,6 +41,7 @@ function Shell() {
         <Stack.Protected guard={ready}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="categories" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="sync" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-manage" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-routines" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-settings" options={{ presentation: 'modal' }} />
