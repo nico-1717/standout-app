@@ -131,6 +131,38 @@ describe('language game screens', () => {
     expect(screen.getByTestId('fcg-hint-meaning')).toBeTruthy();
   });
 
+  test('examples: the word is blank until the answer, then filled in (also another form of it)', async () => {
+    const { languages, course, deck, word } = setup();
+    languages.addExample(word, false, 'The house is big');
+    languages.addExample(word, false, 'Two houses here');
+    (mockServices as { study: StudyRepo }).study.saveSettings({ vocab_examples: 'aperto' });
+    const r = languages
+      .games(course)
+      .start({ decks: [deck], status: 'all', order: 'in_order', direction: 'w2t' });
+    if (r.kind !== 'started') throw new Error('not started');
+    mockParams = { game: r.game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(screen.getByTestId('fcg-example-0')).toHaveTextContent('The ________ is big');
+    expect(screen.getByTestId('fcg-example-1')).toHaveTextContent('Two ________ here');
+    await fireEvent.press(screen.getByTestId('fcg-reveal'));
+    expect(screen.getByTestId('fcg-example-0')).toHaveTextContent('The house is big');
+    expect(screen.getByTestId('fcg-example-1')).toHaveTextContent('Two houses here');
+  });
+
+  test('examples: a hand-picked hidden part wins over the automatic one', async () => {
+    const { languages, course, deck, word } = setup();
+    const ex = languages.addExample(word, false, 'The house is big')!;
+    languages.setExampleGap(ex, 'is big');
+    (mockServices as { study: StudyRepo }).study.saveSettings({ vocab_examples: 'aperto' });
+    const r = languages
+      .games(course)
+      .start({ decks: [deck], status: 'all', order: 'in_order', direction: 'w2t' });
+    if (r.kind !== 'started') throw new Error('not started');
+    mockParams = { game: r.game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(screen.getByTestId('fcg-example-0')).toHaveTextContent('The house ________');
+  });
+
   test('result: shows the course words', async () => {
     const { languages, course, deck } = setup();
     const games = languages.games(course);

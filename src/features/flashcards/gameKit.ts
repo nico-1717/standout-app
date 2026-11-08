@@ -11,9 +11,15 @@ export interface PlayView {
   answerImage: string | null;
   /** significato e esempi come aiuto (solo lingue) */
   meaning: string | null;
-  examples: string[];
-  /** la parola che si sta cercando: serve a nasconderla dagli esempi prima di rivelare */
-  hidden: string[];
+  examples: ExampleView[];
+  /** la parola della carta: le sue forme sono la parte nascosta degli esempi finché non si rivela */
+  word: string;
+}
+
+/** Una frase d'esempio con la scelta a mano della parte nascosta (`gap_text`, vuota = automatica). */
+export interface ExampleView {
+  text: string;
+  gap: string | null;
 }
 
 /**
@@ -41,7 +47,7 @@ const none: PlayView = {
   answerImage: null,
   meaning: null,
   examples: [],
-  hidden: [],
+  word: '',
 };
 
 export function studyKit(s: Services): GameKit {
@@ -87,9 +93,9 @@ export function languageKit(s: Services, course: string): GameKit {
       meaning: row.meaning?.trim() ? row.meaning : null,
       examples: lang
         .examples(target)
-        .map((e) => e.example_text ?? '')
-        .filter((x) => x.trim()),
-      hidden: [dir === 'w2t' ? (row.translation ?? '') : row.word].filter((x) => x.trim()),
+        .map((e) => ({ text: e.example_text ?? '', gap: e.gap_text }))
+        .filter((e) => e.text.trim()),
+      word: row.word,
     };
   };
   const st = s.study.settings();
@@ -119,15 +125,4 @@ export function kitForGame(s: Services, gameUuid: string): GameKit {
 /** Il kit per una schermata di corso (setup, storico): senza corso è lo studio. */
 export function kitForCourse(s: Services, course: string | undefined): GameKit {
   return course && s.languages.course(course) ? languageKit(s, course) : studyKit(s);
-}
-
-/** Un esempio con la parola cercata nascosta («____») finché non si rivela. */
-export function maskExample(text: string, hidden: string[]): string {
-  let out = text;
-  for (const h of hidden) {
-    const w = h.trim();
-    if (!w) continue;
-    out = out.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '____');
-  }
-  return out;
 }

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,8 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
-import { kitForGame, maskExample } from '@/features/flashcards/gameKit';
+import { kitForGame, type ExampleView } from '@/features/flashcards/gameKit';
+import { gapParts } from '@/features/languages/gap';
 import { Card, PrimaryButton } from '@/ui/kit';
 
 interface Item {
@@ -21,9 +22,13 @@ interface Item {
   questionImage: string | null;
   answerImage: string | null;
   meaning: string | null;
-  examples: string[];
-  hidden: string[];
+  examples: ExampleView[];
+  word: string;
 }
+
+/** Lo spazio vuoto di una parte nascosta: la larghezza dice a grandi linee quanto è lunga (corta, media, lunga). */
+const gapBlank = (text: string): string =>
+  text.length <= 4 ? '____' : text.length <= 9 ? '________' : '____________';
 
 /** Il colore e il nome del voto che una riga ha adesso. */
 function stateOf(a: string | null): 'open' | 'correct' | 'wrong' | 'seen' {
@@ -149,11 +154,28 @@ export default function GameScreen() {
 
   /** Significato ed esempi come aiuto: sempre («aperto»), a un tocco, o solo dopo la risposta. */
   const hintBlock = (it: Item) => {
-    const lines: { key: 'meaning' | 'examples'; text: string }[] = [];
-    if (it.meaning) lines.push({ key: 'meaning', text: it.meaning });
+    const lines: { key: 'meaning' | 'examples'; node: ReactNode }[] = [];
+    if (it.meaning) lines.push({ key: 'meaning', node: it.meaning });
     if (it.examples.length) {
-      const ex = it.examples.map((e) => (shown ? e : maskExample(e, it.hidden))).join('\n');
-      lines.push({ key: 'examples', text: ex });
+      lines.push({
+        key: 'examples',
+        node: it.examples.map((e, n) => (
+          <Text key={n} testID={`fcg-example-${n}`}>
+            {n > 0 ? '\n' : ''}
+            {gapParts(e.text, it.word, e.gap).map((part, k) =>
+              !part.hidden ? (
+                part.text
+              ) : shown ? (
+                <Text key={k} style={{ color: th.brand, fontWeight: '700' }}>
+                  {part.text}
+                </Text>
+              ) : (
+                <Text key={k}>{gapBlank(part.text)}</Text>
+              ),
+            )}
+          </Text>
+        )),
+      });
     }
     return (
       <View style={{ gap: 6 }}>
@@ -171,7 +193,7 @@ export default function GameScreen() {
                 fontStyle: l.key === 'examples' ? 'italic' : 'normal',
               }}
             >
-              {l.text}
+              {l.node}
             </Text>
           ) : mode === 'tocco' ? (
             <Pressable

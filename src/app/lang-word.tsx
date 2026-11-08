@@ -198,7 +198,14 @@ export default function LangWordScreen() {
         </Card>
 
         <Card style={{ padding: 16 }}>
-          <ExamplesBlock repo={repo} target={id} isChild={false} tag="lw" onChange={changed} />
+          <ExamplesBlock
+            repo={repo}
+            target={id}
+            word={word.word}
+            isChild={false}
+            tag="lw"
+            onChange={changed}
+          />
         </Card>
 
         <View style={{ gap: 8 }}>
@@ -268,6 +275,7 @@ export default function LangWordScreen() {
                 <ExamplesBlock
                   repo={repo}
                   target={k.uuid}
+                  word={k.word}
                   isChild
                   tag={`lw-kid-${k.uuid}`}
                   onChange={changed}

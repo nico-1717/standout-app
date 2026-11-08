@@ -19,6 +19,7 @@ import {
 import { GameRepo, vocabScope, type GameStore } from '@/features/flashcards/game';
 import { stamp } from '@/features/flashcards/study';
 import type { ProjectsRepo } from '@/features/projects/repo';
+import { cleanChoice } from './gap';
 import { localToday } from '@/features/tasks/groups';
 
 import { isKnownLang, isLearnLang, langBase, langName } from './langs';
@@ -1079,6 +1080,22 @@ export class LanguagesRepo {
       enqueue(
         this.db,
         { table: 'fc_vocab_examples', uuid, op: 'upsert', patch: { example_text: t } },
+        now,
+      );
+    });
+    return true;
+  }
+
+  /** Sceglie a mano la parte nascosta di un esempio (`''` = automatica). Il testo di `gap_text` è quello di gap.ts. */
+  setExampleGap(uuid: string, gap: string): boolean {
+    if (!this.db.all('SELECT 1 FROM fc_vocab_examples WHERE uuid = ?', [uuid]).length) return false;
+    const g = cleanChoice(gap) || null;
+    this.db.transaction(() => {
+      const now = this.clock();
+      patchRow(this.db, 'fc_vocab_examples', uuid, { gap_text: g, updated_at: now });
+      enqueue(
+        this.db,
+        { table: 'fc_vocab_examples', uuid, op: 'upsert', patch: { gap_text: g } },
         now,
       );
     });
