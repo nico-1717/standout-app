@@ -25,6 +25,14 @@ const CARD_COLS =
 const SUB_COLS =
   'uuid, parent_uuid, question_desc, answer_desc, question_image, answer_image, question_audio, answer_audio, custom_order';
 
+export interface Draft {
+  uuid: string;
+  front: string;
+  back: string;
+  deck_uuid: string | null;
+  created_at: string | null;
+}
+
 /** Cosa si può cambiare di un mazzo. `color: null` = automatico (segue il padre). `icon: null` = quella del nome. */
 export interface DeckPatch {
   name?: string;
@@ -37,6 +45,8 @@ export interface DeckPatch {
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const DOC_MAX = 60_000;
+const DRAFT_FRONT_MAX = 500;
+const DRAFT_MAX = 200;
 
 /**
  * I mazzi e le carte di studio sul telefono. Come sul sito (fc_decks.php): il colore si eredita dal padre finché non lo
@@ -456,6 +466,170 @@ export class FlashcardsRepo {
       });
       enqueue(this.db, { table: 'fc_study_cards', uuid, op: 'delete' }, now);
     });
+  }
+
+  /* ---------------- bozze veloci ---------------- */
+
+  /** Le bozze della Home, dalla più recente: solo il fronte, il resto si completa dopo. */
+  drafts(): Draft[] {
+    return this.db.all<Draft>(
+      'SELECT uuid, front, back, deck_uuid, created_at FROM fc_quick_drafts ORDER BY created_at DESC, uuid DESC',
+    );
+  }
+
+  /** Aggiunge una bozza (solo il fronte, fino a 500 caratteri; al massimo 200 bozze, come sul sito). Ritorna l'uuid o null. */
+  addDraft(front: string): string | null {
+    const f = front
+      .replace(/[\u0000-\u001F]+/g, ' ')
+      .trim()
+      .slice(0, DRAFT_FRONT_MAX);
+    if (!f) return null;
+    if (
+      (this.db.all<{ n: number }>('SELECT COUNT(*) AS n FROM fc_quick_drafts')[0]?.n ?? 0) >=
+      DRAFT_MAX
+    )
+      return null;
+    const uuid = this.newId();
+    const now = this.clock();
+    this.db.transaction(() => {
+      upsertRow(this.db, 'fc_quick_drafts', {
+        uuid,
+        front: f,
+        back: '',
+        deck_uuid: null,
+        created_at: now,
+        updated_at: now,
+      });
+      enqueue(
+        this.db,
+        {
+          table: 'fc_quick_drafts',
+          uuid,
+          op: 'upsert',
+          isCreate: true,
+          patch: { front: f, back: '' },
+        },
+        now,
+      );
+    });
+    return uuid;
+  }
+
+  removeDraft(uuid: string): void {
+    const now = this.clock();
+    this.db.transaction(() => {
+      deleteRow(this.db, 'fc_quick_drafts', uuid);
+      enqueue(this.db, { table: 'fc_quick_drafts', uuid, op: 'delete' }, now);
+    });
+  }
+
+  /**
+   * La bozza diventa una carta vera, in fondo al mazzo scelto (home_api.php: draft_finish). Serve il retro e un mazzo che c'è.
+   * Ritorna l'uuid della carta, o null.
+   */
+  finishDraft(uuid: string, p: { front: string; back: string; deck: string }): string | null {
+    const draft = this.db.all<{ uuid: string }>('SELECT uuid FROM fc_quick_drafts WHERE uuid = ?', [
+      uuid,
+    ])[0];
+    if (!draft) return null;
+    const front = p.front.trim().slice(0, DRAFT_FRONT_MAX);
+    const back = p.back.trim();
+    if (!front || !back || !this.deck(p.deck)) return null;
+    let card: string | null = null;
+    this.db.transaction(() => {
+      card = this.addCard(p.deck, front, back);
+      if (card) this.removeDraft(uuid);
+    });
+    return card;
+  }
+
+  /* ---------------- mazzo collegato a un progetto ---------------- */
+
+  /** Il mazzo di studio collegato a un progetto, o null. */
+  linkedDeck(projectUuid: string): string | null {
+    return (
+      this.db.all<{ deck_uuid: string }>(
+        'SELECT deck_uuid FROM fc_study_deck_projects WHERE project_uuid = ? LIMIT 1',
+        [projectUuid],
+      )[0]?.deck_uuid ?? null
+    );
+  }
+
+  /** Il progetto a cui è collegato un mazzo (solo lui, non i suoi rami), o null. */
+  linkedProject(deckUuid: string): string | null {
+    return (
+      this.db.all<{ project_uuid: string }>(
+        'SELECT project_uuid FROM fc_study_deck_projects WHERE deck_uuid = ? LIMIT 1',
+        [deckUuid],
+      )[0]?.project_uuid ?? null
+    );
+  }
+
+  /**
+   * La materia non è libera se lei, un suo padre o un suo figlio è già di un altro progetto (prog_category_link_blocked):
+   * ritorna chi la occupa (e il mazzo che causa il blocco), o null se è libera.
+   */
+  deckLinkConflict(
+    deckUuid: string,
+    projectUuid: string,
+  ): { kind: 'self' | 'parent' | 'child'; deck: string; project: string } | null {
+    const all = this.decks();
+    const byId = new Map(all.map((d) => [d.uuid, d]));
+    const kind = new Map<string, 'self' | 'parent' | 'child'>();
+    for (const id of deckBranch(all, deckUuid)) kind.set(id, id === deckUuid ? 'self' : 'child');
+    for (let cur = byId.get(deckUuid)?.parent_uuid ?? null, g = 0; cur && g < 100; g++) {
+      kind.set(cur, 'parent');
+      cur = byId.get(cur)?.parent_uuid ?? null;
+    }
+    const rows = this.db.all<{ deck_uuid: string; project_uuid: string }>(
+      'SELECT deck_uuid, project_uuid FROM fc_study_deck_projects',
+    );
+    for (const r of rows) {
+      const k = kind.get(r.deck_uuid);
+      if (k && r.project_uuid !== projectUuid)
+        return { kind: k, deck: r.deck_uuid, project: r.project_uuid };
+    }
+    return null;
+  }
+
+  deckLinkBlocked(deckUuid: string, projectUuid: string): boolean {
+    return this.deckLinkConflict(deckUuid, projectUuid) !== null;
+  }
+
+  /** Collega un mazzo a un progetto (o scollega con null). Uno solo per progetto: la riga di prima se ne va. Ritorna false se non si può. */
+  linkDeck(projectUuid: string, deckUuid: string | null): boolean {
+    if (deckUuid !== null && (!this.deck(deckUuid) || this.deckLinkBlocked(deckUuid, projectUuid)))
+      return false;
+    const now = this.clock();
+    this.db.transaction(() => {
+      for (const r of this.db.all<{ uuid: string }>(
+        'SELECT uuid FROM fc_study_deck_projects WHERE project_uuid = ?',
+        [projectUuid],
+      )) {
+        deleteRow(this.db, 'fc_study_deck_projects', r.uuid);
+        enqueue(this.db, { table: 'fc_study_deck_projects', uuid: r.uuid, op: 'delete' }, now);
+      }
+      if (deckUuid === null) return;
+      const uuid = this.newId();
+      upsertRow(this.db, 'fc_study_deck_projects', {
+        uuid,
+        project_uuid: projectUuid,
+        deck_uuid: deckUuid,
+        created_at: now,
+      });
+      enqueue(
+        this.db,
+        {
+          table: 'fc_study_deck_projects',
+          uuid,
+          op: 'upsert',
+          isCreate: true,
+          patch: { project_uuid: projectUuid, deck_uuid: deckUuid },
+        },
+        now,
+      );
+    });
+    return true;
   }
 
   /* ---------------- carte figlie ---------------- */

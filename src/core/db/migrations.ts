@@ -669,6 +669,28 @@ CREATE TABLE plan_templates (
 );
 `,
   },
+  {
+    version: 15,
+    // le bozze veloci della Home e il mazzo di studio collegato a un progetto
+    sql: `
+CREATE TABLE fc_quick_drafts (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  front TEXT NOT NULL,
+  back TEXT NOT NULL DEFAULT '',
+  deck_uuid TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE fc_study_deck_projects (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  project_uuid TEXT NOT NULL,
+  deck_uuid TEXT NOT NULL,
+  created_at TEXT
+);
+CREATE INDEX idx_fc_deckproj_project ON fc_study_deck_projects (project_uuid);
+CREATE INDEX idx_fc_deckproj_deck ON fc_study_deck_projects (deck_uuid);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

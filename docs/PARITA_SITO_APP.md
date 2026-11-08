@@ -51,7 +51,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | H4 | Widget Note (nota veloce) | sync `todo_notes` | Home | P2 | fatto | Stessa nota veloce del To do (si salva da sola). |
 | H5 | Widget Flashcard, Progetti, Voti, «I tuoi numeri» | locale (da DB) | Home | P3 | in parte | Progetti fatto (preferiti o in corso, con il tempo). Flashcard, Voti e «I tuoi numeri» restano nascosti finché non ci sono le loro pagine. |
 | H6 | Widget Trivia (`trivia.json`, `trivia_en.json`) | file nell'app | Home | P4 | fatto | Stessi file del sito nell'app; tocca per scoprire, «Presa bene / Mancata». |
-| H7 | Bozze veloci di flashcard (`fc_quick_drafts`: solo il fronte, finita dopo) | sync `fc_quick_drafts` | Home › Bozze | P3 | da fare | |
+| H7 | Bozze veloci di flashcard (`fc_quick_drafts`: solo il fronte, finita dopo) | sync `fc_quick_drafts` | Home › Bozze | P3 | **fatto** (scheda «Carta veloce» nella Home: salva il fronte, completa con retro e mazzo; sincronizzata, provata sul server) | |
 | H8 | Colpo d'occhio all'avvio: ultimo stato subito, poi aggiornamento (cache in localStorage sul sito) | — | non serve: tutto viene dal DB locale | P2 | assorbito | non serve: tutto viene dal DB locale |
 | H9 | Landing page pubblica (`landing_content.php`) | — | nessuna (è il sito) | — | non si porta | |
 
@@ -153,7 +153,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | J16 | Importazione Pomodoro (`pomodoro_import.php`) | `pomodoro/import` (nuova) | Pomodoro › Importa | P4 | da fare | |
 | J17 | Nota automatica (`nota_auto.js`) | locale | — | P3 | fatto: la nota del progetto si salva 600 ms dopo l'ultimo tasto e quando si chiude la pagina; offline funziona già (il telefono scrive in locale e sincronizza dopo) | |
 | J18 | Notifica di fine Pomodoro | notifica locale | — | P3 | fatto: notifica locale all'ora di fine, anche con l'app chiusa; le pausa pure | |
-| J19 | Mazzi collegati a un progetto (`fc_study_deck_projects`) | sync | Progetto › Mazzi | P3 | da fare | |
+| J19 | Mazzi collegati a un progetto (`fc_study_deck_projects`) | sync | Progetto › Mazzi | P3 | **fatto** (scheda «Flashcard» nel progetto; regole del sito: una materia per progetto, non se lei, un padre o un figlio è già di un altro; provata sul server) | |
 
 ## 8. Voti / Esami (`exams/voti.php`)
 

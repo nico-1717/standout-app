@@ -4,6 +4,7 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { PlanRepo } from '@/features/plan/repo';
 import { PomodoroRepo } from '@/features/pomodoro/repo';
 import { ProjectOptionsStore } from '@/features/projects/options';
@@ -70,10 +71,16 @@ function setup() {
     db,
     projects,
     plan,
+    flashcards: new FlashcardsRepo(db),
     pomodoro: new PomodoroRepo(db, 7),
     projectOptions: new ProjectOptionsStore(db),
   };
-  return { db, projects, plan };
+  return {
+    db,
+    projects,
+    plan,
+    flashcards: (mockServices as { flashcards: FlashcardsRepo }).flashcards,
+  };
 }
 const tree = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
@@ -251,5 +258,25 @@ describe('project Plan card', () => {
       pathname: '/pomodoro',
       params: { project: a, min: '10', auto: '1' },
     });
+  });
+});
+
+describe('project linked deck', () => {
+  test('pick a subject for the project, see it, and a taken one is refused with the reason', async () => {
+    const { projects, flashcards } = setup();
+    const a = projects.create({ name: 'Fisica' })!;
+    const b = projects.create({ name: 'Chimica' })!;
+    const deck = flashcards.createDeck({ name: 'Physics' })!;
+    flashcards.linkDeck(b, deck);
+    mockParams = { id: a };
+    await render(tree(<ProjectScreen />));
+    expect(screen.getByTestId('proj-deck-name')).toHaveTextContent('No subject linked');
+    await fireEvent.press(screen.getByTestId('proj-deck-link'));
+    await fireEvent.press(screen.getByText('Physics'));
+    expect(screen.getByTestId('proj-deck-problem')).toBeTruthy();
+    expect(flashcards.linkedDeck(a)).toBeNull();
+    flashcards.linkDeck(b, null);
+    await fireEvent.press(screen.getByText('Physics'));
+    expect(flashcards.linkedDeck(a)).toBe(deck);
   });
 });

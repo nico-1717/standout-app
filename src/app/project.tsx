@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { ProjectDeckCard } from '@/features/flashcards/ProjectDeckCard';
 import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
 import { human } from '@/features/pomodoro/logic';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
@@ -231,6 +232,16 @@ export default function ProjectScreen() {
                 params: { project: me.uuid, min: String(min), ...(auto ? { auto: '1' } : {}) },
               })
             }
+          />
+        ) : null}
+
+        {services.flashcards ? (
+          <ProjectDeckCard
+            repo={services.flashcards}
+            projects={data.all}
+            project={me.uuid}
+            version={version}
+            changed={changed}
           />
         ) : null}
 

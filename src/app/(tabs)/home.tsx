@@ -20,6 +20,7 @@ import {
   type Shortcut,
 } from '@/features/home/widgets';
 import { base110, cfuStats, weighted } from '@/features/grades/logic';
+import { DraftsPanel } from '@/features/flashcards/DraftsPanel';
 import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { todoTheme } from '@/features/tasks/todoTheme';
 
@@ -46,7 +47,7 @@ const WIDGET_TITLE: Record<HomeWidget['id'], string> = {
 };
 
 /** Per ora non hanno pagine nell'app: restano nell'elenco (così l'ordine del sito si conserva) ma non si disegnano. */
-const NOT_YET: ReadonlySet<string> = new Set(['cards', 'stats']);
+const NOT_YET: ReadonlySet<string> = new Set(['stats']);
 
 export function greetingKey(hour: number): string {
   return hour < 5
@@ -196,6 +197,18 @@ export default function HomeScreen() {
             rows={projectRows}
             onOpen={(uuid) => router.push({ pathname: '/project', params: { id: uuid } })}
           />
+        </WidgetBox>
+      );
+    if (w.id === 'cards' && services)
+      return (
+        <WidgetBox
+          td={td}
+          id="cards"
+          title={t(WIDGET_TITLE.cards)}
+          action={t('home.apri')}
+          onAction={() => go('/flashcards')}
+        >
+          <DraftsPanel repo={services.flashcards} version={version} changed={changed} />
         </WidgetBox>
       );
     if (w.id === 'grades' && services) {

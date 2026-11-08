@@ -35,6 +35,8 @@ export type SyncTable =
   | 'fc_study_decks'
   | 'fc_study_cards'
   | 'fc_study_subcards'
+  | 'fc_quick_drafts'
+  | 'fc_study_deck_projects'
   | 'fc_study_favorites'
   | 'fc_study_learnt'
   | 'fc_study_examples'
@@ -437,6 +439,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'projects', column: 'parent_uuid' },
       { table: 'pomodoro_sessions', column: 'project_uuid', setNull: true },
       { table: 'todos', column: 'project_uuid', setNull: true },
+      { table: 'fc_study_deck_projects', column: 'project_uuid' },
       { table: 'plan_goals', column: 'project_uuid' },
       { table: 'plan_paint', column: 'project_uuid' },
       { table: 'plan_days', column: 'project_uuid' },
@@ -621,6 +624,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'fc_study_decks', column: 'parent_uuid' },
       { table: 'fc_study_cards', column: 'category_uuid' },
       { table: 'fc_study_game_decks', column: 'deck_uuid' },
+      { table: 'fc_study_deck_projects', column: 'deck_uuid' },
     ],
   },
   fc_study_cards: {
@@ -689,6 +693,22 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'fc_study_examples', column: 'child_uuid' },
       { table: 'fc_study_plays', column: 'child_uuid' },
     ],
+  },
+  // le bozze veloci della Home (solo il fronte, il resto si completa dopo)
+  fc_quick_drafts: {
+    order: 213,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: [],
+    columns: ['uuid', 'front', 'back', 'deck_uuid', 'created_at', 'updated_at'],
+  },
+  // il mazzo di studio collegato a un progetto (uno solo per progetto: per cambiarlo si toglie la riga e se ne crea un'altra)
+  fc_study_deck_projects: {
+    order: 214,
+    readOnly: ['created_at'],
+    createOnly: ['project_uuid', 'deck_uuid'],
+    booleans: [],
+    columns: ['uuid', 'project_uuid', 'deck_uuid', 'created_at'],
   },
   // i dati di studio: preferiti, imparate, esempi (di una carta o di una carta figlia)
   fc_study_favorites: {

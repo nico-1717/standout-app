@@ -4,6 +4,7 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { GradesRepo } from '@/features/grades/repo';
 import { DEFAULT_GRADE_SETTINGS as mockGradeSettings } from '@/features/grades/logic';
 import { HabitsRepo } from '@/features/habits/repo';
@@ -72,6 +73,7 @@ function setup() {
     pills,
     projects,
     grades: new GradesRepo(db),
+    flashcards: new FlashcardsRepo(db),
     notes: new QuickNoteStore(db),
     categories: { list: () => [] },
   };
@@ -98,10 +100,10 @@ describe('Home', () => {
     setup();
     await renderIt();
     expect(screen.getByTestId('home-greeting').props.children).toMatch(/Nico/);
-    for (const id of ['shortcuts', 'agenda', 'note', 'projects', 'grades', 'trivia'])
+    for (const id of ['shortcuts', 'agenda', 'note', 'projects', 'grades', 'trivia', 'cards'])
       expect(screen.getByTestId(`home-w-${id}`)).toBeTruthy();
-    // carte e numeri non hanno ancora una pagina nell'app
-    for (const id of ['cards', 'stats']) expect(screen.queryByTestId(`home-w-${id}`)).toBeNull();
+    // i numeri non hanno ancora una pagina nell'app
+    expect(screen.queryByTestId('home-w-stats')).toBeNull();
   });
 
   test('shortcuts open the app pages', async () => {
@@ -210,5 +212,29 @@ describe('Home', () => {
     mockLayout = DEFAULT_HOME_LAYOUT.map((w) => (w.id === 'trivia' ? { ...w, on: false } : w));
     await renderIt();
     expect(screen.queryByTestId('home-w-trivia')).toBeNull();
+  });
+
+  test('Quick card: save only the front for later, then finish it into a deck', async () => {
+    const { db } = setup();
+    const flash = (mockServices as { flashcards: FlashcardsRepo }).flashcards;
+    const deck = flash.createDeck({ name: 'Biology' })!;
+    await renderIt();
+    await fireEvent.changeText(screen.getByTestId('draft-input'), 'mitochondria');
+    await fireEvent.press(screen.getByTestId('draft-add'));
+    expect(flash.drafts().map((d) => d.front)).toEqual(['mitochondria']);
+    expect(screen.getByTestId('draft-saved')).toBeTruthy();
+    await renderIt();
+    const id = flash.drafts()[0].uuid;
+    await fireEvent.press(screen.getAllByTestId(`draft-finish-${id}`)[0]);
+    expect(screen.getByTestId('draft-sheet')).toBeTruthy();
+    // senza retro non si salva
+    await fireEvent.press(screen.getByTestId('draft-save'));
+    expect(screen.getByTestId('draft-error')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('draft-back'), 'makes energy');
+    await fireEvent.press(screen.getByText('Biology'));
+    await fireEvent.press(screen.getByTestId('draft-save'));
+    expect(flash.drafts()).toEqual([]);
+    expect(flash.cards(deck).map((c) => c.answer_desc)).toEqual(['makes energy']);
+    void db;
   });
 });
