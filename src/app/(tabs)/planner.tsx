@@ -23,7 +23,11 @@ import { smartEvent, smartParse } from '@/features/planner/smart';
 import { PrioritiesCard, RoutineBar, routineBlocks } from '@/features/planner/DayExtras';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { addDays, isoWeekday } from '@/features/habits/logic';
 import { SearchSheet } from '@/features/planner/SearchSheet';
+import { QuickAddSheet } from '@/features/planner/QuickAddSheet';
+import type { Habit, HabitLog } from '@/features/habits/logic';
+import type { Project } from '@/features/projects/logic';
 import { PillNotices } from '@/features/planner/PillNotices';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
@@ -52,6 +56,13 @@ export default function PlannerScreen() {
   const [note, setNote] = useState<SmartNote | null>(null);
   const [unclear, setUnclear] = useState(false);
   const [searching, setSearching] = useState(false);
+  // «Abitudini e progetti»: i dati si leggono solo all'apertura del foglio
+  const [quick, setQuick] = useState<{
+    start: string;
+    habits: Habit[];
+    logs: HabitLog[];
+    projects: Project[];
+  } | null>(null);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   const scroller = useRef<ScrollViewInstance>(null);
   const zoom = plannerSettings.zoom;
@@ -420,6 +431,34 @@ export default function PlannerScreen() {
               />
             ))}
             <Pressable
+              testID="open-quick"
+              accessibilityRole="button"
+              onPress={() => {
+                if (!services) return;
+                const now = new Date();
+                const next = Math.min(
+                  23 * 60 + 30,
+                  Math.ceil((now.getHours() * 60 + now.getMinutes() + 1) / 30) * 30,
+                );
+                const start =
+                  date === today
+                    ? `${String(Math.floor(next / 60)).padStart(2, '0')}:${String(next % 60).padStart(2, '0')}`
+                    : '09:00';
+                const monday = addDays(date, -(isoWeekday(date) - 1));
+                setQuick({
+                  start,
+                  habits: services.habits.list(),
+                  logs: services.habits.logsBetween(monday, addDays(monday, 6)),
+                  projects: services.projects.all(),
+                });
+              }}
+              style={{ alignSelf: 'flex-start', paddingVertical: 4 }}
+            >
+              <Text style={{ color: pt.accentInk, fontSize: 13, fontFamily: pt.sans }}>
+                {t('planner.app_aggiungi_rapido')} ›
+              </Text>
+            </Pressable>
+            <Pressable
               testID="open-routines"
               accessibilityRole="button"
               onPress={() => router.push({ pathname: '/planner-routines', params: { date } })}
@@ -528,6 +567,22 @@ export default function PlannerScreen() {
       ) : null}
 
       <SmartReport pt={pt} note={note} onHide={() => setNote(null)} />
+
+      <QuickAddSheet
+        visible={quick !== null}
+        pt={pt}
+        date={date}
+        habits={quick?.habits ?? []}
+        logs={quick?.logs ?? []}
+        projects={quick?.projects ?? []}
+        defaultStart={quick?.start ?? '09:00'}
+        onClose={() => setQuick(null)}
+        onPlace={(item, start, minutes) => {
+          repo.placeLinked(item, date, start, minutes);
+          setQuick(null);
+          changed();
+        }}
+      />
 
       <SearchSheet
         visible={searching}

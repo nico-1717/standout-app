@@ -259,6 +259,7 @@ export class PlannerRepo {
       category_uuid: null,
       calendar_uuid: null,
       habit_uuid: null,
+      project_uuid: null,
       importance: 'normal',
       color: null,
       item_type: 'event',
@@ -953,6 +954,43 @@ export class PlannerRepo {
       }
     });
     return n;
+  }
+
+  /**
+   * Mette in agenda un'abitudine (un'attività) o un progetto preferito (un evento) a un'ora scelta, come
+   * l'attrezzo armato del sito (inserisciArmato): senza avviso, nel calendario predefinito. Ritorna l'uuid.
+   */
+  placeLinked(
+    link: { kind: 'habit' | 'project'; uuid: string; name: string; color: string | null },
+    date: string,
+    start: string,
+    minutes: number,
+  ): string {
+    const uuid = this.newId();
+    const from = minutesOf(start);
+    const end = Math.min(1439, from + Math.max(5, minutes));
+    const calendar = this.calendars().find((c) => c.is_default)?.uuid ?? null;
+    this.db.transaction(() => {
+      const row: EventRow = {
+        ...this.blank(uuid, date),
+        title: link.name,
+        start_time: timeOf(from),
+        end_time: timeOf(end),
+        color: link.color,
+        item_type: link.kind === 'habit' ? 'task' : 'event',
+        notify_type: 'none',
+        notify_minutes: 0,
+        calendar_uuid: calendar,
+        habit_uuid: link.kind === 'habit' ? link.uuid : null,
+        project_uuid: link.kind === 'project' ? link.uuid : null,
+      };
+      const patch: Record<string, WireValue> = {};
+      for (const f of WRITABLE) patch[f] = wire(f, row[f]);
+      if (link.kind === 'habit') patch.habit_uuid = link.uuid;
+      else patch.project_uuid = link.uuid;
+      this.writeNew(row, patch);
+    });
+    return uuid;
   }
 
   /** Apre o richiude un blocco di routine (tutti i pezzi dello stesso gruppo). */

@@ -331,7 +331,14 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
   planner_events: {
     order: 130,
     readOnly: ['completed_at', 'rrule', 'sort_order', 'created_at', 'updated_at'],
-    createOnly: ['habit_uuid', 'series_uuid', 'original_date', 'routine_uuid', 'routine_group'],
+    createOnly: [
+      'habit_uuid',
+      'project_uuid',
+      'series_uuid',
+      'original_date',
+      'routine_uuid',
+      'routine_group',
+    ],
     booleans: [
       'duration_locked',
       'is_all_day',
@@ -357,6 +364,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'category_uuid',
       'calendar_uuid',
       'habit_uuid',
+      'project_uuid',
       'importance',
       'color',
       'item_type',
