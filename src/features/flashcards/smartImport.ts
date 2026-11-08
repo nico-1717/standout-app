@@ -5,8 +5,17 @@
  * importano.
  */
 
-export type Field = 'q' | 'a' | 'img' | '';
+export type Field = 'q' | 'a' | 'm' | 'ex' | 'n' | 'img' | '';
+/** I campi di una carta di studio. */
 export const FIELDS: Field[] = ['q', 'a', 'img', ''];
+/** I campi di una parola di lingua: significato, esempio e note in più. */
+export const VOCAB_FIELDS: Field[] = ['q', 'a', 'm', 'ex', 'n', 'img', ''];
+
+/** Per le lingue: il nome e il codice della lingua che si impara e di quella che si conosce (sono intestazioni valide). */
+export interface VocabOptions {
+  learn?: { name: string; code: string };
+  known?: { name: string; code: string };
+}
 
 export type Format = 'excel' | 'csv' | 'json' | 'righe';
 
@@ -21,12 +30,15 @@ export interface Table {
 export interface ImportedCard {
   q: string;
   a: string;
+  m: string;
+  ex: string;
+  n: string;
   imgLink: string;
 }
 
 export type Analysis = Table | { errore: string } | null;
 
-const SYNONYMS: Record<'q' | 'a' | 'img', string[]> = {
+const SYNONYMS: Record<'q' | 'a' | 'm' | 'ex' | 'n' | 'img', string[]> = {
   q: [
     'word',
     'words',
@@ -68,6 +80,66 @@ const SYNONYMS: Record<'q' | 'a' | 'img', string[]> = {
     'solution',
     'soluzione',
   ],
+  m: [
+    'meaning',
+    'meanings',
+    'significato',
+    'significati',
+    'definition',
+    'definizione',
+    'def',
+    'description',
+    'descrizione',
+    'spiegazione',
+    'explanation',
+    'm',
+    'gloss',
+  ],
+  ex: [
+    'example',
+    'examples',
+    'esempio',
+    'esempi',
+    'sentence',
+    'sentences',
+    'frase',
+    'frasi',
+    'usage',
+    'uso',
+    'context',
+    'contesto',
+    'e',
+    'ex',
+  ],
+  n: [
+    'notes',
+    'note',
+    'nota',
+    'notas',
+    'notizen',
+    'tip',
+    'tips',
+    'trick',
+    'trucco',
+    'trucchi',
+    'memo',
+    'promemoria',
+    'hint',
+    'hints',
+    'suggerimento',
+    'suggerimenti',
+    'remark',
+    'remarks',
+    'comment',
+    'comments',
+    'commento',
+    'commenti',
+    'mnemonic',
+    'mnemonico',
+    'appunti',
+    'appunto',
+    'n',
+  ],
   img: [
     'image',
     'images',
@@ -95,11 +167,50 @@ function norm(s: unknown): string {
     .replace(/[^a-z0-9Ѐ-ӿͰ-Ͽ぀-ヿ一-鿿]+/g, '');
 }
 
-/** Quale campo indica il nome di una colonna (null = nessuno, o un campo che nello studio non c'è). */
-export function fieldFromName(name: string): 'q' | 'a' | 'img' | null {
+/** I nomi di lingua che nelle lingue valgono come intestazione di «parola» (come sul sito). */
+const LANGUAGE_NAMES = [
+  'english',
+  'inglese',
+  'german',
+  'tedesco',
+  'deutsch',
+  'french',
+  'francese',
+  'francais',
+  'spanish',
+  'spagnolo',
+  'espanol',
+  'portuguese',
+  'portoghese',
+  'japanese',
+  'giapponese',
+  'chinese',
+  'cinese',
+  'russian',
+  'russo',
+];
+
+/** Le intestazioni valide per ogni campo: nelle lingue anche il nome (e il codice) delle due lingue del corso. */
+function synonymsFor(vocab: VocabOptions | undefined): Record<keyof typeof SYNONYMS, string[]> {
+  const syn = { ...SYNONYMS, q: [...SYNONYMS.q], a: [...SYNONYMS.a] };
+  if (!vocab) return syn;
+  const names = (x?: { name: string; code: string }): string[] =>
+    x ? [norm(x.name), norm(x.code), norm(x.code.split('-')[0])] : [];
+  syn.q = syn.q.concat(names(vocab.learn));
+  syn.a = syn.a.concat(names(vocab.known));
+  for (const n of LANGUAGE_NAMES) if (!syn.a.includes(n) && !syn.q.includes(n)) syn.q.push(n);
+  return syn;
+}
+
+/** Quale campo indica il nome di una colonna (null = nessuno; nello studio solo domanda, risposta e immagine). */
+export function fieldFromName(name: string, vocab?: VocabOptions): Field | null {
   const n = norm(name);
   if (!n) return null;
-  for (const c of ['q', 'a', 'img'] as const) if (SYNONYMS[c].includes(n)) return c;
+  const syn = synonymsFor(vocab);
+  for (const c of Object.keys(syn) as (keyof typeof SYNONYMS)[]) {
+    if (!syn[c].includes(n)) continue;
+    return vocab || c === 'q' || c === 'a' || c === 'img' ? c : null;
+  }
   return null;
 }
 
@@ -291,14 +402,17 @@ function fromJson(
 
 export const looksLikeUrl = (s: string): boolean => /^https?:\/\/\S+$/i.test(String(s).trim());
 
-function assign(tab: { colonne: string[]; righe: string[][]; intestazione: boolean }): Field[] {
+function assign(
+  tab: { colonne: string[]; righe: string[][]; intestazione: boolean },
+  vocab?: VocabOptions,
+): Field[] {
   const n = tab.colonne.length;
   const fields: (Field | null)[] = new Array<Field | null>(n).fill(null);
   const used: Record<string, boolean> = {};
   // 1. dai nomi
   if (tab.intestazione) {
     tab.colonne.forEach((name, i) => {
-      const c = fieldFromName(name);
+      const c = fieldFromName(name, vocab);
       if (c && !used[c]) {
         fields[i] = c;
         used[c] = true;
@@ -314,10 +428,40 @@ function assign(tab: { colonne: string[]; righe: string[][]; intestazione: boole
       used.img = true;
     }
   }
-  // 4. il resto in ordine (domanda, risposta)
+  // 3. lingue: la colonna di frasi che contengono la parola è l'esempio
+  if (vocab) {
+    const colQ = fields.indexOf('q');
+    const firstFree = fields.indexOf(null);
+    const qIdx = colQ !== -1 ? colQ : firstFree;
+    if (qIdx !== -1 && !used.ex) {
+      for (let k = 0; k < n; k++) {
+        if (k === qIdx || fields[k] !== null) continue;
+        let count = 0;
+        let total = 0;
+        for (const r of tab.righe) {
+          const cell = r[k] ?? '';
+          const word = r[qIdx] ?? '';
+          if (!cell || !word) continue;
+          total++;
+          if (
+            cell.includes('_') ||
+            (cell.length > word.length + 8 && cell.toLowerCase().includes(word.toLowerCase()))
+          )
+            count++;
+        }
+        if (total && count / total >= 0.5) {
+          fields[k] = 'ex';
+          used.ex = true;
+          break;
+        }
+      }
+    }
+  }
+  // 4. il resto in ordine
+  const order: Field[] = vocab ? ['q', 'a', 'm', 'ex'] : ['q', 'a'];
   for (let z = 0; z < n; z++) {
     if (fields[z] !== null) continue;
-    const free = (['q', 'a'] as const).find((c) => !used[c]);
+    const free = order.find((c) => !used[c]);
     fields[z] = free ?? '';
     if (free) used[free] = true;
   }
@@ -328,7 +472,11 @@ function assign(tab: { colonne: string[]; righe: string[][]; intestazione: boole
  * Legge un testo incollato. `columnName(n)` dà il nome «Colonna n» quando non c'è un'intestazione. Ritorna null se non c'è
  * niente da leggere, `{ errore }` se sembra un JSON rotto.
  */
-export function analyze(input: string, columnName: (n: number) => string): Analysis {
+export function analyze(
+  input: string,
+  columnName: (n: number) => string,
+  vocab?: VocabOptions,
+): Analysis {
   const text = String(input || '').trim();
   if (!text) return null;
   let tab: { colonne: string[]; righe: string[][]; intestazione: boolean } | null = null;
@@ -368,7 +516,7 @@ export function analyze(input: string, columnName: (n: number) => string): Analy
     // intestazione: la prima riga è fatta di nomi di campo che si riconoscono, e nessuna sua cella è una frase lunga
     const first = rows[0]!;
     let recognised = 0;
-    for (const c of first) if (fieldFromName(c)) recognised++;
+    for (const c of first) if (fieldFromName(c, vocab)) recognised++;
     const short = first.every((c) => c.length <= 40);
     const header =
       rows.length > 1 &&
@@ -383,7 +531,7 @@ export function analyze(input: string, columnName: (n: number) => string): Analy
     };
     if (jsonError && format === 'righe' && tab.colonne.length < 2) return { errore: jsonError };
   }
-  return { ...tab, formato: format, campi: assign(tab) };
+  return { ...tab, formato: format, campi: assign(tab, vocab) };
 }
 
 /** Dalle colonne alle carte (le righe senza domanda, risposta né immagine si scartano). */
@@ -391,7 +539,7 @@ export function toCards(tab: Table | null): ImportedCard[] {
   if (!tab) return [];
   return tab.righe
     .map((r) => {
-      const c: ImportedCard = { q: '', a: '', imgLink: '' };
+      const c: ImportedCard = { q: '', a: '', m: '', ex: '', n: '', imgLink: '' };
       tab.campi.forEach((field, i) => {
         const v = r[i] ?? '';
         if (!field || !v) return;

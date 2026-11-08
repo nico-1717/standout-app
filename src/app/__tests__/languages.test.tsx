@@ -228,6 +228,34 @@ describe('Deck page', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
+  test('pastes many words with meaning, example and notes, and an example becomes a real example', async () => {
+    const { languages } = setup();
+    const c = languages.addCourse('it', 'de', 'en') as string;
+    const deck = languages.createDeck(c, { name: 'Food' })!;
+    mockParams = { id: deck };
+    await render(wrap(<LangDeckScreen />));
+    expect(screen.queryByTestId('ldi-text')).toBeNull();
+    await fireEvent.press(screen.getByTestId('ld-paste-toggle'));
+    await fireEvent.changeText(
+      screen.getByTestId('ldi-text'),
+      'Word\tTranslation\tMeaning\tExample\tNotes\nBrot\tpane\tfood from flour\tIch esse Brot\tneuter\nKäse\tformaggio\t\t\t',
+    );
+    expect(screen.getByTestId('ldi-count')).toHaveTextContent('2 cards');
+    await fireEvent.press(screen.getByTestId('ldi-create'));
+    expect(screen.getByTestId('ld-paste-done')).toHaveTextContent(/Cards created: 2/);
+    const words = languages.words(deck);
+    expect(words.map((w) => w.word)).toEqual(['Brot', 'Käse']);
+    expect(words[0]).toMatchObject({
+      translation: 'pane',
+      meaning: 'food from flour',
+      notes: 'neuter',
+    });
+    expect(languages.examples(words[0]!.uuid).map((e) => e.example_text)).toEqual([
+      'Ich esse Brot',
+    ]);
+    expect(languages.examples(words[1]!.uuid)).toEqual([]);
+  });
+
   test('adds a sub-deck', async () => {
     const { languages } = setup();
     const c = languages.addCourse('it', 'de', 'en') as string;

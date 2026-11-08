@@ -8,6 +8,9 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
+import { PasteImport } from '@/features/flashcards/PasteImport';
+import type { ImportedCard } from '@/features/flashcards/smartImport';
+import { langName } from '@/features/languages/langs';
 import {
   DECK_ICON_KEYS,
   DECK_SWATCHES,
@@ -27,7 +30,8 @@ import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit'
 /** Un mazzo di lingua: nome, padre, colore, icona, esame, note; sottomazzi e parole (con aggiunta veloce). */
 export default function LangDeckScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const uiLang = i18n.language.startsWith('en') ? 'en' : 'it';
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -40,6 +44,8 @@ export default function LangDeckScreen() {
   const [translation, setTranslation] = useState('');
   const [moving, setMoving] = useState(false);
   const [iconsOpen, setIconsOpen] = useState(false);
+  const [pasting, setPasting] = useState(false);
+  const [imported, setImported] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const data = useMemo(() => {
@@ -61,6 +67,18 @@ export default function LangDeckScreen() {
       favorites: repo.favorites(),
     };
   }, [services, version, id]);
+
+  const course = data?.course ?? null;
+  const vocabOptions = useMemo(
+    () =>
+      course
+        ? {
+            learn: { name: langName(course.learn_lang, uiLang), code: course.learn_lang },
+            known: { name: langName(course.known_lang, uiLang), code: course.known_lang },
+          }
+        : undefined,
+    [course, uiLang],
+  );
 
   if (!services || typeof id !== 'string') return null;
   if (!data) {
@@ -95,6 +113,23 @@ export default function LangDeckScreen() {
     if (note !== null) repo.updateDeck(id, { notes: note });
     setNote(null);
     changed();
+  };
+  const importWords = (cards: ImportedCard[]) => {
+    let n = 0;
+    for (const c of cards) {
+      const uuid = repo.addWord(id, {
+        word: c.q,
+        translation: c.a,
+        meaning: c.m,
+        notes: c.n,
+      });
+      if (!uuid) continue;
+      if (c.ex) repo.addExample(uuid, false, c.ex);
+      n += 1;
+    }
+    if (n > 0) changed();
+    setImported(n);
+    return n;
   };
   const addWord = () => {
     if (repo.addWord(id, { word, translation })) {
@@ -463,6 +498,33 @@ export default function LangDeckScreen() {
               />
             </View>
           </View>
+          <Pressable
+            testID="ld-paste-toggle"
+            accessibilityRole="button"
+            onPress={() => {
+              setPasting(!pasting);
+              setImported(null);
+            }}
+          >
+            <Text style={{ color: th.brand, fontWeight: '600' }}>
+              {pasting ? '▲' : '▼'} {t('fc.ibfai_sec_importa_titolo')}
+            </Text>
+          </Pressable>
+          {pasting ? (
+            <>
+              {imported !== null ? (
+                <Text testID="ld-paste-done" style={{ color: th.green, fontWeight: '700' }}>
+                  {t('fc.smi_create', { n: imported })}
+                </Text>
+              ) : null}
+              <PasteImport
+                testPrefix="ldi"
+                vocab={vocabOptions}
+                onCreate={importWords}
+                onEdit={() => setImported(null)}
+              />
+            </>
+          ) : null}
           {words.length ? (
             <Card>
               {words.map((w, i) => (

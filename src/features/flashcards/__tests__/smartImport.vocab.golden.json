@@ -1,0 +1,1276 @@
+[
+ {
+  "in": "Domanda\tRisposta\nCos'è un limite?\tIl valore a cui tende\nDerivata\tTasso di variazione",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "Domanda",
+    "Risposta"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "Cos'è un limite?",
+     "Il valore a cui tende"
+    ],
+    [
+     "Derivata",
+     "Tasso di variazione"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "Cos'è un limite?",
+     "a": "Il valore a cui tende",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "Derivata",
+     "a": "Tasso di variazione",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "cold - freddo\nhot - caldo\nbig - grande - extra",
+  "out": {
+   "formato": "righe",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "cold",
+     "freddo"
+    ],
+    [
+     "hot",
+     "caldo"
+    ],
+    [
+     "big",
+     "grande - extra"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "cold",
+     "a": "freddo",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "hot",
+     "a": "caldo",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "big",
+     "a": "grande - extra",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "a: b\nc: d\ne: f",
+  "out": {
+   "formato": "righe",
+   "intestazione": true,
+   "colonne": [
+    "a",
+    "b"
+   ],
+   "campi": [
+    "a",
+    "q"
+   ],
+   "righe": [
+    [
+     "c",
+     "d"
+    ],
+    [
+     "e",
+     "f"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "d",
+     "a": "c",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "f",
+     "a": "e",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "question,answer\nWhat is 2+2,4\n\"Capital, of Italy\",Rome",
+  "out": {
+   "formato": "righe",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}"
+   ],
+   "campi": [
+    "q"
+   ],
+   "righe": [
+    [
+     "question,answer"
+    ],
+    [
+     "What is 2+2,4"
+    ],
+    [
+     "\"Capital, of Italy\",Rome"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "question,answer",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "What is 2+2,4",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "\"Capital, of Italy\",Rome",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "[{\"q\":\"Che cos'è?\",\"a\":\"Cosa\"},{\"q\":\"Due\",\"a\":\"Tre\"}]",
+  "out": {
+   "formato": "json",
+   "intestazione": true,
+   "colonne": [
+    "q",
+    "a"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "Che cos'è?",
+     "Cosa"
+    ],
+    [
+     "Due",
+     "Tre"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "Che cos'è?",
+     "a": "Cosa",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "Due",
+     "a": "Tre",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "{\"cards\":[{\"domanda\":\"x\",\"risposta\":\"y\",\"immagine\":\"https://a.b/c.png\"}]}",
+  "out": {
+   "formato": "json",
+   "intestazione": true,
+   "colonne": [
+    "domanda",
+    "risposta",
+    "immagine"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "img"
+   ],
+   "righe": [
+    [
+     "x",
+     "y",
+     "https://a.b/c.png"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "x",
+     "a": "y",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": "https://a.b/c.png"
+    }
+   ]
+  }
+ },
+ {
+  "in": "[[\"uno\",\"two\"],[\"tre\",\"four\"]]",
+  "out": {
+   "formato": "json",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "uno",
+     "two"
+    ],
+    [
+     "tre",
+     "four"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "uno",
+     "a": "two",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "tre",
+     "a": "four",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "solo una riga\naltra riga\nterza riga",
+  "out": {
+   "formato": "righe",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}"
+   ],
+   "campi": [
+    "q"
+   ],
+   "righe": [
+    [
+     "solo una riga"
+    ],
+    [
+     "altra riga"
+    ],
+    [
+     "terza riga"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "solo una riga",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "altra riga",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "terza riga",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "[\"a\",\"b\"]",
+  "out": {
+   "formato": "json",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}"
+   ],
+   "campi": [
+    "q"
+   ],
+   "righe": [
+    [
+     "a"
+    ],
+    [
+     "b"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "a",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "b",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "",
+  "out": null
+ },
+ {
+  "in": "   ",
+  "out": null
+ },
+ {
+  "in": "[{\"q\": \"rotto\"",
+  "out": {
+   "errore": true
+  }
+ },
+ {
+  "in": "Front;Back\nuno;due\ntre;quattro",
+  "out": {
+   "formato": "csv",
+   "intestazione": true,
+   "colonne": [
+    "Front",
+    "Back"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "uno",
+     "due"
+    ],
+    [
+     "tre",
+     "quattro"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "uno",
+     "a": "due",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "tre",
+     "a": "quattro",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "one | two\nthree | four\nfive | six",
+  "out": {
+   "formato": "csv",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "one",
+     "two"
+    ],
+    [
+     "three",
+     "four"
+    ],
+    [
+     "five",
+     "six"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "one",
+     "a": "two",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "three",
+     "a": "four",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "five",
+     "a": "six",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "x -> y\nz -> w",
+  "out": {
+   "formato": "righe",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "x",
+     "y"
+    ],
+    [
+     "z",
+     "w"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "x",
+     "a": "y",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "z",
+     "a": "w",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "Term\tDefinition\tLink\nAtom\tUnit\thttps://x.org/a.jpg\nIon\tCharged\thttps://x.org/b.jpg",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "Term",
+    "Definition",
+    "Link"
+   ],
+   "campi": [
+    "q",
+    "m",
+    "img"
+   ],
+   "righe": [
+    [
+     "Atom",
+     "Unit",
+     "https://x.org/a.jpg"
+    ],
+    [
+     "Ion",
+     "Charged",
+     "https://x.org/b.jpg"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "Atom",
+     "a": "",
+     "m": "Unit",
+     "ex": "",
+     "n": "",
+     "imgLink": "https://x.org/a.jpg"
+    },
+    {
+     "q": "Ion",
+     "a": "",
+     "m": "Charged",
+     "ex": "",
+     "n": "",
+     "imgLink": "https://x.org/b.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "in": "a\tb\tc\nd\te\tf",
+  "out": {
+   "formato": "excel",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}",
+    "fc.smi_colonna_n{\"n\":3}"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "m"
+   ],
+   "righe": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "d",
+     "e",
+     "f"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "a",
+     "a": "b",
+     "m": "c",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "d",
+     "a": "e",
+     "m": "f",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "\"multi\nline\"\tanswer\nq2\ta2",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "multi\nline",
+    "answer"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "q2",
+     "a2"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "q2",
+     "a": "a2",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "Parola;Traduzione\n;vuota\nciao;hello",
+  "out": {
+   "formato": "csv",
+   "intestazione": true,
+   "colonne": [
+    "Parola",
+    "Traduzione"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "",
+     "vuota"
+    ],
+    [
+     "ciao",
+     "hello"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "",
+     "a": "vuota",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "ciao",
+     "a": "hello",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "Q = A\nQ2 = A2\nQ3",
+  "out": {
+   "formato": "righe",
+   "intestazione": true,
+   "colonne": [
+    "Q",
+    "A"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "Q2",
+     "A2"
+    ],
+    [
+     "Q3",
+     ""
+    ]
+   ],
+   "carte": [
+    {
+     "q": "Q2",
+     "a": "A2",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "Q3",
+     "a": "",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "Word\tTranslation\tMeaning\tExample\tNotes\nrun\tcorrere\tmove fast\tI run every morning\tirregular: ran\nwalk\tcamminare\tmove slowly\tShe likes to walk by the sea\t",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "Word",
+    "Translation",
+    "Meaning",
+    "Example",
+    "Notes"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "m",
+    "ex",
+    "n"
+   ],
+   "righe": [
+    [
+     "run",
+     "correre",
+     "move fast",
+     "I run every morning",
+     "irregular: ran"
+    ],
+    [
+     "walk",
+     "camminare",
+     "move slowly",
+     "She likes to walk by the sea",
+     ""
+    ]
+   ],
+   "carte": [
+    {
+     "q": "run",
+     "a": "correre",
+     "m": "move fast",
+     "ex": "I run every morning",
+     "n": "irregular: ran",
+     "imgLink": ""
+    },
+    {
+     "q": "walk",
+     "a": "camminare",
+     "m": "move slowly",
+     "ex": "She likes to walk by the sea",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "English;Italiano\ndog;cane\ncat;gatto",
+  "out": {
+   "formato": "csv",
+   "intestazione": true,
+   "colonne": [
+    "English",
+    "Italiano"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "dog",
+     "cane"
+    ],
+    [
+     "cat",
+     "gatto"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "dog",
+     "a": "cane",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "cat",
+     "a": "gatto",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "Parola,Traduzione,Frase\nhouse,casa,This is my house and it is big\ntree,albero,The tree is tall in the park",
+  "out": {
+   "formato": "csv",
+   "intestazione": true,
+   "colonne": [
+    "Parola",
+    "Traduzione",
+    "Frase"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "ex"
+   ],
+   "righe": [
+    [
+     "house",
+     "casa",
+     "This is my house and it is big"
+    ],
+    [
+     "tree",
+     "albero",
+     "The tree is tall in the park"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "house",
+     "a": "casa",
+     "m": "",
+     "ex": "This is my house and it is big",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "tree",
+     "a": "albero",
+     "m": "",
+     "ex": "The tree is tall in the park",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "apple\tmela\tthe fruit\tI eat an apple every day\ndog\tcane\tan animal\tThe dog barks at night",
+  "out": {
+   "formato": "excel",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}",
+    "fc.smi_colonna_n{\"n\":3}",
+    "fc.smi_colonna_n{\"n\":4}"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "m",
+    "ex"
+   ],
+   "righe": [
+    [
+     "apple",
+     "mela",
+     "the fruit",
+     "I eat an apple every day"
+    ],
+    [
+     "dog",
+     "cane",
+     "an animal",
+     "The dog barks at night"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "apple",
+     "a": "mela",
+     "m": "the fruit",
+     "ex": "I eat an apple every day",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "dog",
+     "a": "cane",
+     "m": "an animal",
+     "ex": "The dog barks at night",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "go - andare\nsee - vedere",
+  "out": {
+   "formato": "righe",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}"
+   ],
+   "campi": [
+    "q",
+    "a"
+   ],
+   "righe": [
+    [
+     "go",
+     "andare"
+    ],
+    [
+     "see",
+     "vedere"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "go",
+     "a": "andare",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "see",
+     "a": "vedere",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "[{\"word\":\"book\",\"translation\":\"libro\",\"example\":\"I read a book\",\"notes\":\"noun\"},{\"word\":\"read\",\"translation\":\"leggere\"}]",
+  "out": {
+   "formato": "json",
+   "intestazione": true,
+   "colonne": [
+    "word",
+    "translation",
+    "example",
+    "notes"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "ex",
+    "n"
+   ],
+   "righe": [
+    [
+     "book",
+     "libro",
+     "I read a book",
+     "noun"
+    ],
+    [
+     "read",
+     "leggere",
+     "",
+     ""
+    ]
+   ],
+   "carte": [
+    {
+     "q": "book",
+     "a": "libro",
+     "m": "",
+     "ex": "I read a book",
+     "n": "noun",
+     "imgLink": ""
+    },
+    {
+     "q": "read",
+     "a": "leggere",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "term\tdefinition\ncat\tfeline pet\ndog\tcanine pet",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "term",
+    "definition"
+   ],
+   "campi": [
+    "q",
+    "m"
+   ],
+   "righe": [
+    [
+     "cat",
+     "feline pet"
+    ],
+    [
+     "dog",
+     "canine pet"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "cat",
+     "a": "",
+     "m": "feline pet",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "dog",
+     "a": "",
+     "m": "canine pet",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "english\titaliano\tnote\nhello\tciao\tgreeting\nbye\taddio\tfarewell",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "english",
+    "italiano",
+    "note"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "n"
+   ],
+   "righe": [
+    [
+     "hello",
+     "ciao",
+     "greeting"
+    ],
+    [
+     "bye",
+     "addio",
+     "farewell"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "hello",
+     "a": "ciao",
+     "m": "",
+     "ex": "",
+     "n": "greeting",
+     "imgLink": ""
+    },
+    {
+     "q": "bye",
+     "a": "addio",
+     "m": "",
+     "ex": "",
+     "n": "farewell",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "run\tcorrere\tI ___ every day\nwalk\tcamminare\tI ___ to school and I like it",
+  "out": {
+   "formato": "excel",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}",
+    "fc.smi_colonna_n{\"n\":3}"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "ex"
+   ],
+   "righe": [
+    [
+     "run",
+     "correre",
+     "I ___ every day"
+    ],
+    [
+     "walk",
+     "camminare",
+     "I ___ to school and I like it"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "run",
+     "a": "correre",
+     "m": "",
+     "ex": "I ___ every day",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "walk",
+     "a": "camminare",
+     "m": "",
+     "ex": "I ___ to school and I like it",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "casa\thouse\t\nlibro\tbook\t",
+  "out": {
+   "formato": "excel",
+   "intestazione": false,
+   "colonne": [
+    "fc.smi_colonna_n{\"n\":1}",
+    "fc.smi_colonna_n{\"n\":2}",
+    "fc.smi_colonna_n{\"n\":3}"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "m"
+   ],
+   "righe": [
+    [
+     "casa",
+     "house",
+     ""
+    ],
+    [
+     "libro",
+     "book",
+     ""
+    ]
+   ],
+   "carte": [
+    {
+     "q": "casa",
+     "a": "house",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    },
+    {
+     "q": "libro",
+     "a": "book",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": ""
+    }
+   ]
+  }
+ },
+ {
+  "in": "Parola\tTraduzione\tImmagine\ncane\tdog\thttps://example.com/dog.jpg",
+  "out": {
+   "formato": "excel",
+   "intestazione": true,
+   "colonne": [
+    "Parola",
+    "Traduzione",
+    "Immagine"
+   ],
+   "campi": [
+    "q",
+    "a",
+    "img"
+   ],
+   "righe": [
+    [
+     "cane",
+     "dog",
+     "https://example.com/dog.jpg"
+    ]
+   ],
+   "carte": [
+    {
+     "q": "cane",
+     "a": "dog",
+     "m": "",
+     "ex": "",
+     "n": "",
+     "imgLink": "https://example.com/dog.jpg"
+    }
+   ]
+  }
+ }
+]
