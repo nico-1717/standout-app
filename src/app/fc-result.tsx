@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { CardImage } from '@/features/flashcards/CardImage';
+import { DocView } from '@/features/flashcards/DocView';
 import { formatDuration } from '@/features/flashcards/format';
 import { kitForGame } from '@/features/flashcards/gameKit';
 import { Card, Header, PrimaryButton, TextButton } from '@/ui/kit';
@@ -29,6 +31,7 @@ export default function ResultScreen() {
   const [onlyWrong, setOnlyWrong] = useState(params.errors === '1');
   const [limit, setLimit] = useState(PAGE);
   const [, setTick] = useState(0);
+  const [opened, setOpened] = useState<string[]>([]);
 
   const kit = useMemo(
     () => (services && game ? kitForGame(services, game) : null),
@@ -261,52 +264,85 @@ export default function ResultScreen() {
               const wrong = p.user_answer === 'Wrong';
               // l'ascolto c'è solo nei mazzi di lingua (negli altri non c'è nessuna voce)
               const voices = kit.vocab ? kit.view(game, p.position, target, isChild) : null;
+              const isOpen = opened.includes(p.uuid);
+              const full = isOpen ? kit.view(game, p.position, target, isChild) : null;
               return (
-                <View key={p.uuid} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ color: wrong ? th.red : th.green, width: 18, fontWeight: '800' }}>
-                    {wrong ? '✗' : '✓'}
-                  </Text>
-                  <Text style={{ color: th.text, flex: 1 }} numberOfLines={2}>
-                    {kit.label(game, p.position, target, isChild).slice(0, 90)}
-                  </Text>
-                  {voices?.questionVoice ? (
-                    <SpeakButton
-                      testID={`fcr-speak-q-${p.uuid}`}
-                      text={voices.question ?? ''}
-                      lang={voices.questionVoice.lang}
-                      once={voices.questionVoice.once}
-                      size={18}
-                    />
-                  ) : null}
-                  {voices?.answerVoice ? (
-                    <SpeakButton
-                      testID={`fcr-speak-a-${p.uuid}`}
-                      text={voices.answer ?? ''}
-                      lang={voices.answerVoice.lang}
-                      once={voices.answerVoice.once}
-                      size={18}
-                    />
-                  ) : null}
-                  <Pressable
-                    testID={`fcr-verdict-${p.uuid}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('fc.gm_cambia_verdetto')}
-                    onPress={() => {
-                      games.changeVerdict(
-                        game,
-                        p.position,
-                        target,
-                        isChild,
-                        wrong ? 'correct' : 'wrong',
-                      );
-                      games.conclude(game);
-                      setTick((n) => n + 1);
-                    }}
-                  >
-                    <Text style={{ color: th.brand, fontSize: 13 }}>
-                      {t('fc.gm_cambia_verdetto')}
+                <View key={p.uuid} style={{ gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text
+                      style={{ color: wrong ? th.red : th.green, width: 18, fontWeight: '800' }}
+                    >
+                      {wrong ? '✗' : '✓'}
                     </Text>
-                  </Pressable>
+                    <Pressable
+                      testID={`fcr-open-${p.uuid}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: isOpen }}
+                      onPress={() =>
+                        setOpened((cur) =>
+                          cur.includes(p.uuid) ? cur.filter((x) => x !== p.uuid) : [...cur, p.uuid],
+                        )
+                      }
+                      style={{ flex: 1 }}
+                    >
+                      <Text style={{ color: th.text }} numberOfLines={isOpen ? undefined : 2}>
+                        {kit.label(game, p.position, target, isChild).slice(0, 90)}
+                      </Text>
+                    </Pressable>
+                    {voices?.questionVoice ? (
+                      <SpeakButton
+                        testID={`fcr-speak-q-${p.uuid}`}
+                        text={voices.question ?? ''}
+                        lang={voices.questionVoice.lang}
+                        once={voices.questionVoice.once}
+                        size={18}
+                      />
+                    ) : null}
+                    {voices?.answerVoice ? (
+                      <SpeakButton
+                        testID={`fcr-speak-a-${p.uuid}`}
+                        text={voices.answer ?? ''}
+                        lang={voices.answerVoice.lang}
+                        once={voices.answerVoice.once}
+                        size={18}
+                      />
+                    ) : null}
+                    <Pressable
+                      testID={`fcr-verdict-${p.uuid}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('fc.gm_cambia_verdetto')}
+                      onPress={() => {
+                        games.changeVerdict(
+                          game,
+                          p.position,
+                          target,
+                          isChild,
+                          wrong ? 'correct' : 'wrong',
+                        );
+                        games.conclude(game);
+                        setTick((n) => n + 1);
+                      }}
+                    >
+                      <Text style={{ color: th.brand, fontSize: 13 }}>
+                        {t('fc.gm_cambia_verdetto')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {full ? (
+                    <View testID={`fcr-detail-${p.uuid}`} style={{ gap: 8, paddingLeft: 28 }}>
+                      <CardImage
+                        testID={`fcr-qimg-${p.uuid}`}
+                        name={full.questionImage}
+                        height={140}
+                      />
+                      <DocView testID={`fcr-answer-${p.uuid}`} raw={full.answer} size={15} />
+                      <CardImage
+                        testID={`fcr-aimg-${p.uuid}`}
+                        name={full.answerImage}
+                        height={140}
+                      />
+                    </View>
+                  ) : null}
                 </View>
               );
             })}

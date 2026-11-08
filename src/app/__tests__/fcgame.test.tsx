@@ -263,6 +263,24 @@ describe('result and history', () => {
     await fireEvent.press(screen.getByTestId('fch-period-7'));
     expect(screen.queryByTestId('fch-from')).toBeNull();
   });
+  test('tapping a review row opens its answer; tapping again closes it', async () => {
+    const { flashcards, games } = setup();
+    const deck = flashcards.createDeck({ name: 'Open' })!;
+    flashcards.addCard(deck, 'Capital of Italy', 'Rome');
+    const r = games.start({ decks: [deck], status: 'all', order: 'in_order' });
+    if (r.kind !== 'started') throw new Error('empty');
+    const p = games.ensurePosition(r.game, 1)!;
+    games.grade(r.game, 1, p[0]!.card_uuid!, false, 'wrong');
+    games.conclude(r.game);
+    mockParams = { game: r.game };
+    await render(wrap(<ResultScreen />));
+    const row = `fcr-open-${games.plays(r.game, 1)[0]!.uuid}`;
+    expect(screen.queryByText('Rome')).toBeNull();
+    await fireEvent.press(screen.getByTestId(row));
+    expect(screen.getByText('Rome')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(row));
+    expect(screen.queryByText('Rome')).toBeNull();
+  });
   test('a long review shows 20 cards and loads more on request', async () => {
     const { flashcards, games } = setup();
     const deck = flashcards.createDeck({ name: 'Big' })!;
