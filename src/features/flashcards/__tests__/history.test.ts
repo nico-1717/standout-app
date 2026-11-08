@@ -116,6 +116,16 @@ describe('history entries and filters', () => {
     ]);
   });
 
+  test('a custom range keeps both end days', () => {
+    const { s, g1, g2 } = world();
+    const e = historyEntries(s.games);
+    const ids = (from: string, to: string) =>
+      filterHistory(e, { ...none, from, to }).map((x) => x.game.uuid);
+    expect(ids('2026-11-01', '2026-11-02')).toEqual([g2, g1]);
+    expect(ids('', '2026-11-01')).toEqual([g1]);
+    expect(ids('2026-11-02', '2026-11-02')).toEqual([g2]);
+  });
+
   test('state: unfinished needs an answered game with positions left', () => {
     const { s, a } = world();
     const r = s.games.start({ decks: [a], status: 'all', order: 'in_order' });

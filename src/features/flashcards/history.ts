@@ -29,6 +29,8 @@ export interface HistoryFilter {
   subject: Set<string> | null;
   /** Prima data (AAAA-MM-GG) da mostrare; '' = da sempre. */
   from: string;
+  /** Ultima data (AAAA-MM-GG) da mostrare; assente o '' = fino a oggi. */
+  to?: string;
 }
 
 const part = (games: GameRepo, game: GameRow): HistoryPart => {
@@ -85,6 +87,7 @@ const suspended = (e: HistoryEntry): boolean =>
 export function filterHistory(entries: HistoryEntry[], f: HistoryFilter): HistoryEntry[] {
   const rows = entries.filter((e) => {
     if (f.from && day(e).slice(0, 10) < f.from) return false;
+    if (f.to && day(e).slice(0, 10) > f.to) return false;
     if (f.kind !== 'any' && (e.game.card_status ?? 'all') !== f.kind) return false;
     if (f.subject && !e.decks.some((d) => f.subject!.has(d))) return false;
     if (f.state === 'open' && !suspended(e)) return false;

@@ -20,9 +20,9 @@ export default function ResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services } = useApp();
-  const params = useLocalSearchParams<{ game?: string }>();
+  const params = useLocalSearchParams<{ game?: string; errors?: string }>();
   const game = params.game ?? '';
-  const [onlyWrong, setOnlyWrong] = useState(false);
+  const [onlyWrong, setOnlyWrong] = useState(params.errors === '1');
   const [, setTick] = useState(0);
 
   const kit = useMemo(

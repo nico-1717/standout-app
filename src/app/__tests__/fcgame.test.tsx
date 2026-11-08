@@ -212,6 +212,47 @@ describe('playing', () => {
 });
 
 describe('result and history', () => {
+  test('the details switch shows the mistakes button, which opens the result on the mistakes', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'wrong');
+    games.conclude(game);
+    await render(wrap(<HistoryScreen />));
+    expect(screen.queryByTestId(`fch-errors-${game}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('fch-density'));
+    await fireEvent.press(screen.getByTestId(`fch-errors-${game}`));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/fc-result',
+      params: { game, errors: '1' },
+    });
+  });
+  test('the dates button opens a from/to range and the list follows it', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'correct');
+    games.conclude(game);
+    await render(wrap(<HistoryScreen />));
+    expect(screen.queryByTestId('fch-from')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fch-dates'));
+    expect(screen.getByTestId('fch-from')).toBeTruthy();
+    expect(screen.getByTestId('fch-to')).toBeTruthy();
+    expect(screen.getByTestId(`fch-game-${game}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fch-period-7'));
+    expect(screen.queryByTestId('fch-from')).toBeNull();
+  });
+  test('result opened with errors=1 starts on the wrong ones', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'correct');
+    games.ensurePosition(game, 2);
+    const p2 = games.plays(game, 2).find((p) => p.card_uuid)!;
+    games.grade(game, 2, p2.card_uuid!, false, 'wrong');
+    games.conclude(game);
+    mockParams = { game, errors: '1' };
+    await render(wrap(<ResultScreen />));
+    expect(screen.queryByTestId(`fcr-verdict-${games.plays(game, 1)[0]!.uuid}`)).toBeNull();
+    expect(screen.getByTestId(`fcr-verdict-${p2.uuid}`)).toBeTruthy();
+  });
   test('result shows score, tally, retries the wrong ones and changes a verdict', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);

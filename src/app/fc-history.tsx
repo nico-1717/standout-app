@@ -21,9 +21,16 @@ import { HistorySubjects } from '@/features/flashcards/HistorySubjects';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
 import { buildSubjects, groupActivity } from '@/features/flashcards/subjects';
 import { localToday } from '@/features/tasks/groups';
+import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header } from '@/ui/kit';
 
-type Period = 7 | 30 | 90 | 0;
+type Period = 7 | 30 | 90 | 0 | 'custom';
+const addDays = (iso: string, n: number): string => {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 
 function FilterRow<T extends string>({
   label,
@@ -88,13 +95,16 @@ export default function HistoryScreen() {
   const [period, setPeriod] = useState<Period>(30);
   const [asking, setAsking] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [now] = useState(() => Date.now());
   const [showFilters, setShowFilters] = useState(false);
   const [state, setState] = useState<HistoryState>('all');
   const [kind, setKind] = useState<HistoryKind>('any');
   const [sort, setSort] = useState<HistorySort>('recent');
   const [subject, setSubject] = useState<string | null>(null);
   const [view, setView] = useState<'games' | 'subjects'>('games');
+  const [detailed, setDetailed] = useState(false);
+  const [showDates, setShowDates] = useState(false);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
   const entries = useMemo(() => {
     void version;
@@ -105,29 +115,33 @@ export default function HistoryScreen() {
     void version;
     return kit ? kit.decks() : [];
   }, [kit, version]);
+  const today = localToday();
+  // un intervallo scelto a mano vale con le due date; se sono capovolte si girano (come sul sito)
+  const customLow = customFrom && customTo && customFrom > customTo ? customTo : customFrom;
+  const customHigh = customFrom && customTo && customFrom > customTo ? customFrom : customTo;
+  const from = period === 'custom' ? customLow : period ? addDays(today, 1 - period) : '';
+  const to = period === 'custom' ? customHigh : '';
   const rows = useMemo(() => {
     if (!entries) return null;
-    const from = period ? new Date(now - period * 86_400_000).toISOString().slice(0, 10) : '';
     return filterHistory(entries, {
       state,
       kind,
       sort,
       from,
+      to,
       subject: subject ? new Set(deckBranch(decks, subject)) : null,
     });
-  }, [entries, period, now, state, kind, sort, subject, decks]);
-  const today = localToday();
-  const from = period ? new Date(now - period * 86_400_000).toISOString().slice(0, 10) : '';
+  }, [entries, from, to, state, kind, sort, subject, decks]);
   const activity = useMemo(() => {
     void version;
     void tick;
-    return kit ? groupActivity(kit.games.answersByDay(from, ''), from, '', today) : null;
-  }, [kit, version, tick, from, today]);
+    return kit ? groupActivity(kit.games.answersByDay(from, to), from, to, today) : null;
+  }, [kit, version, tick, from, to, today]);
   const tree = useMemo(() => {
     void version;
     void tick;
-    return kit && view === 'subjects' ? buildSubjects(kit.games.subjectRows(from, '')) : null;
-  }, [kit, version, tick, from, view]);
+    return kit && view === 'subjects' ? buildSubjects(kit.games.subjectRows(from, to)) : null;
+  }, [kit, version, tick, from, to, view]);
   if (!services || !rows) return null;
   const summary = summarize(rows);
 
@@ -152,14 +166,17 @@ export default function HistoryScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 40 }}
       >
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {periods.map((p) => (
             <Pressable
               key={p.v}
               testID={`fch-period-${p.v}`}
               accessibilityRole="button"
               accessibilityState={{ selected: period === p.v }}
-              onPress={() => setPeriod(p.v)}
+              onPress={() => {
+                setPeriod(p.v);
+                setShowDates(false);
+              }}
               style={{
                 paddingVertical: 7,
                 paddingHorizontal: 12,
@@ -172,7 +189,66 @@ export default function HistoryScreen() {
               </Text>
             </Pressable>
           ))}
+          <Pressable
+            testID="fch-dates"
+            accessibilityRole="button"
+            accessibilityLabel={t('fc.sfc_date')}
+            accessibilityState={{ expanded: showDates, selected: period === 'custom' }}
+            onPress={() => {
+              if (!showDates) {
+                setCustomFrom((v) => v || addDays(today, -29));
+                setCustomTo((v) => v || today);
+                setPeriod('custom');
+              }
+              setShowDates((v) => !v);
+            }}
+            style={{
+              paddingVertical: 7,
+              paddingHorizontal: 12,
+              borderRadius: 16,
+              backgroundColor: period === 'custom' ? th.brand : th.surface2,
+            }}
+          >
+            <Text style={{ color: period === 'custom' ? '#fff' : th.text, fontWeight: '600' }}>
+              {t('fc.sfc_date')}
+            </Text>
+          </Pressable>
         </View>
+
+        {showDates ? (
+          <Card style={{ padding: 14, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ color: th.text2, fontWeight: '700', width: 52 }}>
+                {t('fc.sfc_dal')}
+              </Text>
+              <DateTimeField
+                kind="date"
+                testID="fch-from"
+                value={customFrom}
+                fallback={today}
+                onChange={(v) => {
+                  setCustomFrom(v);
+                  setPeriod('custom');
+                }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ color: th.text2, fontWeight: '700', width: 52 }}>
+                {t('fc.sfc_al')}
+              </Text>
+              <DateTimeField
+                kind="date"
+                testID="fch-to"
+                value={customTo}
+                fallback={today}
+                onChange={(v) => {
+                  setCustomTo(v);
+                  setPeriod('custom');
+                }}
+              />
+            </View>
+          </Card>
+        ) : null}
 
         {activity ? <HistoryActivity step={activity.step} bars={activity.bars} /> : null}
 
@@ -196,6 +272,24 @@ export default function HistoryScreen() {
               </Text>
             </Pressable>
           ))}
+          {view === 'games' ? (
+            <Pressable
+              testID="fch-density"
+              accessibilityRole="button"
+              accessibilityLabel={t('fc.sfc_densita')}
+              accessibilityState={{ selected: detailed }}
+              onPress={() => setDetailed((v) => !v)}
+              style={{
+                marginLeft: 'auto',
+                paddingVertical: 7,
+                paddingHorizontal: 12,
+                borderRadius: 16,
+                backgroundColor: detailed ? th.brand : th.surface2,
+              }}
+            >
+              <Text style={{ color: detailed ? '#fff' : th.text, fontWeight: '600' }}>☰</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {view === 'subjects' && tree ? (
@@ -328,7 +422,7 @@ export default function HistoryScreen() {
                       {formatDuration(e.seconds)}
                     </Text>
                   </Pressable>
-                  {e.retries.length > 0 ? (
+                  {detailed && e.retries.length > 0 ? (
                     <Text
                       testID={`fch-retries-${g.uuid}`}
                       style={{ color: th.text2, fontSize: 13 }}
@@ -340,7 +434,7 @@ export default function HistoryScreen() {
                       {e.retries.map((r) => `${Math.round(r.score)}%`).join(' → ')}
                     </Text>
                   ) : null}
-                  {open === null && openRetry ? (
+                  {detailed && open === null && openRetry ? (
                     <Pressable
                       testID={`fch-resume-retry-${g.uuid}`}
                       accessibilityRole="button"
@@ -353,6 +447,22 @@ export default function HistoryScreen() {
                     >
                       <Text style={{ color: th.brand, fontWeight: '600' }}>
                         {t('fc.sfc_riprendi')} ({t('fc.sfc_ripasso_errori')})
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  {detailed && e.wrong > 0 ? (
+                    <Pressable
+                      testID={`fch-errors-${g.uuid}`}
+                      accessibilityRole="button"
+                      onPress={() =>
+                        router.push({
+                          pathname: '/fc-result',
+                          params: { game: g.uuid, errors: '1' },
+                        })
+                      }
+                    >
+                      <Text style={{ color: th.brand, fontWeight: '600' }}>
+                        {t(e.retries.length > 0 ? 'fc.sfc_vedi_errori' : 'fc.sfc_ripassa')}
                       </Text>
                     </Pressable>
                   ) : null}
