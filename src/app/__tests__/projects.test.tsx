@@ -288,4 +288,63 @@ describe('project page', () => {
     await fireEvent(screen.getByTestId('proj-todo-switch'), 'valueChange', false);
     expect(projects.get(a)!.todo_enabled).toBe(0);
   });
+
+  test('selecting sub-projects: colour, move and delete them together', async () => {
+    const { projects, pomodoro } = setup();
+    const a = projects.create({ name: 'Alpha' })!;
+    const b = projects.create({ name: 'Beta' })!;
+    const k1 = projects.create({ name: 'Kid 1', parent: a })!;
+    const k2 = projects.create({ name: 'Kid 2', parent: a })!;
+    const k3 = projects.create({ name: 'Kid 3', parent: a })!;
+    mockParams = { id: a };
+    const view = await renderOne();
+    const again = async () =>
+      view.rerender(
+        <ThemeProvider>
+          <ProjectScreen />
+        </ThemeProvider>,
+      );
+
+    // fuori dalla selezione, toccare apre il sotto-progetto
+    await fireEvent.press(screen.getByTestId(`kid-${k1}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/project', params: { id: k1 } });
+
+    await fireEvent.press(screen.getByTestId('sub-select-toggle'));
+    await fireEvent.press(screen.getByTestId('sub-bulk-color'));
+    expect(screen.queryByTestId('sub-color-FF3B30')).toBeNull(); // niente scelti: niente pannello
+    await fireEvent.press(screen.getByTestId(`kid-${k1}`));
+    await fireEvent.press(screen.getByTestId(`kid-${k2}`));
+    expect(screen.getByTestId('sub-count')).toHaveTextContent(/2 selected/);
+    await fireEvent.press(screen.getByTestId('sub-bulk-color'));
+    await fireEvent.press(screen.getByTestId('sub-color-FF3B30'));
+    expect(projects.get(k1)!.color.toUpperCase()).toBe('#FF3B30');
+    expect(projects.get(k2)!.color_edited).toBeTruthy();
+    expect(projects.get(k3)!.color_edited).toBeFalsy();
+    await again();
+
+    // spostare k1 e k2 sotto Beta
+    await fireEvent.press(screen.getByTestId('sub-select-toggle'));
+    await fireEvent.press(screen.getByTestId('sub-all'));
+    await fireEvent.press(screen.getByTestId('sub-all')); // di nuovo: deseleziona
+    expect(screen.getByTestId('sub-count')).toHaveTextContent(/0 selected/);
+    await fireEvent.press(screen.getByTestId(`kid-${k1}`));
+    await fireEvent.press(screen.getByTestId(`kid-${k2}`));
+    await fireEvent.press(screen.getByTestId('sub-bulk-parent'));
+    // un progetto scelto non si offre come destinazione
+    expect(screen.queryByTestId(`project-pick-${k1}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId(`project-pick-${b}`));
+    expect(projects.get(k1)!.parent_uuid).toBe(b);
+    expect(projects.get(k2)!.parent_uuid).toBe(b);
+    expect(projects.get(k3)!.parent_uuid).toBe(a);
+    await again();
+
+    // eliminare k3 con i suoi pomodori
+    pomodoro.addManual({ day: '2030-01-01', from: '09:00', to: '09:30', projectUuid: k3 });
+    await fireEvent.press(screen.getByTestId('sub-select-toggle'));
+    await fireEvent.press(screen.getByTestId(`kid-${k3}`));
+    await fireEvent.press(screen.getByTestId('sub-bulk-delete'));
+    await fireEvent.press(screen.getByTestId('sub-del-all'));
+    expect(projects.get(k3)).toBeNull();
+    expect(projects.sessionCount([k3])).toBe(0);
+  });
 });

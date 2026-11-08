@@ -10,6 +10,7 @@ import { ProjectDeckCard } from '@/features/flashcards/ProjectDeckCard';
 import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
 import { human } from '@/features/pomodoro/logic';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
+import { SubProjects } from '@/features/projects/SubProjects';
 import { ancestors, byId, childrenOf, subtreeIds, type Project } from '@/features/projects/logic';
 import { isRichNote, noteText } from '@/features/projects/notes';
 import { useAutosave } from '@/ui/useAutosave';
@@ -356,21 +357,14 @@ export default function ProjectScreen() {
               {t('progetti.nessun_sotto_progetto_aggiungine_uno')}
             </Text>
           ) : (
-            kids.map((k) => (
-              <Pressable
-                key={k.uuid}
-                testID={`kid-${k.uuid}`}
-                accessibilityRole="button"
-                onPress={() => open(k)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}
-              >
-                <View
-                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: k.color }}
-                />
-                <Text style={{ color: th.text, flex: 1 }}>{k.name}</Text>
-                <Text style={{ color: th.text3 }}>›</Text>
-              </Pressable>
-            ))
+            <SubProjects
+              repo={repo}
+              all={all}
+              kids={kids}
+              swatches={SWATCHES}
+              onOpen={open}
+              changed={changed}
+            />
           )}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
