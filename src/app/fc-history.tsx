@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
 import { kitForCourse } from '@/features/flashcards/gameKit';
 import {
+  chainOf,
   filterHistory,
   historyEntries,
   summarize,
@@ -17,6 +18,7 @@ import {
   type HistoryState,
 } from '@/features/flashcards/history';
 import { HistoryActivity } from '@/features/flashcards/HistoryActivity';
+import { HistoryRoad, MiniClimb, useGold } from '@/features/flashcards/HistoryRoad';
 import { HistorySubjects } from '@/features/flashcards/HistorySubjects';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
 import { buildSubjects, groupActivity } from '@/features/flashcards/subjects';
@@ -91,6 +93,7 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { services, version } = useApp();
   const { course } = useLocalSearchParams<{ course?: string }>();
+  const gold = useGold();
   const kit = useMemo(() => (services ? kitForCourse(services, course) : null), [services, course]);
   const [period, setPeriod] = useState<Period>(30);
   const [asking, setAsking] = useState<string | null>(null);
@@ -393,6 +396,12 @@ export default function HistoryScreen() {
               const g = e.game;
               const open = e.resume;
               const openRetry = e.retries.find((r) => r.resume !== null);
+              const ch = chainOf(e);
+              // una partita portata al 100% (o perfetta al primo colpo) è «d'oro»
+              const isGold =
+                !ch.suspended && (ch.state === 'perfetta' || ch.state === 'conquistata');
+              // il prossimo ripasso parte dagli errori dell'ULTIMO passo, non della partita: così la catena arriva al 100%
+              const fix = !ch.suspended && ch.state === 'aperta' && ch.toFix > 0;
               return (
                 <Card key={g.uuid} style={{ padding: 14, gap: 6 }}>
                   <Pressable
@@ -412,16 +421,54 @@ export default function HistoryScreen() {
                         {(g.game_date ?? '').slice(0, 16).replace('T', ' ')}
                       </Text>
                       <Text
-                        style={{ color: open !== null ? th.brand : th.text, fontWeight: '800' }}
+                        testID={isGold ? `fch-gold-${g.uuid}` : undefined}
+                        style={{
+                          color: open !== null ? th.brand : isGold ? gold : th.text,
+                          fontWeight: '800',
+                        }}
                       >
-                        {open !== null ? t('fc.sfc_in_sospeso') : `${Math.round(e.score)}%`}
+                        {open !== null
+                          ? t('fc.sfc_in_sospeso')
+                          : isGold
+                            ? '★ 100%'
+                            : `${Math.round(e.score)}%`}
                       </Text>
                     </View>
                     <Text style={{ color: th.text2, fontSize: 13 }}>
                       {t('fc.res_corretto')} {e.correct} · {t('fc.res_errato')} {e.wrong} ·{' '}
                       {formatDuration(e.seconds)}
                     </Text>
+                    {isGold ? (
+                      <Text
+                        testID={`fch-plate-${g.uuid}`}
+                        style={{ color: gold, fontSize: 12, fontWeight: '700', marginTop: 4 }}
+                      >
+                        🏆{' '}
+                        {ch.state === 'perfetta'
+                          ? t('fc.sfc_perfetta')
+                          : t(
+                              e.retries.length === 1
+                                ? 'fc.sfc_conquistata_1'
+                                : 'fc.sfc_conquistata_n',
+                              { n: e.retries.length },
+                            )}
+                      </Text>
+                    ) : fix ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Text
+                          testID={`fch-plate-${g.uuid}`}
+                          style={{ color: th.orange, fontSize: 12, fontWeight: '700' }}
+                        >
+                          🎯{' '}
+                          {t(ch.toFix === 1 ? 'fc.sfc_da_sistemare_1' : 'fc.sfc_da_sistemare_n', {
+                            n: ch.toFix,
+                          })}
+                        </Text>
+                        <MiniClimb chain={ch} />
+                      </View>
+                    ) : null}
                   </Pressable>
+                  {detailed ? <HistoryRoad chain={ch} testID={`fch-road-${g.uuid}`} /> : null}
                   {detailed && e.retries.length > 0 ? (
                     <View testID={`fch-retries-${g.uuid}`} style={{ gap: 4 }}>
                       {e.retries.map((r, i) => (
@@ -496,6 +543,26 @@ export default function HistoryScreen() {
                       </Text>
                     </Pressable>
                   ) : null}
+                  {detailed && fix && kit ? (
+                    <Pressable
+                      testID={`fch-fix-${g.uuid}`}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        const r = kit.games.retry(ch.lastUuid);
+                        if (r.kind === 'started')
+                          router.push({
+                            pathname: '/fc-game',
+                            params: { game: r.game, position: '1' },
+                          });
+                      }}
+                    >
+                      <Text style={{ color: th.brand, fontWeight: '700' }}>
+                        {t(ch.toFix === 1 ? 'fc.sfc_sistema_1' : 'fc.sfc_sistema_n', {
+                          n: ch.toFix,
+                        })}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   {detailed && e.wrong > 0 ? (
                     <Pressable
                       testID={`fch-errors-${g.uuid}`}
@@ -508,7 +575,7 @@ export default function HistoryScreen() {
                       }
                     >
                       <Text style={{ color: th.brand, fontWeight: '600' }}>
-                        {t(e.retries.length > 0 ? 'fc.sfc_vedi_errori' : 'fc.sfc_ripassa')}
+                        {t(fix ? 'fc.sfc_vedi_errori' : 'fc.sfc_ripassa')}
                       </Text>
                     </Pressable>
                   ) : null}

@@ -125,3 +125,39 @@ export function summarize(rows: HistoryEntry[]): {
   }
   return { games: rows.length, seconds, correct, wrong };
 }
+
+/** «La strada fino al 100%» di una partita con i suoi ripassi (`sfc_catena` del sito). */
+export interface HistoryChain {
+  /** 'perfetta' = senza errori al primo colpo; 'conquistata' = un ripasso finito senza errori; 'aperta' = ci sono ancora errori; null = niente di finito */
+  state: 'perfetta' | 'conquistata' | 'aperta' | null;
+  /** la precisione di ogni passo (la partita, poi i ripassi con risposte), in ordine */
+  climb: (number | null)[];
+  /** gli errori rimasti nell'ultimo passo finito */
+  toFix: number;
+  /** la partita da cui parte il prossimo ripasso: l'ultimo passo finito */
+  lastUuid: string;
+  /** c'è una partita (o un ripasso) lasciata a metà */
+  suspended: boolean;
+}
+
+export function chainOf(e: HistoryEntry): HistoryChain {
+  const members: HistoryPart[] = [e, ...e.retries.filter((r) => r.correct + r.wrong > 0)];
+  const pct = (m: HistoryPart): number | null => {
+    const n = m.correct + m.wrong;
+    return n ? Math.round((m.correct / n) * 100) : null;
+  };
+  let last: HistoryPart | null = null;
+  for (const m of members) if (m.resume === null && m.correct + m.wrong > 0) last = m;
+  let state: HistoryChain['state'];
+  if (!last) state = null;
+  else if (e.resume === null && e.wrong === 0 && e.correct > 0) state = 'perfetta';
+  else if (last.wrong === 0 && last.game.uuid !== e.game.uuid) state = 'conquistata';
+  else state = 'aperta';
+  return {
+    state,
+    climb: members.map(pct),
+    toFix: last ? last.wrong : 0,
+    lastUuid: last ? last.game.uuid : e.game.uuid,
+    suspended: members.some((m) => m.resume !== null) || e.retries.some((r) => r.resume !== null),
+  };
+}

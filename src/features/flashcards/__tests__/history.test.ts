@@ -2,7 +2,7 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 
 import { GameRepo } from '../game';
-import { filterHistory, historyEntries, summarize, type HistoryFilter } from '../history';
+import { chainOf, filterHistory, historyEntries, summarize, type HistoryFilter } from '../history';
 import { deckBranch } from '../logic';
 import { FlashcardsRepo } from '../repo';
 import { StudyRepo } from '../study';
@@ -136,5 +136,68 @@ describe('history entries and filters', () => {
     const e = historyEntries(s.games);
     expect(filterHistory(e, { ...none, state: 'open' }).map((x) => x.game.uuid)).toEqual([r.game]);
     expect(filterHistory(e, { ...none, state: 'done' })).toHaveLength(3);
+  });
+});
+
+describe('the road to 100% in the history', () => {
+  /** Gioca un ripasso della partita, con `wrongs` errori fra le carte da ripassare. */
+  function review(s: S, game: string, wrongs: number): string {
+    const r = s.games.retry(game);
+    if (r.kind !== 'started') throw new Error('nothing to review');
+    const total = s.games.totalPositions(r.game);
+    for (let pos = 1; pos <= total; pos++) {
+      for (const p of s.games.ensurePosition(r.game, pos)!) {
+        s.games.grade(
+          r.game,
+          pos,
+          (p.card_uuid ?? p.child_uuid)!,
+          !!p.child_uuid,
+          pos <= wrongs ? 'wrong' : 'correct',
+        );
+      }
+    }
+    s.games.conclude(r.game);
+    return r.game;
+  }
+  function deckOf(s: S, n: number): string {
+    const d = s.flashcards.createDeck({ name: 'D' })!;
+    for (let i = 0; i < n; i++) s.flashcards.addCard(d, `q${i}`, `a${i}`);
+    return d;
+  }
+  const chain = (s: S, game: string) => {
+    const e = historyEntries(s.games).find((x) => x.game.uuid === game)!;
+    return chainOf(e);
+  };
+
+  test('no mistakes at the first try: perfect', () => {
+    const s = setup();
+    const g = play(s, deckOf(s, 3), 0, '2026-11-01 10:00:00');
+    expect(chain(s, g)).toMatchObject({
+      state: 'perfetta',
+      climb: [100],
+      toFix: 0,
+      suspended: false,
+    });
+  });
+
+  test('mistakes left: open, with what to fix and where to restart', () => {
+    const s = setup();
+    const g = play(s, deckOf(s, 4), 2, '2026-11-01 10:00:00'); // 50%
+    expect(chain(s, g)).toMatchObject({ state: 'aperta', climb: [50], toFix: 2, lastUuid: g });
+    const r1 = review(s, g, 1); // 2 carte da ripassare, 1 sbagliata
+    const c = chain(s, g);
+    expect(c).toMatchObject({ state: 'aperta', climb: [50, 50], toFix: 1, lastUuid: r1 });
+  });
+
+  test('a review without mistakes wins the game', () => {
+    const s = setup();
+    const g = play(s, deckOf(s, 4), 2, '2026-11-01 10:00:00');
+    const r1 = review(s, g, 0);
+    expect(chain(s, g)).toMatchObject({
+      state: 'conquistata',
+      climb: [50, 100],
+      toFix: 0,
+      lastUuid: r1,
+    });
   });
 });

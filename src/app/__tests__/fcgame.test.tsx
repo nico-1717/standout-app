@@ -252,6 +252,55 @@ describe('result and history', () => {
     expect(screen.queryByTestId(`fch-retry-${r.game}`)).toBeNull();
     expect(games.game(game)).not.toBeNull();
   });
+  /** Gioca tutte le posizioni di una partita: sbagliate le prime `wrongs`, giuste le altre; poi la conclude. */
+  function playAll(games: ReturnType<typeof setup>['games'], game: string, wrongs: number): void {
+    for (let pos = 1; pos <= games.totalPositions(game); pos++) {
+      for (const p of games.ensurePosition(game, pos)!)
+        games.grade(
+          game,
+          pos,
+          (p.card_uuid ?? p.child_uuid)!,
+          !!p.child_uuid,
+          pos <= wrongs ? 'wrong' : 'correct',
+        );
+    }
+    games.conclude(game);
+  }
+  function plain(n: number) {
+    const s = setup();
+    const deck = s.flashcards.createDeck({ name: 'Plain' })!;
+    for (let i = 0; i < n; i++) s.flashcards.addCard(deck, `Q${i}`, `A${i}`);
+    const r = s.games.start({ decks: [deck], status: 'all', order: 'in_order' });
+    if (r.kind !== 'started') throw new Error('empty');
+    return { games: s.games, game: r.game };
+  }
+  test('mistakes left: a label says how many, and "Fix N mistakes" starts a review from the last step', async () => {
+    const { games, game } = plain(4);
+    playAll(games, game, 2);
+    mockPush.mockClear();
+    await render(wrap(<HistoryScreen />));
+    expect(screen.getByTestId(`fch-plate-${game}`)).toHaveTextContent(/2 mistakes to fix/);
+    expect(screen.queryByTestId(`fch-gold-${game}`)).toBeNull();
+    expect(screen.queryByTestId(`fch-fix-${game}`)).toBeNull(); // il tasto sta nel dettaglio
+    await fireEvent.press(screen.getByTestId('fch-density'));
+    expect(screen.getByTestId(`fch-road-${game}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`fch-fix-${game}`));
+    const call = mockPush.mock.calls.at(-1)![0] as { pathname: string; params: { game: string } };
+    expect(call.pathname).toBe('/fc-game');
+    expect(games.game(call.params.game)!.parent_uuid).toBe(game);
+  });
+  test('a game won by reviews is gold: star badge, plate, and no more fix button', async () => {
+    const { games, game } = plain(3);
+    playAll(games, game, 1);
+    const r = games.retry(game) as { kind: 'started'; game: string };
+    playAll(games, r.game, 0);
+    await render(wrap(<HistoryScreen />));
+    expect(screen.getByTestId(`fch-gold-${game}`)).toHaveTextContent('★ 100%');
+    expect(screen.getByTestId(`fch-plate-${game}`)).toHaveTextContent(/Taken to 100% in 1 review/);
+    await fireEvent.press(screen.getByTestId('fch-density'));
+    expect(screen.queryByTestId(`fch-fix-${game}`)).toBeNull();
+    expect(screen.getByTestId(`fch-road-${game}`)).toBeTruthy();
+  });
   test('the dates button opens a from/to range and the list follows it', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);
