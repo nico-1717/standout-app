@@ -423,16 +423,62 @@ export default function HistoryScreen() {
                     </Text>
                   </Pressable>
                   {detailed && e.retries.length > 0 ? (
-                    <Text
-                      testID={`fch-retries-${g.uuid}`}
-                      style={{ color: th.text2, fontSize: 13 }}
-                    >
-                      {t(e.retries.length === 1 ? 'fc.sfc_ripassi_1' : 'fc.sfc_ripassi_n', {
-                        n: e.retries.length,
-                      })}
-                      {' · '}
-                      {e.retries.map((r) => `${Math.round(r.score)}%`).join(' → ')}
-                    </Text>
+                    <View testID={`fch-retries-${g.uuid}`} style={{ gap: 4 }}>
+                      {e.retries.map((r, i) => (
+                        <View
+                          key={r.game.uuid}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                        >
+                          <Pressable
+                            testID={`fch-retry-${r.game.uuid}`}
+                            accessibilityRole="button"
+                            style={{ flex: 1, flexDirection: 'row', gap: 10 }}
+                            onPress={() =>
+                              r.resume !== null
+                                ? router.push({
+                                    pathname: '/fc-game',
+                                    params: { game: r.game.uuid, position: String(r.resume) },
+                                  })
+                                : router.push({
+                                    pathname: '/fc-result',
+                                    params: { game: r.game.uuid },
+                                  })
+                            }
+                          >
+                            <Text style={{ color: th.text, fontSize: 13, fontWeight: '600' }}>
+                              {t('fc.sfc_ripasso_n', { n: i + 1 })}
+                            </Text>
+                            <Text style={{ color: th.text2, fontSize: 13, flex: 1 }}>
+                              {(r.game.game_date ?? '').slice(0, 10)}
+                            </Text>
+                            <Text
+                              style={{
+                                color: r.resume !== null ? th.brand : th.text,
+                                fontSize: 13,
+                                fontWeight: '700',
+                              }}
+                            >
+                              {r.resume !== null
+                                ? t('fc.sfc_in_sospeso')
+                                : `${Math.round(r.score)}%`}
+                            </Text>
+                          </Pressable>
+                          {r.resume !== null ? (
+                            <Pressable
+                              testID={`fch-retry-del-${r.game.uuid}`}
+                              accessibilityRole="button"
+                              accessibilityLabel={t('fc.sfc_elimina_ripasso')}
+                              onPress={() => {
+                                kit?.games.remove(r.game.uuid);
+                                setTick((n) => n + 1);
+                              }}
+                            >
+                              <Text style={{ color: th.red, fontSize: 13 }}>✕</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
                   ) : null}
                   {detailed && open === null && openRetry ? (
                     <Pressable

@@ -226,6 +226,29 @@ describe('result and history', () => {
       params: { game, errors: '1' },
     });
   });
+  test('detailed rows list each review: open it, or delete one left half way', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'wrong');
+    games.ensurePosition(game, 2);
+    games.grade(game, 2, games.plays(game, 2).find((p) => p.card_uuid)!.card_uuid!, false, 'wrong');
+    games.conclude(game);
+    const r = games.retry(game) as { kind: 'started'; game: string };
+    games.ensurePosition(r.game, 1);
+    games.grade(r.game, 1, games.plays(r.game, 1)[0]!.card_uuid!, false, 'correct');
+    await render(wrap(<HistoryScreen />));
+    expect(screen.queryByTestId(`fch-retries-${game}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('fch-density'));
+    await fireEvent.press(screen.getByTestId(`fch-retry-${r.game}`));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/fc-game',
+      params: { game: r.game, position: expect.any(String) },
+    });
+    await fireEvent.press(screen.getByTestId(`fch-retry-del-${r.game}`));
+    expect(games.game(r.game)).toBeNull();
+    expect(screen.queryByTestId(`fch-retry-${r.game}`)).toBeNull();
+    expect(games.game(game)).not.toBeNull();
+  });
   test('the dates button opens a from/to range and the list follows it', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);
