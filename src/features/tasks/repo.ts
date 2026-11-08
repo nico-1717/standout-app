@@ -24,6 +24,8 @@ export interface Task {
   buy_priority: number;
   buy_price_cents: number | null;
   buy_url: string | null;
+  /** il nome del file della foto (lo sceglie il server: sul telefono si cambia dalla coda dei file) */
+  buy_image: string | null;
 }
 
 /** I campi che l'utente può scrivere da un'attività (gli altri li decide il server). */

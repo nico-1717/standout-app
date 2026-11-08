@@ -9,6 +9,8 @@ import { pickImage } from '@/core/media/pickImage';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { CardImage } from '@/features/flashcards/CardImage';
 
+import { PrivateImage } from './PrivateImage';
+
 /**
  * Un campo «immagine» di una riga sincronizzata: si vede quella attuale, si sceglie dalla libreria o si scatta una foto,
  * si toglie. La scelta resta subito sul telefono (già ridotta) e parte verso il sito appena c'è rete: finché non è
@@ -29,7 +31,7 @@ export function ImageField({
   /** il nome del file che la riga ha adesso */
   name: string | null | undefined;
   label: string;
-  folder?: 'card' | 'example' | 'vocab';
+  folder?: 'card' | 'example' | 'vocab' | 'private';
   testID: string;
 }) {
   const th = useTheme();
@@ -88,7 +90,11 @@ export function ImageField({
           style={{ width: '100%', height: 200, borderRadius: 10 }}
         />
       ) : !removed ? (
-        <CardImage testID={`${testID}-remote`} name={name} folder={folder} />
+        folder === 'private' ? (
+          <PrivateImage testID={`${testID}-remote`} uuid={uuid} name={name} />
+        ) : (
+          <CardImage testID={`${testID}-remote`} name={name} folder={folder} />
+        )
       ) : null}
       {pending ? (
         <Text testID={`${testID}-waiting`} style={{ color: th.text3, fontSize: 12 }}>

@@ -60,7 +60,8 @@ import { pendingCount } from '../sync/outbox';
 import { SyncScheduler, type SyncStatusInfo } from '../sync/scheduler';
 import { HttpMediaApi } from '../media/httpMedia';
 import { MediaQueue } from '../media/mediaQueue';
-import { phoneFiles } from '../media/phoneFiles';
+import { phoneFiles, privateFiles } from '../media/phoneFiles';
+import { PrivateImages } from '../media/privateImages';
 import i18n, { pickLanguage } from '../i18n';
 import { getLocales } from 'expo-localization';
 import { DEFAULT_SETTINGS, SettingsStore, type Settings } from '../settings/settings';
@@ -103,6 +104,8 @@ export interface Services {
   fcStats: StatsRepo;
   /** immagini e audio da mandare al sito (o da togliere) */
   media: MediaQueue;
+  /** le immagini private (to buy), scaricate con il token e tenute sul telefono */
+  privateImages: PrivateImages;
   scheduler: SyncScheduler;
 }
 
@@ -249,6 +252,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ),
           phoneFiles,
         );
+        const privateImages = new PrivateImages(
+          BASE_URL,
+          () => auth.getAccessToken(),
+          privateFiles,
+          Constants.expoConfig?.version ?? '0.0.0',
+          Platform.OS,
+        );
         const store = new SettingsStore(opened.db);
         settingsStore.current = store;
         setSettings(store.read());
@@ -394,6 +404,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           games: new GameRepo(opened.db, study),
           fcStats: new StatsRepo(opened.db),
           media,
+          privateImages,
           scheduler,
         });
       } catch (e) {

@@ -2,12 +2,16 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
+import { MediaQueue } from '@/core/media/mediaQueue';
+import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import BuyScreen from '../(tabs)/buy';
+
+jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
 
 let mockStyle: 'standard' | 'paper' = 'standard';
 let mockServices: unknown;
@@ -40,8 +44,21 @@ function setup() {
   tasks.create({ title: 'Phone case', buy_price_cents: 1290 }, { listType: 'buy' });
   const done = tasks.create({ title: 'Bread' }, { listType: 'buy' });
   tasks.update(done, { is_done: true });
-  mockServices = { db, tasks, categories, scheduler: { trigger: jest.fn() } };
-  return { tasks, categories };
+  const media = new MediaQueue(
+    db,
+    { put: async () => ({ name: 'x.jpg' }), remove: async () => undefined },
+    { delete: () => undefined },
+  );
+  const privateImages = { get: jest.fn(() => Promise.resolve(null)) };
+  mockServices = {
+    db,
+    tasks,
+    categories,
+    media,
+    privateImages,
+    scheduler: { trigger: jest.fn() },
+  };
+  return { tasks, categories, db };
 }
 
 const renderIt = () =>
@@ -91,5 +108,20 @@ describe.each(['standard', 'paper'] as const)('To buy screen (%s)', (style) => {
     expect(
       tasks.list('buy').find((t) => t.title === 'headphones')!.buy_category_uuid,
     ).not.toBeNull();
+  });
+
+  test('a photo for an item goes to the upload queue from the details', async () => {
+    const { tasks, db } = setup();
+    (pickImage as jest.Mock).mockResolvedValueOnce({
+      uri: 'file:///docs/milk.jpg',
+      mime: 'image/jpeg',
+    });
+    await renderIt();
+    await fireEvent.press(screen.getAllByLabelText('Details')[0]!);
+    const milk = tasks.list('buy').find((x) => x.title === 'Oat milk')!;
+    await fireEvent.press(screen.getByTestId(`buy-img-${milk.uuid}-library`));
+    expect(db.all('SELECT tbl, row_uuid, slot, op FROM media_queue')).toEqual([
+      { tbl: 'todos', row_uuid: milk.uuid, slot: 'buy_image', op: 'put' },
+    ]);
   });
 });

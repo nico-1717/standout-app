@@ -91,7 +91,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | T5 | Smista la nota a mano (regole di `todo_smart.js`) | locale | To do › Nota › Smista a mano (schermata di conferma) | P2 | fatto per To do e To buy (con data, ora, categoria, prezzo); le voci «evento» e «progetto» diventano attività finché non ci sono Planner e Progetti, poi si aggiungono · da provare sul telefono | |
 | T6 | Smista la nota con l'IA (`todo_nota_ai.php`, crediti) | `ai/*` | To do › Nota › Smista con IA | P3 | solo online | |
 | T7 | To buy: articoli, categorie (colore), priorità, prezzo, link, totale, «Carrello» | `shopping` (pronta) → sync | To buy | P2 | scritto e provato con test, da provare sul telefono | |
-| T8 | To buy con immagine dell'articolo | `shopping/{id}/image` → coda media | To buy | P2 | API pronta | |
+| T8 | To buy con immagine dell'articolo | `shopping/{id}/image` → coda media | To buy | P2 | fatto — nei dettagli dell'articolo si sceglie, si scatta o si toglie la foto (coda file sul telefono); la foto privata si scarica col token e resta sul telefono (nuova rotta `GET /media/todos/{uuid}/buy_image`) | |
 | T9 | Memoria degli acquisti frequenti/storico (`todo_buy_memory`, `buy_forget`) | sync | To buy › suggerimenti | P2 | API pronta | |
 | T10 | Le due vesti del to buy: «Corsie» (standard) e «Scontrino» (paper) | — | To buy (due viste) | P2 | scritto (OK di Nico sull'aspetto il 02/11/2026), da provare sul telefono | |
 | T11 | Microfono nella barra del to buy (una frase = un articolo) | voce locale | To buy › microfono | P4 | da fare | |

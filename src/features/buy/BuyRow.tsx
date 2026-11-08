@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { ImageField } from '../media/ImageField';
 import type { Task } from '../tasks/repo';
 import { alpha, mix, type BuyTheme } from './buyTheme';
 import { priceInput, toCents, type BuyCategory } from './logic';
@@ -277,6 +278,15 @@ export const BuyRow = memo(function BuyRow({
               </Pressable>
             ) : null}
           </View>
+          <ImageField
+            testID={`buy-img-${task.uuid}`}
+            table="todos"
+            uuid={task.uuid}
+            slot="buy_image"
+            name={task.buy_image}
+            folder="private"
+            label={t('todo.tb_aggiungi_foto')}
+          />
           <Pressable
             accessibilityRole="button"
             onPress={() => actions.remove(task)}
