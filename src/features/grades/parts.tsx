@@ -74,6 +74,7 @@ export function TrendChart({
   width: number;
   height?: number;
 }) {
+  const { t } = useTranslation();
   const padL = 26;
   const padR = 10;
   const padT = 8;
@@ -85,7 +86,18 @@ export function TrendChart({
   const Y = (v: number) => padT + (1 - (Math.max(18, Math.min(30, v)) - 18) / 12) * innerH;
   const line = (pts: TrendPoint[]) => pts.map((p) => `${X(p.i)},${Y(p.avg)}`).join(' ');
   return (
-    <Svg width={width} height={height} testID="grades-chart">
+    <Svg
+      width={width}
+      height={height}
+      testID="grades-chart"
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={t('voti.app_grafico_alt', {
+        n: real.length,
+        da: fmt2(real[0]?.avg ?? 0),
+        a: fmt2(real[real.length - 1]?.avg ?? 0),
+      })}
+    >
       {[18, 24, 30].map((v) => (
         <Line
           key={v}

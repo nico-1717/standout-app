@@ -412,6 +412,8 @@ export default function PomodoroHistory() {
             >
               <View style={{ width: 96, height: 96 }}>
                 <Svg
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
                   width={96}
                   height={96}
                   viewBox="0 0 80 80"

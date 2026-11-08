@@ -93,6 +93,16 @@ describe('Grades main screen', () => {
     expect(screen.queryByTestId('grades-lodi')).toBeNull();
   });
 
+  test('the trend chart has a spoken description', async () => {
+    const { grades } = setup();
+    grades.addExam({ name: 'Analysis', cfu: 6, status: 'done', grade: 28 });
+    grades.addExam({ name: 'Physics', cfu: 12, status: 'done', grade: 30 });
+    await render(wrap(<GradesScreen />));
+    const chart = screen.getByTestId('grades-chart');
+    expect(chart.props.accessibilityLabel).toMatch(/2 exams/);
+    expect(chart.props.accessibilityLabel).toMatch(/28\.00/);
+  });
+
   test('lists done exams and opens one on tap', async () => {
     const { grades } = setup();
     const id = grades.addExam({ name: 'Analysis', cfu: 6, status: 'done', grade: 28 });

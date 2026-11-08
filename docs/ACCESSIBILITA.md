@@ -25,4 +25,4 @@ Idea da mostrare a Nico (con immagini) prima di toccare qualcosa: un tema "alto 
 ## Ancora da fare
 - Prova con VoiceOver (iPhone) e TalkBack (Android): ordine di lettura, etichette dei bottoni con solo icona/emoji (le principali sono fatte, resta da sentirle).
 - Dimensione del testo di sistema (Dynamic Type) al 200%: controllare che i layout non si rompano.
-- Giochi e grafici: dare un'alternativa testuale (le barre delle statistiche oggi sono solo visive).
+- Giochi e grafici: il grafico dei voti ora ha una descrizione parlata e la torta del Pomodoro è nascosta (ha già la sua riga di testo). Restano da fare le barre delle statistiche e i giochi.
