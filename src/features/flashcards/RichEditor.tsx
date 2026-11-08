@@ -12,14 +12,24 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
-import { parseDoc, stringifyDoc, trimDoc, TEXT_COLORS, bulletFor, type Doc } from './doc';
+import {
+  parseDoc,
+  stringifyDoc,
+  trimDoc,
+  CODE_LANGS,
+  TEXT_COLORS,
+  bulletFor,
+  type Doc,
+} from './doc';
 import { DocView, markColor } from './DocView';
 import {
+  clearMarks,
   editBlockText,
   indent,
   kindOf,
   marksAt,
   mergeWithPrevious,
+  setCodeLang,
   setColor,
   setKind,
   splitBlock,
@@ -108,6 +118,10 @@ export function RichEditor({
   const color = (c: string | null) => {
     const [a, b] = range();
     update(setColor(doc, cur, a, b, c));
+  };
+  const clear = () => {
+    const [a, b] = range();
+    update(clearMarks(doc, cur, a, b));
   };
   const asKind = (k: BlockKind) => update(setKind(doc, cur, kind === k ? 'p' : k));
 
@@ -199,6 +213,9 @@ export function RichEditor({
             }}
           />
         ))}
+        {btn('clear', 'Tx', false, clear, t('editor.cancella_formato'), {
+          textDecorationLine: 'line-through',
+        })}
         {btn('li', '•', kind === 'li', () => asKind('li'), t('editor.elenco'))}
         {btn('ck', '☐', kind === 'ck', () => asKind('ck'), t('editor.checklist'))}
         {btn('q', '❝', kind === 'q', () => asKind('q'), t('editor.citazione'))}
@@ -210,6 +227,42 @@ export function RichEditor({
         {btn('out', '←', false, () => update(indent(doc, cur, -1)), t('editor.riduci_livello'))}
         {btn('in', '→', false, () => update(indent(doc, cur, 1)), t('editor.sotto_punto'))}
       </ScrollView>
+
+      {kind === 'code' ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
+          contentContainerStyle={{ gap: 6 }}
+        >
+          {['auto', ...Object.keys(CODE_LANGS)].map((l) => {
+            const on = (block && block.t === 'p' ? block.code : undefined) === l;
+            return (
+              <Pressable
+                key={l}
+                testID={`${testID}-lang-${l}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                onPress={() => update(setCodeLang(doc, cur, l))}
+                style={{
+                  paddingVertical: 5,
+                  paddingHorizontal: 11,
+                  borderRadius: 14,
+                  backgroundColor: on ? th.brand : th.surface2,
+                }}
+              >
+                <Text style={{ color: on ? '#fff' : th.text, fontSize: 13, fontWeight: '600' }}>
+                  {l === 'auto'
+                    ? t('editor.codice_auto')
+                    : l === 'other'
+                      ? t('editor.codice_altro')
+                      : (CODE_LANGS[l] ?? l)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
 
       <View style={{ gap: 4 }}>
         {doc.blocks.map((b, i) => {

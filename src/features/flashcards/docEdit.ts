@@ -179,6 +179,23 @@ export function setColor(
   return mapRange(doc, i, start, end, (r) => withMark(r, 'c', color));
 }
 
+/** Toglie ogni etichetta (grassetto, corsivo, sottolineato, evidenziatore, colore) dal pezzo [start, end): «Cancella formattazione». */
+export function clearMarks(doc: Doc, i: number, start: number, end: number): Doc {
+  return mapRange(doc, i, start, end, (r) => {
+    const { m: _unused, ...rest } = r;
+    void _unused;
+    return rest as Run;
+  });
+}
+
+/** Il linguaggio di un blocco di codice ('auto' = lo riconosce chi legge). Un blocco che non è codice resta com'è. */
+export function setCodeLang(doc: Doc, i: number, lang: string): Doc {
+  const b = doc.blocks[i];
+  if (!b || b.t !== 'p' || !b.code) return doc;
+  const next = lang === 'auto' || lang in CODE_LANGS ? lang : 'other';
+  return b.code === next ? doc : setBlock(doc, i, { ...b, code: next });
+}
+
 /** Tutto il blocco con le stesse etichette (per applicare una scelta all'intero blocco quando non c'è selezione). */
 export function blockRange(doc: Doc, i: number): [number, number] {
   return [0, textOf(doc.blocks[i]).length];

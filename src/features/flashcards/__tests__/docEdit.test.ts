@@ -1,10 +1,12 @@
 import { blockText, normDoc, parseDoc, stringifyDoc, type Doc } from '../doc';
 import {
+  clearMarks,
   editBlockText,
   indent,
   kindOf,
   marksAt,
   mergeWithPrevious,
+  setCodeLang,
   setColor,
   setKind,
   splitBlock,
@@ -174,4 +176,31 @@ test('the result still round-trips through the field format', () => {
   const raw = stringifyDoc(d);
   expect(texts(parseDoc(raw))).toEqual(['Hello', ' world']);
   expect(parseDoc(raw).blocks[1]).toMatchObject({ t: 'li' });
+});
+
+describe('clear formatting and code language', () => {
+  test('clearing a range removes every mark in it and nothing else', () => {
+    let d = doc([p({ s: 'one two three' })]);
+    d = toggleMark(d, 0, 0, 13, 'b');
+    d = setColor(d, 0, 4, 7, 'red');
+    d = toggleMark(d, 0, 4, 13, 'h');
+    const cleared = clearMarks(d, 0, 4, 7);
+    expect((cleared.blocks[0] as { runs: unknown[] }).runs).toEqual([
+      { s: 'one ', m: { b: 1 } },
+      { s: 'two' },
+      { s: ' three', m: { b: 1, h: 1 } },
+    ]);
+    // un blocco intero
+    expect((clearMarks(d, 0, 0, 13).blocks[0] as { runs: unknown[] }).runs).toEqual([
+      { s: 'one two three' },
+    ]);
+  });
+  test('the code language changes only in a code block, and an unknown one becomes «other»', () => {
+    const code = setKind(doc([p({ s: 'x = 1' })]), 0, 'code');
+    expect(setCodeLang(code, 0, 'cpp').blocks[0]).toMatchObject({ code: 'cpp' });
+    expect(setCodeLang(code, 0, 'auto').blocks[0]).toMatchObject({ code: 'auto' });
+    expect(setCodeLang(code, 0, 'klingon').blocks[0]).toMatchObject({ code: 'other' });
+    const plain = doc([p({ s: 'x = 1' })]);
+    expect(setCodeLang(plain, 0, 'cpp')).toBe(plain);
+  });
 });

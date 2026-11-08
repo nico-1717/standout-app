@@ -47,6 +47,32 @@ describe('RichEditor', () => {
     });
   });
 
+  test('clear formatting removes the marks of the selection', async () => {
+    const onChange = jest.fn();
+    await render(wrap(<RichEditor value="one two" onChange={onChange} testID="e" />));
+    await fireEvent(screen.getByTestId('e-block-0'), 'focus');
+    await select('e-block-0', 0, 7);
+    await fireEvent.press(screen.getByTestId('e-b'));
+    await fireEvent.press(screen.getByTestId('e-clear'));
+    expect(parseDoc(onChange.mock.calls.at(-1)![0] as string).blocks[0]).toMatchObject({
+      runs: [{ s: 'one two' }],
+    });
+  });
+
+  test('a code block shows the language chips and changes the language', async () => {
+    const onChange = jest.fn();
+    await render(wrap(<RichEditor value="x = 1" onChange={onChange} testID="e" />));
+    await fireEvent(screen.getByTestId('e-block-0'), 'focus');
+    expect(screen.queryByTestId('e-lang-python')).toBeNull();
+    await fireEvent.press(screen.getByTestId('e-code'));
+    expect(screen.getByTestId('e-lang-python').props.accessibilityState.selected).toBe(true);
+    await fireEvent.press(screen.getByTestId('e-lang-sql'));
+    expect(parseDoc(onChange.mock.calls.at(-1)![0] as string).blocks[0]).toMatchObject({
+      code: 'sql',
+    });
+    expect(screen.getByTestId('e-lang-sql').props.accessibilityState.selected).toBe(true);
+  });
+
   test('a new line splits the block; the list button makes it a list; the checkbox toggles', async () => {
     const onChange = jest.fn();
     await render(wrap(<RichEditor value={null} onChange={onChange} testID="e" />));
