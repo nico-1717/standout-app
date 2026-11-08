@@ -160,6 +160,29 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith('/flashcards');
   });
 
+  test('Insert sheet: University picks a deck; Vocabulary goes to the language', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('home-insert'));
+    expect(screen.getByTestId('insert-no-course')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('insert-uni'));
+    await fireEvent.press(screen.getByTestId(`deck-pick-${deck}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-insert', params: { deck } });
+    mockPush.mockClear();
+    const services = mockServices as { languages: LanguagesRepo };
+    const one = services.languages.addCourse('it', 'en-GB') as string;
+    await fireEvent.press(screen.getByTestId('home-insert'));
+    await fireEvent.press(screen.getByTestId('insert-vocab'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/lang-course', params: { id: one } });
+    mockPush.mockClear();
+    const two = services.languages.addCourse('it', 'de') as string;
+    await fireEvent.press(screen.getByTestId('home-insert'));
+    await fireEvent.press(screen.getByTestId('insert-vocab'));
+    await fireEvent.press(screen.getByTestId(`insert-course-${two}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/lang-course', params: { id: two } });
+  });
+
   test('shortcuts open the app pages', async () => {
     setup();
     await renderIt();

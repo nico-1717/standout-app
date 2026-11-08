@@ -25,6 +25,7 @@ import { base110, cfuStats, weighted } from '@/features/grades/logic';
 import { localToday } from '@/features/tasks/groups';
 import { homeCards } from '@/features/flashcards/homeCards';
 import { homeNumbers } from '@/features/flashcards/numbers';
+import { InsertSheet } from '@/features/flashcards/InsertSheet';
 import { DraftsPanel } from '@/features/flashcards/DraftsPanel';
 import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { todoTheme } from '@/features/tasks/todoTheme';
@@ -65,6 +66,7 @@ export default function HomeScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const [inserting, setInserting] = useState(false);
   const insets = useSafeAreaInsets();
   const {
     services,
@@ -213,10 +215,21 @@ export default function HomeScreen() {
           <CardsTracks
             td={td}
             data={homeCards(services, localToday(), i18n.language === 'en' ? 'en' : 'it')}
+            onInsert={() => setInserting(true)}
             go={(route, params) =>
               router.push(params ? { pathname: route, params } : route) as never
             }
           />
+          {inserting && services ? (
+            <InsertSheet
+              decks={services.flashcards.decks().filter((d) => !d.archived)}
+              courses={services.languages.courses()}
+              onClose={() => setInserting(false)}
+              go={(route, params) =>
+                router.push(params ? { pathname: route, params } : route) as never
+              }
+            />
+          ) : null}
           <DraftsPanel repo={services.flashcards} version={version} changed={changed} />
         </WidgetBox>
       );

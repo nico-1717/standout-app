@@ -520,10 +520,12 @@ export function CardsTracks({
   td,
   data,
   go,
+  onInsert,
 }: {
   td: TodoTheme;
   data: HomeCards;
   go: (route: string, params?: Record<string, string>) => void;
+  onInsert: () => void;
 }) {
   const { t } = useTranslation();
   const pct = data.goal ? Math.min(100, Math.round((data.today / data.goal) * 100)) : 0;
@@ -576,6 +578,16 @@ export function CardsTracks({
           vocab.course ? go('/fc-setup', { course: vocab.course.uuid }) : go('/flashcards')
         }
       />
+      <Pressable
+        accessibilityRole="button"
+        testID="home-insert"
+        onPress={onInsert}
+        style={[styles.trackBtn, { alignSelf: 'flex-start', backgroundColor: td.accentSoft }]}
+      >
+        <Text style={{ color: td.accent, fontWeight: '700', fontSize: 13 }}>
+          + {t('sidebar.inserisci')}
+        </Text>
+      </Pressable>
     </View>
   );
 }
