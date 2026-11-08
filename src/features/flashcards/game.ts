@@ -16,6 +16,23 @@ import {
 } from './levels';
 import { stamp } from './study';
 
+/** Una materia (un mazzo) nello storico: i suoi numeri soltanto, senza il ramo. */
+export interface SubjectRow {
+  uuid: string;
+  name: string;
+  parent: string | null;
+  color: string | null;
+  archived: boolean;
+  cards: number;
+  learnt: number;
+  ok: number;
+  ko: number;
+  seconds: number;
+  last: string;
+  /** 0–1: il massimo, fra le partite del periodo, delle posizioni risposte sulle carte del mazzo */
+  completion: number;
+}
+
 /** Oltre questa pausa non si sta più giocando: il tempo non si conta (come sul sito: 5 minuti). */
 export const PAUSE_MAX_SECONDS = 300;
 
@@ -527,6 +544,143 @@ export class GameRepo {
     if (value <= 0) return { value: 0, changed: false, first: false };
     const r = this.study.bumpRecord('combo', value, gameUuid);
     return { value, changed: r.changed && !r.first, first: r.first };
+  }
+
+  /* ---------------- attività e materie (storico) ---------------- */
+
+  /** Carte risposte (giuste o sbagliate) per giorno, fra `from` e `to` (AAAA-MM-GG, vuoti = senza limite). */
+  answersByDay(from = '', to = ''): Map<string, number> {
+    const c = this.gameCond('g');
+    const params: string[] = [...c.params];
+    let sql = `SELECT substr(p.play_date, 1, 10) AS d, COUNT(*) AS n
+         FROM ${this.scope.plays} p JOIN fc_games g ON g.uuid = p.game_uuid
+        WHERE ${c.sql} AND p.user_answer IN ('Correct', 'Wrong') AND p.play_date IS NOT NULL`;
+    if (from) {
+      sql += ' AND substr(p.play_date, 1, 10) >= ?';
+      params.push(from);
+    }
+    if (to) {
+      sql += ' AND substr(p.play_date, 1, 10) <= ?';
+      params.push(to);
+    }
+    sql += ' GROUP BY d ORDER BY d';
+    return new Map(
+      this.db.all<{ d: string; n: number }>(sql, params).map((r) => [r.d, Number(r.n)]),
+    );
+  }
+
+  /**
+   * Le materie (i mazzi) con i loro numeri soltanto, senza il ramo (`pickSubjects` li somma): carte, imparate, giuste e
+   * sbagliate nel periodo, secondi, ultima volta e completamento (il massimo del periodo). Ogni risposta va al mazzo della
+   * sua carta (la sottocarta a quello del padre), non ai mazzi della partita. Il tempo è registrato per partita: si divide
+   * fra i mazzi in proporzione alle risposte date in quella partita.
+   */
+  subjectRows(from = '', to = ''): SubjectRow[] {
+    const rows = new Map<string, SubjectRow>();
+    for (const d of this.db.all<{
+      uuid: string;
+      name: string;
+      parent_uuid: string | null;
+      color: string | null;
+      archived: number;
+    }>(
+      `SELECT uuid, name, parent_uuid, color, archived FROM ${this.scope.decks}${
+        this.isVocab ? ' WHERE course_uuid = ?' : ''
+      } ORDER BY name`,
+      this.isVocab ? [this.scope.course!] : [],
+    )) {
+      rows.set(d.uuid, {
+        uuid: d.uuid,
+        name: d.name,
+        parent: d.parent_uuid,
+        color: d.color,
+        archived: d.archived === 1,
+        cards: 0,
+        learnt: 0,
+        ok: 0,
+        ko: 0,
+        seconds: 0,
+        last: '',
+        completion: 0,
+      });
+    }
+    const learnt = this.study.learnt();
+    for (const c of this.db.all<{ uuid: string; deck: string }>(
+      `SELECT uuid, category_uuid AS deck FROM ${this.scope.cards}`,
+    )) {
+      const r = rows.get(c.deck);
+      if (!r) continue;
+      r.cards += 1;
+      if (learnt.has(c.uuid)) r.learnt += 1;
+    }
+
+    const gc = this.gameCond('g');
+    const join = `FROM ${this.scope.plays} p
+         JOIN fc_games g ON g.uuid = p.game_uuid
+         LEFT JOIN ${this.scope.cards} c ON c.uuid = p.card_uuid
+         LEFT JOIN ${this.scope.subcards} s ON s.uuid = p.child_uuid
+         LEFT JOIN ${this.scope.cards} cp ON cp.uuid = s.parent_uuid
+        WHERE ${gc.sql} AND p.user_answer IN ('Correct', 'Wrong')`;
+    const perGame = new Map<string, Map<string, number>>();
+    const range: string[] = [];
+    const rangeParams: string[] = [];
+    if (from) {
+      range.push('substr(p.play_date, 1, 10) >= ?');
+      rangeParams.push(from);
+    }
+    if (to) {
+      range.push('substr(p.play_date, 1, 10) <= ?');
+      rangeParams.push(to);
+    }
+    for (const r of this.db.all<{
+      game: string;
+      deck: string | null;
+      ok: number;
+      ko: number;
+      pos: number;
+    }>(
+      `SELECT p.game_uuid AS game, COALESCE(c.category_uuid, cp.category_uuid) AS deck,
+              SUM(p.user_answer = 'Correct') AS ok, SUM(p.user_answer = 'Wrong') AS ko,
+              COUNT(DISTINCT p.position) AS pos
+         ${join}${range.length ? ` AND ${range.join(' AND ')}` : ''}
+        GROUP BY p.game_uuid, deck`,
+      [...gc.params, ...rangeParams],
+    )) {
+      const d = r.deck ? rows.get(r.deck) : undefined;
+      if (!d) continue;
+      d.ok += Number(r.ok);
+      d.ko += Number(r.ko);
+      const m = perGame.get(r.game) ?? new Map<string, number>();
+      m.set(d.uuid, Number(r.ok) + Number(r.ko));
+      perGame.set(r.game, m);
+      if (d.cards > 0) d.completion = Math.max(d.completion, Math.min(1, Number(r.pos) / d.cards));
+    }
+
+    for (const r of this.db.all<{ game: string; s: number }>(
+      `SELECT game_uuid AS game, SUM(duration_seconds) AS s FROM fc_game_durations
+        WHERE start_time IS NOT NULL${from ? ' AND substr(start_time, 1, 10) >= ?' : ''}${
+          to ? ' AND substr(start_time, 1, 10) <= ?' : ''
+        } GROUP BY game_uuid`,
+      [...(from ? [from] : []), ...(to ? [to] : [])],
+    )) {
+      const decks = perGame.get(r.game);
+      if (!decks) continue;
+      let total = 0;
+      for (const n of decks.values()) total += n;
+      if (total <= 0) continue;
+      for (const [deck, n] of decks)
+        rows.get(deck)!.seconds += Math.round((Number(r.s) * n) / total);
+    }
+
+    for (const r of this.db.all<{ deck: string | null; last: string }>(
+      `SELECT COALESCE(c.category_uuid, cp.category_uuid) AS deck, MAX(p.play_date) AS last
+         ${join} GROUP BY deck`,
+      gc.params,
+    )) {
+      const d = r.deck ? rows.get(r.deck) : undefined;
+      if (d) d.last = r.last;
+    }
+    return [...rows.values()];
   }
 
   /** Quante carte sono «padroneggiate» adesso (livello la_sai, o facile dalla terza risposta; i titoli non contano). */

@@ -285,6 +285,44 @@ describe('history filters', () => {
   });
 });
 
+describe('history: activity and subjects', () => {
+  test('the activity chart shows today; the Subjects view lists played and untouched subjects', async () => {
+    const { games, game, flashcards } = started();
+    flashcards.createDeck({ name: 'Untouched' });
+    const other = flashcards.createDeck({ name: 'Other' })!;
+    flashcards.addCard(other, 'Qo', 'Ao');
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'correct');
+    await render(wrap(<HistoryScreen />));
+    expect(screen.getByTestId('fch-activity')).toBeTruthy();
+    expect(screen.getByTestId('fch-activity-bar-0')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('fch-view-subjects'));
+    expect(screen.queryByTestId('fch-filters')).toBeNull();
+    // Maths was played; Other has cards but no answers; "Untouched" has no cards, so it is hidden
+    expect(screen.getByTestId('fch-subjects-summary')).toHaveTextContent(/^1 of 2 subjects/);
+    expect(screen.getByText('Maths')).toBeTruthy();
+    expect(screen.getByText('Other')).toBeTruthy();
+    expect(screen.queryByText('Untouched')).toBeNull();
+  });
+
+  test('tapping a played subject goes to its games; Play on an untouched one opens the game setup', async () => {
+    const { games, game, deck, flashcards } = started();
+    const other = flashcards.createDeck({ name: 'Other' })!;
+    flashcards.addCard(other, 'Qo', 'Ao');
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'correct');
+    await render(wrap(<HistoryScreen />));
+    await fireEvent.press(screen.getByTestId('fch-view-subjects'));
+    await fireEvent.press(screen.getByTestId(`fch-subject-play-${other}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-setup', params: { preselect: other } });
+    await fireEvent.press(screen.getByTestId(`fch-subject-main-${deck}`));
+    // back on the games view, filtered by Maths: the game is there
+    expect(screen.getByTestId(`fch-game-${game}`)).toBeTruthy();
+    expect(screen.getByTestId('fch-filters')).toBeTruthy();
+  });
+});
+
 describe('statistics screen', () => {
   test('shows totals, streak, goal and changes the goal', async () => {
     const s = started();
