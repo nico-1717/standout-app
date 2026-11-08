@@ -10,6 +10,7 @@ import type { DoseView } from '@/features/pills/repo';
 import type { Task } from '@/features/tasks/repo';
 import type { Project } from '@/features/projects/logic';
 
+import type { HomeCards, NextDeck, OpenGame } from '@/features/flashcards/homeCards';
 import type { HomeNumbers } from '@/features/flashcards/numbers';
 import { minutesText, toMin, type TodayData } from './today';
 import { isQuote, type Trivia } from './trivia';
@@ -404,6 +405,181 @@ export function GradesWidget({
   );
 }
 
+/** Una riga «Continua / Gioca» del riquadro Flashcard (la `track` del sito). */
+function TrackRow({
+  td,
+  id,
+  icon,
+  color,
+  title,
+  open,
+  idle,
+  playLabel,
+  onTitle,
+  onContinue,
+  onPlay,
+}: {
+  td: TodoTheme;
+  id: string;
+  icon: string;
+  color: string;
+  title: string;
+  open: OpenGame | null;
+  idle: string;
+  /** se c'è, il tasto di destra non è «Gioca» ma questo (es. «Aggiungi una lingua») */
+  playLabel?: string;
+  onTitle: () => void;
+  onContinue: () => void;
+  onPlay: () => void;
+}) {
+  const { t } = useTranslation();
+  const pct = open ? Math.round((open.closed / Math.max(1, open.total)) * 100) : 0;
+  return (
+    <View
+      testID={`home-track-${id}`}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 }}
+    >
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color + '33',
+        }}
+      >
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Pressable accessibilityRole="button" onPress={onTitle} testID={`home-track-${id}-title`}>
+          <Text style={{ color: td.ink, fontWeight: '700' }} numberOfLines={1}>
+            {title}
+          </Text>
+        </Pressable>
+        {open ? (
+          <>
+            <Text style={{ color: td.ink3, fontSize: 12 }} numberOfLines={1}>
+              {open.label ? `${open.label} · ` : ''}
+              {t('home.fc_fatte', { n: open.closed, tot: open.total })}
+            </Text>
+            <View style={{ height: 5, borderRadius: 3, backgroundColor: td.hair }}>
+              <View
+                style={{ width: `${pct}%`, height: 5, borderRadius: 3, backgroundColor: color }}
+              />
+            </View>
+          </>
+        ) : (
+          <Text style={{ color: td.ink3, fontSize: 12 }} numberOfLines={1}>
+            {idle}
+          </Text>
+        )}
+      </View>
+      {open ? (
+        <Pressable
+          accessibilityRole="button"
+          testID={`home-track-${id}-continue`}
+          onPress={onContinue}
+          style={[styles.trackBtn, { backgroundColor: td.accent }]}
+        >
+          <Text style={{ color: td.onAccent, fontWeight: '700', fontSize: 13 }}>
+            {t('home.continua')}
+          </Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        testID={`home-track-${id}-play`}
+        onPress={onPlay}
+        style={[styles.trackBtn, { backgroundColor: open ? td.accentSoft : td.accent }]}
+      >
+        <Text style={{ color: open ? td.accent : td.onAccent, fontWeight: '700', fontSize: 13 }}>
+          {playLabel ?? t('home.gioca')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Il testo sotto il mazzo da giocare: «esame tra 12 g», «mai giocato» o «giocato 3 g fa». */
+function nextSub(t: (k: string, o?: Record<string, unknown>) => string, d: NextDeck): string {
+  const when =
+    d.examDays !== null
+      ? t('home.esame_tra', { n: d.examDays })
+      : d.daysAgo === null
+        ? t('home.mai_giocato')
+        : t('home.giocato_giorni_fa', { n: d.daysAgo });
+  return `${d.name} · ${when}`;
+}
+
+/**
+ * Sopra le bozze del riquadro Flashcard: l'obiettivo di oggi e una riga per lo studio e una per le lingue, con la
+ * partita da riprendere (se c'è) e il tasto per giocarne una nuova.
+ */
+export function CardsTracks({
+  td,
+  data,
+  go,
+}: {
+  td: TodoTheme;
+  data: HomeCards;
+  go: (route: string, params?: Record<string, string>) => void;
+}) {
+  const { t } = useTranslation();
+  const pct = data.goal ? Math.min(100, Math.round((data.today / data.goal) * 100)) : 0;
+  const done = data.today >= data.goal;
+  const { study, vocab } = data;
+  const resume = (g: OpenGame) => go('/fc-game', { game: g.game, position: String(g.position) });
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ color: td.ink3, fontSize: 12 }}>{t('home.carte_oggi')}</Text>
+        <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: td.hair }}>
+          <View
+            testID="home-cards-goal-bar"
+            style={{
+              width: `${pct}%`,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: done ? '#34C759' : td.accent,
+            }}
+          />
+        </View>
+        <Text testID="home-cards-goal" style={{ color: td.ink, fontWeight: '700', fontSize: 12 }}>
+          {data.today}/{data.goal}
+        </Text>
+      </View>
+      <TrackRow
+        td={td}
+        id="study"
+        icon="🎓"
+        color="#AF52DE"
+        title={t('home.fc_studio')}
+        open={study.open}
+        idle={study.next ? nextSub(t, study.next) : t('home.nessun_mazzo')}
+        onTitle={() => go('/flashcards')}
+        onContinue={() => study.open && resume(study.open)}
+        onPlay={() => go('/fc-setup', study.next ? { preselect: study.next.uuid } : undefined)}
+      />
+      <TrackRow
+        td={td}
+        id="vocab"
+        icon={vocab.course?.flag ?? '🌐'}
+        color="#30B0C7"
+        title={t('home.fc_lingue')}
+        open={vocab.open}
+        idle={vocab.course ? vocab.course.name : t('home.nessuna_lingua')}
+        playLabel={vocab.course ? undefined : t('home.aggiungi_lingua')}
+        onTitle={() => go('/flashcards')}
+        onContinue={() => vocab.open && resume(vocab.open)}
+        onPlay={() =>
+          vocab.course ? go('/fc-setup', { course: vocab.course.uuid }) : go('/flashcards')
+        }
+      />
+    </View>
+  );
+}
+
 /** «I tuoi numeri»: l'anello delle carte che sai, serie, precisione, record, carte in tutto e gli ultimi 7 giorni. */
 export function NumbersWidget({
   td,
@@ -546,6 +722,7 @@ const styles = StyleSheet.create({
   boxTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
+  trackBtn: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
   now: { borderRadius: 14, padding: 12, gap: 2 },
   nowLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   nowTitle: { fontSize: 18, fontWeight: '700' },

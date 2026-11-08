@@ -11,6 +11,7 @@ import { DEFAULT_HOME_LAYOUT, type HomeWidget } from '@/features/home/layout';
 import { buildToday } from '@/features/home/today';
 import { pickTrivia } from '@/features/home/trivia';
 import {
+  CardsTracks,
   GradesWidget,
   NumbersWidget,
   ProjectsWidget,
@@ -22,6 +23,7 @@ import {
 } from '@/features/home/widgets';
 import { base110, cfuStats, weighted } from '@/features/grades/logic';
 import { localToday } from '@/features/tasks/groups';
+import { homeCards } from '@/features/flashcards/homeCards';
 import { homeNumbers } from '@/features/flashcards/numbers';
 import { DraftsPanel } from '@/features/flashcards/DraftsPanel';
 import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
@@ -208,6 +210,13 @@ export default function HomeScreen() {
           action={t('home.apri')}
           onAction={() => go('/flashcards')}
         >
+          <CardsTracks
+            td={td}
+            data={homeCards(services, localToday(), i18n.language === 'en' ? 'en' : 'it')}
+            go={(route, params) =>
+              router.push(params ? { pathname: route, params } : route) as never
+            }
+          />
           <DraftsPanel repo={services.flashcards} version={version} changed={changed} />
         </WidgetBox>
       );

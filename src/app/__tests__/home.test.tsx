@@ -145,6 +145,21 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith('/fc-stats');
   });
 
+  test('Flashcard widget: goal, deck to play now, and the Play buttons', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    flashcards.addCard(deck, 'Q', 'A');
+    await renderIt();
+    expect(screen.getByTestId('home-cards-goal')).toHaveTextContent('0/20');
+    expect(screen.getByTestId('home-track-study')).toHaveTextContent(/Chem/);
+    expect(screen.getByTestId('home-track-vocab')).toHaveTextContent(/No language yet/);
+    await fireEvent.press(screen.getByTestId('home-track-study-play'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-setup', params: { preselect: deck } });
+    mockPush.mockClear();
+    await fireEvent.press(screen.getByTestId('home-track-vocab-play'));
+    expect(mockPush).toHaveBeenCalledWith('/flashcards');
+  });
+
   test('shortcuts open the app pages', async () => {
     setup();
     await renderIt();
