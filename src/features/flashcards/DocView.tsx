@@ -1,8 +1,9 @@
 import { memo, useMemo, type ReactNode } from 'react';
-import { Platform, Text, View, type TextStyle } from 'react-native';
+import { Platform, ScrollView, Text, View, type TextStyle } from 'react-native';
 
 import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
 
+import { MathView } from './math/MathView';
 import {
   bulletFor,
   parseDoc,
@@ -37,14 +38,31 @@ function markStyle(th: Theme, m: Marks | undefined): TextStyle {
   };
 }
 
-function Runs({ runs, th }: { runs: Run[]; th: Theme }): ReactNode {
+function Runs({
+  runs,
+  th,
+  size,
+  color,
+}: {
+  runs: Run[];
+  th: Theme;
+  size: number;
+  color: string;
+}): ReactNode {
   return runs.map((r, i) => {
     if ('x' in r && typeof r.x === 'string') {
-      // le formule in linea: per ora il LaTeX com'è, in un carattere a spaziatura fissa
+      // le formule in linea: disegnate, dentro la riga di testo
+      const st = markStyle(th, r.m);
       return (
-        <Text key={i} style={[{ fontFamily: MONO }, markStyle(th, r.m)]}>
-          {r.x}
-        </Text>
+        <View
+          key={i}
+          style={{
+            alignSelf: 'center',
+            ...(st.backgroundColor ? { backgroundColor: st.backgroundColor } : null),
+          }}
+        >
+          <MathView tex={r.x} size={size} color={typeof st.color === 'string' ? st.color : color} />
+        </View>
       );
     }
     const t = r as TextRun;
@@ -109,7 +127,11 @@ export const DocView = memo(function DocView({
                 { fontFamily: MONO, fontSize: size - 2, lineHeight: Math.round((size - 2) * 1.45) },
               ]}
             >
-              {l.t === 'p' && l.runs.length ? <Runs runs={l.runs} th={th} /> : ' '}
+              {l.t === 'p' && l.runs.length ? (
+                <Runs runs={l.runs} th={th} size={size - 2} color={color ?? th.text} />
+              ) : (
+                ' '
+              )}
             </Text>
           ))}
         </View>,
@@ -126,7 +148,18 @@ export const DocView = memo(function DocView({
             marginVertical: 4,
           }}
         >
-          <Text style={[base, { fontFamily: MONO }, markStyle(th, b.m)]}>{b.tex}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <MathView
+              testID={`doc-fx-${i}`}
+              tex={b.tex}
+              size={size + 2}
+              color={
+                typeof markStyle(th, b.m).color === 'string'
+                  ? (markStyle(th, b.m).color as string)
+                  : (color ?? th.text)
+              }
+            />
+          </ScrollView>
         </View>,
       );
       continue;
@@ -147,7 +180,11 @@ export const DocView = memo(function DocView({
             {bullet}
           </Text>
           <Text style={[base, { flex: 1 }, b.ck === 1 ? { color: th.text2 } : null]}>
-            {b.runs.length ? <Runs runs={b.runs} th={th} /> : ' '}
+            {b.runs.length ? (
+              <Runs runs={b.runs} th={th} size={size} color={color ?? th.text} />
+            ) : (
+              ' '
+            )}
           </Text>
         </View>,
       );
@@ -170,7 +207,11 @@ export const DocView = memo(function DocView({
         ]}
       >
         <Text style={[base, b.q ? { color: th.text2, fontStyle: 'italic' } : null]}>
-          {b.runs.length ? <Runs runs={b.runs} th={th} /> : ' '}
+          {b.runs.length ? (
+            <Runs runs={b.runs} th={th} size={size} color={color ?? th.text} />
+          ) : (
+            ' '
+          )}
         </Text>
       </View>,
     );
