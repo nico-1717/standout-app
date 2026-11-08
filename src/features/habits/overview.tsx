@@ -315,7 +315,15 @@ export function LineChart({
   const last = coords[coords.length - 1]!;
   const area = `${d} L${last[0].toFixed(1)} ${h - pad} L${pad} ${h - pad} Z`;
   return (
-    <Svg width="100%" height={140} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+    <Svg
+      width="100%"
+      height={140}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`${Math.round(points[0]! * 100)}% → ${Math.round(points[points.length - 1]! * 100)}%`}
+    >
       <Defs>
         <SvgGradient id="lg" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={color} stopOpacity={0.35} />
@@ -358,7 +366,12 @@ export function HBars(p: {
   return (
     <View style={{ gap: 12 }}>
       {p.rows.map((r, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View
+          key={i}
+          accessible
+          accessibilityLabel={`${r.name}: ${r.value}`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+        >
           <Text
             style={{ color: th.text, fontWeight: '700', fontSize: 14, width: 118 }}
             numberOfLines={1}
@@ -431,7 +444,14 @@ export function Radar({
       )
       .join(' ');
   return (
-    <Svg width="100%" height={262} viewBox="0 0 300 262">
+    <Svg
+      width="100%"
+      height={262}
+      viewBox="0 0 300 262"
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={data.map((d) => `${d.name}: ${Math.round(d.v * 100)}%`).join(', ')}
+    >
       {[0.25, 0.5, 0.75, 1].map((g) => (
         <Polygon
           key={g}

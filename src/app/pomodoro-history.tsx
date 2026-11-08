@@ -463,7 +463,14 @@ export default function PomodoroHistory() {
             <Text style={{ color: th.text2 }}>{t('pomodoro.storico_oggi_vuoto')}</Text>
           )}
           <SectionLabel>{t('pomodoro.storico_panoramica_settimana')}</SectionLabel>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 70 }}>
+          <View
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={ins.week
+              .map((d) => `${t(`planner.gg_${weekdayOf(d.day)}`)}: ${human(d.secs)}`)
+              .join(', ')}
+            style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 70 }}
+          >
             {ins.week.map((d) => (
               <View key={d.day} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
                 <View
@@ -491,7 +498,12 @@ export default function PomodoroHistory() {
             ))}
           </View>
           <SectionLabel>{t('pomodoro.storico_panoramica_mese')}</SectionLabel>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+          <View
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={human(Object.values(ins.month).reduce((n, v) => n + v.secs, 0))}
+            style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}
+          >
             {Array.from({ length: 31 }, (_, i) => {
               const day = `${today.slice(0, 8)}${String(i + 1).padStart(2, '0')}`;
               if (Number(today.slice(5, 7)) !== Number(day.slice(5, 7))) return null;

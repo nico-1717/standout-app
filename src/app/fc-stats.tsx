@@ -50,8 +50,12 @@ function Bars({
 }) {
   const th = useTheme();
   const max = scale ?? Math.max(1, ...values);
+  // un solo elemento per VoiceOver/TalkBack: «etichetta: valore, …» (le colonne da sole non dicono niente)
+  const spoken = values
+    .map((v, i) => `${labels?.[i] || i + 1}: ${Math.round(v * 10) / 10}`)
+    .join(', ');
   return (
-    <View testID={testID}>
+    <View testID={testID} accessible accessibilityRole="image" accessibilityLabel={spoken}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height, gap: 2 }}>
         {values.map((v, i) => (
           <View

@@ -95,6 +95,9 @@ export function Bars(p: { th: HabitsTheme; bars: Bar[]; max?: number; testID?: s
   return (
     <View
       testID={p.testID}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={p.bars.map((b) => `${b.label}: ${Math.round(b.value * 100)}%`).join(', ')}
       style={{
         flexDirection: 'row',
         alignItems: 'flex-end',
@@ -156,6 +159,9 @@ export function Heatmap(p: {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        // 371 quadratini senza testo: il lettore di schermo li salta (i numeri stanno nelle carte qui intorno)
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
         ref={(r) => {
           ref.current = r;
         }}

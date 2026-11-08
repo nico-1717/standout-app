@@ -25,4 +25,4 @@ Idea da mostrare a Nico (con immagini) prima di toccare qualcosa: un tema "alto 
 ## Ancora da fare
 - Prova con VoiceOver (iPhone) e TalkBack (Android): ordine di lettura, etichette dei bottoni con solo icona/emoji (le principali sono fatte, resta da sentirle).
 - Dimensione del testo di sistema (Dynamic Type) al 200%: controllare che i layout non si rompano.
-- Giochi e grafici: il grafico dei voti ora ha una descrizione parlata e la torta del Pomodoro è nascosta (ha già la sua riga di testo). Restano da fare le barre delle statistiche e i giochi.
+- Grafici: il grafico dei voti, le barre delle abitudini e dei mazzi, la linea, il radar, le barre orizzontali, la settimana e il mese del Pomodoro ora si leggono come un solo elemento («etichetta: valore, …»); la mappa a quadratini delle abitudini è nascosta al lettore (i numeri stanno nelle carte intorno); la torta del Pomodoro ha già la sua riga. Restano da fare i giochi (da sentire sul telefono).
