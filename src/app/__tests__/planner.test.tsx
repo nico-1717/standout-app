@@ -146,6 +146,22 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(repo.row(id)).toMatchObject({ title: 'Dentist (new time)', importance: 'high' });
   });
 
+  test('a long press holds an event (the page stops scrolling); letting go without moving changes nothing', async () => {
+    const repo = setup();
+    const id = repo.create({ title: 'Dentist', date: TODAY, start: '15:00', end: '16:00' });
+    await renderIt();
+    const block = screen.getByTestId(`ev-${id}@${TODAY}`);
+    expect(screen.getByTestId('day-scroll').props.scrollEnabled).toBe(true);
+    await fireEvent(block, 'longPress');
+    expect(screen.getByTestId('day-scroll').props.scrollEnabled).toBe(false);
+    await fireEvent(block, 'pressOut');
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(screen.getByTestId('day-scroll').props.scrollEnabled).toBe(true);
+    expect(repo.row(id)).toMatchObject({ start_time: '15:00', end_time: '16:00' });
+  });
+
   test('a task has a box: ticking it marks it done', async () => {
     const repo = setup();
     const id = repo.create({

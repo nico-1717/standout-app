@@ -6,10 +6,11 @@ import { mix } from '@/features/buy/buyTheme';
 
 import { dayOfMonth, monthOf, weekdayOf } from './dates';
 import type { EventView } from './events';
-import { layoutDay, pxPerMinute, type Block, type Zoom } from './layout';
-import { minutesOf } from './model';
+import { dropMinute, layoutDay, pxPerMinute, snapMinutes, type Block, type Zoom } from './layout';
+import { minutesOf, timeOf } from './model';
 import { blockBackground, eventColor, longHex, type PlannerTheme } from './plannerTheme';
 import type { Category, Calendar } from './repo';
+import { useEventDrag } from './useEventDrag';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
 export function useNowMinutes(active: boolean): number | null {
@@ -84,26 +85,43 @@ export function EventBlock(
     ppm: number;
     gutter: number;
     width: number;
+    snap: number;
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
+    onMove?: (ev: EventView, startMin: number) => void;
+    onDragActive?: (active: boolean) => void;
   },
 ) {
   const { pt, block, ppm } = p;
+  const drag = useEventDrag({
+    onDrop: (dy) => {
+      if (dy !== 0) p.onMove?.(block.ev, dropMinute(block.top, block.height, dy, ppm, p.snap));
+    },
+    onActive: (a) => p.onDragActive?.(a),
+  });
+  const dragging = drag.dy !== null;
+  const top = dragging ? dropMinute(block.top, block.height, drag.dy ?? 0, ppm, p.snap) : block.top;
   const ev = block.ev;
   const color = eventColor(pt, ev, catOf(p, ev));
   const cal = calColor(p, ev);
   const colW = p.width / block.cols;
   const height = Math.max(18, block.height * ppm - 1);
-  const tall = height >= 40;
+  const tall = height >= 40 || dragging;
   const showBox = ev.type === 'task' || !!ev.habitUuid;
   return (
     <Pressable
       testID={`ev-${ev.uid}`}
       accessibilityRole="button"
       onPress={() => p.onOpen(ev)}
+      onLongPress={p.onMove ? drag.arm : undefined}
+      onPressOut={p.onMove ? drag.release : undefined}
+      delayLongPress={300}
+      {...drag.panHandlers}
       style={{
         position: 'absolute',
-        top: block.top * ppm,
+        zIndex: dragging ? 20 : 0,
+        opacity: dragging ? 0.92 : 1,
+        top: top * ppm,
         left: p.gutter + colW * block.col,
         width: colW - 3,
         height,
@@ -163,7 +181,7 @@ export function EventBlock(
             fontFamily: pt.sans,
           }}
         >
-          {ev.start}–{ev.end}
+          {dragging ? `${timeOf(top)}–${timeOf(top + block.height)}` : `${ev.start}–${ev.end}`}
         </Text>
       ) : null}
     </Pressable>
@@ -247,6 +265,8 @@ export function DayGrid(
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
     onEmptyTap: (minutes: number) => void;
+    onMove?: (ev: EventView, startMin: number) => void;
+    onDragActive?: (active: boolean) => void;
   },
 ) {
   const { pt } = p;
@@ -309,9 +329,12 @@ export function DayGrid(
           block={b}
           ppm={ppm}
           gutter={gutter}
+          snap={snapMinutes(p.zoom)}
           width={p.width - gutter - 6}
           onOpen={p.onOpen}
           onToggle={p.onToggle}
+          onMove={p.onMove}
+          onDragActive={p.onDragActive}
         />
       ))}
       {p.now !== null ? (

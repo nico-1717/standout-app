@@ -364,6 +364,20 @@ export class PlannerRepo {
     });
   }
 
+  /**
+   * Sposta un evento a un'altra ora dello stesso giorno, tenendo la durata (il trascinamento; `event_move` del sito): la
+   * fine non supera le 23:59. Una ripetizione si sposta solo quella volta. Ritorna se è cambiato qualcosa.
+   */
+  moveTo(view: EventView, startMin: number): boolean {
+    if (view.allDay || view.multiday) return false;
+    const from = minutesOf(view.start);
+    const dur = Math.max(0, minutesOf(view.end) - from);
+    const next = Math.max(0, Math.min(Math.round(startMin), 1439 - dur));
+    if (next === from) return false;
+    this.update(view, { start: timeOf(next), end: timeOf(next + dur) }, 'one');
+    return true;
+  }
+
   /** Spunta o toglie la spunta. Una ripetizione si spunta da sola (nasce un'eccezione), non tutta la serie. */
   toggleDone(view: EventView): void {
     const next = !view.done;

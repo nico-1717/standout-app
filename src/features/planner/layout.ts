@@ -67,3 +67,24 @@ export function layoutDay(events: EventView[]): Block[] {
   if (cluster.length) close();
   return items.map(({ ev, top, height, col, cols }) => ({ ev, top, height, col, cols }));
 }
+
+/** Di quanti minuti scatta un evento trascinato: quanto la griglia (5, 15 o 30 minuti; con gli zoom larghi 30). */
+export function snapMinutes(z: Zoom): number {
+  return z === 'm5' ? 5 : z === 'm15' ? 15 : 30;
+}
+
+/**
+ * Dove cade un evento trascinato: l'inizio di prima più lo spostamento del dito (in pixel), a scatti, tenuto dentro il giorno
+ * (l'evento non esce dalla mezzanotte: come `event_move` del sito, la fine non supera le 23:59).
+ */
+export function dropMinute(
+  startMin: number,
+  durationMin: number,
+  dyPx: number,
+  ppm: number,
+  snap: number,
+): number {
+  const raw = startMin + dyPx / ppm;
+  const snapped = Math.round(raw / snap) * snap;
+  return Math.max(0, Math.min(1439 - durationMin, snapped));
+}

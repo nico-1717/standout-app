@@ -152,6 +152,44 @@ describe('changing a series', () => {
   });
 });
 
+describe('moving an event by dragging', () => {
+  test('keeps the length, stays inside the day and sends only the new times', () => {
+    const { db, repo } = setup();
+    repo.create({ title: 'Call', date: '2026-11-10', start: '09:00', end: '10:30' });
+    db.run('DELETE FROM outbox');
+    const ev = repo.eventsInRange('2026-11-10', '2026-11-10')[0]!;
+    expect(repo.moveTo(ev, 14 * 60)).toBe(true);
+    const moved = repo.eventsInRange('2026-11-10', '2026-11-10')[0]!;
+    expect([moved.start, moved.end]).toEqual(['14:00', '15:30']);
+    const [m] = batch(db);
+    expect(m!.patch).toMatchObject({ start_time: '14:00', end_time: '15:30' });
+
+    // troppo tardi: la fine non supera le 23:59, quindi l'inizio si ferma prima
+    expect(repo.moveTo(moved, 23 * 60 + 45)).toBe(true);
+    const late = repo.eventsInRange('2026-11-10', '2026-11-10')[0]!;
+    expect([late.start, late.end]).toEqual(['22:29', '23:59']);
+    // nessun cambio, nessuna scrittura
+    db.run('DELETE FROM outbox');
+    expect(repo.moveTo(late, 22 * 60 + 29)).toBe(false);
+    expect(batch(db)).toHaveLength(0);
+  });
+  test('one time of a series moves alone; all-day events do not move', () => {
+    const { repo } = setup();
+    repo.create({ title: 'Gym', date: '2026-11-03', repeat: 'weekly' });
+    repo.create({ title: 'Trip', date: '2026-11-10', allDay: true });
+    const second = repo.eventsInRange('2026-11-10', '2026-11-10').find((e) => e.title === 'Gym')!;
+    expect(repo.moveTo(second, 18 * 60)).toBe(true);
+    const days = repo.eventsInRange('2026-11-01', '2026-11-17').filter((e) => e.title === 'Gym');
+    expect(days.map((e) => `${e.date} ${e.start}`)).toEqual([
+      '2026-11-03 09:00',
+      '2026-11-10 18:00',
+      '2026-11-17 09:00',
+    ]);
+    const trip = repo.eventsInRange('2026-11-10', '2026-11-10').find((e) => e.title === 'Trip')!;
+    expect(repo.moveTo(trip, 60)).toBe(false);
+  });
+});
+
 describe('deleting', () => {
   test('one time of a series leaves a cancelled exception; the series stays', () => {
     const { db, repo } = setup();

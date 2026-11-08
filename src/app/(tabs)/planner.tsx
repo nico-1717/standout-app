@@ -137,6 +137,14 @@ export default function PlannerScreen() {
     (ev: EventView) => setSheet({ key: Date.now(), target: { mode: 'edit', view: ev } }),
     [],
   );
+  // un evento tenuto in mano e trascinato: la pagina non scorre finché non lo si lascia
+  const [dragging, setDragging] = useState(false);
+  const moveEvent = useCallback(
+    (ev: EventView, startMin: number) => {
+      if (repo?.moveTo(ev, startMin)) changed();
+    },
+    [repo, changed],
+  );
   const toggle = useCallback(
     (ev: EventView) => {
       repo?.toggleDone(ev);
@@ -419,6 +427,7 @@ export default function PlannerScreen() {
         <ScrollView
           ref={scroller}
           testID="day-scroll"
+          scrollEnabled={!dragging}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           <PrioritiesCard
@@ -525,6 +534,8 @@ export default function PlannerScreen() {
             now={now}
             onOpen={open}
             onToggle={toggle}
+            onMove={moveEvent}
+            onDragActive={setDragging}
             onEmptyTap={(minutes) => {
               const h = String(Math.floor(minutes / 60)).padStart(2, '0');
               const m = String(minutes % 60).padStart(2, '0');
