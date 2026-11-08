@@ -605,6 +605,11 @@ CREATE TABLE fc_goals (
     // un evento messo in agenda da un progetto preferito porta con sé il progetto (come sul sito: project_id)
     sql: `ALTER TABLE planner_events ADD COLUMN project_uuid TEXT;`,
   },
+  {
+    version: 13,
+    // l'attività (to do) collegata a un progetto, come todos.project_id del sito
+    sql: `ALTER TABLE todos ADD COLUMN project_uuid TEXT;`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

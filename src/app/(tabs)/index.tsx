@@ -25,6 +25,7 @@ import {
   sansOf,
   type When,
 } from '@/features/tasks/TodoParts';
+import { TaskProjectSheet } from '@/features/tasks/ProjectSheet';
 import { TodoRow, type RowActions } from '@/features/tasks/TodoRow';
 import { cleanMinutes, humanDay, type UnderstoodPiece } from '@/features/tasks/todoLogic';
 import { todoTheme } from '@/features/tasks/todoTheme';
@@ -60,6 +61,7 @@ export default function TodoScreen() {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [when, setWhen] = useState<WhenTarget>(null);
+  const [projectFor, setProjectFor] = useState<string | null>(null);
 
   const today = localToday();
   const now = localNow();
@@ -82,6 +84,13 @@ export default function TodoScreen() {
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [services, version]);
+
+  const projects = useMemo(
+    () => (services ? services.projects.all() : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [services, version],
+  );
+  const projectOf = useMemo(() => new Map(projects.map((p) => [p.uuid, p])), [projects]);
 
   const byUuid = useMemo(() => new Map(tasks.map((x) => [x.uuid, x])), [tasks]);
 
@@ -209,6 +218,10 @@ export default function TodoScreen() {
     editWhen: (task) => {
       freeze(task);
       setWhen({ kind: 'row', uuid: task.uuid });
+    },
+    editProject: (task) => {
+      freeze(task);
+      setProjectFor(task.uuid);
     },
     remove: confirmDelete,
     open: (uuid) => {
@@ -444,6 +457,9 @@ export default function TodoScreen() {
                       picked={picked.includes(task.uuid)}
                       today={today}
                       locale={locale}
+                      project={
+                        task.project_uuid ? (projectOf.get(task.project_uuid) ?? null) : null
+                      }
                       actions={actions}
                     />
                   ))}
@@ -452,6 +468,22 @@ export default function TodoScreen() {
           )}
         </View>
       </ScrollView>
+
+      <TaskProjectSheet
+        visible={projectFor !== null}
+        projects={projects}
+        value={projectFor ? (byUuid.get(projectFor)?.project_uuid ?? null) : null}
+        onClose={() => {
+          setProjectFor(null);
+          release();
+        }}
+        onPick={(id) => {
+          if (projectFor) services?.tasks.update(projectFor, { project_uuid: id });
+          setProjectFor(null);
+          release();
+          changed();
+        }}
+      />
 
       <WhenModal
         td={td}

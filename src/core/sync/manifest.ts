@@ -74,6 +74,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'list_type',
       'parent_uuid',
       'buy_category_uuid',
+      'project_uuid',
       'buy_priority',
       'buy_price_cents',
       'buy_url',
@@ -430,6 +431,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     children: [
       { table: 'projects', column: 'parent_uuid' },
       { table: 'pomodoro_sessions', column: 'project_uuid', setNull: true },
+      { table: 'todos', column: 'project_uuid', setNull: true },
     ],
   },
   // le sessioni del Pomodoro e del cronometro: date e ore come sul sito, «AAAA-MM-GG HH:MM:SS» ora locale

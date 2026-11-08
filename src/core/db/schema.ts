@@ -18,6 +18,7 @@ export const todos = sqliteTable('todos', {
   listType: text('list_type').notNull().default('todo'),
   parentUuid: text('parent_uuid'),
   buyCategoryUuid: text('buy_category_uuid'),
+  projectUuid: text('project_uuid'),
   buyPriority: integer('buy_priority').notNull().default(3),
   buyPriceCents: integer('buy_price_cents'),
   buyUrl: text('buy_url'),

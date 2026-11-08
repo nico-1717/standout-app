@@ -24,6 +24,8 @@ export interface RowActions {
   setMinutes: (task: Task, minutes: number) => void;
   /** apre la finestrella «data e ora» di questa attività */
   editWhen: (task: Task) => void;
+  /** apre la scelta del progetto di questa attività */
+  editProject: (task: Task) => void;
   remove: (task: Task) => void;
   open: (uuid: string | null) => void;
   pick: (uuid: string) => void;
@@ -100,6 +102,8 @@ export function TodoRow(p: {
   picked: boolean;
   today: string;
   locale: string;
+  /** il progetto collegato (nome e colore), se c'è e lo conosciamo */
+  project?: { name: string; color: string } | null;
   actions: RowActions;
 }) {
   const { td, task, actions } = p;
@@ -197,6 +201,20 @@ export function TodoRow(p: {
             </Text>
           ) : null}
 
+          {!p.open && !p.selecting && p.project ? (
+            <View
+              testID={`project-${task.uuid}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <View
+                style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.project.color }}
+              />
+              <Text style={[{ fontSize: 12.5, color: td.ink2 }, sansOf(td)]} numberOfLines={1}>
+                {p.project.name}
+              </Text>
+            </View>
+          ) : null}
+
           {p.open && !p.selecting && (
             <>
               <ScrollView
@@ -268,6 +286,22 @@ export function TodoRow(p: {
                     />
                   </ToolChip>
                 ) : null}
+                <ToolChip
+                  td={td}
+                  set={!!p.project}
+                  testID={`chip-project-${task.uuid}`}
+                  label={p.project ? p.project.name : t('todo.progetto')}
+                  onPress={() => actions.editProject(task)}
+                >
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: p.project ? p.project.color : td.ink3,
+                    }}
+                  />
+                </ToolChip>
                 {hasTime ? (
                   <View style={[styles.chip, { backgroundColor: td.accentSoft }]}>
                     <TextInput

@@ -19,6 +19,8 @@ export interface Task {
   duration_minutes: number;
   sort_key: string;
   buy_category_uuid: string | null;
+  /** il progetto a cui l'attività è collegata (solo i to do) */
+  project_uuid: string | null;
   buy_priority: number;
   buy_price_cents: number | null;
   buy_url: string | null;
@@ -33,6 +35,7 @@ export type TaskInput = Partial<
     | 'due_time'
     | 'duration_minutes'
     | 'buy_category_uuid'
+    | 'project_uuid'
     | 'buy_priority'
     | 'buy_price_cents'
     | 'buy_url'
@@ -97,6 +100,7 @@ export class TasksRepo {
         list_type: listType,
         parent_uuid: opts.parentUuid ?? null,
         buy_category_uuid: null,
+        project_uuid: null,
         buy_priority: 3,
         buy_price_cents: null,
         buy_url: null,

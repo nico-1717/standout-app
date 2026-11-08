@@ -7,6 +7,7 @@ import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { addDaysIso, localToday } from '@/features/tasks/groups';
+import { ProjectsRepo } from '@/features/projects/repo';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import TodoScreen from '../(tabs)/index';
@@ -43,8 +44,16 @@ function setup() {
   const today = tasks.create({ title: 'Call Anna', due_date: TODAY });
   const later = tasks.create({ title: 'Book the train', due_date: TOMORROW, due_time: '15:00' });
   const idea = tasks.create({ title: 'Read a book' });
-  mockServices = { db, tasks, notes: new QuickNoteStore(db), scheduler: { trigger: jest.fn() } };
-  return { tasks, late, today, later, idea };
+  const projects = new ProjectsRepo(db);
+  const thesis = projects.create({ name: 'Thesis', color: '#aa5500' })!;
+  mockServices = {
+    db,
+    tasks,
+    projects,
+    notes: new QuickNoteStore(db),
+    scheduler: { trigger: jest.fn() },
+  };
+  return { tasks, late, today, later, idea, thesis };
 }
 
 const renderIt = () =>
@@ -85,6 +94,7 @@ describe.each(['standard', 'paper'] as const)('To do screen (%s)', (style) => {
     mockServices = {
       db,
       tasks: new TasksRepo(db),
+      projects: new ProjectsRepo(db),
       notes: new QuickNoteStore(db),
       scheduler: { trigger: jest.fn() },
     };
@@ -135,6 +145,23 @@ describe.each(['standard', 'paper'] as const)('To do screen (%s)', (style) => {
     expect(tasks.get(today)!.due_date).toBe(TOMORROW);
     await fireEvent.press(screen.getByTestId(`quick-senza-${today}`));
     expect(tasks.get(today)).toMatchObject({ due_date: null, due_time: null });
+  });
+
+  test('the project chip links the task to a project, shows it, and "no project" clears it', async () => {
+    const { tasks, today, thesis } = setup();
+    await renderIt();
+    await fireEvent(screen.getByTestId(`title-${today}`), 'focus');
+    await fireEvent.press(screen.getByTestId(`chip-project-${today}`));
+    await fireEvent.press(screen.getByTestId(`project-pick-${thesis}`));
+    expect(tasks.get(today)!.project_uuid).toBe(thesis);
+    // closed row: the project name sits under the task
+    await fireEvent(screen.getByTestId('todo-input'), 'focus');
+    await rerender();
+    expect(within(screen.getByTestId(`project-${today}`)).getByText('Thesis')).toBeTruthy();
+    await fireEvent(screen.getByTestId(`title-${today}`), 'focus');
+    await fireEvent.press(screen.getByTestId(`chip-project-${today}`));
+    await fireEvent.press(screen.getByTestId('project-pick-none'));
+    expect(tasks.get(today)!.project_uuid).toBeNull();
   });
 
   test('a touched row stays where it is until you tap elsewhere', async () => {
