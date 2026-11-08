@@ -47,6 +47,44 @@ describe('RichEditor', () => {
     });
   });
 
+  test('the colour toggle makes the dots colour the highlighter instead of the text', async () => {
+    const onChange = jest.fn();
+    await render(wrap(<RichEditor value="all of it" onChange={onChange} testID="e" />));
+    await fireEvent(screen.getByTestId('e-block-0'), 'focus');
+    await fireEvent.press(screen.getByTestId('e-target'));
+    await fireEvent.press(screen.getByTestId('e-c-green'));
+    expect(parseDoc(onChange.mock.calls.at(-1)![0] as string).blocks[0]).toMatchObject({
+      runs: [{ s: 'all of it', m: { h: 'green' } }],
+    });
+    expect(screen.getByTestId('e-c-green').props.accessibilityState.selected).toBe(true);
+    // lo stesso pallino di nuovo: torna il giallo
+    await fireEvent.press(screen.getByTestId('e-c-green'));
+    expect(parseDoc(onChange.mock.calls.at(-1)![0] as string).blocks[0]).toMatchObject({
+      runs: [{ s: 'all of it', m: { h: 1 } }],
+    });
+  });
+
+  test('on a list line the toggle also reaches the bullet colour', async () => {
+    const onChange = jest.fn();
+    await render(wrap(<RichEditor value="item" onChange={onChange} testID="e" />));
+    await fireEvent(screen.getByTestId('e-block-0'), 'focus');
+    // fuori da un elenco il secondo tocco torna al testo
+    await fireEvent.press(screen.getByTestId('e-target'));
+    await fireEvent.press(screen.getByTestId('e-target'));
+    await fireEvent.press(screen.getByTestId('e-li'));
+    await fireEvent.press(screen.getByTestId('e-target'));
+    await fireEvent.press(screen.getByTestId('e-target'));
+    await fireEvent.press(screen.getByTestId('e-c-purple'));
+    expect(parseDoc(onChange.mock.calls.at(-1)![0] as string).blocks[0]).toMatchObject({
+      t: 'li',
+      c: 'purple',
+    });
+    await fireEvent.press(screen.getByTestId('e-c-purple'));
+    expect(
+      (parseDoc(onChange.mock.calls.at(-1)![0] as string).blocks[0] as { c?: string }).c,
+    ).toBeUndefined();
+  });
+
   test('clear formatting removes the marks of the selection', async () => {
     const onChange = jest.fn();
     await render(wrap(<RichEditor value="one two" onChange={onChange} testID="e" />));

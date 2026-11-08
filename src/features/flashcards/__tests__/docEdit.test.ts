@@ -2,12 +2,14 @@ import { blockText, normDoc, parseDoc, stringifyDoc, type Doc } from '../doc';
 import {
   clearMarks,
   editBlockText,
+  highlightColorAt,
   indent,
   kindOf,
   marksAt,
   mergeWithPrevious,
   setCodeLang,
   setColor,
+  setHighlightColor,
   setKind,
   splitBlock,
   splitRuns,
@@ -202,5 +204,23 @@ describe('clear formatting and code language', () => {
     expect(setCodeLang(code, 0, 'klingon').blocks[0]).toMatchObject({ code: 'other' });
     const plain = doc([p({ s: 'x = 1' })]);
     expect(setCodeLang(plain, 0, 'cpp')).toBe(plain);
+  });
+});
+
+describe('highlighter colour', () => {
+  test('is separate from the text colour; null goes back to the yellow highlighter', () => {
+    let d = doc([p({ s: 'one two three' })]);
+    d = setColor(d, 0, 0, 13, 'blue');
+    d = setHighlightColor(d, 0, 4, 7, 'red');
+    expect((d.blocks[0] as { runs: unknown[] }).runs).toEqual([
+      { s: 'one ', m: { c: 'blue' } },
+      { s: 'two', m: { c: 'blue', h: 'red' } },
+      { s: ' three', m: { c: 'blue' } },
+    ]);
+    expect(highlightColorAt(d, 0, 4, 7)).toBe('red');
+    expect(highlightColorAt(d, 0, 0, 13)).toBeNull(); // pezzi diversi
+    d = setHighlightColor(d, 0, 4, 7, null);
+    expect(highlightColorAt(d, 0, 4, 7)).toBeNull();
+    expect(marksAt(d, 0, 4, 7).h).toBe(true); // resta evidenziato, in giallo
   });
 });

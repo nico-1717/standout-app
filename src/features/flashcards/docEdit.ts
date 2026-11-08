@@ -179,6 +179,40 @@ export function setColor(
   return mapRange(doc, i, start, end, (r) => withMark(r, 'c', color));
 }
 
+/** Il colore del pallino di un punto elenco (`null` = quello del testo). Un blocco che non è un elenco resta com'è. */
+export function setListColor(doc: Doc, i: number, color: string | null): Doc {
+  const b = doc.blocks[i];
+  if (!b || b.t !== 'li') return doc;
+  const { c: _old, ...rest } = b;
+  void _old;
+  return setBlock(doc, i, color ? { ...rest, c: color } : rest);
+}
+
+/**
+ * Il colore dell'evidenziatore sul pezzo [start, end): il nome di un colore della tavolozza, o `null` (= giallo, o niente).
+ * Come il sito, colore del testo ed evidenziatore sono due scelte separate.
+ */
+export function setHighlightColor(
+  doc: Doc,
+  i: number,
+  start: number,
+  end: number,
+  color: string | null,
+): Doc {
+  return mapRange(doc, i, start, end, (r) => withMark(r, 'h', color ?? MARK_VALUE));
+}
+
+/** Il colore dell'evidenziatore se tutto il pezzo [start, end) ne ha uno solo (altrimenti `null`). */
+export function highlightColorAt(doc: Doc, i: number, start: number, end: number): string | null {
+  const b = doc.blocks[i];
+  if (!b || b.t === 'fx') return null;
+  const [, mid] = splitThree(b.runs, start, end);
+  const colors = new Set(
+    mid.filter((r) => runLen(r) > 0).map((r) => (typeof r.m?.h === 'string' ? r.m.h : '')),
+  );
+  return colors.size === 1 ? ([...colors][0] ?? '') || null : null;
+}
+
 /** Toglie ogni etichetta (grassetto, corsivo, sottolineato, evidenziatore, colore) dal pezzo [start, end): «Cancella formattazione». */
 export function clearMarks(doc: Doc, i: number, start: number, end: number): Doc {
   return mapRange(doc, i, start, end, (r) => {

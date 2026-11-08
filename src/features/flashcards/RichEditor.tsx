@@ -25,13 +25,16 @@ import { DocView, markColor } from './DocView';
 import {
   clearMarks,
   editBlockText,
+  highlightColorAt,
   indent,
   kindOf,
   marksAt,
   mergeWithPrevious,
   setCodeLang,
   setColor,
+  setHighlightColor,
   setKind,
+  setListColor,
   splitBlock,
   textOf,
   toggleChecked,
@@ -73,6 +76,8 @@ export function RichEditor({
   const [sel, setSel] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const inputs = useRef<(ComponentRef<typeof TextInput> | null)[]>([]);
   const pending = useRef<{ block: number; at: number } | null>(null);
+  // i pallini colorano il testo o l'evidenziatore (due scelte separate, come sul sito)
+  const [pickTarget, setTarget] = useState<'text' | 'mark' | 'bullet'>('text');
 
   const update = (next: Doc) => {
     setDoc(next);
@@ -110,6 +115,20 @@ export function RichEditor({
     [doc, cur, sel, block],
   );
   const kind = kindOf(block);
+  // il pallino di un elenco si colora solo se il blocco è un elenco
+  const isList = block?.t === 'li';
+  const target = pickTarget === 'bullet' && !isList ? 'text' : pickTarget;
+  const targetLabel =
+    target === 'text'
+      ? t('editor.colora_testo')
+      : target === 'mark'
+        ? t('editor.evidenziatore')
+        : t('editor.elenco');
+  const nextTarget = () => {
+    if (target === 'text') return 'mark' as const;
+    if (target === 'mark') return isList ? ('bullet' as const) : ('text' as const);
+    return 'text' as const;
+  };
 
   const toggle = (k: MarkKey) => {
     const [a, b] = range();
@@ -118,6 +137,15 @@ export function RichEditor({
   const color = (c: string | null) => {
     const [a, b] = range();
     update(setColor(doc, cur, a, b, c));
+  };
+  const highlightNow = (() => {
+    if (!block) return null;
+    const [a, b] = range();
+    return highlightColorAt(doc, cur, a, b);
+  })();
+  const highlightWith = (c: string | null) => {
+    const [a, b] = range();
+    update(setHighlightColor(doc, cur, a, b, c));
   };
   const clear = () => {
     const [a, b] = range();
@@ -193,26 +221,48 @@ export function RichEditor({
           textDecorationLine: 'underline',
         })}
         {btn('h', '▮', marks.h, () => toggle('h'), t('editor.evidenziatore'), { color: '#FFD60A' })}
-        {COLORS.map((c) => (
-          <Pressable
-            key={c}
-            testID={`${testID}-c-${c}`}
-            accessibilityRole="button"
-            accessibilityLabel={t('editor.colora_testo')}
-            accessibilityState={{ selected: marks.c === c }}
-            onPress={() => color(marks.c === c ? null : c)}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: marks.c === c ? 3 : 0,
-              borderColor: th.text,
-              backgroundColor: markColor(th, c),
-            }}
-          />
-        ))}
+        {btn(
+          'target',
+          target === 'text' ? 'A' : target === 'mark' ? '▮' : '•',
+          target !== 'text',
+          () => setTarget(nextTarget()),
+          targetLabel,
+          target === 'mark' ? { color: '#FFD60A' } : undefined,
+        )}
+        {COLORS.map((c) => {
+          const chosen =
+            target === 'text'
+              ? marks.c === c
+              : target === 'mark'
+                ? highlightNow === c
+                : block?.t === 'li' && block.c === c;
+          return (
+            <Pressable
+              key={c}
+              testID={`${testID}-c-${c}`}
+              accessibilityRole="button"
+              accessibilityLabel={targetLabel}
+              accessibilityState={{ selected: chosen }}
+              onPress={() =>
+                target === 'text'
+                  ? color(marks.c === c ? null : c)
+                  : target === 'mark'
+                    ? highlightWith(chosen ? null : c)
+                    : update(setListColor(doc, cur, chosen ? null : c))
+              }
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: chosen ? 3 : 0,
+                borderColor: th.text,
+                backgroundColor: markColor(th, c),
+              }}
+            />
+          );
+        })}
         {btn('clear', 'Tx', false, clear, t('editor.cancella_formato'), {
           textDecorationLine: 'line-through',
         })}
