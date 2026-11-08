@@ -17,8 +17,9 @@ const mockChanged = jest.fn(() => {
 });
 
 let mockParams: Record<string, string> = {};
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), push: mockPush }),
   useLocalSearchParams: () => mockParams,
 }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -74,6 +75,14 @@ describe('Pomodoro history', () => {
     await renderIt();
     expect(screen.getByTestId('ins-pie')).toBeTruthy();
     expect(screen.getByTestId('ins-pie-caption')).toHaveTextContent('Physics and 1 more');
+  });
+
+  test('the import button opens the import page', async () => {
+    setup();
+    mockPush.mockClear();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hist-import'));
+    expect(mockPush).toHaveBeenCalledWith('/pomodoro-import');
   });
 
   test('with nothing today there is no pie', async () => {

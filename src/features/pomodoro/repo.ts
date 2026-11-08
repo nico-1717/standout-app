@@ -473,6 +473,46 @@ export class PomodoroRepo {
     return uuid;
   }
 
+  /**
+   * Sessioni lette da un file di un'altra app (`start` «AAAA-MM-GG HH:MM:SS», durata in secondi). Come «a mano» sono sessioni
+   * chiuse e segnate manuali. Tutte in una transazione. Torna quante ne ha scritte.
+   */
+  addImported(
+    rows: { start: string; dur: number; mode: 0 | 1; projectUuid: string | null }[],
+  ): number {
+    let n = 0;
+    this.db.transaction(() => {
+      for (const r of rows) {
+        const startMs = stampMs(r.start);
+        if (!Number.isFinite(startMs) || !(r.dur > 0)) continue;
+        const uuid = this.newId();
+        const row = {
+          mode: r.mode,
+          start_time: r.start,
+          end_time: stamp(new Date(startMs + r.dur * 1000)),
+          duration_seconds: Math.round(r.dur),
+          planned_duration_min: Math.min(600, Math.max(1, Math.round(r.dur / 60))),
+          status: 'archiviato' as const,
+          project_uuid: r.projectUuid,
+          is_manual: 1,
+        };
+        upsertRow(this.db, 'pomodoro_sessions', {
+          uuid,
+          resume_time: null,
+          updated_at: this.clockIso(),
+          ...row,
+        });
+        enqueue(
+          this.db,
+          { table: 'pomodoro_sessions', uuid, op: 'upsert', isCreate: true, patch: row },
+          this.clockIso(),
+        );
+        n++;
+      }
+    });
+    return n;
+  }
+
   /** Corregge una sessione chiusa (anche quella misurata dal timer): da qui gli orari li ha decisi l'utente. */
   edit(
     uuid: string,

@@ -59,12 +59,14 @@ const pad = (n: number): string => String(n).padStart(2, '0');
  */
 export function excelDateText(serial: number): string {
   const whole = Math.floor(serial);
-  const secs = Math.round((serial - whole) * 86400);
-  const time = `${pad(Math.floor(secs / 3600) % 24)}:${pad(Math.floor(secs / 60) % 60)}`;
-  if (whole <= 0) return time;
+  const secs = Math.round((serial - whole) * 86400) % 86400;
+  const hms = `${pad(Math.floor(secs / 3600))}:${pad(Math.floor(secs / 60) % 60)}:${pad(secs % 60)}`;
+  // solo un'ora: sempre con i secondi, così una durata («00:25:00») non si scambia per minuti e secondi
+  if (whole <= 0) return hms;
   const d = new Date(Date.UTC(1899, 11, 30 + whole));
   const day = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-  return secs === 0 ? day : `${day} ${time}`;
+  if (secs === 0) return day;
+  return `${day} ${secs % 60 === 0 ? hms.slice(0, 5) : hms}`;
 }
 
 /** Apre un file .xlsx e dà tutti i fogli con il loro testo. Le date diventano testo `YYYY-MM-DD` / `HH:MM`. */

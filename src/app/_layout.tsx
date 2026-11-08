@@ -70,6 +70,7 @@ function Shell() {
           <Stack.Screen name="fc-stats" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-insert" options={{ presentation: 'modal' }} />
           <Stack.Screen name="habit-import" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="pomodoro-import" options={{ presentation: 'modal' }} />
           <Stack.Screen name="languages" options={{ presentation: 'modal' }} />
           <Stack.Screen name="lang-course" options={{ presentation: 'modal' }} />
           <Stack.Screen name="lang-deck" options={{ presentation: 'modal' }} />

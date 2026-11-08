@@ -24,7 +24,7 @@ describe('readXlsx', () => {
     ]);
     expect(read.rows[3]).toEqual(['2026-11-01', '07:30', 'Completed', '1', '3', 'ok']);
     // una data e un'ora scritte da Excel come numeri con il loro formato
-    expect(read.rows[4]).toEqual(['2026-11-02', '08:05', 'Completed', '2', '', 'Line "1" & <2>']);
+    expect(read.rows[4]).toEqual(['2026-11-02', '08:05:00', 'Completed', '2', '', 'Line "1" & <2>']);
     // un numero senza formato resta un numero
     expect(read.rows[5]).toEqual(['46325', '', 'Skipped', '1']);
     expect(run.rows[1]).toEqual(['2026-10-31 06:45', '12.5']);
@@ -45,11 +45,11 @@ describe('readXlsx', () => {
         name: 'Read',
         title: 'Basic Information\nHabit Name: Read',
         range: 'Date:2026-11-01~2026-11-01',
-        rows: [['2026-11-01', '07:30', 'Completed', '1', '', 'a & b']],
+        rows: [['2026-11-01', '07:30:00', 'Completed', '1', '', 'a & b']],
       },
     ]);
     const [s] = readXlsx(bytes);
-    expect(s!.rows[3]).toEqual(['2026-11-01', '07:30', 'Completed', '1', '', 'a & b']);
+    expect(s!.rows[3]).toEqual(['2026-11-01', '07:30:00', 'Completed', '1', '', 'a & b']);
   });
 
   test('not a spreadsheet gives an error', () => {
@@ -60,7 +60,7 @@ describe('readXlsx', () => {
 describe('excelDateText', () => {
   test('whole numbers are dates, fractions are times', () => {
     expect(excelDateText(46328)).toBe('2026-11-02');
-    expect(excelDateText(0.5)).toBe('12:00');
+    expect(excelDateText(0.5)).toBe('12:00:00');
     expect(excelDateText(46325.75)).toBe('2026-10-30 18:00');
     expect(excelDateText(1)).toBe('1899-12-31');
   });

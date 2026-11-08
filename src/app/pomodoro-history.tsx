@@ -224,6 +224,14 @@ export default function PomodoroHistory() {
               <Text style={{ color: th.brand, fontSize: 17 }}>{selecting ? '✓' : '☐'}</Text>
             </Pressable>
             <Pressable
+              testID="hist-import"
+              accessibilityRole="button"
+              accessibilityLabel={t('import.importa')}
+              onPress={() => router.push('/pomodoro-import')}
+            >
+              <Text style={{ color: th.brand, fontSize: 17 }}>⇩</Text>
+            </Pressable>
+            <Pressable
               testID="hist-add"
               accessibilityRole="button"
               accessibilityLabel={t('pomodoro.ph_aggiungi_manuale')}
