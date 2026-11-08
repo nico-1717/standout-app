@@ -610,6 +610,65 @@ CREATE TABLE fc_goals (
     // l'attività (to do) collegata a un progetto, come todos.project_id del sito
     sql: `ALTER TABLE todos ADD COLUMN project_uuid TEXT;`,
   },
+  {
+    version: 14,
+    // il piano dei progetti: obiettivi (tempo, tipo, priorità, date), giorni evidenziati, blocchi del giorno, «il tuo tempo», modelli
+    sql: `
+CREATE TABLE plan_goals (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  project_uuid TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  minutes INTEGER NOT NULL DEFAULT 0,
+  locked INTEGER NOT NULL DEFAULT 0,
+  kind TEXT NOT NULL DEFAULT 'plain',
+  priority TEXT NOT NULL DEFAULT 'should',
+  start_date TEXT,
+  deadline TEXT,
+  since TEXT,
+  items INTEGER,
+  unit_minutes INTEGER,
+  updated_at TEXT
+);
+CREATE UNIQUE INDEX idx_plan_goals_project ON plan_goals (project_uuid);
+CREATE TABLE plan_paint (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  project_uuid TEXT NOT NULL,
+  day TEXT NOT NULL
+);
+CREATE UNIQUE INDEX idx_plan_paint_key ON plan_paint (project_uuid, day);
+CREATE INDEX idx_plan_paint_day ON plan_paint (day);
+CREATE TABLE plan_days (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  project_uuid TEXT NOT NULL,
+  day TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'study',
+  minutes INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'auto',
+  updated_at TEXT
+);
+CREATE UNIQUE INDEX idx_plan_days_key ON plan_days (project_uuid, day, kind);
+CREATE INDEX idx_plan_days_day ON plan_days (day);
+CREATE TABLE plan_settings (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  weekday_min INTEGER,
+  weekend_min INTEGER,
+  rest_dow INTEGER NOT NULL DEFAULT 0,
+  buffer_days INTEGER NOT NULL DEFAULT 0,
+  floor_min INTEGER NOT NULL DEFAULT 15,
+  max_subjects INTEGER NOT NULL DEFAULT 3,
+  reviews INTEGER NOT NULL DEFAULT 0,
+  overrides TEXT,
+  updated_at TEXT
+);
+CREATE TABLE plan_templates (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
+);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

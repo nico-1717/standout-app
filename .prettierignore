@@ -7,3 +7,4 @@ package-lock.json
 migrations
 src/core/i18n/lang
 docs
+src/features/plan/__tests__/fixtures

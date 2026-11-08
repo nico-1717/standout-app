@@ -146,6 +146,24 @@ export function studyRecordUuid(userId: number | string, kind: string): string {
 }
 
 /** Le impostazioni di studio o l'obiettivo: una riga per utente, come sul server (sync_uuid_per_utente). */
-export function perUserUuid(table: 'fc_settings' | 'fc_goals', userId: number | string): string {
+export function perUserUuid(
+  table: 'fc_settings' | 'fc_goals' | 'plan_settings',
+  userId: number | string,
+): string {
   return uuid5(`${table}|${userId}`);
+}
+
+/** L'obiettivo di un progetto nel piano: una riga per progetto, come sul server (sync_uuid_piano_obiettivo). */
+export function planGoalUuid(projectUuid: string): string {
+  return uuid5(`plan_goals|${projectUuid}`);
+}
+
+/** Un giorno evidenziato di un progetto, come sul server (sync_uuid_piano_giorno_evid). */
+export function planPaintUuid(projectUuid: string, day: string): string {
+  return uuid5(`plan_paint|${projectUuid}|${day}`);
+}
+
+/** Un blocco del piano (progetto, giorno, studio o ripasso), come sul server (sync_uuid_piano_blocco). */
+export function planDayUuid(projectUuid: string, day: string, kind: 'study' | 'review'): string {
+  return uuid5(`plan_days|${projectUuid}|${day}|${kind}`);
 }

@@ -1,4 +1,11 @@
-import { learntUuid, perUserUuid, studyRecordUuid } from '../uuid5';
+import {
+  learntUuid,
+  perUserUuid,
+  planDayUuid,
+  planGoalUuid,
+  planPaintUuid,
+  studyRecordUuid,
+} from '../uuid5';
 
 // I valori attesi sono quelli calcolati dal server (lib/sync_manifest.php: sync_uuid_imparata, sync_uuid_record, sync_uuid_per_utente).
 describe('uuid calcolati come sul server', () => {
@@ -14,5 +21,12 @@ describe('uuid calcolati come sul server', () => {
   it('impostazioni e obiettivo: una riga per utente', () => {
     expect(perUserUuid('fc_settings', 2)).toBe('711f7935-39a5-5518-abc7-8b3c84ff9fa2');
     expect(perUserUuid('fc_goals', 2)).toBe('9e913116-07c8-5183-b0e5-5066673aa2eb');
+  });
+  it('il piano dei progetti: obiettivo, giorno evidenziato, blocco, il tuo tempo', () => {
+    const p = '11111111-1111-4111-8111-111111111111';
+    expect(planGoalUuid(p)).toBe('cffa9adb-5643-5663-a254-422828f9babe');
+    expect(planPaintUuid(p, '2030-03-03')).toBe('2bb5aef3-43c3-5b7e-8cff-9631310a644b');
+    expect(planDayUuid(p, '2030-03-03', 'study')).toBe('83ad9cbd-cdbc-5318-a9f6-94d02d9efcc5');
+    expect(perUserUuid('plan_settings', 7)).toBe('9f87d4e0-bdd5-54db-ae1d-bce998d0ea07');
   });
 });

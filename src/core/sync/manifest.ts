@@ -23,6 +23,11 @@ export type SyncTable =
   | 'projects'
   | 'pomodoro_sessions'
   | 'pomodoro_custom_durations'
+  | 'plan_goals'
+  | 'plan_paint'
+  | 'plan_days'
+  | 'plan_settings'
+  | 'plan_templates'
   | 'university_exam_groups'
   | 'university_exams'
   | 'university_bonuses'
@@ -432,6 +437,9 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'projects', column: 'parent_uuid' },
       { table: 'pomodoro_sessions', column: 'project_uuid', setNull: true },
       { table: 'todos', column: 'project_uuid', setNull: true },
+      { table: 'plan_goals', column: 'project_uuid' },
+      { table: 'plan_paint', column: 'project_uuid' },
+      { table: 'plan_days', column: 'project_uuid' },
     ],
   },
   // le sessioni del Pomodoro e del cronometro: date e ore come sul sito, «AAAA-MM-GG HH:MM:SS» ora locale
@@ -461,6 +469,67 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     createOnly: ['type', 'minutes'],
     booleans: [],
     columns: ['uuid', 'type', 'minutes', 'updated_at'],
+  },
+  // il piano dei progetti: un obiettivo per progetto (UUIDv5 del progetto), giorni evidenziati, blocchi del giorno, «il tuo tempo», modelli
+  plan_goals: {
+    order: 155,
+    readOnly: ['updated_at'],
+    createOnly: ['project_uuid'],
+    booleans: ['active', 'locked'],
+    columns: [
+      'uuid',
+      'project_uuid',
+      'active',
+      'minutes',
+      'locked',
+      'kind',
+      'priority',
+      'start_date',
+      'deadline',
+      'since',
+      'items',
+      'unit_minutes',
+      'updated_at',
+    ],
+  },
+  plan_paint: {
+    order: 156,
+    readOnly: [],
+    createOnly: ['project_uuid', 'day'],
+    booleans: [],
+    columns: ['uuid', 'project_uuid', 'day'],
+  },
+  plan_days: {
+    order: 157,
+    readOnly: ['updated_at'],
+    createOnly: ['project_uuid', 'day', 'kind'],
+    booleans: [],
+    columns: ['uuid', 'project_uuid', 'day', 'kind', 'minutes', 'source', 'updated_at'],
+  },
+  plan_settings: {
+    order: 158,
+    readOnly: ['updated_at'],
+    createOnly: [],
+    booleans: ['reviews'],
+    columns: [
+      'uuid',
+      'weekday_min',
+      'weekend_min',
+      'rest_dow',
+      'buffer_days',
+      'floor_min',
+      'max_subjects',
+      'reviews',
+      'overrides',
+      'updated_at',
+    ],
+  },
+  plan_templates: {
+    order: 159,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: [],
+    booleans: [],
+    columns: ['uuid', 'name', 'body', 'created_at', 'updated_at'],
   },
   // i voti: gruppi di esami, esami (puntano al gruppo) e bonus di laurea
   university_exam_groups: {
