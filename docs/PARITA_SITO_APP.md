@@ -37,7 +37,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | A16 | Menu dell'avatar: stile, colore, lingua, barre d'uso dell'IA (`partials/notifiche_widget.php`) | `home/ai_usage` (solo online) | Pannello profilo | P2 | da fare | |
 | A17 | Notifiche del widget (richieste di amicizia: sul sito il social è SPENTO) | — | rimandata alla fase social | — | da confermare | |
 | A18 | Barra laterale / menu (`partials/sidebar.php`, `sidebar.html`): scorciatoie «Inserisci» (`fc_corsi_lista.php`) | — | Barra a schede in basso + «Altro»; scorciatoia Inserisci | P2 | da fare | |
-| A19 | Blocco con Face ID / impronta | — (solo locale) | Impostazioni › Sicurezza (NUOVO rispetto al sito, spento di default) | P4 | da fare | |
+| A19 | Blocco con Face ID / impronta | — (solo locale) | Impostazioni › Sicurezza (NUOVO rispetto al sito, spento di default) | P4 | **fatto** (da provare sul telefono: serve Face ID, impronta o codice) | |
 | A20 | Coda «problemi di sincronizzazione» e «conservate entrambe le versioni» | `sync/*` | Impostazioni › Sincronizzazione (NUOVO: serve al protocollo) | P1 | fatto | Pagina «Sincronizzazione»: stato, «Sincronizza ora», modifiche rifiutate con motivo semplice e «Ho capito». «Conservate entrambe le versioni»: il protocollo non le crea (vince il server), quindi non c'è altro da mostrare |
 | A21 | Quota immagini/audio e spazio usato | `sync/quota` (nuova) | Impostazioni › Spazio | P2 | da fare | |
 
@@ -129,7 +129,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | D6 | I numeri del diario (`diario_numeri.php`, `insights`) | vedi D4: è la stessa schermata | Diario › «Il diario in numeri» | P2 | scritto e provato con test, da provare sul telefono | |
 | D7 | Impostazioni (carattere, grandezza, carta) | `diary/settings` (GET/PATCH), cambiano subito anche senza rete | Diario › «Aa» (6 scritture in standard, 5 sulla carta; corpo 14–26). La carta a righe / a puntini / bianca si salva ma sul sito non c'è un selettore | P2 | scritto e provato con test, da provare sul telefono | |
 | D8 | Libri del diario scritti dall'IA (`diary_ai_books`) e rapporti trimestrali (`diary_ai_reports`) | `ai/*`; i risultati si sincronizzano (solo lettura) | Diario › Libri e rapporti | P3 | solo online per generarli | |
-| D9 | Schermata nascosta nel selettore app (con blocco attivo) | — | — | P4 | da fare | |
+| D9 | Schermata nascosta nel selettore app (con blocco attivo) | — | — | P4 | **fatto** (copertura quando l'app esce dal primo piano; da provare sul telefono) | |
 
 ## 7. Progetti, Piano e Pomodoro (`projects/`)
 

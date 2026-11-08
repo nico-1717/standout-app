@@ -48,6 +48,12 @@
         {
           "color": "#208AEF"
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Standout uses Face ID to unlock the app when you turn the app lock on."
+        }
       ]
     ],
     "experiments": {

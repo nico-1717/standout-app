@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import '@/core/i18n';
 import { AppProvider, useApp } from '@/core/app/AppProvider';
+import { AppLock } from '@/core/lock/AppLock';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 
 /** Chi vede quale schermata: fuori → login; dentro ma senza testi accettati → terms; poi le schede. */
@@ -104,9 +105,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AppProvider>
-          <Themed />
-        </AppProvider>
+        <AppLock>
+          <AppProvider>
+            <Themed />
+          </AppProvider>
+        </AppLock>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
