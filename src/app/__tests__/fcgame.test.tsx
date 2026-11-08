@@ -521,6 +521,15 @@ describe('statistics screen', () => {
     expect(screen.getByTestId('fcst-forecast')).toHaveTextContent(/Keep playing/);
     expect(screen.getByTestId('fcst-curve-empty')).toBeTruthy();
     expect(screen.getByTestId('fcst-mastery-tried')).toBeTruthy();
+    // il calendario: il giorno di oggi ha una carta; toccandolo si leggono i numeri
+    const iso = stamp.slice(0, 10);
+    expect(screen.getByTestId('cal-info')).toHaveTextContent(/Tap a day/);
+    await fireEvent.press(screen.getByTestId(`cal-day-${iso}`));
+    expect(screen.getByTestId('cal-info')).toHaveTextContent(/1 cards, 100% accuracy/);
+    await fireEvent.press(screen.getByTestId('cal-prev'));
+    expect(screen.queryByTestId(`cal-day-${iso}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('cal-next'));
+    expect(screen.getByTestId(`cal-day-${iso}`)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fcst-goal-more'));
     expect(study.goal()).toBe(25);
     await fireEvent.press(screen.getByTestId('fcst-period-7'));

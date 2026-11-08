@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
+import { ActivityCalendar } from '@/features/flashcards/ActivityCalendar';
 import { DocView } from '@/features/flashcards/DocView';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
 import {
@@ -539,6 +540,11 @@ export default function FlashcardStatsScreen() {
             </Card>
           </>
         ) : null}
+
+        <SectionLabel>{t('fc.attivita')}</SectionLabel>
+        <Card style={{ padding: 12 }}>
+          <ActivityCalendar daily={act.daily} today={today} />
+        </Card>
 
         <SectionLabel>{t('fc.traguardi')}</SectionLabel>
         <Card style={{ padding: 12, gap: 8 }}>
