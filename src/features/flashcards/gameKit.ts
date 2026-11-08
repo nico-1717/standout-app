@@ -10,6 +10,9 @@ export interface PlayView {
   answer: string | null;
   questionImage: string | null;
   answerImage: string | null;
+  /** i file audio registrati sulla carta (solo studio) */
+  questionAudio: string | null;
+  answerAudio: string | null;
   /** significato e esempi come aiuto (solo lingue) */
   meaning: string | null;
   examples: ExampleView[];
@@ -57,6 +60,8 @@ const none: PlayView = {
   answer: null,
   questionImage: null,
   answerImage: null,
+  questionAudio: null,
+  answerAudio: null,
   meaning: null,
   examples: [],
   word: '',
@@ -75,6 +80,8 @@ export function studyKit(s: Services): GameKit {
       answer: row.answer_desc ?? null,
       questionImage: row.question_image ?? null,
       answerImage: row.answer_image ?? null,
+      questionAudio: row.question_audio ?? null,
+      answerAudio: row.answer_audio ?? null,
     };
   };
   return {
@@ -117,6 +124,8 @@ export function languageKit(s: Services, course: string): GameKit {
       answer: a,
       questionImage: null,
       answerImage: row.image ?? null,
+      questionAudio: null,
+      answerAudio: null,
       meaning: row.meaning?.trim() ? row.meaning : null,
       examples: lang
         .examples(target)

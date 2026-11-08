@@ -351,6 +351,17 @@ describe('card page', () => {
     expect(screen.getByTestId('fcc-a-image')).toBeTruthy();
   });
 
+  test('recorded audio shows a play button on each side that has a file', async () => {
+    const { flashcards, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    db.run('UPDATE fc_study_cards SET question_audio = ? WHERE uuid = ?', ['q1.m4a', c]);
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    expect(screen.getByTestId('fcc-q-audio')).toBeTruthy();
+    expect(screen.queryByTestId('fcc-a-audio')).toBeNull();
+  });
+
   test('clearing a side saves it as empty', async () => {
     const { flashcards } = setup();
     const deck = flashcards.createDeck({ name: 'Chem' })!;

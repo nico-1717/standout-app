@@ -8,6 +8,7 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
+import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import { RichEditor } from '@/features/flashcards/RichEditor';
@@ -57,6 +58,8 @@ export default function CardScreen() {
           a: c.answer_desc,
           qImg: c.question_image,
           aImg: c.answer_image,
+          qAud: c.question_audio,
+          aAud: c.answer_audio,
           media: hasAudio(c),
         },
         deckId: c.category_uuid,
@@ -75,6 +78,8 @@ export default function CardScreen() {
           a: s.answer_desc,
           qImg: s.question_image,
           aImg: s.answer_image,
+          qAud: s.question_audio,
+          aAud: s.answer_audio,
           media: hasAudio(s),
         },
         deckId: parent?.category_uuid ?? null,
@@ -85,7 +90,7 @@ export default function CardScreen() {
     }
     if (params.deck && repo.deck(params.deck)) {
       return {
-        item: { q: null, a: null, qImg: null, aImg: null, media: false },
+        item: { q: null, a: null, qImg: null, aImg: null, qAud: null, aAud: null, media: false },
         deckId: params.deck,
         parentCard: null,
         subs: [],
@@ -96,7 +101,7 @@ export default function CardScreen() {
       const p = repo.card(params.parent);
       if (!p) return null;
       return {
-        item: { q: null, a: null, qImg: null, aImg: null, media: false },
+        item: { q: null, a: null, qImg: null, aImg: null, qAud: null, aAud: null, media: false },
         deckId: p.category_uuid,
         parentCard: p.uuid,
         subs: [],
@@ -178,6 +183,7 @@ export default function CardScreen() {
           <DocView testID={`fcc-${s}-view`} raw={raw(s)} />
         )}
         <CardImage testID={`fcc-${s}-image`} name={s === 'q' ? item.qImg : item.aImg} />
+        <CardAudio testID={`fcc-${s}-audio`} name={s === 'q' ? item.qAud : item.aAud} />
       </Card>
     );
   };

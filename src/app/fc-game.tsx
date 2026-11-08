@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
@@ -22,6 +23,8 @@ interface Item {
   answer: string | null;
   questionImage: string | null;
   answerImage: string | null;
+  questionAudio: string | null;
+  answerAudio: string | null;
   meaning: string | null;
   examples: ExampleView[];
   word: string;
@@ -344,6 +347,7 @@ export default function GameScreen() {
               ) : null}
             </View>
             <CardImage testID="fcg-question-image" name={current.questionImage} />
+            <CardAudio testID="fcg-question-audio" name={current.questionAudio} />
             {kit.vocab ? hintBlock(current) : null}
             {shown ? (
               <View style={{ gap: 12 }}>
@@ -362,6 +366,7 @@ export default function GameScreen() {
                   ) : null}
                 </View>
                 <CardImage testID="fcg-answer-image" name={current.answerImage} />
+                <CardAudio testID="fcg-answer-audio" name={current.answerAudio} />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {verdictBtn('fcg-wrong', t('fc.vg_sbagliato'), th.red, () =>
                     grade(current, 'wrong'),

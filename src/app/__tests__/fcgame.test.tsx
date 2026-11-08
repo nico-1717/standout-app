@@ -152,6 +152,21 @@ describe('playing', () => {
     expect(games.game(game)!.score).toBe(75);
   });
 
+  test('a recorded audio plays from the question; the answer one shows after the reveal', async () => {
+    const { db, c1, game } = started();
+    db.run('UPDATE fc_study_cards SET question_audio = ?, answer_audio = ? WHERE uuid = ?', [
+      'q1.m4a',
+      'a1.m4a',
+      c1,
+    ]);
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(screen.getByTestId('fcg-question-audio')).toBeTruthy();
+    expect(screen.queryByTestId('fcg-answer-audio')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcg-reveal'));
+    expect(screen.getByTestId('fcg-answer-audio')).toBeTruthy();
+  });
+
   test('concluding early asks first, then shows the result', async () => {
     const { games, game } = started();
     mockParams = { game, position: '1' };
