@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { diaryTheme } from '@/features/diary/diaryTheme';
+import type { AiList as AiListData } from '@/features/diary/aiReading';
+import { AiList } from '@/features/diary/AiList';
 import type { Insights } from '@/features/diary/insights';
 import { YearPage } from '@/features/diary/YearPage';
 import { localToday } from '@/features/tasks/groups';
@@ -25,6 +27,19 @@ export default function DiaryYearScreen() {
     null,
   );
   const [retry, setRetry] = useState(0);
+  const [ai, setAi] = useState<AiListData | null>(null);
+
+  // i resoconti e i libri dell'IA: se non si riesce a leggerli, la lista semplicemente non c'è
+  useEffect(() => {
+    let alive = true;
+    account
+      .diaryAi()
+      .then((list) => alive && setAi(list))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [account]);
 
   useEffect(() => {
     let alive = true;
@@ -141,6 +156,15 @@ export default function DiaryYearScreen() {
             onOpenDay={(date) => router.push({ pathname: '/diary', params: { data: date } })}
           />
         )}
+        {ai ? (
+          <AiList
+            d={d}
+            list={ai}
+            onOpen={(kind, id) =>
+              router.push({ pathname: '/diary-read', params: { [kind]: String(id) } })
+            }
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

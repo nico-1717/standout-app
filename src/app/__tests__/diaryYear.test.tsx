@@ -20,7 +20,8 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 // stabile come nell'app: se cambiasse a ogni disegno, la richiesta ripartirebbe all'infinito
-const mockAccount = { diaryInsights: mockInsights };
+const mockAi = jest.fn();
+const mockAccount = { diaryInsights: mockInsights, diaryAi: mockAi };
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
     account: mockAccount,
@@ -86,6 +87,7 @@ describe.each(['standard', 'paper'] as const)('Diary insights screen (%s)', (sty
   beforeEach(() => {
     mockStyle = style;
     mockInsights.mockReset().mockImplementation(async (y: number) => insights(y));
+    mockAi.mockReset().mockResolvedValue({ reports: [], books: [] });
     mockPush.mockClear();
     mockBack.mockClear();
   });
@@ -148,5 +150,40 @@ describe.each(['standard', 'paper'] as const)('Diary insights screen (%s)', (sty
     await act(async () => {});
     await fireEvent.press(screen.getByTestId('year-back'));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  test('reports and books written by the AI are listed and open in the reader', async () => {
+    mockAi.mockResolvedValue({
+      reports: [
+        {
+          id: 4,
+          year: 2026,
+          quarter: 2,
+          from: '2026-04-01',
+          to: '2026-06-30',
+          title: 'A calm spring',
+        },
+      ],
+      books: [{ id: 9, title: '', from: '2026-01-01', to: '2026-06-30', done: false, chapters: 3 }],
+    });
+    await renderIt();
+    await act(async () => {});
+    expect(screen.getByText('A calm spring')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('ai-report-4'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/diary-read', params: { report: '4' } });
+    expect(screen.getByText('My book')).toBeTruthy();
+    expect(screen.getByText(/in progress/)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('ai-book-9'));
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/diary-read', params: { book: '9' } });
+  });
+
+  test('no AI texts yet, or no network for the list: nothing is shown', async () => {
+    await renderIt();
+    await act(async () => {});
+    expect(screen.queryByTestId('ai-list')).toBeNull();
+    mockAi.mockReset().mockRejectedValue(new Error('network'));
+    await renderIt();
+    await act(async () => {});
+    expect(screen.queryByTestId('ai-list')).toBeNull();
   });
 });

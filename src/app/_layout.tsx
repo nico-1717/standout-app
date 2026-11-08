@@ -76,6 +76,7 @@ function Shell() {
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />
+          <Stack.Screen name="diary-read" />
         </Stack.Protected>
       </Stack>
     </>

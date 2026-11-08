@@ -1,3 +1,4 @@
+import type { AiBook, AiList, AiReport } from '@/features/diary/aiReading';
 import type { Insights } from '@/features/diary/insights';
 
 import { ApiError } from '../api/httpApi';
@@ -139,6 +140,27 @@ export class AccountApi {
   /** Il diario in numeri di un anno (lo calcola il server: ha anche i pomodori e le abitudini di tutto l'anno). */
   async diaryInsights(year: number): Promise<Insights> {
     return this.json<Insights>(await this.send('GET', `/api/v1/diary/insights?year=${year}`));
+  }
+
+  /** I resoconti trimestrali e i libri scritti dall'IA (solo l'elenco). Serve rete. */
+  async diaryAi(): Promise<AiList> {
+    return this.json<AiList>(await this.send('GET', '/api/v1/diary/ai'));
+  }
+
+  async diaryReport(id: number): Promise<AiReport> {
+    return (
+      await this.json<{ report: AiReport }>(
+        await this.send('GET', `/api/v1/diary/ai/reports/${Math.trunc(id)}`),
+      )
+    ).report;
+  }
+
+  async diaryBook(id: number): Promise<AiBook> {
+    return (
+      await this.json<{ book: AiBook }>(
+        await this.send('GET', `/api/v1/diary/ai/books/${Math.trunc(id)}`),
+      )
+    ).book;
   }
 
   /** Reinvia l'email di verifica. Ritorna lo stato del server: inviata | gia_verificata | attendi | errore. */
