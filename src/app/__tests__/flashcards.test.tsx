@@ -152,6 +152,73 @@ describe('categories list', () => {
   });
 });
 
+describe('selecting several decks', () => {
+  const pick = async (...ids: string[]) => {
+    await fireEvent.press(screen.getByTestId('fc-select'));
+    for (const id of ids) await fireEvent.press(screen.getByTestId(`fc-row-${id}`));
+  };
+
+  test('moves the picked decks under another one, and not into themselves', async () => {
+    const { flashcards } = setup();
+    const a = flashcards.createDeck({ name: 'A' })!;
+    const b = flashcards.createDeck({ name: 'B' })!;
+    const c = flashcards.createDeck({ name: 'C' })!;
+    await render(wrap(<FlashcardsScreen />));
+    await pick(a, b);
+    expect(screen.getByTestId('fc-sel-count')).toHaveTextContent('2 selected');
+    expect(mockPush).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('fc-sel-move'));
+    await fireEvent.press(screen.getByTestId(`deck-pick-${c}`));
+    expect(flashcards.deck(a)!.parent_uuid).toBe(c);
+    expect(flashcards.deck(b)!.parent_uuid).toBe(c);
+    expect(screen.queryByTestId('fc-sel-count')).toBeNull();
+  });
+
+  test('colours the picked decks, or puts them back to automatic', async () => {
+    const { flashcards } = setup();
+    const a = flashcards.createDeck({ name: 'A' })!;
+    const b = flashcards.createDeck({ name: 'B' })!;
+    await render(wrap(<FlashcardsScreen />));
+    await pick(a, b);
+    await fireEvent.press(screen.getByTestId('fc-sel-color'));
+    await fireEvent.press(screen.getByTestId('fc-sel-color-FF3B30'));
+    expect(flashcards.deck(a)).toMatchObject({ color: '#FF3B30', color_edited: 1 });
+    expect(flashcards.deck(b)).toMatchObject({ color: '#FF3B30', color_edited: 1 });
+    await pick(a);
+    await fireEvent.press(screen.getByTestId('fc-sel-color'));
+    await fireEvent.press(screen.getByTestId('fc-sel-color-auto'));
+    expect(flashcards.deck(a)!.color_edited).toBeFalsy();
+    expect(flashcards.deck(b)!.color_edited).toBeTruthy();
+  });
+
+  test('archives the picked decks', async () => {
+    const { flashcards } = setup();
+    const a = flashcards.createDeck({ name: 'A' })!;
+    const b = flashcards.createDeck({ name: 'B' })!;
+    await render(wrap(<FlashcardsScreen />));
+    await pick(a);
+    await fireEvent.press(screen.getByTestId('fc-sel-archive'));
+    expect(flashcards.deck(a)!.archived).toBeTruthy();
+    expect(flashcards.deck(b)!.archived).toBeFalsy();
+  });
+
+  test('deletes only the empty ones, and a father goes with its empty children', async () => {
+    const { flashcards } = setup();
+    const father = flashcards.createDeck({ name: 'Father' })!;
+    const kid = flashcards.createDeck({ name: 'Kid', parent: father })!;
+    const full = flashcards.createDeck({ name: 'Full' })!;
+    flashcards.addCard(full, 'q', 'a');
+    await render(wrap(<FlashcardsScreen />));
+    await pick(father, kid, full);
+    await fireEvent.press(screen.getByTestId('fc-sel-delete'));
+    await fireEvent.press(screen.getByTestId('fc-sel-delete-confirm'));
+    expect(flashcards.deck(father)).toBeNull();
+    expect(flashcards.deck(kid)).toBeNull();
+    expect(flashcards.deck(full)).not.toBeNull();
+    expect(screen.getByTestId('fc-sel-note')).toHaveTextContent(/Only the empty ones/);
+  });
+});
+
 describe('card text search', () => {
   test('the Card text chip searches inside the cards and opens one', async () => {
     const { flashcards } = setup();

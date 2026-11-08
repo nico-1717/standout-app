@@ -303,6 +303,37 @@ export class FlashcardsRepo {
     return true;
   }
 
+  /** Sposta più mazzi insieme (selezione multipla). Salta la destinazione stessa e chi farebbe un ciclo; ritorna quanti ne ha spostati. */
+  moveDecks(uuids: readonly string[], newParent: string | null): number {
+    let moved = 0;
+    for (const u of uuids) {
+      if (u === newParent) continue;
+      if (this.moveDeck(u, newParent)) moved += 1;
+    }
+    return moved;
+  }
+
+  /**
+   * Toglie i mazzi vuoti della selezione. Un padre scelto insieme ai suoi figli diventa vuoto appena spariscono i figli,
+   * quindi si ripassa finché un giro intero non toglie più niente (come il sito). `left` = quelli rimasti perché non vuoti.
+   */
+  removeEmptyDecks(uuids: readonly string[]): { deleted: number; left: number } {
+    let rest = [...new Set(uuids)];
+    let deleted = 0;
+    let progress = true;
+    while (progress && rest.length) {
+      progress = false;
+      for (const u of [...rest]) {
+        if (this.canDeleteDeck(u) && this.removeDeck(u)) {
+          rest = rest.filter((x) => x !== u);
+          deleted += 1;
+          progress = true;
+        }
+      }
+    }
+    return { deleted, left: rest.length };
+  }
+
   setPinned(uuid: string, pinned: boolean): void {
     this.flag(uuid, 'pinned', pinned);
   }

@@ -7,9 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
+import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { whenShort } from '@/features/flashcards/format';
 import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
 import {
+  DECK_SWATCHES,
   daysToExam,
   deckBranch,
   deckIcon,
@@ -36,6 +38,10 @@ export default function FlashcardsScreen() {
   const [scope, setScope] = useState<DeckScope>('active');
   const [query, setQuery] = useState('');
   const [inCards, setInCards] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulk, setBulk] = useState<null | 'move' | 'color' | 'delete'>(null);
+  const [bulkNote, setBulkNote] = useState('');
   const [draft, setDraft] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [addingUnder, setAddingUnder] = useState<string | null>(null);
@@ -89,6 +95,18 @@ export default function FlashcardsScreen() {
     return true;
   };
   const open = (id: string) => router.push({ pathname: '/fc-deck', params: { id } });
+  const stopSelecting = () => {
+    setSelecting(false);
+    setPicked(new Set());
+    setBulk(null);
+  };
+  const pickDeck = (id: string) => {
+    const next = new Set(picked);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setPicked(next);
+  };
+  const bulkIds = [...picked];
 
   const statsLine = (id: string) => {
     const st = stats.get(id);
@@ -213,8 +231,15 @@ export default function FlashcardsScreen() {
           <Pressable
             testID={`fc-row-${id}`}
             accessibilityRole="button"
-            onPress={() => open(id)}
-            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            onPress={() => (selecting ? pickDeck(id) : open(id))}
+            accessibilityState={selecting ? { checked: picked.has(id) } : undefined}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              backgroundColor: selecting && picked.has(id) ? th.brandSoft : undefined,
+            }}
           >
             <View
               style={{
@@ -230,6 +255,7 @@ export default function FlashcardsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: th.text, fontSize: 16, fontWeight: '600' }} numberOfLines={2}>
+                {selecting ? (picked.has(id) ? '☑ ' : '☐ ') : ''}
                 {d.pinned ? '📌 ' : ''}
                 {d.name}
               </Text>
@@ -266,7 +292,7 @@ export default function FlashcardsScreen() {
               {n === 1 ? t('fc.app_n_carte_1') : t('fc.app_mostra_tutte_carte', { n })}
             </Text>
           </Pressable>
-          {scope === 'active' && !found ? (
+          {scope === 'active' && !found && !selecting ? (
             <Pressable
               testID={`fc-add-${id}`}
               accessibilityRole="button"
@@ -547,6 +573,11 @@ export default function FlashcardsScreen() {
               </Pressable>
             ))}
             <View style={{ flex: 1 }} />
+            <TextButton
+              testID="fc-select"
+              label={selecting ? t('fc.cfc_fine') : t('fc.cfc_seleziona')}
+              onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
+            />
             {withKids.size ? (
               <TextButton
                 testID="fc-collapse"
@@ -555,6 +586,144 @@ export default function FlashcardsScreen() {
               />
             ) : null}
           </View>
+        ) : null}
+
+        {selecting ? (
+          <Card style={{ padding: 14, gap: 10 }}>
+            <Text testID="fc-sel-count" style={{ color: th.text, fontWeight: '700' }}>
+              {picked.size === 1
+                ? t('fc.cfc_selezionata_1')
+                : t('fc.cfc_selezionate', { n: picked.size })}
+            </Text>
+            {bulkNote ? (
+              <Text testID="fc-sel-note" style={{ color: th.text2, fontSize: 13 }}>
+                {bulkNote}
+              </Text>
+            ) : null}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <TextButton
+                testID="fc-sel-move"
+                label={t('fc.cfc_sposta_titolo')}
+                onPress={() => picked.size && setBulk(bulk === 'move' ? null : 'move')}
+              />
+              <TextButton
+                testID="fc-sel-color"
+                label={t('fc.cfc_colore_cartella')}
+                onPress={() => picked.size && setBulk(bulk === 'color' ? null : 'color')}
+              />
+              <TextButton
+                testID="fc-sel-archive"
+                label={scope === 'active' ? t('fc.cfc_archivia') : t('fc.cfc_ripristina')}
+                onPress={() => {
+                  if (!picked.size) return;
+                  for (const u of bulkIds) services.flashcards.setArchived(u, scope === 'active');
+                  stopSelecting();
+                  changed();
+                }}
+              />
+              <TextButton
+                testID="fc-sel-delete"
+                danger
+                label={t('comune.elimina')}
+                onPress={() => picked.size && setBulk(bulk === 'delete' ? null : 'delete')}
+              />
+            </View>
+            {bulk === 'move' ? (
+              <DeckPicker
+                decks={decks}
+                value={null}
+                allowRoot
+                rootLabel={t('fc.cfc_in_cima')}
+                exclude={new Set(picked)}
+                onPick={(target) => {
+                  const n = services.flashcards.moveDecks(bulkIds, target);
+                  setBulkNote(n < bulkIds.length ? t('fc.cfc_non_selezionabile') : '');
+                  stopSelecting();
+                  changed();
+                }}
+              />
+            ) : null}
+            {bulk === 'color' ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <Pressable
+                  testID="fc-sel-color-auto"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    for (const u of bulkIds) services.flashcards.updateDeck(u, { color: null });
+                    stopSelecting();
+                    changed();
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    height: 32,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: th.hairline2,
+                  }}
+                >
+                  <Text style={{ color: th.text, fontSize: 13 }}>{t('comune.automatico')}</Text>
+                </Pressable>
+                {DECK_SWATCHES.map((c) => (
+                  <Pressable
+                    key={c}
+                    testID={`fc-sel-color-${c.slice(1)}`}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      for (const u of bulkIds) services.flashcards.updateDeck(u, { color: c });
+                      stopSelecting();
+                      changed();
+                    }}
+                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: c }}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {bulk === 'delete' ? (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: th.text }}>
+                  {t('comune.elimina')}{' '}
+                  {picked.size === 1
+                    ? t('fc.cfc_elimina_sel_1')
+                    : t('fc.cfc_elimina_sel_n', { n: picked.size })}
+                  ?
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <TextButton
+                      testID="fc-sel-delete-cancel"
+                      label={t('comune.annulla')}
+                      onPress={() => setBulk(null)}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      testID="fc-sel-delete-confirm"
+                      danger
+                      label={t('comune.elimina')}
+                      onPress={() => {
+                        const r = services.flashcards.removeEmptyDecks(bulkIds);
+                        setBulkNote(
+                          r.left === 0
+                            ? ''
+                            : r.deleted > 0
+                              ? t('fc.cfc_eliminate_parziale')
+                              : t('fc.cfc_eliminate_nessuna'),
+                        );
+                        stopSelecting();
+                        changed();
+                      }}
+                    />
+                  </View>
+                </View>
+              </View>
+            ) : null}
+          </Card>
+        ) : bulkNote ? (
+          <Text testID="fc-sel-note" style={{ color: th.text2, fontSize: 13 }}>
+            {bulkNote}
+          </Text>
         ) : null}
 
         {found && inCards ? (
