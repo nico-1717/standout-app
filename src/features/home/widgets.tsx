@@ -67,6 +67,8 @@ export interface Shortcut {
   href: string;
   route: string;
   label: string;
+  /** il colore del pallino (quello della scorciatoia sul sito) */
+  color?: string;
 }
 
 export function Shortcuts({
@@ -88,6 +90,12 @@ export function Shortcuts({
           onPress={() => onGo(s)}
           style={[styles.pill, { backgroundColor: td.card, borderColor: td.hair }]}
         >
+          {s.color ? (
+            <View
+              testID={`home-dot-${s.route.replace(/[^a-z]/gi, '')}`}
+              style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color }}
+            />
+          ) : null}
           <Text style={{ color: td.ink, fontWeight: '600' }}>{s.label}</Text>
         </Pressable>
       ))}
@@ -733,7 +741,15 @@ const styles = StyleSheet.create({
   boxHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   boxTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
+  pill: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
   trackBtn: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
   now: { borderRadius: 14, padding: 12, gap: 2 },
   nowLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },

@@ -192,6 +192,13 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith('/pomodoro');
   });
 
+  test('the Voti shortcut wears the colour chosen in the grades settings, or gold if none', async () => {
+    setup();
+    await renderIt();
+    expect(screen.getByTestId('home-dot-grades').props.style.backgroundColor).toBe('#E8A600');
+    expect(screen.getByTestId('home-dot-projects').props.style.backgroundColor).toBe('#5E5CE6');
+  });
+
   test('today shows what is on now, a due task can be ticked off, a late pill can be taken', async () => {
     const { planner, tasks, pills, today } = setup();
     const n = new Date();

@@ -164,7 +164,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | V3 | Bonus e tetti | sync `university_bonuses` | Voti › Bonus | P3 | fatto — 5 tipi, tetto, soglia, interruttore | |
 | V4 | Media, voto di laurea e previsioni | logica in TS | Voti | P3 | fatto — **test d'oro** su 150 casi del codice vero del sito; media, /110, lodi, stima, obiettivo, andamento | |
 | V5 | Catalogo degli esami (`exams_catalog.json`, `catalog_code`) | file nell'app | Voti › Aggiungi | P3 | fatto — 43 corsi / 11 facoltà, carica «sostituisci / aggiungi» | |
-| V6 | Impostazioni (`university_settings`) e «oro dei Voti» (`lib/colore_voti.php`) | sync | Voti › Impostazioni | P3 | fatto — corso, colore facoltà, CFU, base, lode, tesi, arrotondamento (sync REST). la pagina Voti usa il colore scelto (se mai scelto, segue l'app); da fare solo il colore «oro» del tasto Voti nella Home (ritocco) | |
+| V6 | Impostazioni (`university_settings`) e «oro dei Voti» (`lib/colore_voti.php`) | sync | Voti › Impostazioni | P3 | fatto — corso, colore facoltà, CFU, base, lode, tesi, arrotondamento (sync REST). la pagina Voti usa il colore scelto (se mai scelto, segue l'app); il tasto Voti nella Home ha il colore scelto (o l'oro di partenza `#E8A600`) e gli altri tasti il pallino col colore del sito | |
 
 ## 9. Flashcard (`fc/`, `lib/fc/`) — studio (`fc_study_*`) e lingue (`fc_vocab_*`)
 

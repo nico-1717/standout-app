@@ -31,14 +31,24 @@ import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { todoTheme } from '@/features/tasks/todoTheme';
 
 /** I tasti rapidi che esistono già nell'app: href del sito → schermata e nome. Gli altri (carte, voti) arrivano con le loro pagine. */
-const SHORTCUTS: { href: string; route: string; key: string }[] = [
-  { href: 'planner/planner.php', route: '/(tabs)/planner', key: 'sidebar.planner' },
-  { href: 'planner/todo.php', route: '/(tabs)', key: 'sidebar.todo' },
-  { href: 'projects/progetti.php', route: '/projects', key: 'sidebar.progetti' },
-  { href: 'projects/pomodoro.php', route: '/pomodoro', key: 'sidebar.pomodoro' },
-  { href: 'planner/habits.php', route: '/(tabs)/habits', key: 'sidebar.abitudini' },
-  { href: 'planner/diario.php', route: '/diary', key: 'sidebar.diario' },
-  { href: 'exams/voti.php', route: '/grades', key: 'sidebar.voti' },
+const SHORTCUTS: { href: string; route: string; key: string; color: string }[] = [
+  {
+    href: 'planner/planner.php',
+    route: '/(tabs)/planner',
+    key: 'sidebar.planner',
+    color: '#FF453A',
+  },
+  { href: 'planner/todo.php', route: '/(tabs)', key: 'sidebar.todo', color: '#30D158' },
+  { href: 'projects/progetti.php', route: '/projects', key: 'sidebar.progetti', color: '#5E5CE6' },
+  { href: 'projects/pomodoro.php', route: '/pomodoro', key: 'sidebar.pomodoro', color: '#FF6B3D' },
+  {
+    href: 'planner/habits.php',
+    route: '/(tabs)/habits',
+    key: 'sidebar.abitudini',
+    color: '#FF375F',
+  },
+  { href: 'planner/diario.php', route: '/diary', key: 'sidebar.diario', color: '#AC8E68' },
+  { href: 'exams/voti.php', route: '/grades', key: 'sidebar.voti', color: '#E8A600' },
 ];
 
 const WIDGET_TITLE: Record<HomeWidget['id'], string> = {
@@ -112,7 +122,10 @@ export default function HomeScreen() {
       const s = known.get(h);
       if (!s || seen.has(h)) continue;
       seen.add(h);
-      out.push({ href: h, route: s.route, label: t(s.key) });
+      // «Voti» ha il colore scelto nella pagina Voti; se non ne è stato scelto uno resta l'oro di partenza (come il sito)
+      const chosen = gradeSettings?.accent_color?.toUpperCase();
+      const color = h === 'exams/voti.php' && chosen && chosen !== '#0A84FF' ? chosen : s.color;
+      out.push({ href: h, route: s.route, label: t(s.key), color });
     }
     return out;
   }
