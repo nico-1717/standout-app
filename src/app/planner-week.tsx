@@ -13,9 +13,10 @@ import type { DoseView } from '@/features/pills/repo';
 import { localToday } from '@/features/tasks/groups';
 import type { Task } from '@/features/tasks/repo';
 import { diaryFakeText } from '@/features/planner/weekPanel';
+import { studyToday, type StudyBlock } from '@/features/plan/studyToday';
 
-type Tab = 'todo' | 'buy' | 'pills';
-const TABS: Tab[] = ['todo', 'buy', 'pills'];
+type Tab = 'todo' | 'buy' | 'study' | 'pills';
+const TABS: Tab[] = ['todo', 'buy', 'study', 'pills'];
 
 /** La settimana: il numero, gli elenchi di questa settimana (to do, to buy, pastiglie) e il diario del giorno, coperto. */
 export default function PlannerWeek() {
@@ -47,6 +48,7 @@ export default function PlannerWeek() {
       todo: services.tasks.list('todo'),
       buy: services.tasks.list('buy'),
       pills: services.pills.day(focus),
+      study: studyToday(services.db, focus),
       diary: services.diary.day(focus),
     };
   }, [services, version, monday, focus, plannerSettings]);
@@ -64,7 +66,7 @@ export default function PlannerWeek() {
     changed();
   };
 
-  const list = tab === 'pills' ? [] : data[tab];
+  const list = tab === 'pills' || tab === 'study' ? [] : data[tab];
   const roots = list as Task[];
   const inside = roots
     .filter((x) => x.due_date && x.due_date >= monday && x.due_date <= sunday)
@@ -136,7 +138,7 @@ export default function PlannerWeek() {
 
   const addTask = () => {
     const title = draft.trim();
-    if (!title || tab === 'pills') return;
+    if (!title || tab === 'pills' || tab === 'study') return;
     services.tasks.create({ title, due_date: focus }, { listType: tab });
     setDraft('');
     changed();
@@ -300,7 +302,9 @@ export default function PlannerWeek() {
                     ? 'planner.to_do'
                     : k === 'buy'
                       ? 'planner.to_buy'
-                      : 'planner.pastiglie',
+                      : k === 'study'
+                        ? 'planner.to_study'
+                        : 'planner.pastiglie',
                 )}
               </Text>
             </Pressable>
@@ -316,7 +320,20 @@ export default function PlannerWeek() {
             padding: 14,
           }}
         >
-          {tab === 'pills' ? (
+          {tab === 'study' ? (
+            <StudyCard
+              pt={pt}
+              blocks={data.study}
+              empty={t('planner.study_niente_oggi')}
+              untitled={t('planner.senza_titolo_l')}
+              openLabel={t('planner.apri_2')}
+              onOpen={() => router.push('/projects')}
+              onDone={(uuid) => {
+                services.projects.setStatus(uuid, 'completed');
+                changed();
+              }}
+            />
+          ) : tab === 'pills' ? (
             <PillsCard
               pt={pt}
               title={t('planner.prese_di', {
@@ -549,6 +566,101 @@ function PillsCard(p: {
           {p.future}
         </Text>
       ) : null}
+    </View>
+  );
+}
+
+/** «To study» di un giorno: i blocchi di studio che lo coprono e sotto ciascuno gli argomenti da fare (con pomodori fatti/stimati). */
+function StudyCard(p: {
+  pt: PlannerTheme;
+  blocks: StudyBlock[];
+  empty: string;
+  untitled: string;
+  openLabel: string;
+  onOpen: () => void;
+  onDone: (topicUuid: string) => void;
+}) {
+  const { pt } = p;
+  return (
+    <View testID="wk-study">
+      <Pressable
+        testID="wk-study-open"
+        accessibilityRole="link"
+        onPress={p.onOpen}
+        style={{ alignSelf: 'flex-end', paddingBottom: 4 }}
+      >
+        <Text style={{ color: pt.accentInk, fontSize: 13, fontFamily: pt.sans }}>
+          {p.openLabel} ›
+        </Text>
+      </Pressable>
+      {p.blocks.length === 0 ? (
+        <Text style={{ color: pt.ink3, fontSize: 13, fontFamily: pt.sans }}>{p.empty}</Text>
+      ) : (
+        p.blocks.map((b) => (
+          <View key={b.uuid} testID={`wk-study-block-${b.uuid}`} style={{ marginBottom: 8 }}>
+            <View
+              style={{
+                borderLeftWidth: 3,
+                borderLeftColor: b.color ?? pt.hair2,
+                paddingLeft: 8,
+                paddingVertical: 2,
+                opacity: b.completed ? 0.55 : 1,
+              }}
+            >
+              <Text
+                style={{
+                  color: pt.ink,
+                  fontSize: 14,
+                  fontFamily: pt.sans,
+                  textDecorationLine: b.completed ? 'line-through' : 'none',
+                }}
+              >
+                {b.title || p.untitled}
+              </Text>
+              {b.subject && b.subject !== b.title ? (
+                <Text style={{ color: pt.ink3, fontSize: 12, fontFamily: pt.sans }}>
+                  {b.subject}
+                </Text>
+              ) : null}
+            </View>
+            {b.topics.map((x) => (
+              <View
+                key={x.uuid}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingVertical: 7,
+                  paddingLeft: 12,
+                }}
+              >
+                <CheckBox
+                  testID={`wk-study-done-${x.uuid}`}
+                  color={x.color}
+                  done={false}
+                  pt={pt}
+                  onPress={() => p.onDone(x.uuid)}
+                />
+                <Text
+                  testID={`wk-study-topic-${x.uuid}`}
+                  style={{ flex: 1, color: pt.ink, fontSize: 14, fontFamily: pt.sans }}
+                >
+                  {x.name || p.untitled}
+                </Text>
+                {x.done || x.estimated ? (
+                  <Text
+                    testID={`wk-study-pomo-${x.uuid}`}
+                    style={{ color: pt.ink3, fontSize: 12, fontFamily: pt.sans }}
+                  >
+                    {x.done}
+                    {x.estimated ? `/${x.estimated}` : ''}🍅
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ))
+      )}
     </View>
   );
 }

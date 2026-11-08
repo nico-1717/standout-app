@@ -37,6 +37,7 @@ import {
   dayTitle,
   useNowMinutes,
 } from '@/features/planner/PlannerParts';
+import { weekPhraseId } from '@/features/planner/phrases';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthView, WeekView, monthGrid } from '@/features/planner/Views';
 import { isBand, pxPerMinute } from '@/features/planner/layout';
@@ -48,7 +49,8 @@ export default function PlannerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { services, version, changed, uiStyle, plannerSettings } = useApp();
+  const { services, version, changed, uiStyle, plannerSettings, authState } = useApp();
+  const userId = authState?.status === 'signedIn' ? authState.user.id : 0;
   const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const today = localToday();
   const [date, setDate] = useState(today);
@@ -68,6 +70,10 @@ export default function PlannerScreen() {
   const zoom = plannerSettings.zoom;
 
   const repo = services?.planner ?? null;
+  const weekStart = useMemo(() => mondayOf(date), [date]);
+  // la frase e l'affermazione della settimana: stesse del sito (si calcolano, non si salvano)
+  const quote = t(`planner.fr_${weekPhraseId('quotes', weekStart, userId)}`);
+  const affirmation = t(`planner.fr_${weekPhraseId('affirmations', weekStart, userId)}`);
   const pillsRepo = services?.pills ?? null;
   const week = useMemo(() => {
     const m = mondayOf(date);
@@ -277,6 +283,23 @@ export default function PlannerScreen() {
             <Text style={{ color: pt.ink2, fontSize: 20 }}>⚙</Text>
           </Pressable>
         </View>
+        {plannerSettings.show_affirmations ? (
+          <Text
+            testID="week-affirmation"
+            numberOfLines={2}
+            style={{
+              color: pt.ink2,
+              fontSize: 13,
+              fontStyle: 'italic',
+              fontFamily: pt.serif,
+              textAlign: 'center',
+              paddingHorizontal: 20,
+              marginBottom: 6,
+            }}
+          >
+            {affirmation}
+          </Text>
+        ) : null}
         <View
           style={{
             flexDirection: 'row',
@@ -526,6 +549,24 @@ export default function PlannerScreen() {
           ) : null}
         </ScrollView>
       )}
+
+      {plannerSettings.show_motivational ? (
+        <Text
+          testID="week-quote"
+          numberOfLines={3}
+          style={{
+            color: pt.ink3,
+            fontSize: 12,
+            fontStyle: 'italic',
+            fontFamily: pt.serif,
+            textAlign: 'center',
+            paddingHorizontal: 24,
+            paddingVertical: 8,
+          }}
+        >
+          {quote}
+        </Text>
+      ) : null}
 
       <Pressable
         testID="planner-add"

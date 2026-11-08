@@ -270,6 +270,19 @@ export class ProjectsRepo {
     });
   }
 
+  /** Mette lo stato di UN progetto, senza toccare i discendenti (la spunta di un argomento di studio). */
+  setStatus(uuid: string, status: ProjectStatus): boolean {
+    const cur = this.get(uuid);
+    if (!cur) return false;
+    if (cur.status === status) return true;
+    this.db.transaction(() => {
+      const now = this.clock();
+      patchRow(this.db, 'projects', uuid, { status, updated_at: now });
+      enqueue(this.db, { table: 'projects', uuid, op: 'upsert', patch: { status } }, now);
+    });
+    return true;
+  }
+
   /**
    * Il giro dello stato (in corso → completato → pianificato). Se si diventa «completato» tutti i discendenti diventano
    * completati e si ritorna il loro stato di prima (`snapshot`); uscendo da «completato», se ne passi uno, tornano com'erano.

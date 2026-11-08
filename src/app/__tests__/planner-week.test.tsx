@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { DiaryRepo } from '@/features/diary/repo';
 import { PillsRepo } from '@/features/pills/repo';
 import { PlannerRepo } from '@/features/planner/repo';
+import { ProjectsRepo } from '@/features/projects/repo';
 import { localToday } from '@/features/tasks/groups';
 import { TasksRepo } from '@/features/tasks/repo';
 
@@ -53,8 +54,9 @@ function setup() {
     () => `${localToday()} 10:00:00`,
   );
   const diary = new DiaryRepo(db, 7);
-  mockServices = { db, tasks, planner, pills, diary };
-  return { tasks, planner, pills, diary };
+  const projects = new ProjectsRepo(db);
+  mockServices = { db, tasks, planner, pills, diary, projects };
+  return { db, tasks, planner, pills, diary, projects };
 }
 const renderIt = () =>
   render(
@@ -68,6 +70,42 @@ beforeEach(() => {
   mockDate = '2030-02-06';
   mockBack.mockClear();
   mockPush.mockClear();
+});
+
+describe('the week panel: to study', () => {
+  test("shows the day's study block and topics; ticking a topic completes it (queued for sync)", async () => {
+    const { db, projects } = setup();
+    db.run(`INSERT INTO planner_calendars (uuid, name, role) VALUES ('cs', 'To study', 'study')`);
+    db.run(`INSERT INTO projects (uuid, name, color) VALUES ('math', 'Analysis 1', '#3366ff')`);
+    db.run(
+      `INSERT INTO planner_events (uuid, title, event_date, end_date, calendar_uuid, project_uuid) VALUES ('b1', 'Exam block', '2030-02-05', '2030-02-08', 'cs', 'math')`,
+    );
+    db.run(
+      `INSERT INTO projects (uuid, name, color, sort_key, study_event_uuid, study_start, study_pomodori_stimati) VALUES ('t1', 'Triple integrals', '#3366ff', 'a1', 'b1', '2030-02-06', 4)`,
+    );
+    db.run(`DELETE FROM outbox`);
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('wk-tab-study'));
+    expect(screen.getByText('Exam block')).toBeTruthy();
+    expect(screen.getByText('Analysis 1')).toBeTruthy();
+    expect(screen.getByTestId('wk-study-topic-t1')).toHaveTextContent('Triple integrals');
+    expect(screen.getByTestId('wk-study-pomo-t1')).toHaveTextContent(/0\/4/);
+    await fireEvent.press(screen.getByTestId('wk-study-done-t1'));
+    expect(projects.get('t1')!.status).toBe('completed');
+    expect(db.all<{ tbl: string; uuid: string }>('SELECT tbl, uuid FROM outbox')).toEqual([
+      { tbl: 'projects', uuid: 't1' },
+    ]);
+    expect(mockChanged).toHaveBeenCalled();
+  });
+
+  test('nothing to study says so, and "open" goes to the projects', async () => {
+    setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('wk-tab-study'));
+    expect(screen.getByText('Nothing planned to study today.')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('wk-study-open'));
+    expect(mockPush).toHaveBeenCalledWith('/projects');
+  });
 });
 
 describe('the week panel', () => {

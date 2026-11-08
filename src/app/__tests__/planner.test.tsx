@@ -3,9 +3,11 @@ import { Alert } from 'react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
-import '@/core/i18n';
+import i18n from '@/core/i18n';
 import { upsertRow } from '@/core/sync/rows';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { mondayOf } from '@/features/planner/dates';
+import { weekPhraseId } from '@/features/planner/phrases';
 import { PlannerRepo } from '@/features/planner/repo';
 import { localToday } from '@/features/tasks/groups';
 
@@ -30,6 +32,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     version: mockVersion,
     changed: mockChanged,
     uiStyle: mockStyle,
+    authState: { status: 'signedIn', user: { id: 7 } },
     plannerSettings: {
       ...jest.requireActual('@/features/planner/settings').DEFAULT_PLANNER_SETTINGS,
       first_week_start: null,
@@ -81,6 +84,17 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     await renderIt();
     expect(screen.getByTestId('day-empty')).toBeTruthy();
     expect(screen.getByTestId(`strip-${TODAY}`)).toBeTruthy();
+  });
+
+  test("shows the week's affirmation on top and the motivational quote at the bottom", async () => {
+    setup();
+    await renderIt();
+    const monday = mondayOf(TODAY);
+    const aff = i18n.t(`planner.fr_${weekPhraseId('affirmations', monday, 7)}`);
+    const quote = i18n.t(`planner.fr_${weekPhraseId('quotes', monday, 7)}`);
+    expect(aff).not.toMatch(/^<</);
+    expect(screen.getByTestId('week-affirmation')).toHaveTextContent(aff);
+    expect(screen.getByTestId('week-quote')).toHaveTextContent(quote);
   });
 
   test('shows the events of the day, with the all-day ones in the band', async () => {
