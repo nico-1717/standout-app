@@ -879,6 +879,30 @@ CREATE TABLE media_queue (
 );
 `,
   },
+  {
+    version: 20,
+    // l'ordine di nascita delle carte (padri) sul telefono: serve a capire quali carte sono state aggiunte dopo l'avvio di una partita.
+    // Il rowid non va bene: una riga che arriva di nuovo dal server lo cambia. Qui il numero resta quello della prima volta.
+    sql: `
+CREATE TABLE card_birth (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  n INTEGER NOT NULL
+);
+CREATE INDEX idx_card_birth_n ON card_birth (n);
+INSERT INTO card_birth (uuid, n)
+  SELECT uuid, ROW_NUMBER() OVER (ORDER BY r) FROM (
+    SELECT uuid, rowid AS r FROM fc_study_cards
+    UNION ALL
+    SELECT uuid, rowid AS r FROM fc_vocab_cards
+  );
+CREATE TRIGGER trg_fc_study_cards_birth AFTER INSERT ON fc_study_cards BEGIN
+  INSERT OR IGNORE INTO card_birth (uuid, n) VALUES (new.uuid, (SELECT COALESCE(MAX(n), 0) + 1 FROM card_birth));
+END;
+CREATE TRIGGER trg_fc_vocab_cards_birth AFTER INSERT ON fc_vocab_cards BEGIN
+  INSERT OR IGNORE INTO card_birth (uuid, n) VALUES (new.uuid, (SELECT COALESCE(MAX(n), 0) + 1 FROM card_birth));
+END;
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

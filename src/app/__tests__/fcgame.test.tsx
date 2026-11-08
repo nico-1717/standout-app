@@ -344,6 +344,37 @@ describe('result and history', () => {
   });
 });
 
+describe('cards added after the start', () => {
+  test('resuming asks about them: yes joins them at the end, no keeps the game as is', async () => {
+    const { flashcards, games, deck, game } = started();
+    flashcards.addCard(deck, 'Q3', 'A3');
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(screen.getByTestId('fcg-nc-title')).toHaveTextContent('You added 1 card');
+    expect(screen.getByText('Q3')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcg-nc-yes'));
+    expect(games.totalPositions(game)).toBe(3);
+    expect(screen.queryByTestId('fcg-nc-title')).toBeNull();
+    expect(screen.getByTestId('fcg-question')).toBeTruthy();
+  });
+  test('no keeps the sequence and does not ask again for the same cards', async () => {
+    const { flashcards, games, deck, game } = started();
+    flashcards.addCard(deck, 'Q3', 'A3');
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    await fireEvent.press(screen.getByTestId('fcg-nc-no'));
+    expect(games.totalPositions(game)).toBe(2);
+    expect(games.newCards(game)).toEqual([]);
+  });
+  test('nc=1 skips the question', async () => {
+    const { flashcards, deck, game } = started();
+    flashcards.addCard(deck, 'Q3', 'A3');
+    mockParams = { game, position: '1', nc: '1' };
+    await render(wrap(<GameScreen />));
+    expect(screen.queryByTestId('fcg-nc-title')).toBeNull();
+  });
+});
+
 describe('history filters', () => {
   test('the filter panel narrows the list and the summary follows', async () => {
     const { games, game } = started();

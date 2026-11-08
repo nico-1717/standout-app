@@ -1,6 +1,7 @@
 import type { Services } from '@/core/app/AppProvider';
 import { langVoice } from '@/features/languages/langs';
 
+import { docToPlain, parseDoc } from './doc';
 import { directionAt, type Direction, type GameRepo } from './game';
 import type { Deck } from './logic';
 
@@ -52,6 +53,8 @@ export interface GameKit {
   view(gameUuid: string, position: number, target: string, isChild: boolean): PlayView;
   /** una riga corta che descrive la carta (storico, risultato) */
   label(gameUuid: string, position: number, target: string, isChild: boolean): string;
+  /** il testo semplice del lato della domanda di una carta padre (per l'anteprima delle carte nuove) */
+  preview(cardUuid: string): string;
   hints: { meaning: 'aperto' | 'tocco' | 'dopo'; examples: 'aperto' | 'tocco' | 'dopo' };
 }
 
@@ -94,6 +97,10 @@ export function studyKit(s: Services): GameKit {
     setFavorite: (t, c, on) => void s.study.setFavorite(t, c, on),
     view: (_g, _p, target, isChild) => view(target, isChild),
     label: (_g, _p, target, isChild) => (view(target, isChild).question ?? '').replace(/\s+/g, ' '),
+    preview: (card) =>
+      docToPlain(parseDoc(s.flashcards.card(card)?.question_desc))
+        .replace(/\s+/g, ' ')
+        .trim(),
     hints: { meaning: 'dopo', examples: 'dopo' },
   };
 }
@@ -149,6 +156,7 @@ export function languageKit(s: Services, course: string): GameKit {
       const v = view(g, p, target, isChild);
       return `${v.question ?? ''} → ${v.answer ?? ''}`.replace(/\s+/g, ' ');
     },
+    preview: (card) => lang.word(card)?.word ?? '',
     hints: { meaning: st.vocab_meaning, examples: st.vocab_examples },
   };
 }

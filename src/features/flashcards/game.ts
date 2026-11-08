@@ -851,11 +851,11 @@ export class GameRepo {
     );
   }
 
-  private writeSequence(gameUuid: string, fathers: string[]): void {
+  private writeSequence(gameUuid: string, fathers: string[], after = 0): void {
     const now = this.clock();
     fathers.forEach((card, i) => {
       const uuid = this.newId();
-      const row = { game_uuid: gameUuid, position: i + 1, card_uuid: card };
+      const row = { game_uuid: gameUuid, position: after + i + 1, card_uuid: card };
       upsertRow(this.db, this.scope.sequence, { uuid, ...row });
       enqueue(
         this.db,
@@ -903,7 +903,7 @@ export class GameRepo {
       total_father_words: fields.fathers,
       game_order: fields.game_order,
       total_words_with_children: fields.total,
-      max_card_uuid: null,
+      max_card_uuid: this.newestCardUuid(),
     };
     this.db.transaction(() => {
       upsertRow(this.db, 'fc_games', { uuid, ...row });
@@ -918,6 +918,107 @@ export class GameRepo {
     });
     this.active.set(uuid, this.nowMs());
     return uuid;
+  }
+
+  /* ---------------- carte aggiunte dopo l'avvio (fc_nuove_carte.php) ---------------- */
+
+  /** L'ultima carta nata fra quelle di questo studio o corso: il «riferimento» che una partita ricorda all'avvio. */
+  private newestCardUuid(): string | null {
+    const sc = this.cardScope;
+    return (
+      this.db.all<{ uuid: string }>(
+        `SELECT c.uuid FROM ${this.scope.cards} c JOIN card_birth b ON b.uuid = c.uuid
+          WHERE ${sc.sql} ORDER BY b.n DESC LIMIT 1`,
+        sc.params,
+      )[0]?.uuid ?? null
+    );
+  }
+
+  /**
+   * Le carte (padri) nate dopo l'avvio della partita, nei suoi mazzi e secondo il suo stato (nuove / da imparare), che non
+   * sono ancora in sequenza. Vuoto per i ripassi, per le partite senza riferimento e se il riferimento non c'è più.
+   */
+  newCards(gameUuid: string): string[] {
+    const g = this.game(gameUuid);
+    if (!g || g.parent_uuid || !g.max_card_uuid) return [];
+    const base = this.db.all<{ n: number }>('SELECT n FROM card_birth WHERE uuid = ?', [
+      g.max_card_uuid,
+    ])[0];
+    const decks = this.gameDecks(gameUuid);
+    if (!base || !decks.length) return [];
+    const born = new Map(
+      this.db
+        .all<{ uuid: string; n: number }>('SELECT uuid, n FROM card_birth WHERE n > ?', [base.n])
+        .map((r) => [r.uuid, r.n]),
+    );
+    if (!born.size) return [];
+    const inSequence = new Set(
+      this.db
+        .all<{ card_uuid: string }>(
+          `SELECT card_uuid FROM ${this.scope.sequence} WHERE game_uuid = ?`,
+          [gameUuid],
+        )
+        .map((r) => r.card_uuid),
+    );
+    const status: GameStatus =
+      g.card_status === 'all' || g.card_status === '1' ? g.card_status : '0';
+    const passes = this.statusFilter(status, this.childrenByParent());
+    const rank = new Map(decks.map((d, i) => [d, i]));
+    return this.cardsFor(decks)
+      .filter((c) => born.has(c.uuid) && !inSequence.has(c.uuid) && passes(c))
+      .sort(
+        (a, b) =>
+          (rank.get(a.category_uuid) ?? 0) - (rank.get(b.category_uuid) ?? 0) ||
+          a.custom_order - b.custom_order ||
+          born.get(a.uuid)! - born.get(b.uuid)!,
+      )
+      .map((c) => c.uuid);
+  }
+
+  /** «No»: il riferimento passa all'ultima carta di adesso e la domanda non torna per le stesse carte. */
+  declineNewCards(gameUuid: string): void {
+    const ref = this.newestCardUuid();
+    patchRow(this.db, 'fc_games', gameUuid, { max_card_uuid: ref });
+    enqueue(
+      this.db,
+      { table: 'fc_games', uuid: gameUuid, op: 'upsert', patch: { max_card_uuid: ref } },
+      this.clock(),
+    );
+  }
+
+  /** «Sì»: le carte nuove vanno in coda alla sequenza e i totali della partita crescono. Ritorna quante. */
+  acceptNewCards(gameUuid: string): number {
+    const ids = this.newCards(gameUuid);
+    const g = this.game(gameUuid);
+    if (!g || !ids.length) {
+      if (g) this.declineNewCards(gameUuid);
+      return 0;
+    }
+    const kids = this.childrenByParent();
+    const children = ids.reduce(
+      (n, id) => n + (this.isFather(id) ? (kids.get(id)?.length ?? 0) : 0),
+      0,
+    );
+    this.db.transaction(() => {
+      this.writeSequence(gameUuid, ids, this.totalPositions(gameUuid));
+      const patch = {
+        total_father_words: Number(g.total_father_words ?? 0) + ids.length,
+        total_words_with_children: Number(g.total_words_with_children ?? 0) + ids.length + children,
+      };
+      patchRow(this.db, 'fc_games', gameUuid, patch);
+      enqueue(this.db, { table: 'fc_games', uuid: gameUuid, op: 'upsert', patch }, this.clock());
+      this.declineNewCards(gameUuid);
+    });
+    return ids.length;
+  }
+
+  private isFather(cardUuid: string): boolean {
+    return (
+      this.db.all<{ is_father: number }>(
+        `SELECT is_father FROM ${this.scope.cards} WHERE uuid = ?`,
+        [cardUuid],
+      )[0]?.is_father === 1
+    );
   }
 
   /** Avvia una partita sui mazzi scelti. Una scelta senza carte non crea niente. */

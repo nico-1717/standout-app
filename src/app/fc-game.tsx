@@ -12,7 +12,7 @@ import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
 import { kitForGame, type ExampleView, type VoiceSpec } from '@/features/flashcards/gameKit';
 import { gapParts, speakable } from '@/features/languages/gap';
-import { Card, PrimaryButton } from '@/ui/kit';
+import { Card, PrimaryButton, TextButton } from '@/ui/kit';
 import { SpeakButton } from '@/ui/SpeakButton';
 
 interface Item {
@@ -57,7 +57,7 @@ export default function GameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services } = useApp();
-  const params = useLocalSearchParams<{ game?: string; position?: string }>();
+  const params = useLocalSearchParams<{ game?: string; position?: string; nc?: string }>();
   const game = params.game ?? '';
 
   // lo studio o il corso di lingua di questa partita
@@ -71,6 +71,10 @@ export default function GameScreen() {
     const p = kit.games.effectivePosition(game, want);
     return kit.games.ensurePosition(game, p) ? p : null;
   });
+  // carte aggiunte al mazzo dopo l'avvio: alla ripresa si chiede se giocare anche quelle (nc=1 = già risposto)
+  const [added, setAdded] = useState<string[]>(() =>
+    kit && game && params.nc !== '1' ? kit.games.newCards(game) : [],
+  );
   const [shown, setShown] = useState(false);
   const [tapped, setTapped] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
@@ -94,6 +98,37 @@ export default function GameScreen() {
     setPos(p);
     setShown(false);
   };
+
+  if (added.length > 0) {
+    const answer = (yes: boolean) => {
+      if (yes) games.acceptNewCards(game);
+      else games.declineNewCards(game);
+      setAdded([]);
+    };
+    return (
+      <View style={{ flex: 1, backgroundColor: th.bg, justifyContent: 'center', padding: 24 }}>
+        <Text
+          testID="fcg-nc-title"
+          style={{ color: th.text, fontSize: 22, fontWeight: '800', textAlign: 'center' }}
+        >
+          {t(added.length === 1 ? 'fc.nc_h_1' : 'fc.nc_h_n', { n: added.length })}
+        </Text>
+        <Text style={{ color: th.text2, textAlign: 'center', marginVertical: 10 }}>
+          {t('fc.nc_sub')}
+        </Text>
+        <Card style={{ padding: 12, gap: 6, marginBottom: 16 }}>
+          {added.slice(0, 5).map((c) => (
+            <Text key={c} style={{ color: th.text }} numberOfLines={1}>
+              {kit.preview(c).slice(0, 70) || '—'}
+            </Text>
+          ))}
+          {added.length > 5 ? <Text style={{ color: th.text2 }}>+{added.length - 5}</Text> : null}
+        </Card>
+        <PrimaryButton testID="fcg-nc-yes" label={t('fc.nc_si')} onPress={() => answer(true)} />
+        <TextButton testID="fcg-nc-no" label={t('fc.nc_no')} onPress={() => answer(false)} />
+      </View>
+    );
+  }
 
   // la partita non c'è o è già finita: si va al risultato
   if (pos === null) {

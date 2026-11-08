@@ -603,3 +603,65 @@ describe('road to 100% and comparison with last time', () => {
     expect(s.games.compare(retry.game)).toBeNull();
   });
 });
+
+describe('cards added after the game started', () => {
+  test('are found, joined at the end on yes, and not asked again on no', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const other = s.flashcards.createDeck({ name: 'Other' })!;
+    const g = start(s, [d.deck]);
+    expect(s.games.newCards(g)).toEqual([]);
+
+    const n1 = s.flashcards.addCard(d.deck, 'Q4', 'A4')!;
+    s.flashcards.addCard(other, 'X', 'Y'); // un altro mazzo: non conta
+    const n2 = s.flashcards.addCard(d.deck, 'Q5', 'A5')!;
+    expect(s.games.newCards(g)).toEqual([n1, n2]);
+
+    s.db.run('DELETE FROM outbox');
+    expect(s.games.acceptNewCards(g)).toBe(2);
+    expect(s.games.totalPositions(g)).toBe(5);
+    expect(s.games.game(g)).toMatchObject({
+      total_father_words: 5,
+      total_words_with_children: 7,
+    });
+    expect(s.games.newCards(g)).toEqual([]);
+    expect(nextBatch(s.db, 100).length).toBeGreaterThan(0);
+
+    // una carta tornata dal server (stessa riga riscritta) non diventa «nuova»
+    s.db.run('INSERT OR REPLACE INTO fc_study_cards SELECT * FROM fc_study_cards WHERE uuid = ?', [
+      d.c1,
+    ]);
+    expect(s.games.newCards(g)).toEqual([]);
+
+    const n3 = s.flashcards.addCard(d.deck, 'Q6', 'A6')!;
+    expect(s.games.newCards(g)).toEqual([n3]);
+    s.games.declineNewCards(g);
+    expect(s.games.newCards(g)).toEqual([]);
+    expect(s.games.totalPositions(g)).toBe(5);
+  });
+
+  test('a review game and a game without reference never ask', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    const g = start(s, [d.deck]);
+    s.games.ensurePosition(g, 1);
+    s.games.grade(g, 1, s.games.plays(g, 1)[0]!.card_uuid!, false, 'wrong');
+    s.games.conclude(g);
+    const retry = s.games.retry(g) as { kind: 'started'; game: string };
+    s.flashcards.addCard(d.deck, 'Q4', 'A4');
+    expect(s.games.newCards(retry.game)).toEqual([]);
+    s.db.run('UPDATE fc_games SET max_card_uuid = NULL WHERE uuid = ?', [g]);
+    expect(s.games.newCards(g)).toEqual([]);
+  });
+
+  test('only cards that pass the game status are offered', () => {
+    const s = setup();
+    const d = deckWithCards(s);
+    s.study.setLearnt(d.c1, false, true);
+    const onlyLearnt = start(s, [d.deck], { status: '1' });
+    const toLearn = start(s, [d.deck], { status: '0' });
+    const fresh = s.flashcards.addCard(d.deck, 'Q4', 'A4')!;
+    expect(s.games.newCards(onlyLearnt)).toEqual([]);
+    expect(s.games.newCards(toLearn)).toEqual([fresh]);
+  });
+});
