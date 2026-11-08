@@ -21,7 +21,7 @@ export const MAX_RECORD_MS = 120_000;
  * Il registratore vero: nasce solo quando si comincia (così una pagina non tiene il microfono). Chiede il permesso,
  * registra in m4a e quando si ferma — a mano o allo scadere del tempo — dà l'indirizzo del file. null = niente da tenere.
  */
-function Recorder({ onDone }: { onDone: (uri: string | null) => void }) {
+export function Recorder({ onDone }: { onDone: (uri: string | null) => void }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const stopped = useRef(false);
   const { t } = useTranslation();

@@ -5,12 +5,29 @@ import { getState, setState } from '@/core/sync/engine';
  * Una riga scritta a mano: `kid` = è una carta figlia della riga sopra (o delle sue sorelle) che non è figlia.
  * `qi` e `ai` sono le foto scelte per la domanda e la risposta (file già sul telefono, JPEG): partono dopo che la carta c'è.
  */
-export type Row = { q: string; a: string; kid?: boolean; qi?: string; ai?: string };
+export type Row = {
+  q: string;
+  a: string;
+  kid?: boolean;
+  qi?: string;
+  ai?: string;
+  /** le registrazioni per la domanda e per la risposta (m4a già sul telefono) */
+  qa?: string;
+  aa?: string;
+};
 
-export type NewCard = { q: string; a: string; kid: boolean; qi?: string; ai?: string };
+export type NewCard = {
+  q: string;
+  a: string;
+  kid: boolean;
+  qi?: string;
+  ai?: string;
+  qa?: string;
+  aa?: string;
+};
 
 /** La riga ha qualcosa: del testo o una foto. */
-const filled = (r: Row): boolean => !!(r.q.trim() || r.a.trim() || r.qi || r.ai);
+const filled = (r: Row): boolean => !!(r.q.trim() || r.a.trim() || r.qi || r.ai || r.qa || r.aa);
 
 /** Le righe da salvare: quelle con del testo o una foto; una figlia solo se il suo padre ha qualcosa. */
 export function rowsToCreate(rows: readonly Row[]): NewCard[] {
@@ -26,6 +43,8 @@ export function rowsToCreate(rows: readonly Row[]): NewCard[] {
         kid: !!r.kid,
         ...(r.qi ? { qi: r.qi } : {}),
         ...(r.ai ? { ai: r.ai } : {}),
+        ...(r.qa ? { qa: r.qa } : {}),
+        ...(r.aa ? { aa: r.aa } : {}),
       });
   }
   return out;
@@ -51,6 +70,8 @@ export function loadInsertDraft(db: SqlDb, deck: string): Row[] | null {
         ...(r.kid === true ? { kid: true } : {}),
         ...(typeof r.qi === 'string' && r.qi ? { qi: r.qi } : {}),
         ...(typeof r.ai === 'string' && r.ai ? { ai: r.ai } : {}),
+        ...(typeof r.qa === 'string' && r.qa ? { qa: r.qa } : {}),
+        ...(typeof r.aa === 'string' && r.aa ? { aa: r.aa } : {}),
       }));
     return rows.length ? rows : null;
   } catch {

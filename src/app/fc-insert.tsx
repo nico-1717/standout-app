@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { pickImage } from '@/core/media/pickImage';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { DraftAudioField } from '@/features/media/DraftAudioField';
 import { PasteImport } from '@/features/flashcards/PasteImport';
 import {
   loadInsertDraft,
@@ -72,11 +73,13 @@ export default function InsertScreen() {
     const attach = (
       table: 'fc_study_cards' | 'fc_study_subcards',
       uuid: string,
-      c: { qi?: string; ai?: string },
+      c: { qi?: string; ai?: string; qa?: string; aa?: string },
     ) => {
       if (c.qi) services.media.putFile(table, uuid, 'question_image', c.qi, 'image/jpeg');
       if (c.ai) services.media.putFile(table, uuid, 'answer_image', c.ai, 'image/jpeg');
-      if (c.qi || c.ai) photos += 1;
+      if (c.qa) services.media.putFile(table, uuid, 'question_audio', c.qa, 'audio/mp4');
+      if (c.aa) services.media.putFile(table, uuid, 'answer_audio', c.aa, 'audio/mp4');
+      if (c.qi || c.ai || c.qa || c.aa) photos += 1;
     };
     for (const c of list as NewCard[]) {
       if (c.kid && parent) {
@@ -99,7 +102,7 @@ export default function InsertScreen() {
     return n;
   };
 
-  const setPhoto = (i: number, key: 'qi' | 'ai', uri: string | null) =>
+  const setPhoto = (i: number, key: 'qi' | 'ai' | 'qa' | 'aa', uri: string | null) =>
     setRows((cur) =>
       cur.map((x, k) => {
         if (k !== i) return x;
@@ -253,6 +256,22 @@ export default function InsertScreen() {
                           <Text style={{ color: th.brand, fontSize: 13 }}>📷</Text>
                         </Pressable>
                       </View>
+                    );
+                  })}
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 18 }}>
+                  {(['q', 'a'] as const).map((side) => {
+                    const key = side === 'q' ? 'qa' : 'aa';
+                    return (
+                      <DraftAudioField
+                        key={side}
+                        testID={`fci-${side}aud-${i}`}
+                        uri={r[key]}
+                        onChange={(u) => setPhoto(i, key, u)}
+                        label={
+                          side === 'q' ? t('fc.app_audio_domanda') : t('fc.app_audio_risposta')
+                        }
+                      />
                     );
                   })}
                 </View>

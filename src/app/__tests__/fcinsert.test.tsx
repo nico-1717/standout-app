@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -10,6 +10,9 @@ import { FlashcardsRepo } from '@/features/flashcards/repo';
 
 import InsertScreen from '../fc-insert';
 
+jest.mock('@/core/media/phoneFiles', () => ({
+  keepFile: jest.fn((uri: string) => `file:///docs/media_queue/${uri.split('/').pop()}`),
+}));
 jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
 const mockTrigger = jest.fn();
 let mockServices: unknown;
@@ -164,6 +167,30 @@ describe('insert many cards', () => {
       },
     ]);
     expect(mockTrigger).toHaveBeenCalled();
+  });
+
+  test('rows mode: a recording for the answer is heard, kept in the row, and queued after save', async () => {
+    const { flashcards, deck, db } = setup();
+    await render(wrap(<InsertScreen />));
+    await fireEvent.press(screen.getByTestId('fci-mode-rows'));
+    await fireEvent.press(screen.getByTestId('fci-aaud-0-record'));
+    await screen.findByTestId('audio-stop');
+    await fireEvent.press(screen.getByTestId('audio-stop'));
+    await screen.findByTestId('fci-aaud-0-play');
+    // una riga con solo il suono si può salvare
+    await fireEvent.press(screen.getByTestId('fci-save'));
+    const [card] = flashcards.cards(deck);
+    await waitFor(() => expect(db.all('SELECT * FROM media_queue')).toHaveLength(1));
+    expect(db.all('SELECT tbl, row_uuid, slot, op, file, mime FROM media_queue')).toEqual([
+      {
+        tbl: 'fc_study_cards',
+        row_uuid: card!.uuid,
+        slot: 'answer_audio',
+        op: 'put',
+        file: 'file:///docs/media_queue/rec.m4a',
+        mime: 'audio/mp4',
+      },
+    ]);
   });
 
   test('rows mode: a chosen photo can be removed again', async () => {
