@@ -14,10 +14,75 @@ import {
   needsReview,
   type Level,
 } from './levels';
-import { stamp, type StudyRepo } from './study';
+import { stamp } from './study';
 
 /** Oltre questa pausa non si sta più giocando: il tempo non si conta (come sul sito: 5 minuti). */
 export const PAUSE_MAX_SECONDS = 300;
+
+/** Chi tiene a mente le parole imparate e i record: lo studio (StudyRepo) o un corso di lingua. */
+export interface GameStore {
+  learnt(): Set<string>;
+  setLearnt(targetUuid: string, isChild: boolean, on: boolean): unknown;
+  bumpRecord(
+    kind: string,
+    value: number,
+    gameUuid: string | null,
+    lowerWins?: boolean,
+  ): { before: number | null; changed: boolean; first: boolean };
+}
+
+/** Le tabelle di un genere di partite: lo studio o un corso di lingua. */
+export interface GameScope {
+  kind: 'study' | 'vocab';
+  /** il corso (solo lingue) */
+  course: string | null;
+  plays: 'fc_study_plays' | 'fc_vocab_plays';
+  gameDecks: 'fc_study_game_decks' | 'fc_vocab_game_decks';
+  sequence: 'fc_study_sequence' | 'fc_vocab_sequence';
+  decks: 'fc_study_decks' | 'fc_vocab_decks';
+  cards: 'fc_study_cards' | 'fc_vocab_cards';
+  subcards: 'fc_study_subcards' | 'fc_vocab_subcards';
+}
+
+export const STUDY_SCOPE: GameScope = {
+  kind: 'study',
+  course: null,
+  plays: 'fc_study_plays',
+  gameDecks: 'fc_study_game_decks',
+  sequence: 'fc_study_sequence',
+  decks: 'fc_study_decks',
+  cards: 'fc_study_cards',
+  subcards: 'fc_study_subcards',
+};
+
+export const vocabScope = (course: string): GameScope => ({
+  kind: 'vocab',
+  course,
+  plays: 'fc_vocab_plays',
+  gameDecks: 'fc_vocab_game_decks',
+  sequence: 'fc_vocab_sequence',
+  decks: 'fc_vocab_decks',
+  cards: 'fc_vocab_cards',
+  subcards: 'fc_vocab_subcards',
+});
+
+/** Il verso di una partita di lingua: si vede la parola (w2t), la traduzione (t2w), oppure si alterna (mix). */
+export type Direction = 'w2t' | 't2w' | 'mix';
+
+/** Il verso scritto nel tipo di una partita di lingua («w2t», «mix_L»…). */
+export function directionOfType(type: string): Direction {
+  for (const d of ['w2t', 't2w', 'mix'] as const) if (type.startsWith(d)) return d;
+  return 'w2t';
+}
+
+/** Il verso di UNA posizione: in «mix» si alterna, sempre uguale per quella partita e posizione. */
+export function directionAt(type: string, gameUuid: string, position: number): 'w2t' | 't2w' {
+  const d = directionOfType(type);
+  if (d !== 'mix') return d;
+  let h = 0;
+  for (let i = 0; i < gameUuid.length; i++) h += gameUuid.charCodeAt(i);
+  return (h + position) % 2 === 0 ? 'w2t' : 't2w';
+}
 
 export type GameStatus = 'all' | '1' | '0';
 export type GameOrder = 'in_order' | 'random';
@@ -25,6 +90,8 @@ export type Grade = 'correct' | 'wrong' | 'learnt';
 
 export interface GameRow {
   uuid: string;
+  kind: string;
+  course_uuid: string | null;
   game_date: string | null;
   score: number | null;
   type: string;
@@ -60,6 +127,8 @@ export interface StartInput {
   levels?: Level[];
   /** «solo le difficili»: da imparare, difficile e difficilissima; la partita è sempre mescolata e con tutte le carte */
   onlyHard?: boolean;
+  /** il verso (solo lingue); senza, w2t */
+  direction?: Direction;
 }
 
 export type StartOutcome = { kind: 'started'; game: string } | { kind: 'empty' };
@@ -146,44 +215,84 @@ export function isTitleCard(
  * quando si arriva alla posizione (il padre per primo, poi le sottocarte), un titolo parte già chiuso, in una partita
  * «da imparare» le parti già imparate si guardano soltanto, il punteggio è giuste / date.
  */
+const GAME_COLS =
+  'uuid, kind, course_uuid, game_date, score, type, card_status, parent_uuid, total_father_words, game_order, total_words_with_children, max_card_uuid';
+
 export class GameRepo {
   /** l'ultimo istante di gioco di ogni partita, in memoria: serve a non contare le pause lunghe */
   private readonly active = new Map<string, number>();
 
   constructor(
     private readonly db: SqlDb,
-    private readonly study: StudyRepo,
+    private readonly study: GameStore,
     private readonly clock: () => string = () => new Date().toISOString(),
     private readonly newId: () => string = uuidv7,
     private readonly nowMs: () => number = () => Date.now(),
     private readonly nowStamp: () => string = () => stamp(),
     private readonly rng: () => number = Math.random,
+    private readonly scope: GameScope = STUDY_SCOPE,
   ) {}
+
+  /** Una partita di lingua? (niente titoli, le carte hanno parola e traduzione) */
+  get isVocab(): boolean {
+    return this.scope.kind === 'vocab';
+  }
+
+  /** Il pezzo di WHERE che tiene solo le partite di questo genere (e corso). */
+  private gameCond(alias = ''): { sql: string; params: string[] } {
+    const p = alias ? `${alias}.` : '';
+    return this.scope.course === null
+      ? { sql: `${p}kind = 'study'`, params: [] }
+      : { sql: `${p}kind = 'vocab' AND ${p}course_uuid = ?`, params: [this.scope.course] };
+  }
+
+  /** Le colonne di una carta, con i nomi dello studio (in lingua: la parola davanti, la traduzione dietro). */
+  private get cardCols(): string {
+    return this.isVocab
+      ? 'uuid, category_uuid, word AS question_desc, translation AS answer_desc, image AS answer_image, NULL AS answer_audio, is_father, custom_order'
+      : 'uuid, category_uuid, question_desc, answer_desc, answer_image, answer_audio, is_father, custom_order';
+  }
+
+  /** Le carte del corso (tutte quelle dello studio): il pezzo di WHERE. */
+  private get cardScope(): { sql: string; params: string[] } {
+    return this.scope.course === null
+      ? { sql: '1 = 1', params: [] }
+      : {
+          sql: 'category_uuid IN (SELECT uuid FROM fc_vocab_decks WHERE course_uuid = ?)',
+          params: [this.scope.course],
+        };
+  }
+
+  /** Un titolo di gruppo: solo nello studio (carta padre con sottocarte, domanda scritta e risposta vuota). */
+  private isTitle(c: CardLite, kids: number): boolean {
+    return !this.isVocab && isTitleCard(c, kids) && !isBlankField(c.question_desc);
+  }
 
   /* ---------------- lettura ---------------- */
 
   game(uuid: string): GameRow | null {
+    const c = this.gameCond();
     return (
-      this.db.all<GameRow>(
-        `SELECT uuid, game_date, score, type, card_status, parent_uuid, total_father_words, game_order,
-                total_words_with_children, max_card_uuid FROM fc_games WHERE uuid = ?`,
-        [uuid],
-      )[0] ?? null
+      this.db.all<GameRow>(`SELECT ${GAME_COLS} FROM fc_games WHERE uuid = ? AND ${c.sql}`, [
+        uuid,
+        ...c.params,
+      ])[0] ?? null
     );
   }
 
   /** Le partite, dalla più recente. */
   games(): GameRow[] {
+    const c = this.gameCond();
     return this.db.all<GameRow>(
-      `SELECT uuid, game_date, score, type, card_status, parent_uuid, total_father_words, game_order,
-              total_words_with_children, max_card_uuid FROM fc_games ORDER BY game_date DESC, rowid DESC`,
+      `SELECT ${GAME_COLS} FROM fc_games WHERE ${c.sql} ORDER BY game_date DESC, rowid DESC`,
+      c.params,
     );
   }
 
   totalPositions(gameUuid: string): number {
     return Number(
       this.db.all<{ n: number }>(
-        'SELECT COUNT(*) AS n FROM fc_study_sequence WHERE game_uuid = ?',
+        `SELECT COUNT(*) AS n FROM ${this.scope.sequence} WHERE game_uuid = ?`,
         [gameUuid],
       )[0]?.n ?? 0,
     );
@@ -193,7 +302,7 @@ export class GameRepo {
   plays(gameUuid: string, position: number): PlayRow[] {
     return this.db.all<PlayRow>(
       `SELECT p.uuid, p.game_uuid, p.card_uuid, p.child_uuid, p.correct_answer, p.user_answer, p.position, p.play_date
-         FROM fc_study_plays p LEFT JOIN fc_study_subcards s ON s.uuid = p.child_uuid
+         FROM ${this.scope.plays} p LEFT JOIN ${this.scope.subcards} s ON s.uuid = p.child_uuid
         WHERE p.game_uuid = ? AND p.position = ?
         ORDER BY (p.child_uuid IS NOT NULL) ASC, s.custom_order ASC, p.rowid ASC`,
       [gameUuid, position],
@@ -203,7 +312,7 @@ export class GameRepo {
   allPlays(gameUuid: string): PlayRow[] {
     return this.db.all<PlayRow>(
       `SELECT uuid, game_uuid, card_uuid, child_uuid, correct_answer, user_answer, position, play_date
-         FROM fc_study_plays WHERE game_uuid = ? ORDER BY position ASC, rowid ASC`,
+         FROM ${this.scope.plays} WHERE game_uuid = ? ORDER BY position ASC, rowid ASC`,
       [gameUuid],
     );
   }
@@ -211,7 +320,7 @@ export class GameRepo {
   gameDecks(gameUuid: string): string[] {
     return this.db
       .all<{ deck_uuid: string }>(
-        'SELECT deck_uuid FROM fc_study_game_decks WHERE game_uuid = ? ORDER BY category_order, rowid',
+        `SELECT deck_uuid FROM ${this.scope.gameDecks} WHERE game_uuid = ? ORDER BY category_order, rowid`,
         [gameUuid],
       )
       .map((r) => r.deck_uuid);
@@ -239,9 +348,10 @@ export class GameRepo {
       retry: number;
     }>(
       `SELECT p.card_uuid, p.child_uuid, p.user_answer, (g.parent_uuid IS NOT NULL) AS retry
-         FROM fc_study_plays p LEFT JOIN fc_games g ON g.uuid = p.game_uuid
-        WHERE p.user_answer IN ('Correct', 'Wrong')
+         FROM ${this.scope.plays} p LEFT JOIN fc_games g ON g.uuid = p.game_uuid
+        WHERE p.user_answer IN ('Correct', 'Wrong')${this.isVocab ? ' AND g.course_uuid = ?' : ''}
         ORDER BY p.play_date ASC, p.rowid ASC`,
+      this.isVocab ? [this.scope.course!] : [],
     );
     for (const r of rows) {
       const key = r.child_uuid ? `c${r.child_uuid}` : r.card_uuid ? `p${r.card_uuid}` : null;
@@ -269,7 +379,10 @@ export class GameRepo {
    */
   deckStats(): Map<string, DeckStat> {
     const decks = this.db.all<{ uuid: string; parent_uuid: string | null }>(
-      'SELECT uuid, parent_uuid FROM fc_study_decks',
+      this.isVocab
+        ? 'SELECT uuid, parent_uuid FROM fc_vocab_decks WHERE course_uuid = ?'
+        : 'SELECT uuid, parent_uuid FROM fc_study_decks',
+      this.isVocab ? [this.scope.course!] : [],
     );
     const own = new Map<string, { levels: Record<string, number>; known: number; tried: number }>();
     const empty = () => ({
@@ -292,7 +405,7 @@ export class GameRepo {
     };
     for (const c of this.cardsFor([])) {
       const ch = kids.get(c.uuid) ?? [];
-      if (!(isTitleCard(c, ch.length) && !isBlankField(c.question_desc))) {
+      if (!this.isTitle(c, ch.length)) {
         count(c.category_uuid, `p${c.uuid}`, c.uuid);
       }
       for (const k of ch) count(c.category_uuid, `c${k}`, k);
@@ -302,8 +415,9 @@ export class GameRepo {
     const games = new Map<string, { ids: Set<string>; last: string | null }>();
     for (const r of this.db.all<{ deck: string; id: string; date: string | null }>(
       `SELECT gd.deck_uuid AS deck, g.uuid AS id, g.game_date AS date
-         FROM fc_study_game_decks gd JOIN fc_games g ON g.uuid = gd.game_uuid
-        WHERE g.parent_uuid IS NULL`,
+         FROM ${this.scope.gameDecks} gd JOIN fc_games g ON g.uuid = gd.game_uuid
+        WHERE g.parent_uuid IS NULL AND ${this.gameCond('g').sql}`,
+      this.gameCond('g').params,
     )) {
       const e = games.get(r.deck) ?? { ids: new Set<string>(), last: null };
       e.ids.add(r.id);
@@ -376,7 +490,7 @@ export class GameRepo {
     const kids = this.childrenByParent();
     const out = new Map<string, Level>();
     for (const c of cards) {
-      if (isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc)) continue;
+      if (this.isTitle(c, kids.get(c.uuid)?.length ?? 0)) continue;
       out.set(c.uuid, this.levelOfKey(`p${c.uuid}`, hist));
     }
     return out;
@@ -390,7 +504,7 @@ export class GameRepo {
     let best = 0;
     let answers = 0;
     for (const r of this.db.all<{ a: string }>(
-      `SELECT user_answer AS a FROM fc_study_plays
+      `SELECT user_answer AS a FROM ${this.scope.plays}
         WHERE game_uuid = ? AND user_answer IN ('Correct', 'Wrong') ORDER BY play_date ASC, rowid ASC`,
       [gameUuid],
     )) {
@@ -421,7 +535,7 @@ export class GameRepo {
     const kids = this.childrenByParent();
     const titles = new Set<string>();
     for (const c of this.cardsFor([])) {
-      if (isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc)) {
+      if (this.isTitle(c, kids.get(c.uuid)?.length ?? 0)) {
         titles.add(`p${c.uuid}`);
       }
     }
@@ -436,15 +550,20 @@ export class GameRepo {
   /* ---------------- avvio ---------------- */
 
   private cardsFor(deckUuids: string[]): CardLite[] {
-    const cols =
-      'uuid, category_uuid, question_desc, answer_desc, answer_image, answer_audio, is_father, custom_order';
-    if (!deckUuids.length) return this.db.all<CardLite>(`SELECT ${cols} FROM fc_study_cards`);
+    const cols = this.cardCols;
+    if (!deckUuids.length) {
+      const sc = this.cardScope;
+      return this.db.all<CardLite>(
+        `SELECT ${cols} FROM ${this.scope.cards} WHERE ${sc.sql}`,
+        sc.params,
+      );
+    }
     const out: CardLite[] = [];
     for (let i = 0; i < deckUuids.length; i += 400) {
       const part = deckUuids.slice(i, i + 400);
       out.push(
         ...this.db.all<CardLite>(
-          `SELECT ${cols} FROM fc_study_cards WHERE category_uuid IN (${part.map(() => '?').join(',')})`,
+          `SELECT ${cols} FROM ${this.scope.cards} WHERE category_uuid IN (${part.map(() => '?').join(',')})`,
           part,
         ),
       );
@@ -455,8 +574,13 @@ export class GameRepo {
   /** I titoli: carte padre con sottocarte, domanda scritta e risposta vuota (non hanno livello e non si imparano). */
   private childrenByParent(): Map<string, string[]> {
     const m = new Map<string, string[]>();
+    const sc = this.cardScope;
     for (const r of this.db.all<{ uuid: string; parent_uuid: string }>(
-      'SELECT uuid, parent_uuid FROM fc_study_subcards ORDER BY custom_order, rowid',
+      this.isVocab
+        ? `SELECT uuid, parent_uuid FROM fc_vocab_subcards
+            WHERE parent_uuid IN (SELECT uuid FROM fc_vocab_cards WHERE ${sc.sql}) ORDER BY custom_order, rowid`
+        : 'SELECT uuid, parent_uuid FROM fc_study_subcards ORDER BY custom_order, rowid',
+      this.isVocab ? sc.params : [],
     )) {
       const l = m.get(r.parent_uuid) ?? [];
       l.push(r.uuid);
@@ -481,8 +605,7 @@ export class GameRepo {
   private statusFilter(status: GameStatus, kids: Map<string, string[]>): (c: CardLite) => boolean {
     if (status === 'all') return () => true;
     const learnt = this.study.learnt();
-    const isTitle = (c: CardLite): boolean =>
-      isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc);
+    const isTitle = (c: CardLite): boolean => this.isTitle(c, kids.get(c.uuid)?.length ?? 0);
     return (c) => {
       const ch = kids.get(c.uuid) ?? [];
       if (status === '1') return learnt.has(c.uuid) || ch.some((k) => learnt.has(k));
@@ -506,15 +629,21 @@ export class GameRepo {
   /** Quali carte padre entrano in una partita con queste scelte, nell'ordine di gioco, e quante carte figlie portano. */
   select(input: StartInput): { fathers: string[]; children: number; decks: string[] } {
     const decksKnown = new Set(
-      this.db.all<{ uuid: string }>('SELECT uuid FROM fc_study_decks').map((d) => d.uuid),
+      this.db
+        .all<{ uuid: string }>(
+          this.isVocab
+            ? 'SELECT uuid FROM fc_vocab_decks WHERE course_uuid = ?'
+            : 'SELECT uuid FROM fc_study_decks',
+          this.isVocab ? [this.scope.course!] : [],
+        )
+        .map((d) => d.uuid),
     );
     const decks = [...new Set(input.decks)].filter((d) => decksKnown.has(d));
     const kids = this.childrenByParent();
     const status: GameStatus = input.onlyHard ? 'all' : input.status;
     const cards = this.cardsFor(decks);
     const passes = this.statusFilter(status, kids);
-    const isTitle = (c: CardLite): boolean =>
-      isTitleCard(c, kids.get(c.uuid)?.length ?? 0) && !isBlankField(c.question_desc);
+    const isTitle = (c: CardLite): boolean => this.isTitle(c, kids.get(c.uuid)?.length ?? 0);
 
     let chosen = cards.filter(passes);
     // le sottocarte di chi è padre vero
@@ -573,10 +702,10 @@ export class GameRepo {
     fathers.forEach((card, i) => {
       const uuid = this.newId();
       const row = { game_uuid: gameUuid, position: i + 1, card_uuid: card };
-      upsertRow(this.db, 'fc_study_sequence', { uuid, ...row });
+      upsertRow(this.db, this.scope.sequence, { uuid, ...row });
       enqueue(
         this.db,
-        { table: 'fc_study_sequence', uuid, op: 'upsert', isCreate: true, patch: row },
+        { table: this.scope.sequence, uuid, op: 'upsert', isCreate: true, patch: row },
         now,
       );
     });
@@ -587,10 +716,10 @@ export class GameRepo {
     decks.forEach((deck, i) => {
       const uuid = this.newId();
       const row = { game_uuid: gameUuid, deck_uuid: deck, category_order: i };
-      upsertRow(this.db, 'fc_study_game_decks', { uuid, ...row });
+      upsertRow(this.db, this.scope.gameDecks, { uuid, ...row });
       enqueue(
         this.db,
-        { table: 'fc_study_game_decks', uuid, op: 'upsert', isCreate: true, patch: row },
+        { table: this.scope.gameDecks, uuid, op: 'upsert', isCreate: true, patch: row },
         now,
       );
     });
@@ -610,6 +739,8 @@ export class GameRepo {
   ): string {
     const uuid = this.newId();
     const row = {
+      kind: this.scope.kind,
+      course_uuid: this.scope.course,
       game_date: this.nowStamp(),
       score: 0,
       type: fields.type,
@@ -642,7 +773,11 @@ export class GameRepo {
     const status: GameStatus = input.onlyHard ? 'all' : input.status;
     const game = this.createGame(
       {
-        type: status === '1' ? 'fc_L' : 'fc',
+        type: this.isVocab
+          ? `${input.direction ?? 'w2t'}${status === '1' ? '_L' : ''}`
+          : status === '1'
+            ? 'fc_L'
+            : 'fc',
         card_status: status,
         game_order: input.onlyHard ? 'random' : input.order,
         parent_uuid: null,
@@ -665,7 +800,7 @@ export class GameRepo {
     const wrongPositions = new Set(
       this.db
         .all<{ position: number }>(
-          `SELECT DISTINCT position FROM fc_study_plays WHERE game_uuid = ? AND user_answer = 'Wrong'`,
+          `SELECT DISTINCT position FROM ${this.scope.plays} WHERE game_uuid = ? AND user_answer = 'Wrong'`,
           [parentUuid],
         )
         .map((r) => r.position),
@@ -681,7 +816,7 @@ export class GameRepo {
     const kids = this.childrenByParent();
     const children = fathers.reduce((n, f) => {
       const row = this.db.all<{ is_father: number }>(
-        'SELECT is_father FROM fc_study_cards WHERE uuid = ?',
+        `SELECT is_father FROM ${this.scope.cards} WHERE uuid = ?`,
         [f],
       )[0];
       return n + (row?.is_father === 1 ? (kids.get(f)?.length ?? 0) : 0);
@@ -721,10 +856,10 @@ export class GameRepo {
       position,
       play_date: null,
     };
-    upsertRow(this.db, 'fc_study_plays', { uuid, ...row });
+    upsertRow(this.db, this.scope.plays, { uuid, ...row });
     enqueue(
       this.db,
-      { table: 'fc_study_plays', uuid, op: 'upsert', isCreate: true, patch: row },
+      { table: this.scope.plays, uuid, op: 'upsert', isCreate: true, patch: row },
       this.clock(),
     );
   }
@@ -738,24 +873,30 @@ export class GameRepo {
     if (have.length) return have;
     const game = this.game(gameUuid);
     const seq = this.db.all<{ card_uuid: string }>(
-      'SELECT card_uuid FROM fc_study_sequence WHERE game_uuid = ? AND position = ?',
+      `SELECT card_uuid FROM ${this.scope.sequence} WHERE game_uuid = ? AND position = ?`,
       [gameUuid, position],
     )[0];
     if (!game || !seq) return null;
-    const card = this.db.all<CardLite>(
-      `SELECT uuid, category_uuid, question_desc, answer_desc, answer_image, answer_audio, is_father, custom_order
-         FROM fc_study_cards WHERE uuid = ?`,
+    const card = this.db.all<CardLite & { word?: string; translation?: string }>(
+      `SELECT ${this.cardCols}${this.isVocab ? ', word, translation' : ''}
+         FROM ${this.scope.cards} WHERE uuid = ?`,
       [seq.card_uuid],
     )[0];
     if (!card) return null;
     const kids = card.is_father === 1 ? (this.childrenByParent().get(card.uuid) ?? []) : [];
-    const title = isTitleCard(card, kids.length);
+    const title = !this.isVocab && isTitleCard(card, kids.length);
+    // la risposta giusta, scritta nella riga: in lingua dipende dal verso di questa posizione
+    const dir = this.isVocab ? directionAt(game.type, gameUuid, position) : 'w2t';
+    const correctOf = (word: string | null, translation: string | null, study: string | null) =>
+      this.isVocab
+        ? ((dir === 'w2t' ? translation : word) ?? '').slice(0, 255)
+        : (study ?? '').slice(0, 100);
 
     // un ripasso parte con «giusto» le carte già giuste nella partita di origine
     const prevCorrect = (col: 'card_uuid' | 'child_uuid', id: string): boolean =>
       !!game.parent_uuid &&
       this.db.all(
-        `SELECT 1 FROM fc_study_plays WHERE game_uuid = ? AND ${col} = ? AND user_answer = 'Correct' LIMIT 1`,
+        `SELECT 1 FROM ${this.scope.plays} WHERE game_uuid = ? AND ${col} = ? AND user_answer = 'Correct' LIMIT 1`,
         [game.parent_uuid, id],
       ).length > 0;
 
@@ -777,11 +918,17 @@ export class GameRepo {
         position,
         { card: card.uuid },
         a,
-        title ? '' : (card.answer_desc ?? '').slice(0, 100),
+        title ? '' : correctOf(card.word ?? null, card.translation ?? null, card.answer_desc),
       );
       for (const k of kids) {
-        const child = this.db.all<{ answer_desc: string | null }>(
-          'SELECT answer_desc FROM fc_study_subcards WHERE uuid = ?',
+        const child = this.db.all<{
+          answer_desc: string | null;
+          word: string | null;
+          translation: string | null;
+        }>(
+          this.isVocab
+            ? 'SELECT translation AS answer_desc, word, translation FROM fc_vocab_subcards WHERE uuid = ?'
+            : 'SELECT answer_desc, NULL AS word, NULL AS translation FROM fc_study_subcards WHERE uuid = ?',
           [k],
         )[0];
         let ca = '';
@@ -792,7 +939,7 @@ export class GameRepo {
           position,
           { child: k },
           ca,
-          (child?.answer_desc ?? '').slice(0, 100),
+          correctOf(child?.word ?? null, child?.translation ?? null, child?.answer_desc ?? null),
         );
       }
     });
@@ -802,7 +949,7 @@ export class GameRepo {
   /** La prima posizione ancora da rispondere (null = nessuna). */
   firstUnanswered(gameUuid: string): number | null {
     const r = this.db.all<{ p: number | null }>(
-      `SELECT MIN(position) AS p FROM fc_study_plays WHERE game_uuid = ? AND COALESCE(user_answer, '') = ''`,
+      `SELECT MIN(position) AS p FROM ${this.scope.plays} WHERE game_uuid = ? AND COALESCE(user_answer, '') = ''`,
       [gameUuid],
     )[0];
     return r?.p ? Number(r.p) : null;
@@ -816,9 +963,9 @@ export class GameRepo {
     const open = this.firstUnanswered(gameUuid);
     if (open) return open;
     const r = this.db.all<{ p: number | null }>(
-      `SELECT MIN(s.position) AS p FROM fc_study_sequence s
+      `SELECT MIN(s.position) AS p FROM ${this.scope.sequence} s
         WHERE s.game_uuid = ?
-          AND NOT EXISTS (SELECT 1 FROM fc_study_plays p WHERE p.game_uuid = s.game_uuid AND p.position = s.position
+          AND NOT EXISTS (SELECT 1 FROM ${this.scope.plays} p WHERE p.game_uuid = s.game_uuid AND p.position = s.position
                             AND COALESCE(p.user_answer, '') <> '')`,
       [gameUuid],
     )[0];
@@ -834,7 +981,7 @@ export class GameRepo {
   /** Il fronte: la posizione più avanti con una risposta vera (non titolo, non da guardare). */
   frontier(gameUuid: string): number {
     const r = this.db.all<{ p: number | null }>(
-      `SELECT MAX(position) AS p FROM fc_study_plays
+      `SELECT MAX(position) AS p FROM ${this.scope.plays}
         WHERE game_uuid = ? AND user_answer <> '' AND user_answer NOT IN ('Titolo', 'Visione')`,
       [gameUuid],
     )[0];
@@ -888,7 +1035,7 @@ export class GameRepo {
     return (
       this.db.all<PlayRow>(
         `SELECT uuid, game_uuid, card_uuid, child_uuid, correct_answer, user_answer, position, play_date
-           FROM fc_study_plays WHERE game_uuid = ? AND position = ? AND ${isChild ? 'child_uuid' : 'card_uuid'} = ?`,
+           FROM ${this.scope.plays} WHERE game_uuid = ? AND position = ? AND ${isChild ? 'child_uuid' : 'card_uuid'} = ?`,
         [gameUuid, position, target],
       )[0] ?? null
     );
@@ -896,10 +1043,10 @@ export class GameRepo {
 
   private writeAnswer(play: PlayRow, answer: string): void {
     const patch: Record<string, WireValue> = { user_answer: answer, play_date: this.nowStamp() };
-    patchRow(this.db, 'fc_study_plays', play.uuid, patch);
+    patchRow(this.db, this.scope.plays, play.uuid, patch);
     enqueue(
       this.db,
-      { table: 'fc_study_plays', uuid: play.uuid, op: 'upsert', patch },
+      { table: this.scope.plays, uuid: play.uuid, op: 'upsert', patch },
       this.clock(),
     );
   }
@@ -956,7 +1103,7 @@ export class GameRepo {
   /** Giuste, sbagliate e carte giocate (i titoli e le carte solo da guardare non contano). */
   tally(gameUuid: string): { correct: number; wrong: number; played: number; score: number } {
     const rows = this.db.all<{ a: string; n: number }>(
-      `SELECT user_answer AS a, COUNT(*) AS n FROM fc_study_plays WHERE game_uuid = ? GROUP BY user_answer`,
+      `SELECT user_answer AS a, COUNT(*) AS n FROM ${this.scope.plays} WHERE game_uuid = ? GROUP BY user_answer`,
       [gameUuid],
     );
     const count = (a: string): number => Number(rows.find((r) => r.a === a)?.n ?? 0);
@@ -975,10 +1122,12 @@ export class GameRepo {
     state: 'open' | 'perfect' | 'conquered';
     lastWrong: number;
   } {
+    const gc = this.gameCond();
     const all = new Map(
       this.db
         .all<{ uuid: string; parent_uuid: string | null; game_date: string | null }>(
-          'SELECT uuid, parent_uuid, game_date FROM fc_games',
+          `SELECT uuid, parent_uuid, game_date FROM fc_games WHERE ${gc.sql}`,
+          gc.params,
         )
         .map((r) => [r.uuid, r]),
     );
@@ -1039,10 +1188,11 @@ export class GameRepo {
     if (!decks.length || mine.played <= 0) return null;
     const key = (d: string[]): string => [...d].sort().join('|');
     const want = key(decks);
+    const gc = this.gameCond();
     const earlier = this.db.all<{ uuid: string }>(
-      `SELECT uuid FROM fc_games WHERE parent_uuid IS NULL AND uuid <> ? AND game_date < ?
+      `SELECT uuid FROM fc_games WHERE parent_uuid IS NULL AND uuid <> ? AND game_date < ? AND ${gc.sql}
         ORDER BY game_date DESC, rowid DESC LIMIT 200`,
-      [gameUuid, game.game_date ?? '9999'],
+      [gameUuid, game.game_date ?? '9999', ...gc.params],
     );
     const same: { uuid: string; pct: number }[] = [];
     for (const g of earlier) {
@@ -1065,7 +1215,7 @@ export class GameRepo {
   closedPositions(gameUuid: string): number {
     return Number(
       this.db.all<{ n: number }>(
-        `SELECT COUNT(*) AS n FROM (SELECT position FROM fc_study_plays WHERE game_uuid = ?
+        `SELECT COUNT(*) AS n FROM (SELECT position FROM ${this.scope.plays} WHERE game_uuid = ?
                 GROUP BY position HAVING SUM(COALESCE(user_answer, '') = '') = 0)`,
         [gameUuid],
       )[0]?.n ?? 0,
@@ -1079,7 +1229,7 @@ export class GameRepo {
   conclude(gameUuid: string): number {
     const empty = this.db
       .all<{ position: number }>(
-        `SELECT position FROM fc_study_plays WHERE game_uuid = ? GROUP BY position
+        `SELECT position FROM ${this.scope.plays} WHERE game_uuid = ? GROUP BY position
           HAVING SUM(CASE WHEN COALESCE(user_answer, '') <> '' THEN 1 ELSE 0 END) = 0`,
         [gameUuid],
       )
@@ -1088,8 +1238,8 @@ export class GameRepo {
       for (const pos of empty) {
         for (const p of this.plays(gameUuid, pos)) {
           // se la riga non era ancora partita, `enqueue` la fa sparire senza lasciare tracce
-          deleteRow(this.db, 'fc_study_plays', p.uuid);
-          enqueue(this.db, { table: 'fc_study_plays', uuid: p.uuid, op: 'delete' }, this.clock());
+          deleteRow(this.db, this.scope.plays, p.uuid);
+          enqueue(this.db, { table: this.scope.plays, uuid: p.uuid, op: 'delete' }, this.clock());
         }
       }
       const score = Math.round(this.tally(gameUuid).score * 100) / 100;
@@ -1115,10 +1265,10 @@ export class GameRepo {
     this.db.transaction(() => {
       const now = this.clock();
       for (const table of [
-        'fc_study_plays',
+        this.scope.plays,
         'fc_game_durations',
-        'fc_study_game_decks',
-        'fc_study_sequence',
+        this.scope.gameDecks,
+        this.scope.sequence,
       ] as const) {
         this.db.run(
           `DELETE FROM outbox WHERE tbl = ? AND state = 'pending' AND uuid IN (SELECT uuid FROM ${table} WHERE game_uuid = ?)`,
@@ -1127,6 +1277,11 @@ export class GameRepo {
         this.db.run(`DELETE FROM ${table} WHERE game_uuid = ?`, [gameUuid]);
       }
       this.db.run('UPDATE fc_games SET parent_uuid = NULL WHERE parent_uuid = ?', [gameUuid]);
+      // un record che puntava a questa partita resta, senza il legame (come sul server)
+      this.db.run(
+        `UPDATE ${this.isVocab ? 'fc_vocab_records' : 'fc_study_records'} SET game_uuid = NULL WHERE game_uuid = ?`,
+        [gameUuid],
+      );
       deleteRow(this.db, 'fc_games', gameUuid);
       enqueue(this.db, { table: 'fc_games', uuid: gameUuid, op: 'delete' }, now);
     });
@@ -1143,18 +1298,17 @@ export class GameRepo {
     label: string;
   } | null {
     const limit = stamp(new Date(today.getTime() - 90 * 86_400_000));
+    const gc = this.gameCond();
     const candidates = this.db.all<GameRow>(
-      `SELECT uuid, game_date, score, type, card_status, parent_uuid, total_father_words, game_order,
-              total_words_with_children, max_card_uuid
-         FROM fc_games WHERE game_date >= ? ORDER BY game_date DESC, rowid DESC LIMIT 12`,
-      [limit],
+      `SELECT ${GAME_COLS} FROM fc_games WHERE game_date >= ? AND ${gc.sql} ORDER BY game_date DESC, rowid DESC LIMIT 12`,
+      [limit, ...gc.params],
     );
     for (const g of candidates) {
       const total = this.totalPositions(g.uuid);
       if (total < 1) continue;
       const answered = Number(
         this.db.all<{ n: number }>(
-          `SELECT COUNT(*) AS n FROM fc_study_plays WHERE game_uuid = ? AND user_answer IN ('Correct', 'Wrong')`,
+          `SELECT COUNT(*) AS n FROM ${this.scope.plays} WHERE game_uuid = ? AND user_answer IN ('Correct', 'Wrong')`,
           [g.uuid],
         )[0]?.n ?? 0,
       );
@@ -1164,7 +1318,7 @@ export class GameRepo {
       if (position === null || closed >= total) continue;
       const first = this.gameDecks(g.uuid)[0];
       const label = first
-        ? (this.db.all<{ name: string }>('SELECT name FROM fc_study_decks WHERE uuid = ?', [
+        ? (this.db.all<{ name: string }>(`SELECT name FROM ${this.scope.decks} WHERE uuid = ?`, [
             first,
           ])[0]?.name ?? '')
         : '';

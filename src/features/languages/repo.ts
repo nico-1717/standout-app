@@ -6,7 +6,7 @@ import type { SyncTable } from '@/core/sync/manifest';
 import { enqueue } from '@/core/sync/outbox';
 import { deleteRow, patchRow, upsertRow } from '@/core/sync/rows';
 import type { WireValue } from '@/core/sync/types';
-import { learntUuid } from '@/core/sync/uuid5';
+import { learntUuid, vocabRecordUuid } from '@/core/sync/uuid5';
 import {
   deckBranch,
   deckMap,
@@ -16,6 +16,8 @@ import {
   sortCards,
   type Deck,
 } from '@/features/flashcards/logic';
+import { GameRepo, vocabScope, type GameStore } from '@/features/flashcards/game';
+import { stamp } from '@/features/flashcards/study';
 import type { ProjectsRepo } from '@/features/projects/repo';
 import { localToday } from '@/features/tasks/groups';
 
@@ -117,6 +119,7 @@ export class LanguagesRepo {
     private readonly clock: () => string = () => new Date().toISOString(),
     private readonly newId: () => string = uuidv7,
     private readonly today: () => string = () => localToday(),
+    private readonly nowStamp: () => string = () => stamp(),
   ) {}
 
   /* ---------------- corsi ---------------- */
@@ -235,11 +238,40 @@ export class LanguagesRepo {
     if (!this.course(uuid)) return false;
     this.db.transaction(() => {
       const now = this.clock();
+      this.dropCourseGames(uuid);
       this.dropDecks(this.decks(uuid).map((d) => d.uuid));
       enqueue(this.db, { table: 'fc_vocab_courses', uuid, op: 'delete' }, now);
       deleteRow(this.db, 'fc_vocab_courses', uuid);
     });
     return true;
+  }
+
+  /** Toglie dal telefono le partite e i record di un corso, senza dire niente al server (lo sa già: una cancellazione sola). */
+  private dropCourseGames(course: string): void {
+    const games = this.db
+      .all<{ uuid: string }>('SELECT uuid FROM fc_games WHERE course_uuid = ?', [course])
+      .map((g) => g.uuid);
+    const wipe = (table: SyncTable, column: string, list: string[]): void => {
+      for (let i = 0; i < list.length; i += 400) {
+        const part = list.slice(i, i + 400);
+        const ph = part.map(() => '?').join(',');
+        this.db.run(
+          `DELETE FROM outbox WHERE tbl = ? AND state = 'pending' AND uuid IN (SELECT uuid FROM ${table} WHERE ${column} IN (${ph}))`,
+          [table, ...part],
+        );
+        this.db.run(`DELETE FROM ${table} WHERE ${column} IN (${ph})`, part);
+      }
+    };
+    for (const t of [
+      'fc_vocab_plays',
+      'fc_game_durations',
+      'fc_vocab_game_decks',
+      'fc_vocab_sequence',
+    ] as const) {
+      wipe(t, 'game_uuid', games);
+    }
+    wipe('fc_games', 'uuid', games);
+    wipe('fc_vocab_records', 'course_uuid', [course]);
   }
 
   /** Quante parole (padri + figlie) e quante imparate ha ogni corso. */
@@ -495,6 +527,12 @@ export class LanguagesRepo {
   private dropWordsOf(deckIds: string[]): void {
     if (!deckIds.length) return;
     const ph = deckIds.map(() => '?').join(',');
+    // i mazzi scelti per una partita non hanno più il mazzo
+    this.db.run(
+      `DELETE FROM outbox WHERE tbl = 'fc_vocab_game_decks' AND state = 'pending' AND uuid IN (SELECT uuid FROM fc_vocab_game_decks WHERE deck_uuid IN (${ph}))`,
+      deckIds,
+    );
+    this.db.run(`DELETE FROM fc_vocab_game_decks WHERE deck_uuid IN (${ph})`, deckIds);
     const cards = this.db
       .all<{ uuid: string }>(
         `SELECT uuid FROM fc_vocab_cards WHERE category_uuid IN (${ph})`,
@@ -521,6 +559,9 @@ export class LanguagesRepo {
       );
     }
     const jobs: [SyncTable, string, string[]][] = [
+      ['fc_vocab_plays', 'card_uuid', cards],
+      ['fc_vocab_plays', 'child_uuid', children],
+      ['fc_vocab_sequence', 'card_uuid', cards],
       ['fc_vocab_favorites', 'card_uuid', cards],
       ['fc_vocab_examples', 'card_uuid', cards],
       ['fc_vocab_learnt', 'target_uuid', [...cards, ...children]],
@@ -901,6 +942,94 @@ export class LanguagesRepo {
       );
     });
     return true;
+  }
+
+  /** Una parola o figlia preferita? */
+  isFavorite(targetUuid: string): boolean {
+    return this.favorites().has(targetUuid);
+  }
+
+  /* ---------------- gioco ---------------- */
+
+  /** Il gioco di un corso: stesse regole dello studio, con le parole e i mazzi di quel corso. */
+  games(course: string): GameRepo {
+    return new GameRepo(
+      this.db,
+      this.store(course),
+      this.clock,
+      this.newId,
+      undefined,
+      this.nowStamp,
+      undefined,
+      vocabScope(course),
+    );
+  }
+
+  /** Il corso di una partita di lingua (null = non è una partita di lingua). */
+  courseOfGame(gameUuid: string): string | null {
+    return (
+      this.db.all<{ c: string | null }>(
+        `SELECT course_uuid AS c FROM fc_games WHERE uuid = ? AND kind = 'vocab'`,
+        [gameUuid],
+      )[0]?.c ?? null
+    );
+  }
+
+  /** I record di un corso: [tipo => valore]. */
+  records(course: string): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const r of this.db.all<{ kind: string; value: number }>(
+      'SELECT kind, value FROM fc_vocab_records WHERE course_uuid = ?',
+      [course],
+    )) {
+      out[r.kind] = Number(r.value);
+    }
+    return out;
+  }
+
+  /** Scrive un record del corso solo se è migliore di quello che c'è (come lo studio). */
+  bumpRecord(
+    course: string,
+    kind: string,
+    value: number,
+    gameUuid: string | null,
+    lowerWins = false,
+  ): { before: number | null; changed: boolean; first: boolean } {
+    const uuid = vocabRecordUuid(this.userId, course, kind);
+    const cur = this.db.all<{ value: number }>(
+      'SELECT value FROM fc_vocab_records WHERE uuid = ?',
+      [uuid],
+    )[0];
+    const before = cur ? Number(cur.value) : null;
+    const v = Math.round(value * 100) / 100;
+    const better = before === null || (lowerWins ? v < before : v > before);
+    if (!better) return { before, changed: false, first: false };
+    const patch = {
+      ...(before === null ? { kind, course_uuid: course } : null),
+      value: v,
+      game_uuid: gameUuid,
+      achieved_at: this.nowStamp(),
+    };
+    const now = this.clock();
+    this.db.transaction(() => {
+      if (cur) patchRow(this.db, 'fc_vocab_records', uuid, { ...patch, updated_at: now });
+      else upsertRow(this.db, 'fc_vocab_records', { uuid, ...patch, updated_at: now });
+      enqueue(
+        this.db,
+        { table: 'fc_vocab_records', uuid, op: 'upsert', isCreate: !cur, patch },
+        now,
+      );
+    });
+    return { before, changed: before !== null, first: before === null };
+  }
+
+  private store(course: string): GameStore {
+    return {
+      learnt: () => this.learnt(),
+      setLearnt: (t, isChild, on) => this.setLearnt(t, isChild, on),
+      bumpRecord: (kind, value, game, lowerWins) =>
+        this.bumpRecord(course, kind, value, game, lowerWins),
+    };
   }
 
   /* ---------------- esempi ---------------- */

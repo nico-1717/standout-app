@@ -5,6 +5,7 @@ import {
   planGoalUuid,
   planPaintUuid,
   studyRecordUuid,
+  vocabRecordUuid,
 } from '../uuid5';
 
 // I valori attesi sono quelli calcolati dal server (lib/sync_manifest.php: sync_uuid_imparata, sync_uuid_record, sync_uuid_per_utente).
@@ -17,6 +18,11 @@ describe('uuid calcolati come sul server', () => {
   });
   it('record di studio: utente + tipo', () => {
     expect(studyRecordUuid(2, 'combo')).toBe('586b9970-53a7-5e11-8d2e-1fab9a8076e9');
+  });
+  it('record di un corso di lingua: utente + corso + tipo', () => {
+    expect(vocabRecordUuid(2, '0192f3a0-0000-7000-8000-000000000002', 'streak')).toBe(
+      '6f05f8c6-3524-5479-81ee-4a6f93d944db',
+    );
   });
   it('impostazioni e obiettivo: una riga per utente', () => {
     expect(perUserUuid('fc_settings', 2)).toBe('711f7935-39a5-5518-abc7-8b3c84ff9fa2');

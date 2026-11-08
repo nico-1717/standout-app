@@ -145,6 +145,11 @@ export function studyRecordUuid(userId: number | string, kind: string): string {
   return uuid5(`fc_study_records|${userId}|${kind}`);
 }
 
+/** Un record di un corso di lingua: una riga per (utente, corso, tipo), come sul server (sync_uuid_record_lingua). */
+export function vocabRecordUuid(userId: number | string, courseUuid: string, kind: string): string {
+  return uuid5(`fc_vocab_records|${userId}|${courseUuid}|${kind}`);
+}
+
 /** Le impostazioni di studio o l'obiettivo: una riga per utente, come sul server (sync_uuid_per_utente). */
 export function perUserUuid(
   table: 'fc_settings' | 'fc_goals' | 'plan_settings',

@@ -56,6 +56,10 @@ export type SyncTable =
   | 'fc_study_game_decks'
   | 'fc_study_sequence'
   | 'fc_study_records'
+  | 'fc_vocab_plays'
+  | 'fc_vocab_game_decks'
+  | 'fc_vocab_sequence'
+  | 'fc_vocab_records'
   | 'fc_settings'
   | 'fc_goals';
 
@@ -667,7 +671,11 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'created_at',
       'updated_at',
     ],
-    children: [{ table: 'fc_vocab_decks', column: 'course_uuid' }],
+    children: [
+      { table: 'fc_vocab_decks', column: 'course_uuid' },
+      { table: 'fc_games', column: 'course_uuid' },
+      { table: 'fc_vocab_records', column: 'course_uuid' },
+    ],
   },
   fc_vocab_decks: {
     order: 301,
@@ -691,6 +699,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     children: [
       { table: 'fc_vocab_decks', column: 'parent_uuid' },
       { table: 'fc_vocab_cards', column: 'category_uuid' },
+      { table: 'fc_vocab_game_decks', column: 'deck_uuid' },
     ],
   },
   fc_vocab_cards: {
@@ -715,6 +724,8 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'fc_vocab_favorites', column: 'card_uuid' },
       { table: 'fc_vocab_learnt', column: 'target_uuid' },
       { table: 'fc_vocab_examples', column: 'card_uuid' },
+      { table: 'fc_vocab_plays', column: 'card_uuid' },
+      { table: 'fc_vocab_sequence', column: 'card_uuid' },
     ],
   },
   fc_vocab_subcards: {
@@ -737,6 +748,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'fc_vocab_favorites', column: 'child_uuid' },
       { table: 'fc_vocab_learnt', column: 'target_uuid' },
       { table: 'fc_vocab_examples', column: 'child_uuid' },
+      { table: 'fc_vocab_plays', column: 'child_uuid' },
     ],
   },
   fc_vocab_favorites: {
@@ -902,14 +914,16 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     booleans: [],
     columns: ['uuid', 'card_uuid', 'child_uuid', 'example_text', 'example_image', 'example_audio'],
   },
-  // le partite di studio (quelle di vocabolario arrivano con le lingue)
+  // le partite, di studio e di lingua (kind; quelle di lingua hanno anche il corso)
   fc_games: {
     order: 220,
     readOnly: [],
-    createOnly: ['game_date', 'type', 'card_status', 'parent_uuid'],
+    createOnly: ['kind', 'course_uuid', 'game_date', 'type', 'card_status', 'parent_uuid'],
     booleans: [],
     columns: [
       'uuid',
+      'kind',
+      'course_uuid',
       'game_date',
       'score',
       'type',
@@ -926,7 +940,12 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'fc_study_plays', column: 'game_uuid' },
       { table: 'fc_study_game_decks', column: 'game_uuid' },
       { table: 'fc_study_sequence', column: 'game_uuid' },
+      { table: 'fc_vocab_plays', column: 'game_uuid' },
+      { table: 'fc_vocab_game_decks', column: 'game_uuid' },
+      { table: 'fc_vocab_sequence', column: 'game_uuid' },
       { table: 'fc_games', column: 'parent_uuid', setNull: true },
+      { table: 'fc_study_records', column: 'game_uuid', setNull: true },
+      { table: 'fc_vocab_records', column: 'game_uuid', setNull: true },
     ],
   },
   fc_game_durations: {
@@ -973,6 +992,45 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     createOnly: ['kind'],
     booleans: [],
     columns: ['uuid', 'kind', 'value', 'game_uuid', 'achieved_at', 'updated_at'],
+  },
+  // il gioco delle lingue: come lo studio, con parole e mazzi del corso
+  fc_vocab_plays: {
+    order: 307,
+    readOnly: [],
+    createOnly: ['game_uuid', 'card_uuid', 'child_uuid', 'position'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'game_uuid',
+      'card_uuid',
+      'child_uuid',
+      'correct_answer',
+      'user_answer',
+      'position',
+      'play_date',
+    ],
+  },
+  fc_vocab_game_decks: {
+    order: 308,
+    readOnly: [],
+    createOnly: ['game_uuid', 'deck_uuid', 'category_order'],
+    booleans: [],
+    columns: ['uuid', 'game_uuid', 'deck_uuid', 'category_order'],
+  },
+  fc_vocab_sequence: {
+    order: 309,
+    readOnly: [],
+    createOnly: ['game_uuid', 'position', 'card_uuid'],
+    booleans: [],
+    columns: ['uuid', 'game_uuid', 'position', 'card_uuid'],
+  },
+  // un record per (utente, corso, tipo); l'uuid è UUIDv5 (vedi vocabRecordUuid)
+  fc_vocab_records: {
+    order: 310,
+    readOnly: ['updated_at'],
+    createOnly: ['kind', 'course_uuid'],
+    booleans: [],
+    columns: ['uuid', 'course_uuid', 'kind', 'value', 'game_uuid', 'achieved_at', 'updated_at'],
   },
   // una riga per utente: impostazioni di studio e obiettivo di ogni giorno
   fc_settings: {

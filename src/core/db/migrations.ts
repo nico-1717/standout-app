@@ -812,6 +812,54 @@ CREATE INDEX idx_fc_vex_card ON fc_vocab_examples (card_uuid);
 CREATE INDEX idx_fc_vex_child ON fc_vocab_examples (child_uuid);
 `,
   },
+  {
+    version: 18,
+    // il gioco delle lingue: le partite stanno in fc_games (kind + corso), risposte, mazzi scelti, sequenza e record in tabelle loro
+    sql: `
+ALTER TABLE fc_games ADD COLUMN kind TEXT NOT NULL DEFAULT 'study';
+ALTER TABLE fc_games ADD COLUMN course_uuid TEXT;
+CREATE INDEX idx_fc_games_kind ON fc_games (kind, course_uuid, game_date);
+CREATE TABLE fc_vocab_plays (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  card_uuid TEXT,
+  child_uuid TEXT,
+  correct_answer TEXT,
+  user_answer TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  play_date TEXT
+);
+CREATE INDEX idx_fc_vplays_game ON fc_vocab_plays (game_uuid, position);
+CREATE INDEX idx_fc_vplays_card ON fc_vocab_plays (card_uuid);
+CREATE INDEX idx_fc_vplays_child ON fc_vocab_plays (child_uuid);
+CREATE TABLE fc_vocab_game_decks (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  deck_uuid TEXT NOT NULL,
+  category_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_fc_vgdecks_game ON fc_vocab_game_decks (game_uuid);
+CREATE INDEX idx_fc_vgdecks_deck ON fc_vocab_game_decks (deck_uuid);
+CREATE TABLE fc_vocab_sequence (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  game_uuid TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  card_uuid TEXT NOT NULL
+);
+CREATE INDEX idx_fc_vseq_game ON fc_vocab_sequence (game_uuid, position);
+CREATE INDEX idx_fc_vseq_card ON fc_vocab_sequence (card_uuid);
+CREATE TABLE fc_vocab_records (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  course_uuid TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  value REAL NOT NULL DEFAULT 0,
+  game_uuid TEXT,
+  achieved_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_fc_vrec_course ON fc_vocab_records (course_uuid);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {
