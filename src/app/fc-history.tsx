@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
+import { kitForCourse } from '@/features/flashcards/gameKit';
 import {
   filterHistory,
   historyEntries,
@@ -78,6 +79,8 @@ export default function HistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services, version } = useApp();
+  const { course } = useLocalSearchParams<{ course?: string }>();
+  const kit = useMemo(() => (services ? kitForCourse(services, course) : null), [services, course]);
   const [period, setPeriod] = useState<Period>(30);
   const [asking, setAsking] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -91,12 +94,12 @@ export default function HistoryScreen() {
   const entries = useMemo(() => {
     void version;
     void tick;
-    return services ? historyEntries(services.games) : null;
-  }, [services, version, tick]);
+    return kit ? historyEntries(kit.games) : null;
+  }, [kit, version, tick]);
   const decks = useMemo(() => {
     void version;
-    return services ? services.flashcards.decks() : [];
-  }, [services, version]);
+    return kit ? kit.decks() : [];
+  }, [kit, version]);
   const rows = useMemo(() => {
     if (!entries) return null;
     const from = period ? new Date(now - period * 86_400_000).toISOString().slice(0, 10) : '';
@@ -294,7 +297,7 @@ export default function HistoryScreen() {
                     testID={`fch-del-yes-${g.uuid}`}
                     accessibilityRole="button"
                     onPress={() => {
-                      services.games.remove(g.uuid);
+                      kit?.games.remove(g.uuid);
                       setAsking(null);
                       setTick((n) => n + 1);
                     }}

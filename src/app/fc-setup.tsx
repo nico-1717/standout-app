@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
-import type { GameOrder, GameStatus } from '@/features/flashcards/game';
+import type { Direction, GameOrder, GameStatus } from '@/features/flashcards/game';
+import { kitForCourse } from '@/features/flashcards/gameKit';
 import { LEVEL_CHOICES, LEVEL_COLORS, type Level } from '@/features/flashcards/levels';
 import { deckBranch, deckIcon, flattenDecks, type Deck } from '@/features/flashcards/logic';
 import { Card, Header, SectionLabel } from '@/ui/kit';
@@ -67,7 +68,12 @@ export default function GameSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services, version } = useApp();
-  const params = useLocalSearchParams<{ preselect?: string }>();
+  const params = useLocalSearchParams<{ preselect?: string; course?: string }>();
+  const kit = useMemo(
+    () => (services ? kitForCourse(services, params.course) : null),
+    [services, params.course],
+  );
+  const [direction, setDirection] = useState<Direction>('w2t');
 
   const [order, setOrder] = useState<GameOrder>('in_order');
   const [status, setStatus] = useState<GameStatus>('0');
@@ -75,20 +81,20 @@ export default function GameSetupScreen() {
   const [onlyHard, setOnlyHard] = useState(false);
   const [multi, setMulti] = useState(!!params.preselect);
   const [picked, setPicked] = useState<string[]>(() =>
-    params.preselect && services ? deckBranch(services.flashcards.decks(), params.preselect) : [],
+    params.preselect && kit ? deckBranch(kit.decks(), params.preselect) : [],
   );
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [empty, setEmpty] = useState(false);
 
   const data = useMemo(() => {
     void version;
-    if (!services) return null;
+    if (!kit) return null;
     return {
-      decks: services.flashcards.decks(),
-      counts: services.games.deckCounts(status),
+      decks: kit.decks(),
+      counts: kit.games.deckCounts(status),
     };
-  }, [services, version, status]);
-  if (!services || !data) return null;
+  }, [kit, version, status]);
+  if (!services || !kit || !data) return null;
   const { decks, counts } = data;
 
   const rows = [
@@ -101,8 +107,9 @@ export default function GameSetupScreen() {
     deckBranch(decks, id).reduce((n, x) => n + (counts.byDeck.get(x) ?? 0), 0);
 
   const play = (ids: string[]) => {
-    const r = services.games.start({
+    const r = kit.games.start({
       decks: ids,
+      direction: kit.vocab ? direction : undefined,
       status,
       order,
       levels: levels.length ? levels : undefined,
@@ -242,6 +249,21 @@ export default function GameSetupScreen() {
         }}
       >
         <Card style={{ padding: 16, gap: 14 }}>
+          {kit.vocab ? (
+            <View style={{ gap: 6 }}>
+              <SectionLabel>{t('fcv.verso')}</SectionLabel>
+              <Segmented
+                testID="fcs-direction"
+                value={direction}
+                onChange={setDirection}
+                options={[
+                  { value: 'w2t', label: t('fcv.verso_w2t') },
+                  { value: 't2w', label: t('fcv.verso_t2w') },
+                  { value: 'mix', label: t('fcv.verso_mix') },
+                ]}
+              />
+            </View>
+          ) : null}
           <View style={{ gap: 6 }}>
             <SectionLabel>{t('fc.cg_ordine')}</SectionLabel>
             <Segmented

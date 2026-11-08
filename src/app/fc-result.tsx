@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
+import { kitForGame } from '@/features/flashcards/gameKit';
 import { Card, Header, PrimaryButton, TextButton } from '@/ui/kit';
 
 /**
@@ -24,8 +25,12 @@ export default function ResultScreen() {
   const [onlyWrong, setOnlyWrong] = useState(false);
   const [, setTick] = useState(0);
 
-  if (!services || !game) return null;
-  const { games, flashcards } = services;
+  const kit = useMemo(
+    () => (services && game ? kitForGame(services, game) : null),
+    [services, game],
+  );
+  if (!services || !game || !kit) return null;
+  const { games } = kit;
   const row = games.game(game);
   if (!row) {
     return (
@@ -213,12 +218,22 @@ export default function ResultScreen() {
         <PrimaryButton
           testID="fcr-again"
           label={t('fc.res_gioca_ancora')}
-          onPress={() => router.replace('/fc-setup')}
+          onPress={() =>
+            router.replace(
+              kit.course ? { pathname: '/fc-setup', params: { course: kit.course } } : '/fc-setup',
+            )
+          }
         />
         <TextButton
           testID="fcr-history"
           label={t('fc.js_storico')}
-          onPress={() => router.replace('/fc-history')}
+          onPress={() =>
+            router.replace(
+              kit.course
+                ? { pathname: '/fc-history', params: { course: kit.course } }
+                : '/fc-history',
+            )
+          }
         />
 
         <View
@@ -238,7 +253,6 @@ export default function ResultScreen() {
             {shown.map((p) => {
               const isChild = !!p.child_uuid;
               const target = (isChild ? p.child_uuid : p.card_uuid) ?? '';
-              const card = isChild ? flashcards.subcard(target) : flashcards.card(target);
               const wrong = p.user_answer === 'Wrong';
               return (
                 <View key={p.uuid} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -246,7 +260,7 @@ export default function ResultScreen() {
                     {wrong ? '✗' : '✓'}
                   </Text>
                   <Text style={{ color: th.text, flex: 1 }} numberOfLines={2}>
-                    {(card?.question_desc ?? '').replace(/\s+/g, ' ').slice(0, 90)}
+                    {kit.label(game, p.position, target, isChild).slice(0, 90)}
                   </Text>
                   <Pressable
                     testID={`fcr-verdict-${p.uuid}`}

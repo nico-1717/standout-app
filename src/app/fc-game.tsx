@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
+import { kitForGame, maskExample } from '@/features/flashcards/gameKit';
 import { Card, PrimaryButton } from '@/ui/kit';
 
 interface Item {
@@ -19,6 +20,9 @@ interface Item {
   answer: string | null;
   questionImage: string | null;
   answerImage: string | null;
+  meaning: string | null;
+  examples: string[];
+  hidden: string[];
 }
 
 /** Il colore e il nome del voto che una riga ha adesso. */
@@ -44,19 +48,25 @@ export default function GameScreen() {
   const params = useLocalSearchParams<{ game?: string; position?: string }>();
   const game = params.game ?? '';
 
+  // lo studio o il corso di lingua di questa partita
+  const kit = useMemo(
+    () => (services && game ? kitForGame(services, game) : null),
+    [services, game],
+  );
   const [pos, setPos] = useState<number | null>(() => {
-    if (!services || !game) return null;
+    if (!kit || !game) return null;
     const want = Math.max(1, Number(params.position) || 1);
-    const p = services.games.effectivePosition(game, want);
-    return services.games.ensurePosition(game, p) ? p : null;
+    const p = kit.games.effectivePosition(game, want);
+    return kit.games.ensurePosition(game, p) ? p : null;
   });
   const [shown, setShown] = useState(false);
+  const [tapped, setTapped] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
 
-  if (!services || !game) return null;
-  const { games, flashcards, study } = services;
+  if (!services || !game || !kit) return null;
+  const { games } = kit;
 
   const finish = () => {
     games.conclude(game);
@@ -89,16 +99,8 @@ export default function GameScreen() {
   const items: Item[] = games.plays(game, pos).map((p) => {
     const isChild = !!p.child_uuid;
     const target = (isChild ? p.child_uuid : p.card_uuid) ?? '';
-    const row = isChild ? flashcards.subcard(target) : flashcards.card(target);
-    return {
-      play: p,
-      target,
-      isChild,
-      question: row?.question_desc ?? null,
-      answer: row?.answer_desc ?? null,
-      questionImage: row?.question_image ?? null,
-      answerImage: row?.answer_image ?? null,
-    };
+    const v = kit.view(game, pos, target, isChild);
+    return { play: p, target, isChild, ...v };
   });
   const father = items.find((i) => !i.isChild);
   const current = items.find((i) => stateOf(i.play.user_answer) === 'open') ?? null;
@@ -106,7 +108,7 @@ export default function GameScreen() {
   const closed = games.closedPositions(game);
 
   const streak = games.streak(game);
-  const record = study.records().combo ?? 0;
+  const record = kit.records().combo ?? 0;
 
   const grade = (it: Item, g: Grade) => {
     const r = games.grade(game, pos, it.target, it.isChild, g);
@@ -144,6 +146,49 @@ export default function GameScreen() {
       </Text>
     </Pressable>
   );
+
+  /** Significato ed esempi come aiuto: sempre («aperto»), a un tocco, o solo dopo la risposta. */
+  const hintBlock = (it: Item) => {
+    const lines: { key: 'meaning' | 'examples'; text: string }[] = [];
+    if (it.meaning) lines.push({ key: 'meaning', text: it.meaning });
+    if (it.examples.length) {
+      const ex = it.examples.map((e) => (shown ? e : maskExample(e, it.hidden))).join('\n');
+      lines.push({ key: 'examples', text: ex });
+    }
+    return (
+      <View style={{ gap: 6 }}>
+        {lines.map((l) => {
+          const mode = kit.hints[l.key];
+          const id = `${it.play.uuid}:${l.key}`;
+          const open = mode === 'aperto' || (mode === 'dopo' && shown) || tapped.has(id);
+          return open ? (
+            <Text
+              key={l.key}
+              testID={`fcg-hint-${l.key}`}
+              style={{
+                color: th.text2,
+                fontSize: 14,
+                fontStyle: l.key === 'examples' ? 'italic' : 'normal',
+              }}
+            >
+              {l.text}
+            </Text>
+          ) : mode === 'tocco' ? (
+            <Pressable
+              key={l.key}
+              testID={`fcg-hint-${l.key}-show`}
+              accessibilityRole="button"
+              onPress={() => setTapped(new Set([...tapped, id]))}
+            >
+              <Text style={{ color: th.brand, fontSize: 14 }}>
+                {t(l.key === 'meaning' ? 'fcv.indizio_significato' : 'fcv.indizio_esempio')}
+              </Text>
+            </Pressable>
+          ) : null;
+        })}
+      </View>
+    );
+  };
 
   const label = (it: Item) => t(it.isChild ? 'fc.gm_sottoconcetto' : 'fc.gm_concetto_principale');
   const mark = (s: ReturnType<typeof stateOf>) =>
@@ -249,6 +294,7 @@ export default function GameScreen() {
             </Text>
             <DocView testID="fcg-question" raw={current.question} size={19} />
             <CardImage testID="fcg-question-image" name={current.questionImage} />
+            {kit.vocab ? hintBlock(current) : null}
             {shown ? (
               <View style={{ gap: 12 }}>
                 <View style={{ height: 1, backgroundColor: th.hairline2 }} />
@@ -296,9 +342,9 @@ export default function GameScreen() {
               <Text style={{ color: th.text }}>{t('fc.gm_preferiti')}</Text>
               <Switch
                 testID="fcg-favorite"
-                value={study.isFavorite(current.target)}
+                value={kit.isFavorite(current.target)}
                 onValueChange={(v) => {
-                  study.setFavorite(current.target, current.isChild, v);
+                  kit.setFavorite(current.target, current.isChild, v);
                   refresh();
                 }}
               />

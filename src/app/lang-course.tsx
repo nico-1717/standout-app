@@ -251,6 +251,45 @@ export default function LangCourseScreen() {
           {t('fcv.conteggio', { categorie: decks.length, carte: totalWords })}
         </Text>
 
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Pressable
+            testID="lcourse-play"
+            accessibilityRole="button"
+            disabled={totalWords === 0}
+            onPress={() => router.push({ pathname: '/fc-setup', params: { course: course.uuid } })}
+            style={{
+              flex: 1,
+              backgroundColor: th.brand,
+              opacity: totalWords === 0 ? 0.4 : 1,
+              borderRadius: 12,
+              paddingVertical: 12,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+              {t('fc.cg_gioca')} ▶
+            </Text>
+          </Pressable>
+          <Pressable
+            testID="lcourse-history"
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({ pathname: '/fc-history', params: { course: course.uuid } })
+            }
+            style={{
+              backgroundColor: th.surface2,
+              borderRadius: 12,
+              paddingVertical: 12,
+              paddingHorizontal: 18,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: th.text, fontWeight: '600', fontSize: 16 }}>
+              {t('fc.sfc_storico')}
+            </Text>
+          </Pressable>
+        </View>
+
         <TextInput
           testID="lcourse-search"
           value={query}
