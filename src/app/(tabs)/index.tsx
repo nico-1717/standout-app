@@ -62,6 +62,8 @@ export default function TodoScreen() {
   const [picked, setPicked] = useState<string[]>([]);
   const [when, setWhen] = useState<WhenTarget>(null);
   const [projectFor, setProjectFor] = useState<string | null>(null);
+  // «progetto» per tutte le attività scelte insieme
+  const [projectBulk, setProjectBulk] = useState(false);
 
   const today = localToday();
   const now = localNow();
@@ -302,6 +304,7 @@ export default function TodoScreen() {
             td={td}
             count={picked.length}
             onSchedule={() => picked.length && setWhen({ kind: 'bulk' })}
+            onProject={() => picked.length && setProjectBulk(true)}
             onDelete={bulkDelete}
           />
         </View>
@@ -470,15 +473,21 @@ export default function TodoScreen() {
       </ScrollView>
 
       <TaskProjectSheet
-        visible={projectFor !== null}
+        visible={projectFor !== null || projectBulk}
         projects={projects}
         value={projectFor ? (byUuid.get(projectFor)?.project_uuid ?? null) : null}
         onClose={() => {
           setProjectFor(null);
+          setProjectBulk(false);
           release();
         }}
         onPick={(id) => {
           if (projectFor) services?.tasks.update(projectFor, { project_uuid: id });
+          if (projectBulk) {
+            for (const u of picked) services?.tasks.update(u, { project_uuid: id });
+            setPicked([]);
+            setProjectBulk(false);
+          }
           setProjectFor(null);
           release();
           changed();

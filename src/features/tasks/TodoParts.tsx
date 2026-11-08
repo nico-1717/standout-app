@@ -29,6 +29,7 @@ const PATHS = {
   cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
   clock: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18',
   close: 'M6 6l12 12M18 6L6 18',
+  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
 } as const;
 
 export function TodoIcon({
@@ -193,6 +194,7 @@ export function BulkBar(p: {
   td: TodoTheme;
   count: number;
   onSchedule: () => void;
+  onProject: () => void;
   onDelete: () => void;
 }) {
   const { td } = p;
@@ -207,6 +209,15 @@ export function BulkBar(p: {
         style={[styles.bulkBtn, { backgroundColor: td.panel, opacity: p.count ? 1 : 0.5 }]}
       >
         <TodoIcon name="cal" color={td.ink2} size={15} />
+      </Pressable>
+      <Pressable
+        testID="bulk-project"
+        accessibilityRole="button"
+        accessibilityLabel={t('todo.collega_progetto')}
+        onPress={p.onProject}
+        style={[styles.bulkBtn, { backgroundColor: td.panel, opacity: p.count ? 1 : 0.5 }]}
+      >
+        <TodoIcon name="folder" color={td.ink2} size={15} />
       </Pressable>
       <Pressable
         testID="bulk-delete"

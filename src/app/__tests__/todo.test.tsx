@@ -216,6 +216,28 @@ describe.each(['standard', 'paper'] as const)('To do screen (%s)', (style) => {
     expect(tasks.get(idea)).toBeNull();
   });
 
+  test('select mode: link all the picked tasks to one project, or to none', async () => {
+    const { tasks, idea, today, thesis } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('todo-select'));
+    // niente scelto: non si apre niente
+    await fireEvent.press(screen.getByTestId('bulk-project'));
+    expect(screen.queryByTestId(`project-pick-${thesis}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId(`pick-${idea}`));
+    await fireEvent.press(screen.getByTestId(`pick-${today}`));
+    await fireEvent.press(screen.getByTestId('bulk-project'));
+    await fireEvent.press(screen.getByTestId(`project-pick-${thesis}`));
+    expect(tasks.get(idea)!.project_uuid).toBe(thesis);
+    expect(tasks.get(today)!.project_uuid).toBe(thesis);
+    // la scelta si svuota dopo l'azione
+    expect(screen.getByTestId('bulk-count').props.children).toBe('none selected');
+    await fireEvent.press(screen.getByTestId(`pick-${idea}`));
+    await fireEvent.press(screen.getByTestId('bulk-project'));
+    await fireEvent.press(screen.getByTestId('project-pick-none'));
+    expect(tasks.get(idea)!.project_uuid).toBeNull();
+    expect(tasks.get(today)!.project_uuid).toBe(thesis);
+  });
+
   test('select mode: pick two, schedule them together, then delete', async () => {
     const { tasks, idea, today } = setup();
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
