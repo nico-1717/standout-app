@@ -174,7 +174,6 @@ export function masterView(repo: PlanRepo, projects: Project[]): MasterView {
   const today = repo.today();
   const settings = repo.settings();
   const res = repo.compute(null);
-  const names = byUuid(projects);
   const goals = repo.goals();
   const done = repo.done();
   const nodes = res.nodes;

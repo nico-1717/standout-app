@@ -157,6 +157,14 @@ export default function ProjectsScreen() {
         right={
           <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
             <Pressable
+              testID="proj-plan"
+              accessibilityRole="button"
+              accessibilityLabel={t('progetti.piano_titolo')}
+              onPress={() => router.push('/plan')}
+            >
+              <Text style={{ color: th.brand, fontSize: 18 }}>🗓</Text>
+            </Pressable>
+            <Pressable
               testID="proj-options"
               accessibilityRole="button"
               accessibilityLabel={t('progetti.impostazioni')}

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -60,6 +60,17 @@ function Ring({
   );
 }
 
+/** Parte da solo una volta (dal Piano: «ogni giorno» → Avvia il timer). */
+function AutoStart({ go }: { go: () => void }) {
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    go();
+  }, [go]);
+  return null;
+}
+
 /** Il Pomodoro: timer a tempo o cronometro, pausa, progetto, e la pausa dopo lo studio (pomodoro.php). */
 export default function PomodoroScreen() {
   const th = useTheme();
@@ -68,10 +79,22 @@ export default function PomodoroScreen() {
   const insets = useSafeAreaInsets();
   const { services, version, changed, pomodoroSettings, updatePomodoroSettings } = useApp();
 
-  const [mode, setMode] = useState<0 | 1>(pomodoroSettings.last_mode);
-  const [minutes, setMinutes] = useState(pomodoroSettings.last_pomodoro_duration_min);
+  const {
+    project: projectParam,
+    min: minParam,
+    auto: autoParam,
+  } = useLocalSearchParams<{
+    project?: string;
+    min?: string;
+    auto?: string;
+  }>();
+  const minFromPlan = typeof minParam === 'string' ? parseInt(minParam, 10) : NaN;
+  const fromPlan = Number.isFinite(minFromPlan) && minFromPlan >= 1 && minFromPlan <= 600;
+  const [mode, setMode] = useState<0 | 1>(fromPlan ? 0 : pomodoroSettings.last_mode);
+  const [minutes, setMinutes] = useState(
+    fromPlan ? minFromPlan : pomodoroSettings.last_pomodoro_duration_min,
+  );
   const [breakMin, setBreakMin] = useState(pomodoroSettings.last_break_duration_min);
-  const { project: projectParam } = useLocalSearchParams<{ project?: string }>();
   const [project, setProject] = useState<string | null>(
     typeof projectParam === 'string' ? projectParam : null,
   );
@@ -637,6 +660,9 @@ export default function PomodoroScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
+      {autoParam === '1' && fromPlan && !active && !brk ? (
+        <AutoStart go={() => void start()} />
+      ) : null}
       <Header
         top={insets.top}
         title={t('pomodoro.nuovo_pomodoro')}

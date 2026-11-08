@@ -25,10 +25,20 @@ import {
   type PlanSettings,
   type Priority,
 } from './engine';
+import { rescale, type SplitRow } from './split';
 
 /* ---------------- tipi ---------------- */
 
 /** Le impostazioni come stanno salvate: `null` = «usa il ritmo misurato». */
+export interface ImportantEvent {
+  day: string;
+  title: string;
+  importance: 'high' | 'highest';
+  allDay: boolean;
+  time: string;
+  color: string;
+}
+
 export interface StoredSettings {
   weekdayMin: number | null;
   weekendMin: number | null;
@@ -364,6 +374,44 @@ export class PlanRepo {
     return out;
   }
 
+  /**
+   * Gli eventi importanti e importantissimi del planner in un intervallo (le vacanze, un viaggio…), per vederli mentre si
+   * decide dove mettere lo studio. Un evento su più giorni compare in ognuno. Solo lettura.
+   */
+  importantEvents(from: string, to: string): ImportantEvent[] {
+    const rows = this.db.all<{
+      title: string;
+      importance: string;
+      is_all_day: number;
+      start_time: string;
+      event_date: string;
+      fine: string;
+      color: string | null;
+    }>(
+      `SELECT title, importance, is_all_day, start_time, event_date, COALESCE(end_date, event_date) AS fine, color
+       FROM planner_events
+       WHERE importance <> 'normal' AND item_type = 'event' AND COALESCE(is_cancelled,0) = 0
+         AND event_date <= ? AND COALESCE(end_date, event_date) >= ?
+       ORDER BY event_date, start_time LIMIT 400`,
+      [to, from],
+    );
+    const out: ImportantEvent[] = [];
+    for (const r of rows) {
+      let d = r.event_date > from ? r.event_date : from;
+      const last = r.fine < to ? r.fine : to;
+      for (let n = 0; d <= last && n < 60; n++, d = addDays(d, 1))
+        out.push({
+          day: d,
+          title: r.title,
+          importance: r.importance === 'highest' ? 'highest' : 'high',
+          allDay: r.is_all_day === 1,
+          time: r.start_time.slice(0, 5),
+          color: r.color ?? '',
+        });
+    }
+    return out;
+  }
+
   storedSettings(): StoredSettings {
     const r = this.db.all<{
       weekday_min: number | null;
@@ -622,22 +670,34 @@ export class PlanRepo {
     return [...rows].map(([uuid, r]) => ({ uuid, minutes: r.m, locked: r.l }));
   }
 
-  /** Dividi in parti uguali (con il resto ai primi), rispettando i lucchetti: ritorna i minuti proposti per ogni figlio. */
-  static evenSplit(
-    total: number,
-    kids: { uuid: string; minutes: number; locked: boolean }[],
-  ): SplitItem[] {
-    const lockedSum = kids.filter((k) => k.locked).reduce((a, k) => a + k.minutes, 0);
-    const free = kids.filter((k) => !k.locked);
-    const pool = Math.max(0, total - lockedSum);
-    const base = free.length ? Math.floor(pool / free.length) : 0;
-    let extra = free.length ? pool - base * free.length : 0;
-    return kids.map((k) => {
-      if (k.locked) return { uuid: k.uuid, minutes: k.minutes, locked: true };
-      const m = base + (extra > 0 ? 1 : 0);
-      if (extra > 0) extra--;
-      return { uuid: k.uuid, minutes: m, locked: false };
-    });
+  /** I figli (non completati) di un progetto, con tempo e lucchetto del loro obiettivo. */
+  kidRows(projectUuid: string): SplitRow[] {
+    const nodes = new Map(this.nodes().map((n) => [n.id, n]));
+    const goals = this.goals();
+    return (nodes.get(projectUuid)?.kids ?? [])
+      .filter((k) => nodes.get(k)?.status !== 'completed')
+      .map((k) => ({
+        uuid: k,
+        minutes: goals.get(k)?.minutes ?? 0,
+        locked: goals.get(k)?.locked ?? false,
+      }));
+  }
+
+  /**
+   * Il totale di un progetto è cambiato: i figli si adeguano in proporzione (quelli con lucchetto no); se non avevano ancora
+   * ore si parte da parti uguali. Lo stesso vale, a cascata, per i loro figli (resplit del sito).
+   */
+  resplit(projectUuid: string, total: number): void {
+    const kids = this.kidRows(projectUuid);
+    if (!kids.length || total <= 0) return;
+    const start =
+      kids.reduce((a, r) => a + r.minutes, 0) === 0
+        ? kids.map((r) => (r.locked ? r : { ...r, minutes: 1 }))
+        : kids;
+    const rows = rescale(start, total);
+    const before = new Map(kids.map((r) => [r.uuid, r.minutes]));
+    const saved = this.saveSplit(projectUuid, total, rows);
+    for (const r of saved) if (r.minutes !== before.get(r.uuid)) this.resplit(r.uuid, r.minutes);
   }
 
   /* ---------------- evidenziatore e blocchi ---------------- */

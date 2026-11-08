@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
 import { human } from '@/features/pomodoro/logic';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
 import { ancestors, byId, childrenOf, subtreeIds, type Project } from '@/features/projects/logic';
@@ -40,11 +41,11 @@ const STATUS_KEY = {
 /** La scheda di un progetto: nome, stato, colore, date, nota, sotto-progetti, spostamento, Pomodoro, eliminazione. */
 export default function ProjectScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, pomodoroSettings } = useApp();
 
   const [name, setName] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -212,6 +213,26 @@ export default function ProjectScreen() {
             </View>
           </View>
         </Card>
+
+        {services.plan ? (
+          <ProjectPlanCard
+            repo={services.plan}
+            projects={data.all}
+            project={me.uuid}
+            lang={i18n.language || 'it'}
+            pomodoroMinutes={pomodoroSettings.last_pomodoro_duration_min}
+            changed={changed}
+            onCalendar={() =>
+              router.push({ pathname: '/plan', params: { project: me.uuid, tab: 'cal' } })
+            }
+            onPomodoro={(min, auto) =>
+              router.push({
+                pathname: '/pomodoro',
+                params: { project: me.uuid, min: String(min), ...(auto ? { auto: '1' } : {}) },
+              })
+            }
+          />
+        ) : null}
 
         <Card style={{ padding: 16, gap: 10 }}>
           <SectionLabel>{t('progetti.nota')}</SectionLabel>

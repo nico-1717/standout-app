@@ -137,15 +137,15 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 |---|---|---|---|---|---|---|
 | J1 | Albero dei progetti (`progetti.php`: figli, nipoti, preferiti, date, colore, note, stato) | sync `projects` | Progetti | P3 | in parte: albero con stato (anche a cascata e ripristino), preferiti, scadenze, tempo di lavoro, opzioni della pagina (solo su questo telefono), scheda del progetto (nome, colore, date, nota di testo, sposta, riordina, sotto-progetti, elimina con scelta sui Pomodoro). Mancano: nota con formato (si legge, non si riscrive), attività del progetto (todo_enabled), mazzi collegati, selezione multipla/azioni di gruppo, vista a griglia | |
 | J2 | Selettore di progetto (`project_selector.php`) | locale | selettore | P3 | fatto: scelta del progetto (albero con colori) nel Pomodoro, nello storico e per spostare un progetto | |
-| J3 | Vista Elenco / Calendario / Piano dentro un progetto | sync piano | Progetto | P3 | da fare | |
-| J4 | Piano: obiettivi (minuti, tipo, priorità, scadenza), divisione fra i figli con lucchetto | sync `plan_goals` | Progetto › Piano | P3 | da fare — **test d'oro** | |
-| J5 | Evidenziatore dei giorni (`plan_paint`) e blocchi del giorno (`plan_days`) | sync | Progetto › Calendario | P3 | da fare | |
-| J6 | «Pianifica per me» (`pn_pianifica`: anteprima, applica, non tocca i blocchi manuali) | logica in TS | Piano › Pianifica | P3 | da fare — **test d'oro** (algoritmo grosso) | |
-| J7 | Progetti › Calendario: Oggi / Calendario / Panoramica / Cronologia (timeline) | locale | Progetti › Calendario | P3 | da fare | |
-| J8 | «Il tuo tempo» (impostazioni del piano, `plan_settings`) | sync | Piano › Il tuo tempo | P3 | da fare | |
-| J9 | Modelli di piano (`plan_templates`) | sync | Piano › Modelli | P3 | da fare | |
-| J10 | «Porta le stime nel nuovo piano» (`import_old`) e salta/riporta (`skip_fix`) | logica | Piano | P4 | da fare | |
-| J11 | Registro giornaliero «Ho già fatto» e avvio con minuti preimpostati (`daily_log`) | sync `pomodoro_sessions` | Piano › Oggi | P3 | da fare | |
+| J3 | Vista Elenco / Calendario / Piano dentro un progetto | sync piano | Progetto › Piano (scheda) + pagina Piano con `project` | P3 | **fatto** (solo da provare sul telefono) | scheda «Piano» nel progetto; la pagina Piano da solo il ramo |
+| J4 | Piano: obiettivi (minuti, tipo, priorità, scadenza), divisione fra i figli con lucchetto | sync `plan_goals` | Progetto › Piano | P3 | **fatto** — test d'oro (400 casi) | al posto dello slider: −/+ 15 min o scrivi le ore |
+| J5 | Evidenziatore dei giorni (`plan_paint`) e blocchi del giorno (`plan_days`) | sync | Piano › Calendario | P3 | **fatto** | tocca o trascina; Cancella, Guarda, Annulla (30 passi) |
+| J6 | «Pianifica per me» (`pn_pianifica`: anteprima, applica, non tocca i blocchi manuali) | logica in TS | Piano › Pianifica | P3 | **fatto** — test d'oro | specchia il sito: un blocco a mano nello stesso giorno fa cadere la parte automatica |
+| J7 | Progetti › Calendario: Oggi / Calendario / Panoramica / Cronologia (timeline) | locale | Piano (4 schede) | P3 | **fatto** | Oggi, Calendario, Linea del tempo, Panoramica |
+| J8 | «Il tuo tempo» (impostazioni del piano, `plan_settings`) | sync | Piano › Il tuo tempo | P3 | **fatto** (sync lato server aspetta la migrazione 08) | |
+| J9 | Modelli di piano (`plan_templates`) | sync | Progetto › Piano › Modelli | P3 | **fatto** | |
+| J10 | «Porta le stime nel nuovo piano» (`import_old`) e salta/riporta (`skip_fix`) | logica | Piano / Progetto | P4 | **fatto** | |
+| J11 | Registro giornaliero «Ho già fatto» e avvio con minuti preimpostati (`daily_log`) | sync `pomodoro_sessions` | Piano › Oggi | P3 | **fatto** | il Pomodoro riceve `min` e `auto=1` |
 | J12 | Pomodoro: timer, pausa, riprendi, ferma (chiede pausa/fine/scarta), durate personalizzate | sync `pomodoro_sessions`, `pomodoro_custom_durations`, `pomodoro_settings` | Pomodoro | P3 | fatto: schermata con timer/cronometro, pausa, ferma (pausa/fine/scarta, «molto breve»), durate personalizzate, progetto, pausa dopo lo studio (sessioni, durate e impostazioni si sincronizzano) | |
 | J13 | Barra globale del Pomodoro (`pomodoro_barra.*`) | locale | mini-barra sopra le schede | P3 | fatto: barretta sopra le schede con il tempo (Pomodoro, cronometro, pausa); tocco = apre il Pomodoro | |
 | J14 | Pause e scene (`pausa_scena.php`, `pomodoro_current_breaks`), clessidra (`clessidra.php`) | sync | Pomodoro › Pausa | P3 | da fare — **serve il tuo OK sull'aspetto** (scene animate) | |

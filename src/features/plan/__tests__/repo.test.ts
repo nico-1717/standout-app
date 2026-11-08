@@ -113,19 +113,27 @@ describe('PlanRepo goals', () => {
     expect(repo.saveSplit(p, 100, [{ uuid: other, minutes: 100, locked: false }])).toEqual([]);
   });
 
-  test('evenSplit shares the rest among unlocked children', () => {
-    const out = PlanRepo.evenSplit(100, [
-      { uuid: 'a', minutes: 40, locked: true },
-      { uuid: 'b', minutes: 0, locked: false },
-      { uuid: 'c', minutes: 0, locked: false },
+  test('resplit shares a new total among the children and goes down the tree', () => {
+    const { projects, repo } = setup();
+    const p = projects.create({ name: 'Corso' })!;
+    const a = projects.create({ name: 'a', parent: p })!;
+    const b = projects.create({ name: 'b', parent: p })!;
+    const a1 = projects.create({ name: 'a1', parent: a })!;
+    const a2 = projects.create({ name: 'a2', parent: a })!;
+    repo.saveGoal(p, { minutes: 600 });
+    repo.resplit(p, 600);
+    const g = repo.goals();
+    expect(g.get(a)!.minutes + g.get(b)!.minutes).toBe(600);
+    expect(g.get(a)!.minutes).toBe(300);
+    expect(g.get(a1)!.minutes + g.get(a2)!.minutes).toBe(300);
+    // un figlio bloccato non si tocca
+    repo.saveSplit(p, 600, [
+      { uuid: a, minutes: 100, locked: true },
+      { uuid: b, minutes: 500, locked: false },
     ]);
-    expect(out.map((x) => x.minutes)).toEqual([40, 30, 30]);
-    const odd = PlanRepo.evenSplit(10, [
-      { uuid: 'a', minutes: 0, locked: false },
-      { uuid: 'b', minutes: 0, locked: false },
-      { uuid: 'c', minutes: 0, locked: false },
-    ]);
-    expect(odd.map((x) => x.minutes)).toEqual([4, 3, 3]);
+    repo.resplit(p, 800);
+    expect(repo.goals().get(a)!.minutes).toBe(100);
+    expect(repo.goals().get(b)!.minutes).toBe(700);
   });
 });
 
@@ -394,5 +402,43 @@ describe('PlanRepo templates, old estimates, daily log, skipped', () => {
     repo.setDay(p, '2030-03-03', 10);
     repo.skipFix(p, 'move');
     expect(repo.blocks('2030-03-03', '2030-03-10')).toEqual([]);
+  });
+});
+
+describe('PlanRepo important events', () => {
+  test('multi-day events appear on each day of the window; normal and cancelled ones do not', () => {
+    const { db, repo } = setup();
+    const ev = (uuid: string, extra: Record<string, string | number | null>) => {
+      const cols = {
+        uuid,
+        event_date: '2030-03-05',
+        start_time: '09:00',
+        end_time: '10:00',
+        item_type: 'event',
+        importance: 'high',
+        ...extra,
+      };
+      db.run(
+        `INSERT INTO planner_events (${Object.keys(cols).join(',')}) VALUES (${Object.keys(cols)
+          .map(() => '?')
+          .join(',')})`,
+        Object.values(cols),
+      );
+    };
+    ev('trip', {
+      title: 'Viaggio',
+      event_date: '2030-03-05',
+      end_date: '2030-03-07',
+      importance: 'highest',
+      is_all_day: 1,
+    });
+    ev('plain', { title: 'Normale', importance: 'normal' });
+    ev('gone', { title: 'Annullato', is_cancelled: 1 });
+    ev('late', { title: 'Fuori', event_date: '2030-05-01' });
+    const out = repo.importantEvents('2030-03-06', '2030-03-31');
+    expect(out.map((e) => [e.day, e.title, e.importance, e.allDay])).toEqual([
+      ['2030-03-06', 'Viaggio', 'highest', true],
+      ['2030-03-07', 'Viaggio', 'highest', true],
+    ]);
   });
 });

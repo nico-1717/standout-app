@@ -72,6 +72,25 @@ describe('Pomodoro screen', () => {
   });
   afterEach(() => jest.useRealTimers());
 
+  test('coming from the Plan with min and auto, a timer of that length starts by itself, once', async () => {
+    const { pomodoro, projects } = setup();
+    const a = projects.create({ name: 'Podcast' })!;
+    mockParams = { project: a, min: '10', auto: '1' };
+    await renderIt();
+    const s = pomodoro.active();
+    expect(s).toMatchObject({ project_uuid: a, planned_duration_min: 10, mode: 0 });
+    expect(mockUpdate).toHaveBeenCalledWith({ last_mode: 0, last_pomodoro_duration_min: 10 });
+  });
+
+  test('coming from the Plan with only min, the length is set but nothing starts', async () => {
+    const { pomodoro, projects } = setup();
+    const a = projects.create({ name: 'Analisi' })!;
+    mockParams = { project: a, min: '40' };
+    await renderIt();
+    expect(pomodoro.active()).toBeNull();
+    expect(screen.getByTestId('pomodoro-start')).toBeTruthy();
+  });
+
   test('starts a 50 minute pomodoro on a project, remembers the choice, pauses and resumes', async () => {
     const { pomodoro, projects } = setup();
     const proj = projects.create({ name: 'Maths' })!;
