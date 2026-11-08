@@ -68,3 +68,41 @@ export function learningCurve(
   }
   return { hist, proj, labels };
 }
+
+export interface SpeedStats {
+  /** quante partite */
+  games: number;
+  /** secondi per carta: la media delle più recenti */
+  recent: number;
+  /** quanto più veloce rispetto alle prime (in %): null con meno di 4 partite */
+  improvement: number | null;
+  trend: 'up' | 'down' | 'flat';
+}
+
+/**
+ * La velocità di risposta e la sua tendenza (`computeCatSpeedStats` del sito): si confrontano la media delle partite più
+ * vecchie con quella delle più recenti (un terzo ciascuna, almeno 2). Oltre il 4% è «su» o «giù», altrimenti stabile.
+ * `spcs` è in ordine di giorno.
+ */
+export function speedStats(spcs: number[]): SpeedStats | null {
+  if (!spcs.length) return null;
+  const avg = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+  if (spcs.length < 4) {
+    return { games: spcs.length, recent: avg(spcs), improvement: null, trend: 'flat' };
+  }
+  const chunk = Math.max(2, Math.floor(spcs.length / 3));
+  const old = avg(spcs.slice(0, chunk));
+  const recent = avg(spcs.slice(-chunk));
+  const improvement = old > 0 ? Math.round(((old - recent) / old) * 100) : 0;
+  return {
+    games: spcs.length,
+    recent,
+    improvement,
+    trend: improvement > 4 ? 'up' : improvement < -4 ? 'down' : 'flat',
+  };
+}
+
+/** I secondi per carta come li scrive il sito: un decimale sotto i 10, intero sopra. */
+export function secPerCard(spc: number): string {
+  return spc < 10 ? spc.toFixed(1) : String(Math.round(spc));
+}

@@ -9,7 +9,12 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
 import { DocView } from '@/features/flashcards/DocView';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
-import { finishForecast, learningCurve } from '@/features/flashcards/forecast';
+import {
+  finishForecast,
+  learningCurve,
+  secPerCard,
+  speedStats,
+} from '@/features/flashcards/forecast';
 import { badges, streaks } from '@/features/flashcards/stats';
 import { localToday } from '@/features/tasks/groups';
 import { Card, Header, SectionLabel, bigNumber } from '@/ui/kit';
@@ -165,6 +170,18 @@ export default function FlashcardStatsScreen() {
   const none = played === 0 && act.totalPlayed === 0;
   const allDecks = flashcards.decks();
   const drill = fcStats.drill(focus ? new Set(deckBranch(allDecks, focus)) : null);
+  // la velocità di risposta (e la sua tendenza) del mazzo scelto con il suo ramo, o di tutti
+  const focusIds = focus ? new Set(deckBranch(allDecks, focus)) : null;
+  const points = games.speedPoints().filter((x) => !focusIds || focusIds.has(x.deck));
+  const speed = speedStats(points.map((x) => x.spc));
+  const typicalSize = points.length
+    ? Math.round(points.reduce((n, x) => n + x.cards, 0) / points.length)
+    : 0;
+  // il progetto collegato al mazzo scelto: il tempo di studio e quello del Pomodoro, uno accanto all'altro
+  const linkedProject = focus ? flashcards.linkedProject(focus) : null;
+  const projectName = linkedProject ? (services.projects.get(linkedProject)?.name ?? null) : null;
+  const studySeconds = focus ? (breakdown.get(focus)?.seconds ?? 0) : 0;
+  const pomoSeconds = linkedProject ? services.projects.ownSeconds(linkedProject) : 0;
   const retryPct =
     drill.afterError.opportunities >= 3
       ? Math.round((drill.afterError.fixed / drill.afterError.opportunities) * 100)
@@ -447,6 +464,66 @@ export default function FlashcardStatsScreen() {
                   </View>
                 </View>
               ))}
+            </Card>
+          </>
+        ) : null}
+
+        {speed ? (
+          <>
+            <SectionLabel>{t('fc.velocita_di_risposta')}</SectionLabel>
+            <Card style={{ padding: 12, gap: 6 }}>
+              <Text style={{ color: th.text2, fontSize: 12 }}>{t('fc.velocita_media')}</Text>
+              <Text testID="fcst-pace" style={[{ color: th.text }, bigNumber(th, 24)]}>
+                {t('fc.st_s_carta', { s: secPerCard(speed.recent) })}
+              </Text>
+              <Text
+                testID="fcst-pace-trend"
+                style={{
+                  color:
+                    speed.trend === 'up' ? th.green : speed.trend === 'down' ? th.red : th.text2,
+                }}
+              >
+                {speed.improvement === null
+                  ? t('fc.js_poche_partite')
+                  : speed.trend === 'up'
+                    ? `▲ ${speed.improvement}${t('fc.pct_piu_veloce')}`
+                    : speed.trend === 'down'
+                      ? `▼ ${Math.abs(speed.improvement)}${t('fc.pct_piu_lento')}`
+                      : t('fc.js_stabile')}
+              </Text>
+              {points.length >= 3 && typicalSize > 0 ? (
+                <Text testID="fcst-pace-next" style={{ color: th.text2, fontSize: 13 }}>
+                  {t('fc.st_previsione', {
+                    vel: t('fc.st_s_carta', { s: secPerCard(speed.recent) }),
+                    trend:
+                      speed.improvement !== null && speed.trend === 'up'
+                        ? t('fc.st_trend_su', { pct: speed.improvement })
+                        : speed.improvement !== null && speed.trend === 'down'
+                          ? t('fc.st_trend_giu')
+                          : '',
+                    n: typicalSize,
+                    durata: formatDuration(Math.round(speed.recent * typicalSize)),
+                  }).replace(/<[^>]+>/g, '')}
+                </Text>
+              ) : null}
+            </Card>
+          </>
+        ) : null}
+
+        {projectName ? (
+          <>
+            <SectionLabel>{t('fc.flashcard_progetto_pomodoro_collegato')}</SectionLabel>
+            <Card style={{ padding: 12, gap: 6 }}>
+              <Text testID="fcst-link-study" style={{ color: th.text }}>
+                {t('fc.flashcard')}: {formatDuration(studySeconds)}
+              </Text>
+              <Text testID="fcst-link-pomo" style={{ color: th.text }}>
+                {t('fc.pomodoro_sep')}
+                {projectName}: {formatDuration(pomoSeconds)}
+              </Text>
+              <Text testID="fcst-link-total" style={{ color: th.text, fontWeight: '700' }}>
+                {t('fc.totale')} {formatDuration(studySeconds + pomoSeconds)}
+              </Text>
             </Card>
           </>
         ) : null}

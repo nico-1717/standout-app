@@ -91,6 +91,16 @@ export class ProjectsRepo {
     return out;
   }
 
+  /** I secondi di tutte le sessioni del Pomodoro di questo progetto soltanto (non dei sotto-progetti). */
+  ownSeconds(projectUuid: string): number {
+    return (
+      this.db.all<{ s: number }>(
+        'SELECT COALESCE(SUM(duration_seconds), 0) AS s FROM pomodoro_sessions WHERE project_uuid = ?',
+        [projectUuid],
+      )[0]?.s ?? 0
+    );
+  }
+
   /** Quante sessioni del Pomodoro hanno uno di questi progetti (serve a chiedere cosa farne prima di cancellare). */
   sessionCount(projectUuids: string[]): number {
     if (!projectUuids.length) return 0;

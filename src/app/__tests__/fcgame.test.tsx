@@ -9,6 +9,8 @@ import { GameRepo } from '@/features/flashcards/game';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 import { StatsRepo } from '@/features/flashcards/stats';
 import { StudyRepo } from '@/features/flashcards/study';
+import { PomodoroRepo } from '@/features/pomodoro/repo';
+import { ProjectsRepo } from '@/features/projects/repo';
 
 import GameScreen from '../fc-game';
 import HistoryScreen from '../fc-history';
@@ -45,8 +47,9 @@ function setup() {
   const flashcards = new FlashcardsRepo(db);
   const study = new StudyRepo(db, 7);
   const games = new GameRepo(db, study);
-  mockServices = { db, flashcards, study, games, fcStats: new StatsRepo(db) };
-  return { db, flashcards, study, games };
+  const projects = new ProjectsRepo(db);
+  mockServices = { db, flashcards, study, games, projects, fcStats: new StatsRepo(db) };
+  return { db, flashcards, study, games, projects };
 }
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
@@ -545,6 +548,42 @@ describe('statistics screen', () => {
     expect(screen.getByTestId(`fcst-missed-p${card}`)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fcst-focus-all'));
     expect(screen.getByTestId(`fcst-missed-p${card}`)).toBeTruthy();
+  });
+
+  test('answer speed: average, trend over the games, the next-game estimate; and the linked project', async () => {
+    const s = setup();
+    const deck = s.flashcards.createDeck({ name: 'Speed' })!;
+    s.flashcards.addCard(deck, 'Q1', 'A1');
+    s.flashcards.addCard(deck, 'Q2', 'A2');
+    const secs = [120, 120, 90, 60, 30, 30];
+    for (const sec of secs) {
+      const r = s.games.start({ decks: [deck], status: 'all', order: 'in_order' });
+      if (r.kind !== 'started') throw new Error('empty');
+      for (let pos = 1; pos <= s.games.totalPositions(r.game); pos++) {
+        const p = s.games.ensurePosition(r.game, pos)!;
+        s.games.grade(r.game, pos, p[0]!.card_uuid!, false, 'correct');
+      }
+      s.db.run('UPDATE fc_game_durations SET duration_seconds = ? WHERE game_uuid = ?', [
+        sec,
+        r.game,
+      ]);
+    }
+    const project = s.projects.create({ name: 'Maths project' })!;
+    s.flashcards.linkDeck(project, deck);
+    new PomodoroRepo(s.db, 7).addManual({
+      day: '2026-10-01',
+      from: '09:00',
+      to: '10:00',
+      projectUuid: project,
+    });
+    await render(wrap(<StatsScreen />));
+    expect(screen.getByTestId('fcst-pace')).toHaveTextContent('15s/card');
+    expect(screen.getByTestId('fcst-pace-trend')).toHaveTextContent(/75% faster/);
+    expect(screen.getByTestId('fcst-pace-next')).toHaveTextContent(/typical next game of 2 cards/);
+    expect(screen.queryByTestId('fcst-link-pomo')).toBeNull(); // nessun mazzo scelto
+    await fireEvent.press(screen.getByTestId(`fcst-focus-${deck}`));
+    expect(screen.getByTestId('fcst-link-pomo')).toHaveTextContent(/Maths project: 1:00:00/);
+    expect(screen.getByTestId('fcst-link-total')).toBeTruthy();
   });
 
   test('empty history shows the message', async () => {

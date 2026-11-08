@@ -448,6 +448,23 @@ export class GameRepo {
    * almeno 2 carte e fra 0 e 10 minuti a carta (oltre sono quasi di sicuro lasciate aperte). Servono 3 partite per mazzo.
    */
   speedByDeck(): { deck: string; spc: number; games: number }[] {
+    const byDeck = new Map<string, number[]>();
+    for (const r of this.speedPoints()) byDeck.set(r.deck, [...(byDeck.get(r.deck) ?? []), r.spc]);
+    return [...byDeck.entries()]
+      .filter(([, v]) => v.length >= 3)
+      .map(([deck, v]) => ({
+        deck,
+        spc: Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10,
+        games: v.length,
+      }))
+      .sort((a, b) => a.spc - b.spc || (a.deck < b.deck ? -1 : 1));
+  }
+
+  /**
+   * Un punto per partita: il mazzo, il giorno (quello del primo tempo registrato), i secondi per carta e quante carte.
+   * Valgono le regole di `speedByDeck` (un mazzo solo, almeno 2 carte, fra 0 e 10 minuti a carta), in ordine di giorno.
+   */
+  speedPoints(): { deck: string; d: string; spc: number; cards: number }[] {
     const cond = this.gameCond('g');
     const decksOf = new Map<string, Set<string>>();
     for (const r of this.db.all<{ game: string; deck: string }>(
@@ -466,11 +483,12 @@ export class GameRepo {
     )) {
       chosen.set(r.game, [...(chosen.get(r.game) ?? []), r.deck]);
     }
-    const points = new Map<string, number[]>();
-    for (const r of this.db.all<{ game: string; cards: number; secs: number }>(
+    const out: { deck: string; d: string; spc: number; cards: number }[] = [];
+    for (const r of this.db.all<{ game: string; cards: number; secs: number; day: string | null }>(
       `SELECT g.uuid AS game,
               (SELECT COUNT(*) FROM ${this.scope.plays} p WHERE p.game_uuid = g.uuid) AS cards,
-              (SELECT COALESCE(SUM(d.duration_seconds), 0) FROM fc_game_durations d WHERE d.game_uuid = g.uuid) AS secs
+              (SELECT COALESCE(SUM(d.duration_seconds), 0) FROM fc_game_durations d WHERE d.game_uuid = g.uuid) AS secs,
+              (SELECT MIN(substr(d.start_time, 1, 10)) FROM fc_game_durations d WHERE d.game_uuid = g.uuid) AS day
          FROM fc_games g WHERE ${cond.sql}`,
       cond.params,
     )) {
@@ -484,16 +502,9 @@ export class GameRepo {
       if (!deck || r.cards < 2 || r.secs <= 0) continue;
       const spc = r.secs / r.cards;
       if (spc <= 0 || spc >= 600) continue;
-      points.set(deck, [...(points.get(deck) ?? []), spc]);
+      out.push({ deck, d: r.day ?? '', spc, cards: r.cards });
     }
-    return [...points.entries()]
-      .filter(([, v]) => v.length >= 3)
-      .map(([deck, v]) => ({
-        deck,
-        spc: Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10,
-        games: v.length,
-      }))
-      .sort((a, b) => a.spc - b.spc || (a.deck < b.deck ? -1 : 1));
+    return out.sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
   }
 
   /** Il livello di una carta (`p<uuid>`) o carta figlia (`c<uuid>`). */
