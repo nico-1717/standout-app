@@ -18,6 +18,7 @@ import {
   type Session,
 } from '@/features/pomodoro/logic';
 import type { PresetKind } from '@/features/pomodoro/repo';
+import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
@@ -105,6 +106,7 @@ export default function PomodoroScreen() {
   const [stopping, setStopping] = useState(false);
   const [short, setShort] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  const [noteTasks, setNoteTasks] = useState<string[]>([]);
 
   const data = useMemo(() => {
     void version;
@@ -709,6 +711,18 @@ export default function PomodoroScreen() {
           </Pressable>
         ) : null}
         {body}
+        {services.tasks ? (
+          <TasksNote
+            repo={services.tasks}
+            project={active ? active.project_uuid : done ? done.project_uuid : project}
+            created={noteTasks}
+            onCreated={(uuid) => setNoteTasks((cur) => [...cur, uuid])}
+            onReset={() => setNoteTasks([])}
+            version={version}
+            changed={changed}
+            finished={!active && done ? done.uuid : null}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

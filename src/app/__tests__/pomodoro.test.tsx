@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { PomodoroRepo } from '@/features/pomodoro/repo';
 import { DEFAULT_POMODORO_SETTINGS, type PomodoroSettings } from '@/features/pomodoro/settings';
 import { ProjectsRepo } from '@/features/projects/repo';
+import { TasksRepo } from '@/features/tasks/repo';
 import { upsertRow } from '@/core/sync/rows';
 import { stamp } from '@/features/pomodoro/logic';
 
@@ -55,8 +56,9 @@ function setup() {
   migrate(db);
   const pomodoro = new PomodoroRepo(db, 7);
   const projects = new ProjectsRepo(db);
-  mockServices = { db, pomodoro, projects };
-  return { db, pomodoro, projects };
+  const tasks = new TasksRepo(db);
+  mockServices = { db, pomodoro, projects, tasks };
+  return { db, pomodoro, projects, tasks };
 }
 const renderIt = () =>
   render(
@@ -202,6 +204,88 @@ describe('Pomodoro screen', () => {
     expect(screen.getByTestId('pomodoro-clock').props.children).toBe('25:00');
     await fireEvent.press(screen.getByTestId('done-close'));
     expect(pomodoro.get('s2')!.status).toBe('archiviato');
+  });
+
+  test('the tasks note: write tasks, tick them, and choose what to do when the pomodoro ends', async () => {
+    const { db, projects, tasks } = setup();
+    const a = projects.create({ name: 'Thesis' })!;
+    const old = tasks.create({ title: 'Old task of the project', project_uuid: a });
+    mockParams = { project: a };
+    const view = await renderIt();
+    await fireEvent.press(screen.getByTestId('pomo-note-toggle'));
+    expect(screen.getByText('Old task of the project')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('pomo-note-new'), 'Call Anna');
+    await fireEvent.press(screen.getByTestId('pomo-note-add'));
+    const fresh = tasks.ofProject(a).find((x) => x.title === 'Call Anna')!;
+    expect(fresh.due_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fresh.due_time).toMatch(/^\d{2}:\d{2}$/);
+    await fireEvent.press(screen.getByTestId(`pomo-note-${fresh.uuid}`));
+    expect(tasks.get(fresh.uuid)!.is_done).toBe(1);
+
+    // il pomodoro finisce: si chiede cosa fare; «elimina le spuntate» toglie solo quella
+    upsertRow(db, 'pomodoro_sessions', {
+      uuid: 's9',
+      mode: 0,
+      start_time: '2030-01-01 10:00:00',
+      end_time: '2030-01-01 10:25:00',
+      status: 'completato',
+      resume_time: null,
+      duration_seconds: 1500,
+      planned_duration_min: 25,
+      project_uuid: a,
+      is_manual: 0,
+      updated_at: null,
+    });
+    mockChanged();
+    await view.rerender(
+      <ThemeProvider>
+        <PomodoroScreen />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('pomo-note-ask')).toBeTruthy();
+    expect(screen.getByText(/1 of 2 ticked/)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('pomo-note-del-done'));
+    expect(tasks.get(fresh.uuid)).toBeNull();
+    expect(tasks.get(old)).not.toBeNull();
+    expect(screen.queryByTestId('pomo-note-ask')).toBeNull();
+  });
+
+  test('without a project the note starts empty and "keep them all" keeps the tasks', async () => {
+    const { db, tasks } = setup();
+    tasks.create({ title: 'Left from another day' });
+    const view = await renderIt();
+    await fireEvent.press(screen.getByTestId('pomo-note-toggle'));
+    expect(screen.queryByText('Left from another day')).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('pomo-note-new'), 'Only this session');
+    await fireEvent.press(screen.getByTestId('pomo-note-add'));
+    expect(screen.getByText('Only this session')).toBeTruthy();
+    expect(tasks.list().find((x) => x.title === 'Only this session')!.project_uuid).toBeNull();
+    // titolo vuoto: niente
+    await fireEvent.press(screen.getByTestId('pomo-note-add'));
+    expect(tasks.list()).toHaveLength(2);
+
+    upsertRow(db, 'pomodoro_sessions', {
+      uuid: 's8',
+      mode: 0,
+      start_time: '2030-01-01 10:00:00',
+      end_time: '2030-01-01 10:25:00',
+      status: 'completato',
+      resume_time: null,
+      duration_seconds: 1500,
+      planned_duration_min: 25,
+      project_uuid: null,
+      is_manual: 0,
+      updated_at: null,
+    });
+    mockChanged();
+    await view.rerender(
+      <ThemeProvider>
+        <PomodoroScreen />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId('pomo-note-keep'));
+    expect(screen.queryByTestId('pomo-note-ask')).toBeNull();
+    expect(tasks.list()).toHaveLength(2);
   });
 
   test('a break counts down and can be ended', async () => {
