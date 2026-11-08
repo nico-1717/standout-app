@@ -73,20 +73,32 @@ const none: PlayView = {
   exampleVoice: null,
 };
 
-export function studyKit(s: Services): GameKit {
-  const view = (target: string, isChild: boolean): PlayView => {
-    const row = isChild ? s.flashcards.subcard(target) : s.flashcards.card(target);
-    if (!row) return none;
-    return {
-      ...none,
-      question: row.question_desc ?? null,
-      answer: row.answer_desc ?? null,
-      questionImage: row.question_image ?? null,
-      answerImage: row.answer_image ?? null,
-      questionAudio: row.question_audio ?? null,
-      answerAudio: row.answer_audio ?? null,
-    };
+/** Come si vede una carta di studio (domanda, risposta, immagini e audio): la usano le partite e il visore a schermo intero. */
+export function studyView(
+  row: {
+    question_desc?: string | null;
+    answer_desc?: string | null;
+    question_image?: string | null;
+    answer_image?: string | null;
+    question_audio?: string | null;
+    answer_audio?: string | null;
+  } | null,
+): PlayView {
+  if (!row) return none;
+  return {
+    ...none,
+    question: row.question_desc ?? null,
+    answer: row.answer_desc ?? null,
+    questionImage: row.question_image ?? null,
+    answerImage: row.answer_image ?? null,
+    questionAudio: row.question_audio ?? null,
+    answerAudio: row.answer_audio ?? null,
   };
+}
+
+export function studyKit(s: Services): GameKit {
+  const view = (target: string, isChild: boolean): PlayView =>
+    studyView(isChild ? s.flashcards.subcard(target) : s.flashcards.card(target));
   return {
     vocab: false,
     course: null,

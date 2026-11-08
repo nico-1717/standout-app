@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { CardImage } from '@/features/flashcards/CardImage';
+import { CardViewer } from '@/features/flashcards/CardViewer';
 import { DocView } from '@/features/flashcards/DocView';
 import { formatDuration } from '@/features/flashcards/format';
 import { kitForGame } from '@/features/flashcards/gameKit';
@@ -32,6 +33,7 @@ export default function ResultScreen() {
   const [limit, setLimit] = useState(PAGE);
   const [, setTick] = useState(0);
   const [opened, setOpened] = useState<string[]>([]);
+  const [viewer, setViewer] = useState<number | null>(null);
 
   const kit = useMemo(
     () => (services && game ? kitForGame(services, game) : null),
@@ -348,6 +350,29 @@ export default function ResultScreen() {
             })}
           </Card>
         )}
+        {shown.length > 0 ? (
+          <TextButton
+            testID="fcr-browse"
+            label={t('fc.vis_fcv_apri')}
+            onPress={() => setViewer(0)}
+          />
+        ) : null}
+        {viewer !== null ? (
+          <CardViewer
+            testID="fcr-viewer"
+            start={viewer}
+            onClose={() => setViewer(null)}
+            cards={shown.map((p) => {
+              const isChild = !!p.child_uuid;
+              return kit.view(
+                game,
+                p.position,
+                (isChild ? p.child_uuid : p.card_uuid) ?? '',
+                isChild,
+              );
+            })}
+          />
+        ) : null}
         {shown.length > limit ? (
           <TextButton
             testID="fcr-more"

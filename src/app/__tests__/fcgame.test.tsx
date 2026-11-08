@@ -281,6 +281,34 @@ describe('result and history', () => {
     await fireEvent.press(screen.getByTestId(row));
     expect(screen.queryByText('Rome')).toBeNull();
   });
+  test('the full-screen viewer flips a card, goes next and closes', async () => {
+    const { flashcards, games } = setup();
+    const deck = flashcards.createDeck({ name: 'View' })!;
+    flashcards.addCard(deck, 'First question', 'First answer');
+    flashcards.addCard(deck, 'Second question', 'Second answer');
+    const r = games.start({ decks: [deck], status: 'all', order: 'in_order' });
+    if (r.kind !== 'started') throw new Error('empty');
+    for (const pos of [1, 2]) {
+      const p = games.ensurePosition(r.game, pos)!;
+      games.grade(r.game, pos, p[0]!.card_uuid!, false, 'correct');
+    }
+    games.conclude(r.game);
+    mockParams = { game: r.game };
+    await render(wrap(<ResultScreen />));
+    expect(screen.queryByTestId('fcr-viewer')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcr-browse'));
+    expect(screen.getByTestId('fcr-viewer-count')).toHaveTextContent('1 / 2');
+    expect(screen.getByTestId('fcr-viewer-question')).toHaveTextContent('First question');
+    await fireEvent.press(screen.getByTestId('fcr-viewer-card'));
+    expect(screen.getByTestId('fcr-viewer-answer')).toHaveTextContent('First answer');
+    await fireEvent.press(screen.getByTestId('fcr-viewer-next'));
+    expect(screen.getByTestId('fcr-viewer-count')).toHaveTextContent('2 / 2');
+    expect(screen.getByTestId('fcr-viewer-question')).toHaveTextContent('Second question');
+    await fireEvent.press(screen.getByTestId('fcr-viewer-prev'));
+    expect(screen.getByTestId('fcr-viewer-count')).toHaveTextContent('1 / 2');
+    await fireEvent.press(screen.getByTestId('fcr-viewer-close'));
+    expect(screen.queryByTestId('fcr-viewer')).toBeNull();
+  });
   test('a long review shows 20 cards and loads more on request', async () => {
     const { flashcards, games } = setup();
     const deck = flashcards.createDeck({ name: 'Big' })!;

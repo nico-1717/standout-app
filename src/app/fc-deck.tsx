@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { CardViewer } from '@/features/flashcards/CardViewer';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
 import {
   CARD_SORTS,
@@ -16,6 +17,7 @@ import {
 } from '@/features/flashcards/cardList';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import type { GameStatus } from '@/features/flashcards/game';
+import { studyView } from '@/features/flashcards/gameKit';
 import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
 import {
   DECK_ICON_KEYS,
@@ -70,6 +72,7 @@ export default function DeckScreen() {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<'move' | 'delete' | null>(null);
+  const [viewing, setViewing] = useState(false);
 
   const data = useMemo(() => {
     void version;
@@ -615,6 +618,13 @@ export default function DeckScreen() {
             >
               <Text style={{ color: th.brand, fontWeight: '600' }}>⇅ {t(SORT_LABELS[sort])}</Text>
             </Pressable>
+            <Pressable
+              testID="fcd-view"
+              accessibilityRole="button"
+              onPress={() => setViewing(true)}
+            >
+              <Text style={{ color: th.brand, fontWeight: '600' }}>{t('fc.vis_fcv_apri')}</Text>
+            </Pressable>
             <Text testID="fcd-shown" style={{ color: th.text2, fontSize: 13 }}>
               {t(cards.length === 1 ? 'fc.vis_una_carta_mostrata' : 'fc.vis_n_carte_mostrate', {
                 n: cards.length,
@@ -717,6 +727,13 @@ export default function DeckScreen() {
                 </View>
               ) : null}
             </Card>
+          ) : null}
+          {viewing ? (
+            <CardViewer
+              testID="fcd-viewer"
+              onClose={() => setViewing(false)}
+              cards={cards.map((c) => studyView(c))}
+            />
           ) : null}
           {cards.length ? (
             <Card>

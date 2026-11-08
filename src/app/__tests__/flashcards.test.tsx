@@ -186,6 +186,23 @@ describe('category page', () => {
     expect(screen.getByTestId('fcd-shown')).toHaveTextContent(/1 card shown/);
   });
 
+  test('the viewer button flips through the shown cards only', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    flashcards.addCard(id, 'Oxygen symbol', 'O');
+    flashcards.addCard(id, 'Helium symbol', 'He');
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    await fireEvent.changeText(screen.getByTestId('fcd-search'), 'heli');
+    await fireEvent.press(screen.getByTestId('fcd-view'));
+    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 1');
+    expect(screen.getByTestId('fcd-viewer-question')).toHaveTextContent('Helium symbol');
+    await fireEvent.press(screen.getByTestId('fcd-viewer-card'));
+    expect(screen.getByTestId('fcd-viewer-answer')).toHaveTextContent('He');
+    await fireEvent.press(screen.getByTestId('fcd-viewer-close'));
+    expect(screen.queryByTestId('fcd-viewer')).toBeNull();
+  });
+
   test('sort button cycles through the orders', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;
