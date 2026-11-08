@@ -161,7 +161,12 @@ export default function DeckScreen() {
             >
               <Text style={{ fontSize: 18, opacity: deck.pinned ? 1 : 0.35 }}>📌</Text>
             </Pressable>
-            <Pressable testID="fcd-close" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="fcd-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

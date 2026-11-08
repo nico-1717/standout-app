@@ -135,7 +135,12 @@ export default function PlanScreen() {
             >
               <Text style={{ color: th.brand, fontSize: 18 }}>⏱</Text>
             </Pressable>
-            <Pressable testID="plan-close" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="plan-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

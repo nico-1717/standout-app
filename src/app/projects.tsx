@@ -172,7 +172,12 @@ export default function ProjectsScreen() {
             >
               <Text style={{ color: th.brand, fontSize: 18 }}>⚙︎</Text>
             </Pressable>
-            <Pressable testID="proj-close" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="proj-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

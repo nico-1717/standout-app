@@ -130,7 +130,12 @@ function ExamForm({ exam, initialStatus }: { exam: Exam | null; initialStatus: '
         top={insets.top}
         title={exam ? t('voti.modifica_esame') : t('voti.nuovo_esame')}
         right={
-          <Pressable testID="exam-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="exam-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

@@ -236,6 +236,7 @@ export default function LangCourseScreen() {
           <Pressable
             testID="lcourse-close"
             accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
             onPress={() => router.back()}
           >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>

@@ -168,7 +168,12 @@ export default function LangDeckScreen() {
             >
               <Text style={{ fontSize: 18, opacity: deck.pinned ? 1 : 0.35 }}>📌</Text>
             </Pressable>
-            <Pressable testID="ld-close" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="ld-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

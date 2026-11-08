@@ -122,7 +122,12 @@ function BonusForm({ bonus }: { bonus: Bonus | null }) {
         top={insets.top}
         title={t('voti.bonus_punti')}
         right={
-          <Pressable testID="bonus-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="bonus-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

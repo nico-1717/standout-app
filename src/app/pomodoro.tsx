@@ -310,6 +310,7 @@ export default function PomodoroScreen() {
                 <Pressable
                   testID={`dur-del-${kind}-${m}`}
                   accessibilityRole="button"
+                  accessibilityLabel={t('comune.chiudi')}
                   onPress={() => removePreset(kind, m)}
                   hitSlop={8}
                 >
@@ -680,6 +681,7 @@ export default function PomodoroScreen() {
             <Pressable
               testID="pomodoro-close"
               accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
               onPress={() => router.back()}
             >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>

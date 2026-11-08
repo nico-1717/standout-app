@@ -114,7 +114,12 @@ function GroupForm({
         top={insets.top}
         title={group ? t('voti.modifica_gruppo') : t('voti.crea_gruppo')}
         right={
-          <Pressable testID="group-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="group-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

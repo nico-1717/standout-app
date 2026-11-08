@@ -1,5 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Platform, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
@@ -39,6 +40,7 @@ export function DateTimeField({
   clearable?: boolean;
 }) {
   const th = useTheme();
+  const { t } = useTranslation();
   const isDate = kind === 'date';
   const make = isDate ? dateOf : timeOf;
   const out = (d: Date) => (isDate ? isoOf(d) : hhmmOf(d));
@@ -82,6 +84,7 @@ export function DateTimeField({
         <Pressable
           testID={`${testID}-clear`}
           accessibilityRole="button"
+          accessibilityLabel={t('comune.rimuovi')}
           hitSlop={8}
           onPress={() => onChange('')}
         >

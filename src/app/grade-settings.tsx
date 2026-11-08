@@ -84,7 +84,12 @@ export default function GradeSettingsScreen() {
         top={insets.top}
         title={t('voti.impostazioni')}
         right={
-          <Pressable testID="gset-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="gset-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

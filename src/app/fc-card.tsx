@@ -245,7 +245,12 @@ export default function CardScreen() {
                 <Text style={{ color: th.brand, fontSize: 17 }}>{t('comune.modifica')}</Text>
               </Pressable>
             ) : null}
-            <Pressable testID="fcc-close" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="fcc-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

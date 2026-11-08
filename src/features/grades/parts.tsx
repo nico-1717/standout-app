@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 
 import type { Theme } from '@/core/theme/ThemeProvider';
@@ -157,6 +158,7 @@ export function Stepper({
   testID: string;
   big?: boolean;
 }) {
+  const { t } = useTranslation();
   const btn = {
     width: big ? 48 : 34,
     height: big ? 48 : 34,
@@ -170,6 +172,7 @@ export function Stepper({
       <Pressable
         testID={`${testID}-minus`}
         accessibilityRole="button"
+        accessibilityLabel={t('fc.diminuisci')}
         onPress={onMinus}
         style={btn}
       >
@@ -187,7 +190,13 @@ export function Stepper({
       >
         {value}
       </Text>
-      <Pressable testID={`${testID}-plus`} accessibilityRole="button" onPress={onPlus} style={btn}>
+      <Pressable
+        testID={`${testID}-plus`}
+        accessibilityRole="button"
+        accessibilityLabel={t('fc.aumenta')}
+        onPress={onPlus}
+        style={btn}
+      >
         <Text style={{ color: th.brand, fontSize: big ? 26 : 20, fontWeight: '700' }}>+</Text>
       </Pressable>
     </View>

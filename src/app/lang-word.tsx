@@ -149,7 +149,12 @@ export default function LangWordScreen() {
         top={insets.top}
         title={word.word}
         right={
-          <Pressable testID="lw-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="lw-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

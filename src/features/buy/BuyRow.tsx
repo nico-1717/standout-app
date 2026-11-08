@@ -267,6 +267,7 @@ export const BuyRow = memo(function BuyRow({
             {task.buy_url ? (
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={t('comune.apri')}
                 onPress={() =>
                   void Linking.openURL(
                     /^https?:/i.test(task.buy_url!) ? task.buy_url! : 'https://' + task.buy_url!,

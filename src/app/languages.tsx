@@ -298,7 +298,12 @@ export default function LanguagesScreen() {
         top={insets.top}
         title={t('fchub.lingue_titolo')}
         right={
-          <Pressable testID="lang-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="lang-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

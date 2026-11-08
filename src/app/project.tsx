@@ -149,7 +149,12 @@ export default function ProjectScreen() {
                 {me.is_favorite ? '★' : '☆'}
               </Text>
             </Pressable>
-            <Pressable testID="proj-back" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="proj-back"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

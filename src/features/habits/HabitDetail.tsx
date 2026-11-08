@@ -196,6 +196,7 @@ function Body(p: HabitDetailProps & { habit: Habit; t: ReturnType<typeof useTran
         <View style={styles.calHead}>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={t('planner.mese_prec')}
             testID="cal-prev"
             onPress={() => setMonth(addMonths(month, -1))}
             style={[styles.nav, { backgroundColor: th.surface2 }]}
@@ -207,6 +208,7 @@ function Body(p: HabitDetailProps & { habit: Habit; t: ReturnType<typeof useTran
           </Text>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={t('planner.mese_succ')}
             testID="cal-next"
             onPress={() => setMonth(addMonths(month, 1))}
             style={[styles.nav, { backgroundColor: th.surface2 }]}

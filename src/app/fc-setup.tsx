@@ -236,7 +236,12 @@ export default function GameSetupScreen() {
         top={insets.top}
         title={t('fc.cg_nuova_partita')}
         right={
-          <Pressable testID="fcs-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="fcs-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }

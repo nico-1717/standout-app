@@ -368,6 +368,7 @@ export default function HomeScreen() {
                 </Text>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={t('home.sposta_su')}
                   testID={`home-up-${w.id}`}
                   onPress={() => move(i, -1)}
                   hitSlop={8}
@@ -376,6 +377,7 @@ export default function HomeScreen() {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={t('home.sposta_giu')}
                   testID={`home-down-${w.id}`}
                   onPress={() => move(i, 1)}
                   hitSlop={8}

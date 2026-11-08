@@ -214,6 +214,7 @@ export default function PlannerManage() {
           <Pressable
             testID="cal-add"
             accessibilityRole="button"
+            accessibilityLabel={t('comune.aggiungi')}
             onPress={() => {
               const n = newCal.trim();
               if (!n) return;
@@ -331,6 +332,7 @@ export default function PlannerManage() {
                 <Pressable
                   testID={`kw-add-${c.uuid}`}
                   accessibilityRole="button"
+                  accessibilityLabel={t('comune.aggiungi')}
                   onPress={() => addWord(c.uuid)}
                 >
                   <Text style={{ color: pt.accentInk, fontSize: 22 }}>＋</Text>
@@ -351,6 +353,7 @@ export default function PlannerManage() {
           <Pressable
             testID="cat-add"
             accessibilityRole="button"
+            accessibilityLabel={t('comune.aggiungi')}
             onPress={() => {
               const n = newCat.trim();
               if (!n) return;

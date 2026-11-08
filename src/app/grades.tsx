@@ -361,6 +361,7 @@ export default function GradesScreen() {
             <Pressable
               testID="grades-close"
               accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
               onPress={() => router.back()}
             >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>

@@ -231,7 +231,12 @@ export default function PomodoroHistory() {
             >
               <Text style={{ color: th.brand, fontSize: 22 }}>+</Text>
             </Pressable>
-            <Pressable testID="hist-close" accessibilityRole="button" onPress={() => router.back()}>
+            <Pressable
+              testID="hist-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              onPress={() => router.back()}
+            >
               <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
             </Pressable>
           </View>

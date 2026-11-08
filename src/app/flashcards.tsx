@@ -365,7 +365,12 @@ export default function FlashcardsScreen() {
         top={insets.top}
         title={t('fc.cfc_titolo')}
         right={
-          <Pressable testID="fc-close" accessibilityRole="button" onPress={() => router.back()}>
+          <Pressable
+            testID="fc-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => router.back()}
+          >
             <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
           </Pressable>
         }
