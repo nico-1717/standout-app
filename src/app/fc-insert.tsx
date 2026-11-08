@@ -9,6 +9,7 @@ import { useApp } from '@/core/app/AppProvider';
 import { pickImage } from '@/core/media/pickImage';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DraftAudioField } from '@/features/media/DraftAudioField';
+import { MAX_LINK_JOBS, attachLinkImages, type LinkJob } from '@/features/flashcards/linkImages';
 import { PasteImport } from '@/features/flashcards/PasteImport';
 import {
   loadInsertDraft,
@@ -41,6 +42,11 @@ export default function InsertScreen() {
     () => (services ? loadInsertDraft(services.db, deckId) : null) ?? [{ q: '', a: '' }],
   );
   const [done, setDone] = useState<number | null>(null);
+  const [pictures, setPictures] = useState<{
+    done: number;
+    total: number;
+    added: number | null;
+  } | null>(null);
 
   // le righe scritte restano sul telefono mentre si scrive (salvataggio automatico)
   useEffect(() => {
@@ -65,8 +71,11 @@ export default function InsertScreen() {
   const deck = services.flashcards.deck(deckId);
   if (!deck) return null;
 
-  const saveAll = (list: NewCard[] | { q: string; a: string; kid?: boolean }[]) => {
+  const saveAll = (
+    list: NewCard[] | { q: string; a: string; kid?: boolean; imgLink?: string }[],
+  ) => {
     let n = 0;
+    const jobs: LinkJob[] = [];
     let parent: string | null = null;
     let photos = 0;
     // le foto scelte per le righe: partono verso il sito dopo che la carta c'è (il sito vuole la riga prima del file)
@@ -87,6 +96,13 @@ export default function InsertScreen() {
         if (kid) {
           n += 1;
           attach('fc_study_subcards', kid, c);
+          if (c.imgLink)
+            jobs.push({
+              table: 'fc_study_subcards',
+              uuid: kid,
+              slot: 'question_image',
+              url: c.imgLink,
+            });
         }
         continue;
       }
@@ -94,12 +110,30 @@ export default function InsertScreen() {
       if (parent) {
         n += 1;
         attach('fc_study_cards', parent, c);
+        if (c.imgLink)
+          jobs.push({
+            table: 'fc_study_cards',
+            uuid: parent,
+            slot: 'question_image',
+            url: c.imgLink,
+          });
       }
     }
     if (photos > 0) services.scheduler.trigger(0);
     if (n > 0) changed();
     setDone(n);
+    if (jobs.length > 0) void fetchPictures(jobs);
     return n;
+  };
+  // le immagini dei link (come sul sito: l'immagine della domanda) si scaricano dopo, una alla volta
+  const fetchPictures = async (jobs: LinkJob[]) => {
+    setPictures({ done: 0, total: Math.min(jobs.length, MAX_LINK_JOBS), added: null });
+    const r = await attachLinkImages(services.media, jobs, (d, total) =>
+      setPictures({ done: d, total, added: null }),
+    );
+    if (r.added > 0) services.scheduler.trigger(0);
+    setPictures({ done: r.total, total: r.total, added: r.added });
+    changed();
   };
 
   const setPhoto = (i: number, key: 'qi' | 'ai' | 'qa' | 'aa', uri: string | null) =>
@@ -185,8 +219,22 @@ export default function InsertScreen() {
           </Text>
         ) : null}
 
+        {pictures ? (
+          <Text testID="fci-pictures" style={{ color: th.text2 }}>
+            {pictures.added === null
+              ? t('fc.smi_img_scarico', { done: pictures.done, total: pictures.total })
+              : t('fc.smi_img_fatte', { n: pictures.added, total: pictures.total })}
+          </Text>
+        ) : null}
+
         {mode === 'paste' ? (
-          <PasteImport onCreate={saveAll} onEdit={() => setDone(null)} />
+          <PasteImport
+            onCreate={saveAll}
+            onEdit={() => {
+              setDone(null);
+              setPictures(null);
+            }}
+          />
         ) : (
           <View style={{ gap: 12 }}>
             {rows.map((r, i) => (

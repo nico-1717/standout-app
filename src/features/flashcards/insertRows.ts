@@ -24,6 +24,8 @@ export type NewCard = {
   ai?: string;
   qa?: string;
   aa?: string;
+  /** un link a un'immagine (dall'importazione): si scarica dopo e diventa l'immagine della domanda */
+  imgLink?: string;
 };
 
 /** La riga ha qualcosa: del testo o una foto. */

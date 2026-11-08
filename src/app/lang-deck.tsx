@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { PasteImport } from '@/features/flashcards/PasteImport';
+import { MAX_LINK_JOBS, attachLinkImages, type LinkJob } from '@/features/flashcards/linkImages';
 import type { ImportedCard } from '@/features/flashcards/smartImport';
 import { langName } from '@/features/languages/langs';
 import {
@@ -46,6 +47,11 @@ export default function LangDeckScreen() {
   const [iconsOpen, setIconsOpen] = useState(false);
   const [pasting, setPasting] = useState(false);
   const [imported, setImported] = useState<number | null>(null);
+  const [pictures, setPictures] = useState<{
+    done: number;
+    total: number;
+    added: number | null;
+  } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const data = useMemo(() => {
@@ -116,6 +122,7 @@ export default function LangDeckScreen() {
   };
   const importWords = (cards: ImportedCard[]) => {
     let n = 0;
+    const jobs: LinkJob[] = [];
     for (const c of cards) {
       const uuid = repo.addWord(id, {
         word: c.q,
@@ -125,11 +132,24 @@ export default function LangDeckScreen() {
       });
       if (!uuid) continue;
       if (c.ex) repo.addExample(uuid, false, c.ex);
+      if (c.imgLink) jobs.push({ table: 'fc_vocab_cards', uuid, slot: 'image', url: c.imgLink });
       n += 1;
     }
     if (n > 0) changed();
     setImported(n);
+    if (jobs.length > 0) void fetchPictures(jobs);
     return n;
+  };
+  // le immagini dei link si scaricano dopo, una alla volta: le parole ci sono già
+  const fetchPictures = async (jobs: LinkJob[]) => {
+    if (!services) return;
+    setPictures({ done: 0, total: Math.min(jobs.length, MAX_LINK_JOBS), added: null });
+    const r = await attachLinkImages(services.media, jobs, (done, total) =>
+      setPictures({ done, total, added: null }),
+    );
+    if (r.added > 0) services.scheduler.trigger(0);
+    setPictures({ done: r.total, total: r.total, added: r.added });
+    changed();
   };
   const addWord = () => {
     if (repo.addWord(id, { word, translation })) {
@@ -509,6 +529,7 @@ export default function LangDeckScreen() {
             onPress={() => {
               setPasting(!pasting);
               setImported(null);
+              setPictures(null);
             }}
           >
             <Text style={{ color: th.brand, fontWeight: '600' }}>
@@ -520,6 +541,13 @@ export default function LangDeckScreen() {
               {imported !== null ? (
                 <Text testID="ld-paste-done" style={{ color: th.green, fontWeight: '700' }}>
                   {t('fc.smi_create', { n: imported })}
+                </Text>
+              ) : null}
+              {pictures ? (
+                <Text testID="ld-paste-pictures" style={{ color: th.text2 }}>
+                  {pictures.added === null
+                    ? t('fc.smi_img_scarico', { done: pictures.done, total: pictures.total })
+                    : t('fc.smi_img_fatte', { n: pictures.added, total: pictures.total })}
                 </Text>
               ) : null}
               <PasteImport

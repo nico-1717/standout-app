@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import { MediaQueue } from '@/core/media/mediaQueue';
+import { imageFromLink } from '@/core/media/fetchImage';
 import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
@@ -15,6 +16,7 @@ import LangWordScreen from '../lang-word';
 import LanguagesScreen from '../languages';
 
 jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
+jest.mock('@/core/media/fetchImage', () => ({ imageFromLink: jest.fn() }));
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -226,6 +228,33 @@ describe('Deck page', () => {
     await fireEvent.press(screen.getByTestId('ld-delete-confirm'));
     expect(languages.deck(deck)).toBeNull();
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  test('pasted words with a picture link get their picture after they are created', async () => {
+    const { languages } = setup();
+    (imageFromLink as jest.Mock).mockResolvedValue({
+      uri: 'file:///docs/media_queue/p.jpg',
+      mime: 'image/jpeg',
+    });
+    const c = languages.addCourse('it', 'de', 'en') as string;
+    const deck = languages.createDeck(c, { name: 'Animals' })!;
+    mockParams = { id: deck };
+    await render(wrap(<LangDeckScreen />));
+    await fireEvent.press(screen.getByTestId('ld-paste-toggle'));
+    await fireEvent.changeText(
+      screen.getByTestId('ldi-text'),
+      'Word\tTranslation\tLink\nKatze\tgatto\thttps://a.b/k.png',
+    );
+    await fireEvent.press(screen.getByTestId('ldi-create'));
+    await waitFor(() =>
+      expect(screen.getByTestId('ld-paste-pictures')).toHaveTextContent('Pictures added: 1 of 1'),
+    );
+    const w = languages.words(deck)[0]!;
+    const media = (mockServices as { media: MediaQueue }).media;
+    expect(media.pending('fc_vocab_cards', w.uuid, 'image')).toMatchObject({
+      op: 'put',
+      uri: 'file:///docs/media_queue/p.jpg',
+    });
   });
 
   test('pastes many words with meaning, example and notes, and an example becomes a real example', async () => {

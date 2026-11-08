@@ -5,6 +5,7 @@ import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { MediaQueue } from '@/core/media/mediaQueue';
+import { imageFromLink } from '@/core/media/fetchImage';
 import { pickImage } from '@/core/media/pickImage';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 
@@ -14,6 +15,7 @@ jest.mock('@/core/media/phoneFiles', () => ({
   keepFile: jest.fn((uri: string) => `file:///docs/media_queue/${uri.split('/').pop()}`),
 }));
 jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
+jest.mock('@/core/media/fetchImage', () => ({ imageFromLink: jest.fn() }));
 const mockTrigger = jest.fn();
 let mockServices: unknown;
 let mockParams: Record<string, string> = {};
@@ -52,6 +54,33 @@ function setup() {
 const wrap = (el: React.ReactElement) => <ThemeProvider>{el}</ThemeProvider>;
 
 describe('insert many cards', () => {
+  test('a link column: the picture is downloaded after the cards exist and queued as the question image', async () => {
+    const { flashcards, deck } = setup();
+    (imageFromLink as jest.Mock).mockImplementation(async (url: string) =>
+      url.endsWith('/ok.png')
+        ? { uri: 'file:///docs/media_queue/ok.jpg', mime: 'image/jpeg' }
+        : null,
+    );
+    await render(wrap(<InsertScreen />));
+    await fireEvent.changeText(
+      screen.getByTestId('fci-text'),
+      'Question\tAnswer\tLink\nCat\tgatto\thttps://a.b/ok.png\nDog\tcane\thttps://a.b/broken.png',
+    );
+    await fireEvent.press(screen.getByTestId('fci-create'));
+    await waitFor(() =>
+      expect(screen.getByTestId('fci-pictures')).toHaveTextContent('Pictures added: 1 of 2'),
+    );
+    const cards = flashcards.cards(deck);
+    expect(cards.map((c) => c.question_desc)).toEqual(['Cat', 'Dog']);
+    const media = (mockServices as { media: MediaQueue }).media;
+    expect(media.pending('fc_study_cards', cards[0]!.uuid, 'question_image')).toMatchObject({
+      op: 'put',
+      uri: 'file:///docs/media_queue/ok.jpg',
+    });
+    expect(media.pending('fc_study_cards', cards[1]!.uuid, 'question_image')).toBeNull();
+    expect(mockTrigger).toHaveBeenCalled();
+  });
+
   test('paste a table: it understands the format, a column can be changed, then it creates the cards', async () => {
     const { flashcards, deck } = setup();
     await render(wrap(<InsertScreen />));
