@@ -30,17 +30,20 @@ function Playing({ uri, onEnd }: { uri: string; onEnd: () => void }) {
  */
 export function CardAudio({
   name,
+  localUri,
   testID,
   size = 22,
 }: {
   name: string | null | undefined;
+  /** una registrazione ancora sul telefono, non ancora sul sito: suona questa */
+  localUri?: string | null;
   testID?: string;
   size?: number;
 }) {
   const th = useTheme();
   const { t } = useTranslation();
   const [on, setOn] = useState(false);
-  const uri = cardAudioUrl(name);
+  const uri = localUri || cardAudioUrl(name);
   if (!uri) return null;
   const color = on ? th.brand : th.text2;
   return (

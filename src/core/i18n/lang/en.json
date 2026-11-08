@@ -4304,7 +4304,10 @@
     "app_audio_sul_sito": "The sounds of this card can only be played on the website for now.",
     "st_tentativi_prec": "{played} attempts · {acc}% accuracy",
     "st_dopo_errore": "When you get a card wrong, you get it right the next time {pct}% of the time (out of {n} cases seen).",
-    "app_filtra_materia": "Subject"
+    "app_filtra_materia": "Subject",
+    "app_ferma_registrazione": "Stop recording",
+    "app_audio_domanda": "Question audio",
+    "app_audio_risposta": "Answer audio"
   },
   "fchub": {
     "home_titolo": "Flashcards",

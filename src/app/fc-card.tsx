@@ -13,6 +13,7 @@ import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import { RichEditor } from '@/features/flashcards/RichEditor';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
+import { AudioField } from '@/features/media/AudioField';
 import { ImageField } from '@/features/media/ImageField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
@@ -195,7 +196,18 @@ export default function CardScreen() {
         ) : (
           <CardImage testID={`fcc-${s}-image`} name={s === 'q' ? item.qImg : item.aImg} />
         )}
-        <CardAudio testID={`fcc-${s}-audio`} name={s === 'q' ? item.qAud : item.aAud} />
+        {edit && !isNew ? (
+          <AudioField
+            testID={`fcc-${s}-audfield`}
+            table={params.sub ? 'fc_study_subcards' : 'fc_study_cards'}
+            uuid={(params.sub ?? params.id)!}
+            slot={s === 'q' ? 'question_audio' : 'answer_audio'}
+            name={s === 'q' ? item.qAud : item.aAud}
+            label={s === 'q' ? t('fc.app_audio_domanda') : t('fc.app_audio_risposta')}
+          />
+        ) : (
+          <CardAudio testID={`fcc-${s}-audio`} name={s === 'q' ? item.qAud : item.aAud} />
+        )}
       </Card>
     );
   };

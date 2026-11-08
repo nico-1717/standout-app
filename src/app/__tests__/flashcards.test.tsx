@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -18,6 +18,10 @@ import CardScreen from '../fc-card';
 import DeckScreen from '../fc-deck';
 import FlashcardsScreen from '../flashcards';
 
+jest.mock('@/core/media/phoneFiles', () => ({
+  keepFile: jest.fn((uri: string) => `file:///docs/media_queue/${uri.split('/').pop()}`),
+  phoneFiles: { delete: jest.fn() },
+}));
 jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
 const mockTrigger = jest.fn();
 
@@ -342,6 +346,48 @@ describe('card page', () => {
     await view.rerender(wrap(<CardScreen />));
     expect(screen.queryByTestId('fcc-q-imgfield-local')).toBeNull();
     expect(db.all<{ op: string }>('SELECT op FROM media_queue')).toEqual([{ op: 'delete' }]);
+  });
+
+  test('edit a card: record the answer audio, stop, and it waits in the upload queue', async () => {
+    const { flashcards, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    const view = await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-edit'));
+    expect(screen.queryByTestId('fcc-a-audfield-remove')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcc-a-audfield-record'));
+    await screen.findByTestId('audio-stop');
+    await fireEvent.press(screen.getByTestId('audio-stop'));
+    await waitFor(() => expect(db.all('SELECT * FROM media_queue')).toHaveLength(1));
+    expect(db.all('SELECT tbl, row_uuid, slot, op, file, mime FROM media_queue')).toEqual([
+      {
+        tbl: 'fc_study_cards',
+        row_uuid: c,
+        slot: 'answer_audio',
+        op: 'put',
+        file: 'file:///docs/media_queue/rec.m4a',
+        mime: 'audio/mp4',
+      },
+    ]);
+    await view.rerender(wrap(<CardScreen />));
+    expect(screen.getByTestId('fcc-a-audfield-waiting')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcc-a-audfield-remove'));
+    expect(db.all<{ op: string }>('SELECT op FROM media_queue')).toEqual([{ op: 'delete' }]);
+  });
+
+  test('edit a card: no microphone permission shows a message and keeps nothing', async () => {
+    const { flashcards, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    const audio = jest.requireMock('expo-audio');
+    audio.requestRecordingPermissionsAsync.mockResolvedValueOnce({ granted: false });
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-edit'));
+    await fireEvent.press(screen.getByTestId('fcc-q-audfield-record'));
+    await screen.findByTestId('fcc-q-audfield-error');
+    expect(db.all('SELECT * FROM media_queue')).toEqual([]);
   });
 
   test('edit a card: a cancelled photo choice changes nothing', async () => {
