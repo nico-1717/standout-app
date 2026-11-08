@@ -40,6 +40,7 @@ import { GradeSettingsStore } from '@/features/grades/settings';
 import { DEFAULT_GRADE_SETTINGS, type GradeSettings } from '@/features/grades/logic';
 import { DEFAULT_HOME_LAYOUT, HomeLayoutStore, type HomeWidget } from '@/features/home/layout';
 import { ProjectOptionsStore } from '@/features/projects/options';
+import { PlanRepo } from '@/features/plan/repo';
 import { ProjectsRepo } from '@/features/projects/repo';
 import {
   DEFAULT_DIARY_SETTINGS,
@@ -85,6 +86,7 @@ export interface Services {
   diary: DiaryRepo;
   planner: PlannerRepo;
   projects: ProjectsRepo;
+  plan: PlanRepo;
   projectOptions: ProjectOptionsStore;
   pomodoro: PomodoroRepo;
   grades: GradesRepo;
@@ -352,6 +354,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             userId,
           ),
           projects: new ProjectsRepo(opened.db),
+          plan: new PlanRepo(opened.db, userId),
           projectOptions: new ProjectOptionsStore(opened.db),
           pomodoro: new PomodoroRepo(opened.db, userId),
           grades: new GradesRepo(opened.db),
