@@ -268,12 +268,21 @@ export default function HabitsScreen() {
       file.create({ overwrite: true });
       if (format === 'xlsx') file.write(buildXlsx(sheets, t('import.abitudine_senza_nome')));
       else file.write(buildCsv(sheets));
-      await Sharing.shareAsync(file.uri, {
-        mimeType:
-          format === 'xlsx'
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            : 'text/csv',
-      });
+      try {
+        await Sharing.shareAsync(file.uri, {
+          mimeType:
+            format === 'xlsx'
+              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              : 'text/csv',
+        });
+      } finally {
+        // la copia nella cache non serve più dopo «Condividi»: la storia personale non resta in un file qualunque
+        try {
+          if (file.exists) file.delete();
+        } catch {
+          /* già sparita */
+        }
+      }
     } catch {
       Alert.alert(t('abitudini.esporta_tutto'), t('app.scarica_errore'));
     }

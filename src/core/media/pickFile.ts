@@ -17,6 +17,15 @@ export async function pickDocument(): Promise<PickedDoc | null> {
   if (!asset) return null;
   if (typeof asset.size === 'number' && asset.size > MAX_IMPORT_BYTES)
     throw new Error('troppo_grande');
-  const bytes = new Uint8Array(await new File(asset.uri).arrayBuffer());
-  return { name: asset.name, bytes };
+  const copy = new File(asset.uri);
+  try {
+    return { name: asset.name, bytes: new Uint8Array(await copy.arrayBuffer()) };
+  } finally {
+    // la copia nella cache dell'app non serve più: i dati personali non devono restare in giro
+    try {
+      if (copy.exists) copy.delete();
+    } catch {
+      /* già sparita */
+    }
+  }
 }

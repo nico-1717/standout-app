@@ -20,6 +20,7 @@ const mockChanged = jest.fn();
 const mockShare = jest.fn(async (..._a: unknown[]) => undefined);
 jest.mock('expo-sharing', () => ({ shareAsync: (...a: unknown[]) => mockShare(...a) }));
 const mockWritten: { name: string; data: unknown }[] = [];
+const mockDeleted: string[] = [];
 jest.mock('expo-file-system', () => ({
   Paths: { cache: 'cache' },
   File: class {
@@ -29,9 +30,13 @@ jest.mock('expo-file-system', () => ({
       this.name = name;
       this.uri = `file:///cache/${name}`;
     }
+    exists = true;
     create() {}
     write(data: unknown) {
       mockWritten.push({ name: this.name, data });
+    }
+    delete() {
+      mockDeleted.push(this.name);
     }
   },
 }));
@@ -143,6 +148,7 @@ describe('Habits screen', () => {
     const { habits, read } = setup();
     habits.checkIn(read, localToday(), 'toggle');
     mockWritten.length = 0;
+    mockDeleted.length = 0;
     mockShare.mockClear();
     await renderIt();
     await fireEvent.press(screen.getByTestId('hb-settings'));
@@ -157,6 +163,8 @@ describe('Habits screen', () => {
     await waitFor(() => expect(mockShare).toHaveBeenCalledTimes(2));
     expect(mockWritten[1]!.name).toMatch(/\.csv$/);
     expect(String(mockWritten[1]!.data)).toContain('Read,');
+    // dopo «Condividi» la copia nella cache sparisce
+    expect(mockDeleted).toEqual([mockWritten[0]!.name, mockWritten[1]!.name]);
   });
 
   test('settings: Import opens the import page', async () => {
