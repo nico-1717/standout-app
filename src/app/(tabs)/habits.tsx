@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +30,7 @@ import { labelDate } from '@/features/habits/labels';
 import { HabitsHeader, StatCarousel, type CardView } from '@/features/habits/overview';
 import { StatsSheet } from '@/features/habits/StatsSheet';
 import { TableSheet } from '@/features/habits/TableSheet';
-import { NoteSheet } from '@/features/habits/NoteSheet';
+import { MOODS, NoteSheet } from '@/features/habits/NoteSheet';
 import {
   addDays,
   currentStreak,
@@ -78,6 +79,7 @@ export default function HabitsScreen() {
   );
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const today = localToday();
   const [day, setDay] = useState(today);
@@ -412,6 +414,8 @@ export default function HabitsScreen() {
     ] as const
   ).filter((s) => s[2].length > 0);
 
+  // il diario del giorno è lo stesso del Diario: umore e testo (habit_daily_journal)
+  const journal = services ? services.diary.day(day) : null;
   const nothing = items.length === 0 && others === 0;
   const chips = [
     `✅ ${progress.done}/${progress.total}`,
@@ -453,8 +457,10 @@ export default function HabitsScreen() {
           th={ht}
           title={labelDate(day, today, t)}
           pct={progress.pct}
-          sub={t(dayMessageKey(progress))}
-          chips={chips}
+          sub={journal?.note ? journal.note : t(dayMessageKey(progress))}
+          chips={journal?.mood ? [...chips, MOODS[journal.mood - 1] ?? ''] : chips}
+          writeLabel={journal?.note || journal?.mood ? null : t('abitudini.scrivi')}
+          onWrite={() => router.push({ pathname: '/diary', params: { data: day } })}
         />
         <Text
           testID="list-title"

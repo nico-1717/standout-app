@@ -79,10 +79,20 @@ export function TodayCard(p: {
   pct: number;
   sub: string;
   chips: string[];
+  /** il tasto «Scrivi»: appare quando il diario del giorno è vuoto; toccare la carta apre il diario di quel giorno */
+  writeLabel?: string | null;
+  onWrite?: () => void;
 }) {
   const { th } = p;
   return (
-    <View style={[styles.today, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}>
+    <Pressable
+      testID="today-card"
+      accessibilityRole="button"
+      accessibilityLabel={p.title}
+      disabled={!p.onWrite}
+      onPress={p.onWrite}
+      style={[styles.today, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}
+    >
       <View style={styles.bigRing}>
         <Ring
           size={78}
@@ -102,9 +112,22 @@ export function TodayCard(p: {
               <Text style={{ color: th.text, fontWeight: '800', fontSize: 12.5 }}>{c}</Text>
             </View>
           ))}
+          {p.writeLabel ? (
+            <View
+              testID="today-write"
+              style={[
+                styles.miniChip,
+                { borderWidth: 1, borderStyle: 'dashed', borderColor: th.hairline2 },
+              ]}
+            >
+              <Text style={{ color: th.text2, fontWeight: '700', fontSize: 12.5 }}>
+                {p.writeLabel}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

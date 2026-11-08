@@ -4,6 +4,7 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { DiaryRepo } from '@/features/diary/repo';
 import { HabitCategoriesRepo, HabitsRepo } from '@/features/habits/repo';
 import { localToday } from '@/features/tasks/groups';
 
@@ -16,6 +17,8 @@ let mockHabitSettings = {
 };
 const mockChanged = jest.fn();
 
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -52,8 +55,9 @@ function setup() {
   });
   const read = habits.create({ name: 'Read', day_part: 'evening' });
   const run = habits.create({ name: 'Long run', frequency_type: 'weekly', times_per_week: 2 });
-  mockServices = { db, habits, habitCategories: new HabitCategoriesRepo(db) };
-  return { habits, water, read, run };
+  const diary = new DiaryRepo(db, 7);
+  mockServices = { db, habits, diary, habitCategories: new HabitCategoriesRepo(db) };
+  return { habits, diary, water, read, run };
 }
 
 const renderIt = () =>
@@ -179,6 +183,7 @@ describe('Habits screen', () => {
     mockServices = {
       db,
       habits: new HabitsRepo(db, undefined, undefined, localToday),
+      diary: new DiaryRepo(db, 7),
       habitCategories: new HabitCategoriesRepo(db),
     };
     await renderIt();
@@ -193,7 +198,12 @@ describe('Habit form', () => {
     const db = memoryDb();
     migrate(db);
     const habits = new HabitsRepo(db, undefined, undefined, localToday);
-    mockServices = { db, habits, habitCategories: new HabitCategoriesRepo(db) };
+    mockServices = {
+      db,
+      habits,
+      diary: new DiaryRepo(db, 7),
+      habitCategories: new HabitCategoriesRepo(db),
+    };
     await renderIt();
     await fireEvent.press(screen.getByTestId('habit-add'));
     expect(screen.getByText('New habit')).toBeTruthy();
@@ -206,7 +216,12 @@ describe('Habit form', () => {
     const db = memoryDb();
     migrate(db);
     const habits = new HabitsRepo(db, undefined, undefined, localToday);
-    mockServices = { db, habits, habitCategories: new HabitCategoriesRepo(db) };
+    mockServices = {
+      db,
+      habits,
+      diary: new DiaryRepo(db, 7),
+      habitCategories: new HabitCategoriesRepo(db),
+    };
     await renderIt();
     await fireEvent.press(screen.getByTestId('habit-add'));
     await fireEvent.changeText(screen.getByTestId('habit-name'), 'Walk');
@@ -234,7 +249,12 @@ describe('Habit form', () => {
     const db = memoryDb();
     migrate(db);
     const habits = new HabitsRepo(db, undefined, undefined, localToday);
-    mockServices = { db, habits, habitCategories: new HabitCategoriesRepo(db) };
+    mockServices = {
+      db,
+      habits,
+      diary: new DiaryRepo(db, 7),
+      habitCategories: new HabitCategoriesRepo(db),
+    };
     await renderIt();
     await fireEvent.press(screen.getByTestId('habit-add'));
     await fireEvent.press(screen.getByTestId('from-preset'));
@@ -252,7 +272,12 @@ describe('Habit form', () => {
     const db = memoryDb();
     migrate(db);
     const habits = new HabitsRepo(db, undefined, undefined, localToday);
-    mockServices = { db, habits, habitCategories: new HabitCategoriesRepo(db) };
+    mockServices = {
+      db,
+      habits,
+      diary: new DiaryRepo(db, 7),
+      habitCategories: new HabitCategoriesRepo(db),
+    };
     await renderIt();
     await fireEvent.press(screen.getByTestId('habit-add'));
     await fireEvent.press(screen.getByTestId('pick-icon'));
@@ -283,7 +308,12 @@ describe('Habit form', () => {
     const habits = new HabitsRepo(db, undefined, undefined, localToday);
     habits.create({ name: 'Later', start_date: '2999-01-01' });
     habits.create({ name: 'Now' });
-    mockServices = { db, habits, habitCategories: new HabitCategoriesRepo(db) };
+    mockServices = {
+      db,
+      habits,
+      diary: new DiaryRepo(db, 7),
+      habitCategories: new HabitCategoriesRepo(db),
+    };
     await renderIt();
     expect(screen.queryByText('Later')).toBeNull();
     expect(screen.getByText('Now')).toBeTruthy();
@@ -363,5 +393,26 @@ describe('Habits reorder', () => {
     expect(screen.getByTestId('reorder-sheet')).toBeTruthy();
     expect(screen.getByTestId(`grip-${water}`)).toBeTruthy();
     expect(screen.getByTestId(`grip-${read}`)).toBeTruthy();
+  });
+
+  test('the Today card shows the diary note and mood, and opens the diary for that day', async () => {
+    const { diary } = setup();
+    await renderIt();
+    // empty diary: the dashed "Write" chip is there, and a tap opens today's page of the diary
+    expect(screen.getByTestId('today-write')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('today-card'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/diary', params: { data: localToday() } });
+    // with a note and a mood: the chip goes away, the note replaces the message
+    diary.setNote(localToday(), 'A calm day');
+    diary.setMood(localToday(), 4);
+    mockVersion++;
+    await screen.rerender(
+      <ThemeProvider accent="indigo">
+        <HabitsScreen />
+      </ThemeProvider>,
+    );
+    expect(screen.queryByTestId('today-write')).toBeNull();
+    expect(screen.getByText('A calm day')).toBeOnTheScreen();
+    expect(screen.getByText('🙂')).toBeOnTheScreen();
   });
 });
