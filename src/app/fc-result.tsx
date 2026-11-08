@@ -11,6 +11,9 @@ import { kitForGame } from '@/features/flashcards/gameKit';
 import { Card, Header, PrimaryButton, TextButton } from '@/ui/kit';
 import { SpeakButton } from '@/ui/SpeakButton';
 
+/** Quante carte della revisione si mostrano per volta (come il sito: «Carica altre»). */
+const PAGE = 20;
+
 /**
  * Il risultato di una partita (fc_result.php), versione semplice: punteggio, giuste e sbagliate, durata, l'elenco delle carte
  * con il verdetto cambiabile, «Rigioca errori» e «Gioca ancora». Parametro `game`.
@@ -24,6 +27,7 @@ export default function ResultScreen() {
   const params = useLocalSearchParams<{ game?: string; errors?: string }>();
   const game = params.game ?? '';
   const [onlyWrong, setOnlyWrong] = useState(params.errors === '1');
+  const [limit, setLimit] = useState(PAGE);
   const [, setTick] = useState(0);
 
   const kit = useMemo(
@@ -251,7 +255,7 @@ export default function ResultScreen() {
           <Text style={{ color: th.text2 }}>{t('fc.res_nessuna_carta')}</Text>
         ) : (
           <Card style={{ padding: 12, gap: 10 }}>
-            {shown.map((p) => {
+            {shown.slice(0, limit).map((p) => {
               const isChild = !!p.child_uuid;
               const target = (isChild ? p.child_uuid : p.card_uuid) ?? '';
               const wrong = p.user_answer === 'Wrong';
@@ -308,6 +312,13 @@ export default function ResultScreen() {
             })}
           </Card>
         )}
+        {shown.length > limit ? (
+          <TextButton
+            testID="fcr-more"
+            label={`${t('fc.res_carica_altre')} · ${t('fc.res_restano_n', { n: shown.length - limit })}`}
+            onPress={() => setLimit((n) => n + PAGE)}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

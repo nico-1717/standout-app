@@ -263,6 +263,25 @@ describe('result and history', () => {
     await fireEvent.press(screen.getByTestId('fch-period-7'));
     expect(screen.queryByTestId('fch-from')).toBeNull();
   });
+  test('a long review shows 20 cards and loads more on request', async () => {
+    const { flashcards, games } = setup();
+    const deck = flashcards.createDeck({ name: 'Big' })!;
+    for (let i = 0; i < 25; i++) flashcards.addCard(deck, `Q${i}`, `A${i}`);
+    const r = games.start({ decks: [deck], status: 'all', order: 'in_order' });
+    if (r.kind !== 'started') throw new Error('empty');
+    for (let pos = 1; pos <= 25; pos++) {
+      const p = games.ensurePosition(r.game, pos)!;
+      games.grade(r.game, pos, p[0]!.card_uuid!, false, 'correct');
+    }
+    games.conclude(r.game);
+    mockParams = { game: r.game };
+    await render(wrap(<ResultScreen />));
+    expect(screen.getAllByText(/^Q\d+$/)).toHaveLength(20);
+    expect(screen.getByTestId('fcr-more')).toHaveTextContent(/5 left/);
+    await fireEvent.press(screen.getByTestId('fcr-more'));
+    expect(screen.getAllByText(/^Q\d+$/)).toHaveLength(25);
+    expect(screen.queryByTestId('fcr-more')).toBeNull();
+  });
   test('result opened with errors=1 starts on the wrong ones', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);
