@@ -75,9 +75,10 @@ export class FlashcardsRepo {
 
   cards(deckUuid: string): Card[] {
     return sortCards(
-      this.db.all<Card>(`SELECT ${CARD_COLS} FROM fc_study_cards WHERE category_uuid = ?`, [
-        deckUuid,
-      ]),
+      this.db.all<Card>(
+        `SELECT ${CARD_COLS}, rowid AS rid FROM fc_study_cards WHERE category_uuid = ?`,
+        [deckUuid],
+      ),
     );
   }
 

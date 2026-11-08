@@ -6,11 +6,17 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
+import {
+  CARD_SORTS,
+  filterCards,
+  levelCounts,
+  plainText,
+  type CardSort,
+} from '@/features/flashcards/cardList';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import type { GameStatus } from '@/features/flashcards/game';
-import { LEVEL_COLORS } from '@/features/flashcards/levels';
+import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
 import {
   DECK_ICON_KEYS,
   DECK_SWATCHES,
@@ -30,8 +36,16 @@ import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
 const preview = (raw: string | null): string => {
-  const t = docToPlain(parseDoc(raw)).replace(/\s+/g, ' ').trim();
+  const t = plainText(raw);
   return t.length > 110 ? t.slice(0, 110) + '…' : t;
+};
+
+const SORT_LABELS: Record<CardSort, string> = {
+  position: 'fc.vis_posizione',
+  newest: 'fc.vis_id_recenti',
+  oldest: 'fc.vis_id_meno_recenti',
+  question: 'fc.vis_domanda_az',
+  hardest: 'fcv.vis_piu_difficili',
 };
 
 /** La scheda di una categoria: nome, padre, colore, icona, esame, fissata/archiviata, note; sottocategorie e carte. */
@@ -50,6 +64,12 @@ export default function DeckScreen() {
   const [iconsOpen, setIconsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [filter, setFilter] = useState<GameStatus>('all');
+  const [text, setText] = useState('');
+  const [level, setLevel] = useState<Level | ''>('');
+  const [sort, setSort] = useState<CardSort>('position');
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulk, setBulk] = useState<'move' | 'delete' | null>(null);
 
   const data = useMemo(() => {
     void version;
@@ -85,7 +105,14 @@ export default function DeckScreen() {
   }
   const { deck, decks, kids, counts, levels, learnt } = data;
   const passes = services.games.cardFilter(filter);
-  const cards = filter === 'all' ? data.cards : data.cards.filter(passes);
+  const byStatus = filter === 'all' ? data.cards : data.cards.filter(passes);
+  const cards = filterCards(byStatus, levels, { text, level, sort });
+  const perLevel = levelCounts(byStatus, levels);
+  const stopSelecting = () => {
+    setSelecting(false);
+    setPicked(new Set());
+    setBulk(null);
+  };
   const repo = services.flashcards;
   const map = deckMap(decks);
   const crumbs = deckPath(map, id);
@@ -512,6 +539,185 @@ export default function DeckScreen() {
               </Pressable>
             ))}
           </View>
+          <TextInput
+            testID="fcd-search"
+            value={text}
+            onChangeText={setText}
+            placeholder={t('fc.vis_cerca')}
+            placeholderTextColor={th.text3}
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+            style={{
+              color: th.text,
+              fontSize: 15,
+              backgroundColor: th.surface2,
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 9,
+            }}
+          />
+          {perLevel.size ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+            >
+              {[
+                ['' as const, t('fc.vis_tutti_livelli'), byStatus.length] as const,
+                ...LEVELS.filter((l) => perLevel.has(l)).map(
+                  (l) => [l, t(`fcv.liv_${l}`), perLevel.get(l) ?? 0] as const,
+                ),
+              ].map(([v, label, n]) => (
+                <Pressable
+                  key={v || 'all'}
+                  testID={`fcd-level-filter-${v || 'all'}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: level === v }}
+                  onPress={() => setLevel(v)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 16,
+                    backgroundColor: level === v ? th.brand : th.surface2,
+                  }}
+                >
+                  {v ? (
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: LEVEL_COLORS[v],
+                      }}
+                    />
+                  ) : null}
+                  <Text style={{ color: level === v ? '#fff' : th.text, fontWeight: '600' }}>
+                    {label}
+                    {v ? ` (${n})` : ''}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Pressable
+              testID="fcd-sort"
+              accessibilityRole="button"
+              accessibilityLabel={t('fc.vis_ordina')}
+              onPress={() =>
+                setSort(CARD_SORTS[(CARD_SORTS.indexOf(sort) + 1) % CARD_SORTS.length]!)
+              }
+            >
+              <Text style={{ color: th.brand, fontWeight: '600' }}>⇅ {t(SORT_LABELS[sort])}</Text>
+            </Pressable>
+            <Text testID="fcd-shown" style={{ color: th.text2, fontSize: 13 }}>
+              {t(cards.length === 1 ? 'fc.vis_una_carta_mostrata' : 'fc.vis_n_carte_mostrate', {
+                n: cards.length,
+              }).replace(/<[^>]+>/g, '')}
+            </Text>
+            <Pressable
+              testID="fcd-select"
+              accessibilityRole="button"
+              accessibilityState={{ selected: selecting }}
+              onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
+            >
+              <Text style={{ color: th.brand, fontWeight: '600' }}>
+                {selecting ? t('fc.vis_annulla_sel') : t('vocab.vi_seleziona')}
+              </Text>
+            </Pressable>
+          </View>
+          {selecting ? (
+            <Card style={{ padding: 12, gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <Pressable
+                  testID="fcd-select-all"
+                  accessibilityRole="button"
+                  onPress={() =>
+                    setPicked(
+                      picked.size === cards.length ? new Set() : new Set(cards.map((c) => c.uuid)),
+                    )
+                  }
+                >
+                  <Text style={{ color: th.brand, fontWeight: '600' }}>{t('vocab.vi_tutte')}</Text>
+                </Pressable>
+                <Text testID="fcd-picked" style={{ color: th.text, fontWeight: '700' }}>
+                  {picked.size}
+                </Text>
+                <View style={{ flex: 1 }} />
+                {picked.size ? (
+                  <>
+                    <Pressable
+                      testID="fcd-bulk-move"
+                      accessibilityRole="button"
+                      onPress={() => setBulk(bulk === 'move' ? null : 'move')}
+                    >
+                      <Text style={{ color: th.brand, fontWeight: '600' }}>
+                        {t('vocab.cat_sposta_attr')}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      testID="fcd-bulk-delete"
+                      accessibilityRole="button"
+                      onPress={() => setBulk(bulk === 'delete' ? null : 'delete')}
+                    >
+                      <Text style={{ color: th.red, fontWeight: '600' }}>
+                        {t('comune.elimina')}
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : null}
+              </View>
+              {bulk === 'move' && picked.size ? (
+                <DeckPicker
+                  decks={decks}
+                  value={id}
+                  exclude={new Set([id])}
+                  onCreate={(name, parent) => repo.createDeck({ name, parent })}
+                  onPick={(d) => {
+                    if (d) for (const c of picked) repo.moveCard(c, d);
+                    stopSelecting();
+                    changed();
+                  }}
+                />
+              ) : null}
+              {bulk === 'delete' && picked.size ? (
+                <View style={{ gap: 8 }}>
+                  <Text style={{ color: th.text, fontWeight: '700' }}>
+                    {t('fc.vis_eliminare_carta')} ({picked.size})
+                  </Text>
+                  <Text style={{ color: th.text2, fontSize: 13 }}>
+                    {t('fc.vis_non_annullabile')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <TextButton
+                        testID="fcd-bulk-delete-cancel"
+                        label={t('comune.annulla')}
+                        onPress={() => setBulk(null)}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <PrimaryButton
+                        testID="fcd-bulk-delete-confirm"
+                        danger
+                        label={t('comune.elimina')}
+                        onPress={() => {
+                          for (const c of picked) repo.removeCard(c);
+                          stopSelecting();
+                          changed();
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </Card>
+          ) : null}
           {cards.length ? (
             <Card>
               {cards.map((c, i) => (
@@ -519,10 +725,21 @@ export default function DeckScreen() {
                   key={c.uuid}
                   testID={`fcd-card-${c.uuid}`}
                   accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/fc-card', params: { id: c.uuid } })}
+                  onPress={() => {
+                    if (!selecting) {
+                      router.push({ pathname: '/fc-card', params: { id: c.uuid } });
+                      return;
+                    }
+                    const next = new Set(picked);
+                    if (next.has(c.uuid)) next.delete(c.uuid);
+                    else next.add(c.uuid);
+                    setPicked(next);
+                  }}
+                  accessibilityState={selecting ? { checked: picked.has(c.uuid) } : undefined}
                   style={{
                     padding: 12,
                     gap: 4,
+                    backgroundColor: selecting && picked.has(c.uuid) ? th.brandSoft : undefined,
                     borderTopWidth: i ? 0.5 : 0,
                     borderTopColor: th.hairline,
                   }}
@@ -531,6 +748,7 @@ export default function DeckScreen() {
                     style={{ color: th.text, fontSize: 16, fontWeight: '600' }}
                     numberOfLines={2}
                   >
+                    {selecting ? (picked.has(c.uuid) ? '☑ ' : '☐ ') : ''}
                     {preview(c.question_desc) || '—'}
                   </Text>
                   <Text style={{ color: th.text2, fontSize: 14 }} numberOfLines={2}>

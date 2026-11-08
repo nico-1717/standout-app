@@ -48,6 +48,8 @@ export interface Card {
   answer_audio: string | null;
   is_father: number;
   custom_order: number;
+  /** l'ordine in cui la carta è arrivata sul telefono (per «più recenti»); solo da `cards()` */
+  rid?: number;
 }
 
 export interface SubCard {

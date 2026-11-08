@@ -157,6 +157,64 @@ describe('category page', () => {
     expect(screen.getByTestId(`fcd-card-${b}`)).toBeTruthy();
   });
 
+  test('text search narrows the list and the counter follows', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const a = flashcards.addCard(id, 'Oxygen symbol', 'O')!;
+    const b = flashcards.addCard(id, 'Helium symbol', 'He')!;
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    expect(screen.getByTestId('fcd-shown')).toHaveTextContent(/2 cards shown/);
+    await fireEvent.changeText(screen.getByTestId('fcd-search'), 'heli');
+    expect(screen.queryByTestId(`fcd-card-${a}`)).toBeNull();
+    expect(screen.getByTestId(`fcd-card-${b}`)).toBeTruthy();
+    expect(screen.getByTestId('fcd-shown')).toHaveTextContent(/1 card shown/);
+  });
+
+  test('sort button cycles through the orders', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    flashcards.addCard(id, 'B card', 'x');
+    flashcards.addCard(id, 'A card', 'y');
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    expect(screen.getByTestId('fcd-sort')).toHaveTextContent(/Position/);
+    await fireEvent.press(screen.getByTestId('fcd-sort'));
+    expect(screen.getByTestId('fcd-sort')).toHaveTextContent(/Newest first/);
+    await fireEvent.press(screen.getByTestId('fcd-sort'));
+    expect(screen.getByTestId('fcd-sort')).toHaveTextContent(/Oldest first/);
+  });
+
+  test('select mode: pick cards, move them to another category, then delete one', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const other = flashcards.createDeck({ name: 'Physics' })!;
+    const a = flashcards.addCard(id, 'QA', 'AA')!;
+    const b = flashcards.addCard(id, 'QB', 'AB')!;
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-select'));
+    await fireEvent.press(screen.getByTestId(`fcd-card-${a}`));
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(screen.getByTestId('fcd-picked')).toHaveTextContent('1');
+    await fireEvent.press(screen.getByTestId('fcd-select-all'));
+    expect(screen.getByTestId('fcd-picked')).toHaveTextContent('2');
+    await fireEvent.press(screen.getByTestId('fcd-select-all'));
+    expect(screen.getByTestId('fcd-picked')).toHaveTextContent('0');
+    await fireEvent.press(screen.getByTestId(`fcd-card-${a}`));
+    await fireEvent.press(screen.getByTestId('fcd-bulk-move'));
+    await fireEvent.press(screen.getByTestId(`deck-pick-${other}`));
+    expect(flashcards.card(a)?.category_uuid).toBe(other);
+    expect(flashcards.card(b)?.category_uuid).toBe(id);
+    // select mode is closed after the move
+    expect(screen.queryByTestId('fcd-picked')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcd-select'));
+    await fireEvent.press(screen.getByTestId(`fcd-card-${b}`));
+    await fireEvent.press(screen.getByTestId('fcd-bulk-delete'));
+    await fireEvent.press(screen.getByTestId('fcd-bulk-delete-confirm'));
+    expect(flashcards.card(b)).toBeFalsy();
+  });
+
   test('rename, colour, pin, archive and exam date are saved', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;
