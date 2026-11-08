@@ -145,6 +145,29 @@ export class StatsRepo {
   }
 
   /**
+   * Le giocate di studio e di lingue insieme, per «I tuoi numeri» della Home: le risposte per giorno e quante giuste/date
+   * dal giorno `since` (incluso). Stessa regola del sito (`fc_riepilogo`): contano solo «Correct» e «Wrong».
+   */
+  bothKinds(since: string): { perDay: Map<string, number>; ok: number; total: number } {
+    const perDay = new Map<string, number>();
+    let ok = 0;
+    let total = 0;
+    for (const table of ['fc_study_plays', 'fc_vocab_plays']) {
+      for (const r of this.db.all<{ d: string; a: string }>(
+        `SELECT substr(play_date, 1, 10) AS d, user_answer AS a FROM ${table}
+          WHERE play_date IS NOT NULL AND user_answer IN ('Correct', 'Wrong')`,
+      )) {
+        perDay.set(r.d, (perDay.get(r.d) ?? 0) + 1);
+        if (r.d >= since) {
+          total += 1;
+          if (r.a === 'Correct') ok += 1;
+        }
+      }
+    }
+    return { perDay, ok, total };
+  }
+
+  /**
    * Per ogni mazzo (col suo ramo): giocate, giuste e secondi nel periodo [from, to] (date «AAAA-MM-GG», vuote = senza limite).
    * Il mazzo di una risposta è quello della carta (la sottocarta ha quello del padre); se la carta non c'è più, quello della
    * partita se ne ha uno solo. Il tempo va al mazzo della partita: quello delle sue carte se è uno solo, altrimenti il mazzo

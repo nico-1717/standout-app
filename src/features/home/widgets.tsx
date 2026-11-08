@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import Svg, { Circle } from 'react-native-svg';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { bigNumber } from '@/ui/kit';
@@ -9,6 +10,7 @@ import type { DoseView } from '@/features/pills/repo';
 import type { Task } from '@/features/tasks/repo';
 import type { Project } from '@/features/projects/logic';
 
+import type { HomeNumbers } from '@/features/flashcards/numbers';
 import { minutesText, toMin, type TodayData } from './today';
 import { isQuote, type Trivia } from './trivia';
 
@@ -397,6 +399,93 @@ export function GradesWidget({
         <Text style={[{ color: td.ink }, bigNumber(app, 26)]}>
           {cfuDone}/{cfuTotal}
         </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** «I tuoi numeri»: l'anello delle carte che sai, serie, precisione, record, carte in tutto e gli ultimi 7 giorni. */
+export function NumbersWidget({
+  td,
+  n,
+  today,
+  onOpen,
+}: {
+  td: TodoTheme;
+  n: HomeNumbers;
+  today: string;
+  onOpen: () => void;
+}) {
+  const app = useTheme();
+  const { t } = useTranslation();
+  const r = 40;
+  const c = 2 * Math.PI * r;
+  const max = Math.max(1, ...n.week.map((w) => w.n));
+  const letters = ['g_lun', 'g_mar', 'g_mer', 'g_gio', 'g_ven', 'g_sab', 'g_dom'];
+  const kv: [string, string][] = [
+    [String(n.streak), t('home.serie')],
+    [`${n.accuracy}%`, t('home.precisione')],
+    [String(n.record), t('home.record')],
+    [String(n.cardsTotal), t('home.carte')],
+  ];
+  return (
+    <Pressable
+      accessibilityRole="button"
+      testID="home-numbers"
+      onPress={onOpen}
+      style={{ gap: 12 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ width: 92, height: 92, alignItems: 'center', justifyContent: 'center' }}>
+          <Svg width={92} height={92} viewBox="0 0 92 92" style={{ position: 'absolute' }}>
+            <Circle cx={46} cy={46} r={r} fill="none" stroke={td.hair} strokeWidth={9} />
+            <Circle
+              cx={46}
+              cy={46}
+              r={r}
+              fill="none"
+              stroke={td.accent}
+              strokeWidth={9}
+              strokeLinecap="round"
+              strokeDasharray={c}
+              strokeDashoffset={c * (1 - n.mastery / 100)}
+              transform="rotate(-90 46 46)"
+            />
+          </Svg>
+          <Text testID="home-numbers-mastery" style={[{ color: td.ink }, bigNumber(app, 20)]}>
+            {n.mastery}%
+          </Text>
+        </View>
+        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 8 }}>
+          {kv.map(([v, label]) => (
+            <View key={label} style={{ width: '50%' }}>
+              <Text style={[{ color: td.ink }, bigNumber(app, 18)]}>{v}</Text>
+              <Text style={{ color: td.ink3, fontSize: 12 }}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <Text style={{ color: td.ink3, fontSize: 12 }}>{t('dashboard.ultimi_7_giorni')}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 58 }}>
+        {n.week.map((w) => {
+          const dow = new Date(`${w.day}T12:00:00Z`).getUTCDay();
+          return (
+            <View key={w.day} style={{ flex: 1, alignItems: 'center', gap: 3 }}>
+              <View
+                testID={`home-numbers-bar-${w.day}`}
+                style={{
+                  width: '100%',
+                  height: Math.max(6, Math.round((w.n / max) * 40)),
+                  borderRadius: 4,
+                  backgroundColor: w.day === today ? td.accent : td.hair,
+                }}
+              />
+              <Text style={{ color: td.ink3, fontSize: 10 }}>
+                {t(`dashboard.${letters[(dow + 6) % 7]}`)}
+              </Text>
+            </View>
+          );
+        })}
       </View>
     </Pressable>
   );

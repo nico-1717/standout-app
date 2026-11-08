@@ -4,7 +4,11 @@ import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
+import { GameRepo } from '@/features/flashcards/game';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
+import { StatsRepo } from '@/features/flashcards/stats';
+import { StudyRepo } from '@/features/flashcards/study';
+import { LanguagesRepo } from '@/features/languages/repo';
 import { GradesRepo } from '@/features/grades/repo';
 import { DEFAULT_GRADE_SETTINGS as mockGradeSettings } from '@/features/grades/logic';
 import { HabitsRepo } from '@/features/habits/repo';
@@ -65,6 +69,8 @@ function setup() {
     () => `${localToday()} 10:00:00`,
   );
   const projects = new ProjectsRepo(db);
+  const flashcards = new FlashcardsRepo(db);
+  const study = new StudyRepo(db, 7);
   mockServices = {
     db,
     planner,
@@ -73,11 +79,15 @@ function setup() {
     pills,
     projects,
     grades: new GradesRepo(db),
-    flashcards: new FlashcardsRepo(db),
+    flashcards,
+    study,
+    games: new GameRepo(db, study),
+    fcStats: new StatsRepo(db),
+    languages: new LanguagesRepo(db, 7, projects),
     notes: new QuickNoteStore(db),
     categories: { list: () => [] },
   };
-  return { db, planner, tasks, habits, pills, projects, today };
+  return { db, planner, tasks, habits, pills, projects, today, flashcards, study };
 }
 const renderIt = () =>
   render(
@@ -100,10 +110,39 @@ describe('Home', () => {
     setup();
     await renderIt();
     expect(screen.getByTestId('home-greeting').props.children).toMatch(/Nico/);
-    for (const id of ['shortcuts', 'agenda', 'note', 'projects', 'grades', 'trivia', 'cards'])
+    for (const id of [
+      'shortcuts',
+      'agenda',
+      'note',
+      'projects',
+      'grades',
+      'trivia',
+      'cards',
+      'stats',
+    ])
       expect(screen.getByTestId(`home-w-${id}`)).toBeTruthy();
-    // i numeri non hanno ancora una pagina nell'app
-    expect(screen.queryByTestId('home-w-stats')).toBeNull();
+  });
+
+  test('your numbers: mastery ring, streak, accuracy and the last 7 days', async () => {
+    const { db, flashcards, study, today } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const a = flashcards.addCard(deck, 'QA', 'AA')!;
+    flashcards.addCard(deck, 'QB', 'AB');
+    study.setLearnt(a, false, true);
+    const game = 'g1';
+    for (const [i, ans] of ['Correct', 'Correct', 'Wrong', 'Correct'].entries()) {
+      db.run(
+        `INSERT INTO fc_study_plays (uuid, game_uuid, card_uuid, position, user_answer, play_date)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [`p${i}`, game, a, i + 1, ans, `${today} 10:0${i}:00`],
+      );
+    }
+    await renderIt();
+    expect(screen.getByTestId('home-numbers-mastery')).toHaveTextContent('50%');
+    expect(screen.getByTestId('home-numbers')).toHaveTextContent(/75%/);
+    expect(screen.getByTestId(`home-numbers-bar-${today}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('home-numbers'));
+    expect(mockPush).toHaveBeenCalledWith('/fc-stats');
   });
 
   test('shortcuts open the app pages', async () => {

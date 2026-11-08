@@ -12,6 +12,7 @@ import { buildToday } from '@/features/home/today';
 import { pickTrivia } from '@/features/home/trivia';
 import {
   GradesWidget,
+  NumbersWidget,
   ProjectsWidget,
   Shortcuts,
   TodayWidget,
@@ -20,6 +21,8 @@ import {
   type Shortcut,
 } from '@/features/home/widgets';
 import { base110, cfuStats, weighted } from '@/features/grades/logic';
+import { localToday } from '@/features/tasks/groups';
+import { homeNumbers } from '@/features/flashcards/numbers';
 import { DraftsPanel } from '@/features/flashcards/DraftsPanel';
 import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { todoTheme } from '@/features/tasks/todoTheme';
@@ -45,9 +48,6 @@ const WIDGET_TITLE: Record<HomeWidget['id'], string> = {
   trivia: 'home.w_curiosita',
   stats: 'home.w_numeri',
 };
-
-/** Per ora non hanno pagine nell'app: restano nell'elenco (così l'ordine del sito si conserva) ma non si disegnano. */
-const NOT_YET: ReadonlySet<string> = new Set(['stats']);
 
 export function greetingKey(hour: number): string {
   return hour < 5
@@ -236,6 +236,23 @@ export default function HomeScreen() {
         </WidgetBox>
       );
     }
+    if (w.id === 'stats' && services)
+      return (
+        <WidgetBox
+          td={td}
+          id="stats"
+          title={t(WIDGET_TITLE.stats)}
+          action={t('home.apri')}
+          onAction={() => go('/fc-stats')}
+        >
+          <NumbersWidget
+            td={td}
+            n={homeNumbers(services, localToday())}
+            today={localToday()}
+            onOpen={() => go('/fc-stats')}
+          />
+        </WidgetBox>
+      );
     if (w.id === 'trivia')
       return (
         <WidgetBox td={td} id="trivia" title={t(WIDGET_TITLE.trivia)}>
@@ -381,7 +398,7 @@ export default function HomeScreen() {
         </View>
       ) : (
         homeLayout
-          .filter((w) => w.on && !NOT_YET.has(w.id))
+          .filter((w) => w.on)
           .map((w, i) => (
             <Rise key={w.id} index={i + 1}>
               {body(w)}
