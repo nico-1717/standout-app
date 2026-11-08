@@ -19,6 +19,8 @@ export interface SettingsSheetProps {
   onChange: (patch: Partial<HabitSettings>) => void;
   onRestore: (h: Habit) => void;
   onReorder: () => void;
+  /** scrive lo storico in un file e lo offre a «Condividi» */
+  onExport?: (format: 'xlsx' | 'csv') => void;
   onClose: () => void;
 }
 
@@ -128,6 +130,46 @@ export function SettingsSheet(p: SettingsSheetProps) {
               </Pressable>
             </View>
           </View>
+
+          {p.onExport ? (
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: th.surface },
+                cardShadow(th.scheme === 'dark'),
+              ]}
+            >
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: th.text, fontWeight: '700', fontSize: 15.5 }}>
+                    {t('abitudini.esporta_tutto')}
+                  </Text>
+                  <Text style={{ color: th.text2, fontSize: 13, marginTop: 2 }}>
+                    {t('abitudini.un_file_xlsx_con_lo')}
+                  </Text>
+                </View>
+                <Pressable
+                  testID="export-xlsx"
+                  accessibilityRole="button"
+                  onPress={() => p.onExport?.('xlsx')}
+                  style={[styles.btn, { backgroundColor: th.surface2 }]}
+                >
+                  <Text style={{ color: th.text, fontWeight: '700', fontSize: 13 }}>
+                    {t('abitudini.esporta')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  testID="export-csv"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('abitudini.esporta')} CSV`}
+                  onPress={() => p.onExport?.('csv')}
+                  style={[styles.btn, { backgroundColor: th.surface2 }]}
+                >
+                  <Text style={{ color: th.text, fontWeight: '700', fontSize: 13 }}>CSV</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
 
           <View
             style={[styles.card, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}

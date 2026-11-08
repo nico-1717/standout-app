@@ -1,4 +1,6 @@
+import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -34,6 +36,7 @@ import {
 import { toInput, toPatch, type HabitFormState } from '@/features/habits/formModel';
 import { allLogsOf, statCards, globalStreak } from '@/features/habits/globalStats';
 import { ReorderSheet } from '@/features/habits/ReorderSheet';
+import { buildCsv, buildXlsx, exportSheets, exportStem } from '@/features/habits/exportFile';
 import { SettingsSheet } from '@/features/habits/SettingsSheet';
 import { habitsTheme } from '@/features/habits/habitsTheme';
 import { labelDate } from '@/features/habits/labels';
@@ -250,6 +253,31 @@ export default function HabitsScreen() {
   };
   const keepOther = (h: Habit) =>
     filter === 'all' || filter === 'todo' || h.day_part === filter.slice(5);
+
+  /** «Esporta»: lo storico dei giorni fatti in un file (.xlsx come il sito, o .csv) da salvare o condividere. */
+  async function exportHistory(format: 'xlsx' | 'csv') {
+    if (!services) return;
+    try {
+      const sheets = exportSheets(services.db);
+      if (!sheets.length) {
+        Alert.alert(t('abitudini.esporta_tutto'), t('abitudini.nessun_dato_ancora'));
+        return;
+      }
+      const stem = exportStem();
+      const file = new File(Paths.cache, `${stem}.${format}`);
+      file.create({ overwrite: true });
+      if (format === 'xlsx') file.write(buildXlsx(sheets, t('import.abitudine_senza_nome')));
+      else file.write(buildCsv(sheets));
+      await Sharing.shareAsync(file.uri, {
+        mimeType:
+          format === 'xlsx'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv',
+      });
+    } catch {
+      Alert.alert(t('abitudini.esporta_tutto'), t('app.scarica_errore'));
+    }
+  }
 
   /** Un lancio di coriandoli (se sono accesi) che sparisce da solo. */
   function throwConfetti(x: number, y: number, color: string, n: number) {
@@ -669,6 +697,7 @@ export default function HabitsScreen() {
           changed();
         }}
         onReorder={() => setPanel('reorder')}
+        onExport={(f) => void exportHistory(f)}
         onClose={() => setPanel(null)}
       />
       <ReorderSheet

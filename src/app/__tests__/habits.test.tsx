@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -17,6 +17,24 @@ let mockHabitSettings = {
 };
 const mockChanged = jest.fn();
 
+const mockShare = jest.fn(async (..._a: unknown[]) => undefined);
+jest.mock('expo-sharing', () => ({ shareAsync: (...a: unknown[]) => mockShare(...a) }));
+const mockWritten: { name: string; data: unknown }[] = [];
+jest.mock('expo-file-system', () => ({
+  Paths: { cache: 'cache' },
+  File: class {
+    uri: string;
+    name: string;
+    constructor(_dir: unknown, name: string) {
+      this.name = name;
+      this.uri = `file:///cache/${name}`;
+    }
+    create() {}
+    write(data: unknown) {
+      mockWritten.push({ name: this.name, data });
+    }
+  },
+}));
 const mockPush = jest.fn();
 const mockBlip = jest.fn();
 jest.mock('@/features/habits/playBlip', () => ({ playBlip: (up: boolean) => mockBlip(up) }));
@@ -119,6 +137,26 @@ describe('Habits screen', () => {
     expect(screen.queryByTestId('confetti')).toBeNull();
     expect(mockBlip).not.toHaveBeenCalled();
     mockHabitSettings = { ...mockHabitSettings, confetti_enabled: true, sound_enabled: true };
+  });
+
+  test('settings: export writes the history as .xlsx or .csv and shares it', async () => {
+    const { habits, read } = setup();
+    habits.checkIn(read, localToday(), 'toggle');
+    mockWritten.length = 0;
+    mockShare.mockClear();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hb-settings'));
+    await fireEvent.press(screen.getByTestId('export-xlsx'));
+    await waitFor(() => expect(mockShare).toHaveBeenCalledTimes(1));
+    expect(mockWritten[0]!.name).toMatch(/^Habits_\d{8}\.xlsx$/);
+    expect(mockWritten[0]!.data).toBeInstanceOf(Uint8Array);
+    expect(mockShare.mock.calls[0]![1]).toEqual({
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    await fireEvent.press(screen.getByTestId('export-csv'));
+    await waitFor(() => expect(mockShare).toHaveBeenCalledTimes(2));
+    expect(mockWritten[1]!.name).toMatch(/\.csv$/);
+    expect(String(mockWritten[1]!.data)).toContain('Read,');
   });
 
   test('a new achievement pops up once; old ones do not on the first visit', async () => {
