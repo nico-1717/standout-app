@@ -25,6 +25,11 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
   useLocalSearchParams: () => mockParams,
 }));
+const mockSpeak = jest.fn();
+jest.mock('@/core/speech/speak', () => ({
+  speak: (...a: unknown[]) => mockSpeak(...a),
+  stopSpeaking: jest.fn(),
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -161,6 +166,40 @@ describe('language game screens', () => {
     mockParams = { game: r.game, position: '1' };
     await render(wrap(<GameScreen />));
     expect(screen.getByTestId('fcg-example-0')).toHaveTextContent('The house ________');
+  });
+
+  test('listen: the word in the studied language, the meaning in the known one, examples only after the answer', async () => {
+    mockSpeak.mockClear();
+    const { languages, course, deck, word } = setup();
+    languages.addExample(word, false, 'The house is big');
+    const r = languages
+      .games(course)
+      .start({ decks: [deck], status: 'all', order: 'in_order', direction: 'w2t' });
+    if (r.kind !== 'started') throw new Error('not started');
+    mockParams = { game: r.game, position: '1' };
+    await render(wrap(<GameScreen />));
+    // before the answer: only the question can be heard, never the example (it holds the word to guess)
+    expect(screen.queryByTestId('fcg-speak-example-0')).toBeNull();
+    expect(screen.queryByTestId('fcg-speak-answer')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcg-speak-question'));
+    expect(mockSpeak).toHaveBeenLastCalledWith(
+      'house',
+      'en-GB',
+      expect.objectContaining({ once: false }),
+    );
+    await fireEvent.press(screen.getByTestId('fcg-reveal'));
+    await fireEvent.press(screen.getByTestId('fcg-speak-answer'));
+    expect(mockSpeak).toHaveBeenLastCalledWith(
+      'maison',
+      'fr-FR',
+      expect.objectContaining({ once: true }),
+    );
+    await fireEvent.press(screen.getByTestId('fcg-speak-example-0'));
+    expect(mockSpeak).toHaveBeenLastCalledWith(
+      'The house is big',
+      'en-GB',
+      expect.objectContaining({ once: true }),
+    );
   });
 
   test('result: shows the course words', async () => {

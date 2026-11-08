@@ -9,8 +9,10 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
 import { ExamplesBlock } from '@/features/languages/ExamplesBlock';
+import { langVoice } from '@/features/languages/langs';
 import type { WordText } from '@/features/languages/repo';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { SpeakButton } from '@/ui/SpeakButton';
 
 type Field = keyof WordText;
 
@@ -66,6 +68,10 @@ export default function LangWordScreen() {
   const map = deckMap(decks);
   const path = deck ? [...deckPath(map, deck.uuid), deck].map((d) => d.name).join(' › ') : '';
   const key = (scope: string, f: Field) => `${scope}:${f}`;
+  // la parola si sente nella lingua che si studia, la traduzione (una volta sola) in quella che si conosce
+  const course = deck ? repo.course(deck.course_uuid) : null;
+  const learnVoice = langVoice(course?.learn_lang ?? 'en-GB');
+  const knownVoice = langVoice(course?.known_lang ?? 'it');
 
   /** Un campo di testo: si scrive, si esce dal campo e si salva. La parola vuota non si salva e torna com'era. */
   const field = (
@@ -73,39 +79,60 @@ export default function LangWordScreen() {
     f: Field,
     current: string | null,
     save: (v: string) => boolean,
-    props: { placeholder: string; multiline?: boolean; size?: number; bold?: boolean },
-  ) => (
-    <TextInput
-      testID={`lw-${scope === id ? '' : 'kid-'}${f}${scope === id ? '' : `-${scope}`}`}
-      value={edits[key(scope, f)] ?? current ?? ''}
-      onChangeText={(v) => setEdits({ ...edits, [key(scope, f)]: v })}
-      onBlur={() => {
-        const v = edits[key(scope, f)];
-        if (v === undefined) return;
-        const ok = save(v);
-        setError(ok ? null : t('vocab.mi_serve_minimo'));
-        const rest = { ...edits };
-        delete rest[key(scope, f)];
-        setEdits(rest);
-        changed();
-      }}
-      placeholder={props.placeholder}
-      placeholderTextColor={th.text3}
-      multiline={props.multiline}
-      autoCorrect={false}
-      style={{
-        color: th.text,
-        fontSize: props.size ?? 16,
-        fontWeight: props.bold ? '700' : '400',
-        backgroundColor: th.surface2,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 9,
-        minHeight: props.multiline ? 64 : undefined,
-        textAlignVertical: props.multiline ? 'top' : 'center',
-      }}
-    />
-  );
+    props: {
+      placeholder: string;
+      multiline?: boolean;
+      size?: number;
+      bold?: boolean;
+      speak?: { lang: string; once?: boolean };
+    },
+  ) => {
+    const input = (
+      <TextInput
+        testID={`lw-${scope === id ? '' : 'kid-'}${f}${scope === id ? '' : `-${scope}`}`}
+        value={edits[key(scope, f)] ?? current ?? ''}
+        onChangeText={(v) => setEdits({ ...edits, [key(scope, f)]: v })}
+        onBlur={() => {
+          const v = edits[key(scope, f)];
+          if (v === undefined) return;
+          const ok = save(v);
+          setError(ok ? null : t('vocab.mi_serve_minimo'));
+          const rest = { ...edits };
+          delete rest[key(scope, f)];
+          setEdits(rest);
+          changed();
+        }}
+        placeholder={props.placeholder}
+        placeholderTextColor={th.text3}
+        multiline={props.multiline}
+        autoCorrect={false}
+        style={{
+          color: th.text,
+          fontSize: props.size ?? 16,
+          fontWeight: props.bold ? '700' : '400',
+          backgroundColor: th.surface2,
+          borderRadius: 10,
+          paddingHorizontal: 12,
+          paddingVertical: 9,
+          minHeight: props.multiline ? 64 : undefined,
+          textAlignVertical: props.multiline ? 'top' : 'center',
+        }}
+      />
+    );
+    if (!props.speak) return input;
+    const spoken = scope === id ? (f === 'word' ? word.word : word.translation) : null;
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flex: 1 }}>{input}</View>
+        <SpeakButton
+          testID={`lw-speak-${f}${scope === id ? '' : `-${scope}`}`}
+          text={spoken ?? current ?? ''}
+          lang={props.speak.lang}
+          once={props.speak.once}
+        />
+      </View>
+    );
+  };
 
   const addKid = () => {
     if (repo.addChild(id, { word: kidWord, translation: kidTranslation })) {
@@ -146,13 +173,14 @@ export default function LangWordScreen() {
             placeholder: t('fcv.ph_parola'),
             size: 22,
             bold: true,
+            speak: { lang: learnVoice },
           })}
           {field(
             id,
             'translation',
             word.translation,
             (v) => repo.updateWord(id, { translation: v }),
-            { placeholder: t('fcv.ph_traduzione') },
+            { placeholder: t('fcv.ph_traduzione'), speak: { lang: knownVoice, once: true } },
           )}
           {field(id, 'meaning', word.meaning, (v) => repo.updateWord(id, { meaning: v }), {
             placeholder: t('fcv.ph_significato'),
@@ -202,6 +230,7 @@ export default function LangWordScreen() {
             repo={repo}
             target={id}
             word={word.word}
+            voice={learnVoice}
             isChild={false}
             tag="lw"
             onChange={changed}
@@ -232,13 +261,17 @@ export default function LangWordScreen() {
                   {field(k.uuid, 'word', k.word, (v) => repo.updateChild(k.uuid, { word: v }), {
                     placeholder: t('fcv.ph_parola'),
                     bold: true,
+                    speak: { lang: learnVoice },
                   })}
                   {field(
                     k.uuid,
                     'translation',
                     k.translation,
                     (v) => repo.updateChild(k.uuid, { translation: v }),
-                    { placeholder: t('fcv.ph_traduzione') },
+                    {
+                      placeholder: t('fcv.ph_traduzione'),
+                      speak: { lang: knownVoice, once: true },
+                    },
                   )}
                 </View>
                 <Pressable
@@ -276,6 +309,7 @@ export default function LangWordScreen() {
                   repo={repo}
                   target={k.uuid}
                   word={k.word}
+                  voice={learnVoice}
                   isChild
                   tag={`lw-kid-${k.uuid}`}
                   onChange={changed}

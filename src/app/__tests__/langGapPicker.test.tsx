@@ -9,6 +9,8 @@ import { ExamplesBlock } from '@/features/languages/ExamplesBlock';
 import { LanguagesRepo } from '@/features/languages/repo';
 import { ProjectsRepo } from '@/features/projects/repo';
 
+jest.mock('@/core/speech/speak', () => ({ speak: jest.fn(), stopSpeaking: jest.fn() }));
+
 function setup(text: string, word = 'house') {
   const db = memoryDb();
   migrate(db);
@@ -77,5 +79,31 @@ describe('example hidden part', () => {
     await fireEvent.press(screen.getByTestId(`${p}-clear`));
     await fireEvent.press(screen.getByTestId(`${p}-cancel`));
     expect(languages.examples(target)[0]!.gap_text).toBe('[[0,"I want"],[11,"to"]]');
+  });
+});
+
+describe('example listen button', () => {
+  test('reads the sentence in the studied language, with the dashes filled by the word', async () => {
+    const speak = jest.requireMock('@/core/speech/speak').speak as jest.Mock;
+    const { languages, target, ex } = setup('___ is big');
+    await render(
+      <ThemeProvider>
+        <ExamplesBlock
+          repo={languages}
+          target={target}
+          word="house"
+          voice="en-GB"
+          isChild={false}
+          tag="t"
+          onChange={() => undefined}
+        />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId(`t-ex-speak-${ex}`));
+    expect(speak).toHaveBeenCalledWith(
+      'house is big',
+      'en-GB',
+      expect.objectContaining({ once: true }),
+    );
   });
 });

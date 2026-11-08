@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { SectionLabel } from '@/ui/kit';
+import { SpeakButton } from '@/ui/SpeakButton';
 
-import { gapParts, gapSpans, isAutomatic } from './gap';
+import { gapParts, gapSpans, isAutomatic, speakable } from './gap';
 import { GapPicker } from './GapPicker';
 import type { LanguagesRepo } from './repo';
 
@@ -29,6 +30,7 @@ export function ExamplesBlock({
   repo,
   target,
   word,
+  voice,
   isChild,
   tag,
   onChange,
@@ -37,6 +39,8 @@ export function ExamplesBlock({
   target: string;
   /** la parola della carta: le sue forme sono quelle che il gioco nasconde da sole */
   word: string;
+  /** la lingua con cui leggere gli esempi (quella che si studia) */
+  voice?: string;
   isChild: boolean;
   /** prefisso dei testID, per distinguere la parola dalle sue figlie */
   tag: string;
@@ -90,6 +94,15 @@ export function ExamplesBlock({
                 paddingVertical: 8,
               }}
             />
+            {voice ? (
+              <SpeakButton
+                testID={`${tag}-ex-speak-${e.uuid}`}
+                text={speakable(e.example_text ?? '', word)}
+                lang={voice}
+                once
+                size={18}
+              />
+            ) : null}
             <Pressable
               testID={`${tag}-ex-del-${e.uuid}`}
               accessibilityRole="button"

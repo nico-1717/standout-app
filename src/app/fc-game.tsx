@@ -9,9 +9,10 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
-import { kitForGame, type ExampleView } from '@/features/flashcards/gameKit';
-import { gapParts } from '@/features/languages/gap';
+import { kitForGame, type ExampleView, type VoiceSpec } from '@/features/flashcards/gameKit';
+import { gapParts, speakable } from '@/features/languages/gap';
 import { Card, PrimaryButton } from '@/ui/kit';
+import { SpeakButton } from '@/ui/SpeakButton';
 
 interface Item {
   play: PlayRow;
@@ -24,6 +25,9 @@ interface Item {
   meaning: string | null;
   examples: ExampleView[];
   word: string;
+  questionVoice: VoiceSpec | null;
+  answerVoice: VoiceSpec | null;
+  exampleVoice: string | null;
 }
 
 /** Lo spazio vuoto di una parte nascosta: la larghezza dice a grandi linee quanto è lunga (corta, media, lunga). */
@@ -160,20 +164,34 @@ export default function GameScreen() {
       lines.push({
         key: 'examples',
         node: it.examples.map((e, n) => (
-          <Text key={n} testID={`fcg-example-${n}`}>
-            {n > 0 ? '\n' : ''}
-            {gapParts(e.text, it.word, e.gap).map((part, k) =>
-              !part.hidden ? (
-                part.text
-              ) : shown ? (
-                <Text key={k} style={{ color: th.brand, fontWeight: '700' }}>
-                  {part.text}
-                </Text>
-              ) : (
-                <Text key={k}>{gapBlank(part.text)}</Text>
-              ),
-            )}
-          </Text>
+          <View key={n} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text
+              testID={`fcg-example-${n}`}
+              style={{ flex: 1, color: th.text2, fontSize: 14, fontStyle: 'italic' }}
+            >
+              {gapParts(e.text, it.word, e.gap).map((part, k) =>
+                !part.hidden ? (
+                  part.text
+                ) : shown ? (
+                  <Text key={k} style={{ color: th.brand, fontWeight: '700' }}>
+                    {part.text}
+                  </Text>
+                ) : (
+                  <Text key={k}>{gapBlank(part.text)}</Text>
+                ),
+              )}
+            </Text>
+            {/* l'ascolto compare solo con la risposta: prima la voce direbbe proprio la parola da indovinare */}
+            {shown && it.exampleVoice ? (
+              <SpeakButton
+                testID={`fcg-speak-example-${n}`}
+                text={speakable(e.text, it.word)}
+                lang={it.exampleVoice}
+                once
+                size={18}
+              />
+            ) : null}
+          </View>
         )),
       });
     }
@@ -184,17 +202,15 @@ export default function GameScreen() {
           const id = `${it.play.uuid}:${l.key}`;
           const open = mode === 'aperto' || (mode === 'dopo' && shown) || tapped.has(id);
           return open ? (
-            <Text
-              key={l.key}
-              testID={`fcg-hint-${l.key}`}
-              style={{
-                color: th.text2,
-                fontSize: 14,
-                fontStyle: l.key === 'examples' ? 'italic' : 'normal',
-              }}
-            >
-              {l.node}
-            </Text>
+            l.key === 'examples' ? (
+              <View key={l.key} testID="fcg-hint-examples" style={{ gap: 4 }}>
+                {l.node}
+              </View>
+            ) : (
+              <Text key={l.key} testID="fcg-hint-meaning" style={{ color: th.text2, fontSize: 14 }}>
+                {l.node}
+              </Text>
+            )
           ) : mode === 'tocco' ? (
             <Pressable
               key={l.key}
@@ -314,13 +330,37 @@ export default function GameScreen() {
             <Text style={{ color: th.text2, fontSize: 12, fontWeight: '700' }}>
               {label(current).toUpperCase()}
             </Text>
-            <DocView testID="fcg-question" raw={current.question} size={19} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <DocView testID="fcg-question" raw={current.question} size={19} />
+              </View>
+              {current.questionVoice ? (
+                <SpeakButton
+                  testID="fcg-speak-question"
+                  text={current.question ?? ''}
+                  lang={current.questionVoice.lang}
+                  once={current.questionVoice.once}
+                />
+              ) : null}
+            </View>
             <CardImage testID="fcg-question-image" name={current.questionImage} />
             {kit.vocab ? hintBlock(current) : null}
             {shown ? (
               <View style={{ gap: 12 }}>
                 <View style={{ height: 1, backgroundColor: th.hairline2 }} />
-                <DocView testID="fcg-answer" raw={current.answer} size={17} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <DocView testID="fcg-answer" raw={current.answer} size={17} />
+                  </View>
+                  {current.answerVoice ? (
+                    <SpeakButton
+                      testID="fcg-speak-answer"
+                      text={current.answer ?? ''}
+                      lang={current.answerVoice.lang}
+                      once={current.answerVoice.once}
+                    />
+                  ) : null}
+                </View>
                 <CardImage testID="fcg-answer-image" name={current.answerImage} />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {verdictBtn('fcg-wrong', t('fc.vg_sbagliato'), th.red, () =>

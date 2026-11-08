@@ -1,6 +1,7 @@
 import type { Services } from '@/core/app/AppProvider';
+import { langVoice } from '@/features/languages/langs';
 
-import { directionAt, type GameRepo } from './game';
+import { directionAt, type Direction, type GameRepo } from './game';
 import type { Deck } from './logic';
 
 /** Come si vede una carta in una partita: la domanda, la risposta e (solo in lingua) significato ed esempi. */
@@ -14,6 +15,17 @@ export interface PlayView {
   examples: ExampleView[];
   /** la parola della carta: le sue forme sono la parte nascosta degli esempi finché non si rivela */
   word: string;
+  /** come si legge ad alta voce (solo lingue): la parola da imparare nella lingua che si studia, il resto in quella che si conosce */
+  questionVoice: VoiceSpec | null;
+  answerVoice: VoiceSpec | null;
+  /** gli esempi sono nella lingua che si studia */
+  exampleVoice: string | null;
+}
+
+/** Con quale voce leggere un testo: la lingua («en-GB») e se dirlo una volta sola (traduzioni). */
+export interface VoiceSpec {
+  lang: string;
+  once: boolean;
 }
 
 /** Una frase d'esempio con la scelta a mano della parte nascosta (`gap_text`, vuota = automatica). */
@@ -48,6 +60,9 @@ const none: PlayView = {
   meaning: null,
   examples: [],
   word: '',
+  questionVoice: null,
+  answerVoice: null,
+  exampleVoice: null,
 };
 
 export function studyKit(s: Services): GameKit {
@@ -79,6 +94,18 @@ export function studyKit(s: Services): GameKit {
 export function languageKit(s: Services, course: string): GameKit {
   const lang = s.languages;
   const games = lang.games(course);
+  const c = lang.course(course);
+  const learn = langVoice(c?.learn_lang ?? 'en-GB');
+  const known = langVoice(c?.known_lang ?? 'it');
+  const voices = (dir: Direction) => {
+    const word: VoiceSpec = { lang: learn, once: false };
+    const meaning: VoiceSpec = { lang: known, once: true };
+    return {
+      questionVoice: dir === 'w2t' ? word : meaning,
+      answerVoice: dir === 'w2t' ? meaning : word,
+      exampleVoice: learn,
+    };
+  };
   const view = (gameUuid: string, position: number, target: string, isChild: boolean): PlayView => {
     const row = isChild ? lang.child(target) : lang.word(target);
     const game = games.game(gameUuid);
@@ -96,6 +123,7 @@ export function languageKit(s: Services, course: string): GameKit {
         .map((e) => ({ text: e.example_text ?? '', gap: e.gap_text }))
         .filter((e) => e.text.trim()),
       word: row.word,
+      ...voices(dir),
     };
   };
   const st = s.study.settings();
