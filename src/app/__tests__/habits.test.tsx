@@ -18,6 +18,8 @@ let mockHabitSettings = {
 const mockChanged = jest.fn();
 
 const mockPush = jest.fn();
+const mockBlip = jest.fn();
+jest.mock('@/features/habits/playBlip', () => ({ playBlip: (up: boolean) => mockBlip(up) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -94,6 +96,29 @@ describe('Habits screen', () => {
     expect(habits.log(water, localToday())).toMatchObject({ status: 'partial', amount: 1 });
     await fireEvent.press(screen.getByTestId(`habit-check-${water}`));
     expect(habits.log(water, localToday())).toMatchObject({ status: 'done', amount: 2 });
+  });
+
+  test('finishing a habit throws confetti and plays the blip; a partial step does not', async () => {
+    const { water, read } = setup();
+    mockBlip.mockClear();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-check-${water}`)); // 1 of 2: not done yet
+    expect(screen.queryByTestId('confetti')).toBeNull();
+    expect(mockBlip).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId(`habit-check-${read}`));
+    expect(screen.getByTestId('confetti')).toBeTruthy();
+    expect(mockBlip).toHaveBeenCalledWith(true);
+  });
+
+  test('confetti and sound follow their switches', async () => {
+    const { read } = setup();
+    mockBlip.mockClear();
+    mockHabitSettings = { ...mockHabitSettings, confetti_enabled: false, sound_enabled: false };
+    await renderIt();
+    await fireEvent.press(screen.getByTestId(`habit-check-${read}`));
+    expect(screen.queryByTestId('confetti')).toBeNull();
+    expect(mockBlip).not.toHaveBeenCalled();
+    mockHabitSettings = { ...mockHabitSettings, confetti_enabled: true, sound_enabled: true };
   });
 
   test('a new achievement pops up once; old ones do not on the first visit', async () => {

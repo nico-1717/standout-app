@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { alpha, mix } from '@/features/buy/buyTheme';
@@ -22,7 +22,8 @@ export interface HabitRowProps {
   /** anello periodico (settimanali, mensili, a intervallo) */
   period?: { done: number; target: number };
   disabled?: boolean;
-  onCheck: () => void;
+  /** il tocco sul cerchio: il punto sullo schermo serve a far partire i coriandoli da lì */
+  onCheck: (e?: GestureResponderEvent) => void;
   onLongPress: () => void;
   onOpen: () => void;
 }

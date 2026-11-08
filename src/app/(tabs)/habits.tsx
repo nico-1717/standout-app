@@ -1,12 +1,22 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+  type GestureResponderEvent,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { AwardPopup } from '@/features/habits/AwardPopup';
+import { Confetti, newBurst, type Burst } from '@/features/habits/Confetti';
+import { playBlip } from '@/features/habits/playBlip';
 import { evaluateAchievements } from '@/features/habits/achievements';
 import { loadSeen, newlyUnlocked, saveSeen } from '@/features/habits/awardsSeen';
 import { ActionSheet, type SheetAction } from '@/features/habits/ActionSheet';
@@ -47,7 +57,9 @@ import {
   swipeAllowed,
   swipeMode,
   type CheckInMode,
+  type DayState,
   type Habit,
+  type HabitLog,
 } from '@/features/habits/logic';
 import { localToday } from '@/features/tasks/groups';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -90,6 +102,8 @@ export default function HabitsScreen() {
     habit: null,
   });
   const [showFuture, setShowFuture] = useState(false);
+  const [bursts, setBursts] = useState<Burst[]>([]);
+  const screen = useWindowDimensions();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [panel, setPanel] = useState<'stats' | 'table' | 'settings' | 'reorder' | null>(null);
   const [noteFor, setNoteFor] = useState<{ habit: Habit; day: string } | null>(null);
@@ -235,12 +249,50 @@ export default function HabitsScreen() {
   const keepOther = (h: Habit) =>
     filter === 'all' || filter === 'todo' || h.day_part === filter.slice(5);
 
-  function tap(h: Habit) {
+  /** Un lancio di coriandoli (se sono accesi) che sparisce da solo. */
+  function throwConfetti(x: number, y: number, color: string, n: number) {
+    if (!SETTINGS.confetti_enabled) return;
+    setBursts((cur) => [...cur, newBurst(x, y, color, n)]);
+  }
+
+  /**
+   * La festa di una abitudine appena riuscita (celebrate del sito): suono, coriandoli dal cerchio e, se con questa
+   * sono fatte tutte le giornaliere del giorno, un lancio d'oro in alto.
+   */
+  function celebrate(
+    h: Habit,
+    before: DayState,
+    log: HabitLog | null,
+    at?: { x: number; y: number },
+  ) {
+    if (!log || isSuccess(h, before) || !isSuccess(h, stateOf(h, day, log, today))) return;
+    if (SETTINGS.sound_enabled) playBlip(true);
+    throwConfetti(at?.x ?? screen.width * 0.12, at?.y ?? screen.height * 0.4, h.color, 24);
+    const daily = dailyFor(current, day);
+    const perfect =
+      daily.length > 0 &&
+      daily.every((x) =>
+        x.uuid === h.uuid
+          ? true
+          : isSuccess(x, stateOf(x, day, logs.get(`${x.uuid}|${day}`) ?? null, today)),
+      );
+    if (perfect && daily.some((x) => x.uuid === h.uuid)) {
+      setTimeout(() => {
+        throwConfetti(screen.width * 0.5, screen.height * 0.34, '#FFCC00', 70);
+        if (SETTINGS.sound_enabled) playBlip(true);
+      }, 360);
+    }
+  }
+
+  function tap(h: Habit, e?: GestureResponderEvent) {
     if (!services) return;
     const mode: CheckInMode = h.goal_type === 'quantity' ? 'increment' : 'toggle';
+    const before = stateOf(h, day, logs.get(`${h.uuid}|${day}`) ?? null, today);
     try {
-      services.habits.checkIn(h.uuid, day, mode);
+      const log = services.habits.checkIn(h.uuid, day, mode);
       if (SETTINGS.haptics_enabled) haptic.tap();
+      const pt = e?.nativeEvent;
+      celebrate(h, before, log, pt && pt.pageX ? { x: pt.pageX, y: pt.pageY } : undefined);
       changed();
     } catch {
       /* giorno futuro: la fascia non lo mostra, quindi non succede */
@@ -249,9 +301,11 @@ export default function HabitsScreen() {
 
   function run(h: Habit, mode: CheckInMode) {
     if (!services) return;
+    const before = stateOf(h, day, logs.get(`${h.uuid}|${day}`) ?? null, today);
     try {
-      services.habits.checkIn(h.uuid, day, mode);
+      const log = services.habits.checkIn(h.uuid, day, mode);
       if (SETTINGS.haptics_enabled) haptic.select();
+      celebrate(h, before, log);
       changed();
     } catch {
       /* vedi sopra */
@@ -380,7 +434,7 @@ export default function HabitsScreen() {
             period={period}
             amountText={quantity && !period ? `${fmt(st.amount)}/${fmt(st.target)}` : undefined}
             unitText={quantity && !period ? h.unit : undefined}
-            onCheck={() => tap(h)}
+            onCheck={(e) => tap(h, e)}
             onLongPress={() => setSheet(h)}
             onOpen={() => setDetailId(h.uuid)}
           />
@@ -588,6 +642,10 @@ export default function HabitsScreen() {
         </LinearGradient>
       </Pressable>
       <AwardPopup award={awardToShow} onClose={closeAward} />
+      <Confetti
+        bursts={bursts}
+        onDone={(id) => setBursts((cur) => cur.filter((b) => b.id !== id))}
+      />
       <StatsSheet
         visible={panel === 'stats'}
         habits={current}
