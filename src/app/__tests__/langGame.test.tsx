@@ -212,5 +212,9 @@ describe('language game screens', () => {
     mockParams = { game: r.game };
     await render(wrap(<ResultScreen />));
     expect(screen.getByText('house → maison')).toBeTruthy();
+    const play = games.allPlays(r.game).find((x) => x.card_uuid)!;
+    await fireEvent.press(screen.getByTestId(`fcr-speak-q-${play.uuid}`));
+    expect(mockSpeak).toHaveBeenLastCalledWith('house', 'en-GB', expect.anything());
+    expect(screen.getByTestId(`fcr-speak-a-${play.uuid}`)).toBeTruthy();
   });
 });

@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatDuration } from '@/features/flashcards/format';
 import { kitForGame } from '@/features/flashcards/gameKit';
 import { Card, Header, PrimaryButton, TextButton } from '@/ui/kit';
+import { SpeakButton } from '@/ui/SpeakButton';
 
 /**
  * Il risultato di una partita (fc_result.php), versione semplice: punteggio, giuste e sbagliate, durata, l'elenco delle carte
@@ -254,6 +255,8 @@ export default function ResultScreen() {
               const isChild = !!p.child_uuid;
               const target = (isChild ? p.child_uuid : p.card_uuid) ?? '';
               const wrong = p.user_answer === 'Wrong';
+              // l'ascolto c'è solo nei mazzi di lingua (negli altri non c'è nessuna voce)
+              const voices = kit.vocab ? kit.view(game, p.position, target, isChild) : null;
               return (
                 <View key={p.uuid} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Text style={{ color: wrong ? th.red : th.green, width: 18, fontWeight: '800' }}>
@@ -262,6 +265,24 @@ export default function ResultScreen() {
                   <Text style={{ color: th.text, flex: 1 }} numberOfLines={2}>
                     {kit.label(game, p.position, target, isChild).slice(0, 90)}
                   </Text>
+                  {voices?.questionVoice ? (
+                    <SpeakButton
+                      testID={`fcr-speak-q-${p.uuid}`}
+                      text={voices.question ?? ''}
+                      lang={voices.questionVoice.lang}
+                      once={voices.questionVoice.once}
+                      size={18}
+                    />
+                  ) : null}
+                  {voices?.answerVoice ? (
+                    <SpeakButton
+                      testID={`fcr-speak-a-${p.uuid}`}
+                      text={voices.answer ?? ''}
+                      lang={voices.answerVoice.lang}
+                      once={voices.answerVoice.once}
+                      size={18}
+                    />
+                  ) : null}
                   <Pressable
                     testID={`fcr-verdict-${p.uuid}`}
                     accessibilityRole="button"
