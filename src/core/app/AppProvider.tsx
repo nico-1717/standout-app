@@ -58,6 +58,9 @@ import type { SqlDb } from '../db/sqldb';
 import { getState, SyncEngine, setState } from '../sync/engine';
 import { pendingCount } from '../sync/outbox';
 import { SyncScheduler, type SyncStatusInfo } from '../sync/scheduler';
+import { HttpMediaApi } from '../media/httpMedia';
+import { MediaQueue } from '../media/mediaQueue';
+import { phoneFiles } from '../media/phoneFiles';
 import i18n, { pickLanguage } from '../i18n';
 import { getLocales } from 'expo-localization';
 import { DEFAULT_SETTINGS, SettingsStore, type Settings } from '../settings/settings';
@@ -98,6 +101,8 @@ export interface Services {
   languages: LanguagesRepo;
   games: GameRepo;
   fcStats: StatsRepo;
+  /** immagini e audio da mandare al sito (o da togliere) */
+  media: MediaQueue;
   scheduler: SyncScheduler;
 }
 
@@ -234,6 +239,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           Platform.OS,
         );
         const engine = new SyncEngine(opened.db, api);
+        const media = new MediaQueue(
+          opened.db,
+          new HttpMediaApi(
+            BASE_URL,
+            () => auth.getAccessToken(),
+            Constants.expoConfig?.version ?? '0.0.0',
+            Platform.OS,
+          ),
+          phoneFiles,
+        );
         const store = new SettingsStore(opened.db);
         settingsStore.current = store;
         setSettings(store.read());
@@ -263,6 +278,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const scheduler = new SyncScheduler({
           syncOnce: async () => {
             const r = await engine.syncOnce();
+            try {
+              // i file vanno dopo le righe: il sito deve conoscere la carta prima di riceverne l'immagine
+              await media.run();
+            } catch (e) {
+              // un file che non parte non ferma il resto: resta in coda. Sessione chiusa e rete assente invece sì.
+              if (e instanceof ApiError && (e.status === 401 || e.code === 'upgrade_required'))
+                throw e;
+              if (e instanceof TypeError) throw e;
+            }
             try {
               setSettings(await store.sync(api));
             } catch (e) {
@@ -369,6 +393,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           languages: new LanguagesRepo(opened.db, userId, projectsRepo),
           games: new GameRepo(opened.db, study),
           fcStats: new StatsRepo(opened.db),
+          media,
           scheduler,
         });
       } catch (e) {

@@ -54,6 +54,20 @@
         {
           "faceIDPermission": "Standout uses Face ID to unlock the app when you turn the app lock on."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Standout uses your photos so you can add pictures to your cards, words and shopping items.",
+          "cameraPermission": "Standout uses the camera so you can take a picture for a card, a word or a shopping item.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Standout uses the microphone so you can record your voice on a flashcard."
+        }
       ]
     ],
     "experiments": {

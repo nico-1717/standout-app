@@ -8,6 +8,7 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
+import { ImageField } from '@/features/media/ImageField';
 import { ExamplesBlock } from '@/features/languages/ExamplesBlock';
 import { langVoice } from '@/features/languages/langs';
 import type { WordText } from '@/features/languages/repo';
@@ -190,6 +191,15 @@ export default function LangWordScreen() {
             placeholder: t('fcv.ph_note'),
             multiline: true,
           })}
+          <ImageField
+            testID="lw-imgfield"
+            table="fc_vocab_cards"
+            uuid={id}
+            slot="image"
+            name={word.image}
+            folder="vocab"
+            label={t('vocab.immagine')}
+          />
           {error ? (
             <Text testID="lw-error" style={{ color: th.red }}>
               {error}
@@ -304,6 +314,17 @@ export default function LangWordScreen() {
                   }}
                 />
               </View>
+              {openKid === k.uuid ? (
+                <ImageField
+                  testID={`lw-kid-imgfield-${k.uuid}`}
+                  table="fc_vocab_subcards"
+                  uuid={k.uuid}
+                  slot="image"
+                  name={k.image}
+                  folder="vocab"
+                  label={t('vocab.immagine')}
+                />
+              ) : null}
               {openKid === k.uuid ? (
                 <ExamplesBlock
                   repo={repo}

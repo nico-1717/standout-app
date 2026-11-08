@@ -9,6 +9,9 @@ import { ExamplesBlock } from '@/features/languages/ExamplesBlock';
 import { LanguagesRepo } from '@/features/languages/repo';
 import { ProjectsRepo } from '@/features/projects/repo';
 
+jest.mock('@/core/app/AppProvider', () => ({
+  useApp: () => ({ services: null, version: 0, changed: jest.fn() }),
+}));
 jest.mock('@/core/speech/speak', () => ({ speak: jest.fn(), stopSpeaking: jest.fn() }));
 
 function setup(text: string, word = 'house') {

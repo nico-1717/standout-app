@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
+import { MediaQueue } from '@/core/media/mediaQueue';
+import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { LanguagesRepo } from '@/features/languages/repo';
@@ -11,6 +13,8 @@ import LangCourseScreen from '../lang-course';
 import LangDeckScreen from '../lang-deck';
 import LangWordScreen from '../lang-word';
 import LanguagesScreen from '../languages';
+
+jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -41,7 +45,12 @@ function setup() {
   migrate(db);
   const projects = new ProjectsRepo(db);
   const languages = new LanguagesRepo(db, 7, projects);
-  mockServices = { db, languages, projects };
+  const media = new MediaQueue(
+    db,
+    { put: async () => ({ name: 'x.jpg' }), remove: async () => undefined },
+    { delete: () => undefined },
+  );
+  mockServices = { db, languages, projects, media, scheduler: { trigger: jest.fn() } };
   return { db, languages, projects };
 }
 /** Il telefono è cambiato fuori dallo schermo: lo schermo deve rileggere. */
@@ -262,6 +271,19 @@ describe('Word page', () => {
     expect(screen.getByTestId('lw-error')).toBeTruthy();
     await view.rerender(wrap(<LangWordScreen />));
     expect(screen.getByTestId('lw-word').props.value).toBe('Brot');
+  });
+
+  test('a photo for the word goes to the upload queue with the vocab slot', async () => {
+    const { db, w } = word();
+    (pickImage as jest.Mock).mockResolvedValueOnce({
+      uri: 'file:///docs/bread.jpg',
+      mime: 'image/jpeg',
+    });
+    await render(wrap(<LangWordScreen />));
+    await fireEvent.press(screen.getByTestId('lw-imgfield-library'));
+    expect(db.all('SELECT tbl, row_uuid, slot, op FROM media_queue')).toEqual([
+      { tbl: 'fc_vocab_cards', row_uuid: w, slot: 'image', op: 'put' },
+    ]);
   });
 
   test('learnt and favourite switches', async () => {

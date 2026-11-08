@@ -860,6 +860,25 @@ CREATE TABLE fc_vocab_records (
 CREATE INDEX idx_fc_vrec_course ON fc_vocab_records (course_uuid);
 `,
   },
+  {
+    version: 19,
+    // la coda dei file (immagini e audio) da mandare al sito o da togliere: una riga per campo, la più recente vince
+    sql: `
+CREATE TABLE media_queue (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tbl TEXT NOT NULL,
+  row_uuid TEXT NOT NULL,
+  slot TEXT NOT NULL,
+  op TEXT NOT NULL,             -- put | delete
+  file TEXT,                    -- il file sul telefono (solo per put)
+  mime TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE (tbl, row_uuid, slot)
+);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

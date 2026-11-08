@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { memo } from 'react';
 
-import { cardImageUrl, exampleImageUrl } from './media';
+import { cardImageUrl, exampleImageUrl, vocabImageUrl } from './media';
 
 /** L'immagine di una carta, intera nel riquadro. Senza nome valido non disegna niente. */
 export const CardImage = memo(function CardImage({
@@ -13,9 +13,14 @@ export const CardImage = memo(function CardImage({
   name: string | null | undefined;
   height?: number;
   testID?: string;
-  folder?: 'card' | 'example';
+  folder?: 'card' | 'example' | 'vocab';
 }) {
-  const uri = folder === 'example' ? exampleImageUrl(name) : cardImageUrl(name);
+  const uri =
+    folder === 'example'
+      ? exampleImageUrl(name)
+      : folder === 'vocab'
+        ? vocabImageUrl(name)
+        : cardImageUrl(name);
   if (!uri) return null;
   return (
     <Image

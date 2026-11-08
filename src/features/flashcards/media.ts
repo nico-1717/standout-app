@@ -19,3 +19,7 @@ export const cardAudioUrl = (name: string | null | undefined): string | null =>
 /** L'immagine di un esempio (cartella `example_images`). */
 export const exampleImageUrl = (name: string | null | undefined): string | null =>
   url('example_images', name);
+
+/** L'immagine di una parola di lingue (cartella `vocab_images`). */
+export const vocabImageUrl = (name: string | null | undefined): string | null =>
+  url('vocab_images', name);

@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { ImageField } from '@/features/media/ImageField';
 import { SectionLabel } from '@/ui/kit';
 import { SpeakButton } from '@/ui/SpeakButton';
 
@@ -116,6 +117,15 @@ export function ExamplesBlock({
               <Text style={{ color: th.red, fontSize: 18 }}>✕</Text>
             </Pressable>
           </View>
+          <ImageField
+            testID={`${tag}-ex-img-${e.uuid}`}
+            table="fc_vocab_examples"
+            uuid={e.uuid}
+            slot="example_image"
+            name={e.example_image}
+            folder="example"
+            label={t('vocab.immagine')}
+          />
           {picking === e.uuid ? (
             <GapPicker
               tag={`${tag}-gap-${e.uuid}`}

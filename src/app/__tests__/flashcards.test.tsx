@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
+import { MediaQueue } from '@/core/media/mediaQueue';
+import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { stringifyDoc } from '@/features/flashcards/doc';
@@ -15,6 +17,9 @@ import { ProjectsRepo } from '@/features/projects/repo';
 import CardScreen from '../fc-card';
 import DeckScreen from '../fc-deck';
 import FlashcardsScreen from '../flashcards';
+
+jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
+const mockTrigger = jest.fn();
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -54,6 +59,12 @@ function setup() {
     languages: new LanguagesRepo(db, 7, new ProjectsRepo(db)),
     games: new GameRepo(db, study),
     fcStats: new StatsRepo(db),
+    media: new MediaQueue(
+      db,
+      { put: async () => ({ name: 'x.jpg' }), remove: async () => undefined },
+      { delete: () => undefined },
+    ),
+    scheduler: { trigger: mockTrigger },
   };
   return {
     db,
@@ -298,6 +309,54 @@ describe('category page', () => {
 });
 
 describe('card page', () => {
+  test('edit a card: choose a photo for the question, see it at once, then remove it', async () => {
+    const { flashcards, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    (pickImage as jest.Mock).mockResolvedValueOnce({
+      uri: 'file:///docs/photo.jpg',
+      mime: 'image/jpeg',
+    });
+    const view = await render(wrap(<CardScreen />));
+    expect(screen.queryByTestId('fcc-q-imgfield')).toBeNull(); // si cambia solo in modifica
+    await fireEvent.press(screen.getByTestId('fcc-edit'));
+    expect(screen.queryByTestId('fcc-q-imgfield-remove')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcc-q-imgfield-library'));
+    expect(pickImage).toHaveBeenCalledWith('library');
+    expect(db.all('SELECT tbl, row_uuid, slot, op, file FROM media_queue')).toEqual([
+      {
+        tbl: 'fc_study_cards',
+        row_uuid: c,
+        slot: 'question_image',
+        op: 'put',
+        file: 'file:///docs/photo.jpg',
+      },
+    ]);
+    expect(mockTrigger).toHaveBeenCalled();
+    await view.rerender(wrap(<CardScreen />));
+    expect(screen.getByTestId('fcc-q-imgfield-local')).toBeTruthy();
+    expect(screen.getByTestId('fcc-q-imgfield-waiting')).toBeTruthy();
+    expect(screen.queryByTestId('fcc-a-imgfield-local')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcc-q-imgfield-remove'));
+    await view.rerender(wrap(<CardScreen />));
+    expect(screen.queryByTestId('fcc-q-imgfield-local')).toBeNull();
+    expect(db.all<{ op: string }>('SELECT op FROM media_queue')).toEqual([{ op: 'delete' }]);
+  });
+
+  test('edit a card: a cancelled photo choice changes nothing', async () => {
+    const { flashcards, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    (pickImage as jest.Mock).mockResolvedValueOnce(null);
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-edit'));
+    await fireEvent.press(screen.getByTestId('fcc-a-imgfield-camera'));
+    expect(pickImage).toHaveBeenCalledWith('camera');
+    expect(db.all('SELECT * FROM media_queue')).toEqual([]);
+  });
+
   test('new card: save needs some text, then the card goes in the deck', async () => {
     const { flashcards } = setup();
     const deck = flashcards.createDeck({ name: 'Chem' })!;

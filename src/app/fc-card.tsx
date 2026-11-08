@@ -13,6 +13,7 @@ import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import { RichEditor } from '@/features/flashcards/RichEditor';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
+import { ImageField } from '@/features/media/ImageField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
 type Side = 'q' | 'a';
@@ -182,7 +183,18 @@ export default function CardScreen() {
         ) : (
           <DocView testID={`fcc-${s}-view`} raw={raw(s)} />
         )}
-        <CardImage testID={`fcc-${s}-image`} name={s === 'q' ? item.qImg : item.aImg} />
+        {edit && !isNew ? (
+          <ImageField
+            testID={`fcc-${s}-imgfield`}
+            table={params.sub ? 'fc_study_subcards' : 'fc_study_cards'}
+            uuid={(params.sub ?? params.id)!}
+            slot={s === 'q' ? 'question_image' : 'answer_image'}
+            name={s === 'q' ? item.qImg : item.aImg}
+            label={s === 'q' ? t('fc.ifc_img_domanda') : t('fc.ifc_img_risposta')}
+          />
+        ) : (
+          <CardImage testID={`fcc-${s}-image`} name={s === 'q' ? item.qImg : item.aImg} />
+        )}
         <CardAudio testID={`fcc-${s}-audio`} name={s === 'q' ? item.qAud : item.aAud} />
       </Card>
     );
