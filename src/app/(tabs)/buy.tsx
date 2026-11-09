@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
+import { dictationLang } from '@/core/speech/dictation';
+import { useDictation } from '@/core/speech/useDictation';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { BuyRow, type RowActions } from '@/features/buy/BuyRow';
 import { alpha, buyTheme, mix, type BuyTheme } from '@/features/buy/buyTheme';
@@ -28,6 +30,7 @@ import {
 } from '@/features/buy/logic';
 import type { Task } from '@/features/tasks/repo';
 import { cardShadow } from '@/ui/kit';
+import { MicButton } from '@/ui/MicButton';
 import { SyncBadge } from '@/ui/SyncBadge';
 
 export default function BuyScreen() {
@@ -90,6 +93,25 @@ export default function BuyScreen() {
     setText('');
     changed();
   }
+
+  // il microfono: una frase = un articolo (stessa riga di comando di quando si scrive: «latte #casa 1,20»)
+  const mic = useDictation({
+    lang: dictationLang(i18n.language),
+    once: true,
+    onInterim: setText,
+    onFinal: setText,
+    onStop: (heard) => {
+      if (heard.trim()) {
+        setText('');
+        addLines(heard);
+      }
+    },
+  });
+  const micToggle = () => {
+    if (mic.active) mic.stop();
+    else mic.start();
+  };
+  const micError = mic.error ? t('diario.dettatura_non_disponibile') : null;
 
   const actions: RowActions = {
     toggle: (task) => {
@@ -266,6 +288,14 @@ export default function BuyScreen() {
               paddingVertical: 8,
             }}
           />
+          <MicButton
+            testID="buy-mic"
+            active={mic.active}
+            onPress={micToggle}
+            label={t('todo.tn_detta')}
+            size={36}
+            tint={bt.accent}
+          />
           <Pressable
             onPress={() => addLines(text)}
             accessibilityRole="button"
@@ -278,6 +308,12 @@ export default function BuyScreen() {
             <Text style={{ color: paper ? bt.card : '#fff', fontSize: 22, lineHeight: 24 }}>+</Text>
           </Pressable>
         </View>
+
+        {micError ? (
+          <Text testID="buy-mic-error" style={{ color: bt.ink2, fontSize: 13, marginTop: 6 }}>
+            {micError}
+          </Text>
+        ) : null}
 
         <View style={styles.sumRow}>
           <Text

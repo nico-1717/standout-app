@@ -55,3 +55,15 @@ jest.mock('react-native-maps', () => {
   const Marker = () => null;
   return { __esModule: true, default: MapView, Marker };
 });
+
+// il riconoscimento vocale del telefono non c'è nei test: un modulo finto che non fa niente (le prove vere usano un motore finto)
+jest.mock('expo-speech-recognition', () => ({
+  ExpoSpeechRecognitionModule: {
+    isRecognitionAvailable: () => false,
+    requestPermissionsAsync: () => Promise.resolve({ granted: false }),
+    start: () => undefined,
+    stop: () => undefined,
+    abort: () => undefined,
+    addListener: () => ({ remove: () => undefined }),
+  },
+}));

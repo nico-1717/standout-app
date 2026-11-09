@@ -1,0 +1,80 @@
+{
+  "punct": [
+    { "lang": "it", "say": "ciao come stai", "out": "ciao come stai." },
+    { "lang": "it", "say": "oggi sono andato al mare con", "out": "oggi sono andato al mare con," },
+    { "lang": "it", "say": "che bella giornata oggi", "out": "che bella giornata oggi?" },
+    { "lang": "it", "say": "ok", "out": "ok," },
+    { "lang": "it", "say": "ho mangiato la pizza", "out": "ho mangiato la pizza?" },
+    { "lang": "it", "say": "what did you do today", "out": "what did you do today." },
+    { "lang": "it", "say": "I went to the park and", "out": "I went to the park and." },
+    { "lang": "it", "say": "it was nice", "out": "it was nice." },
+    {
+      "lang": "it",
+      "say": "tomorrow I will study for the exam",
+      "out": "tomorrow I will study for the exam."
+    },
+    { "lang": "it", "say": "già chiusa.", "out": "già chiusa." },
+    { "lang": "it", "say": "come", "out": "come?" },
+    { "lang": "it", "say": "sono stanco", "out": "sono stanco?" },
+    {
+      "lang": "it",
+      "say": "è stata una bella giornata davvero",
+      "out": "è stata una bella giornata davvero?"
+    },
+    { "lang": "it", "say": "where are you going", "out": "where are you going." },
+    { "lang": "it", "say": "hello", "out": "hello," },
+    { "lang": "en", "say": "ciao come stai", "out": "ciao come stai." },
+    { "lang": "en", "say": "oggi sono andato al mare con", "out": "oggi sono andato al mare con." },
+    { "lang": "en", "say": "che bella giornata oggi", "out": "che bella giornata oggi." },
+    { "lang": "en", "say": "ok", "out": "ok," },
+    { "lang": "en", "say": "ho mangiato la pizza", "out": "ho mangiato la pizza." },
+    { "lang": "en", "say": "what did you do today", "out": "what did you do today?" },
+    { "lang": "en", "say": "I went to the park and", "out": "I went to the park and," },
+    { "lang": "en", "say": "it was nice", "out": "it was nice." },
+    {
+      "lang": "en",
+      "say": "tomorrow I will study for the exam",
+      "out": "tomorrow I will study for the exam."
+    },
+    { "lang": "en", "say": "già chiusa.", "out": "già chiusa." },
+    { "lang": "en", "say": "come", "out": "come," },
+    { "lang": "en", "say": "sono stanco", "out": "sono stanco," },
+    {
+      "lang": "en",
+      "say": "è stata una bella giornata davvero",
+      "out": "è stata una bella giornata davvero."
+    },
+    { "lang": "en", "say": "where are you going", "out": "where are you going?" },
+    { "lang": "en", "say": "hello", "out": "hello," }
+  ],
+  "marks": [
+    { "lang": "it", "say": "punto", "mark": ".", "nl": false },
+    { "lang": "it", "say": "virgola", "mark": ",", "nl": false },
+    { "lang": "it", "say": "punto e virgola", "mark": ";", "nl": false },
+    { "lang": "it", "say": "Due Punti", "mark": ":", "nl": false },
+    { "lang": "it", "say": "a capo", "mark": null, "nl": true },
+    { "lang": "it", "say": "nuova riga", "mark": null, "nl": true },
+    { "lang": "it", "say": "punto interrogativo", "mark": "?", "nl": false },
+    { "lang": "it", "say": "full stop", "mark": null, "nl": false },
+    { "lang": "it", "say": "comma", "mark": null, "nl": false },
+    { "lang": "it", "say": "new line", "mark": null, "nl": false },
+    { "lang": "it", "say": "question mark", "mark": null, "nl": false },
+    { "lang": "it", "say": "ciao", "mark": null, "nl": false },
+    { "lang": "it", "say": "punto di domanda", "mark": "?", "nl": false },
+    { "lang": "it", "say": "period", "mark": null, "nl": false },
+    { "lang": "en", "say": "punto", "mark": null, "nl": false },
+    { "lang": "en", "say": "virgola", "mark": null, "nl": false },
+    { "lang": "en", "say": "punto e virgola", "mark": null, "nl": false },
+    { "lang": "en", "say": "Due Punti", "mark": null, "nl": false },
+    { "lang": "en", "say": "a capo", "mark": null, "nl": false },
+    { "lang": "en", "say": "nuova riga", "mark": null, "nl": false },
+    { "lang": "en", "say": "punto interrogativo", "mark": null, "nl": false },
+    { "lang": "en", "say": "full stop", "mark": ".", "nl": false },
+    { "lang": "en", "say": "comma", "mark": ",", "nl": false },
+    { "lang": "en", "say": "new line", "mark": null, "nl": true },
+    { "lang": "en", "say": "question mark", "mark": "?", "nl": false },
+    { "lang": "en", "say": "ciao", "mark": null, "nl": false },
+    { "lang": "en", "say": "punto di domanda", "mark": null, "nl": false },
+    { "lang": "en", "say": "period", "mark": ".", "nl": false }
+  ]
+}

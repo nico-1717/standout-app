@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import { MediaQueue } from '@/core/media/mediaQueue';
+import { FakeEngine } from '@/core/speech/__tests__/fakeEngine';
+import { phoneEngine } from '@/core/speech/recognizer';
 import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
@@ -12,6 +14,13 @@ import { TasksRepo } from '@/features/tasks/repo';
 import BuyScreen from '../(tabs)/buy';
 
 jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
+
+// il microfono è finto: si "dice" una frase dal test
+jest.mock('@/core/speech/recognizer', () => {
+  const { FakeEngine: Fake } = jest.requireActual('@/core/speech/__tests__/fakeEngine');
+  return { ...jest.requireActual('@/core/speech/recognizer'), phoneEngine: new Fake() };
+});
+const mockEngine = phoneEngine as unknown as FakeEngine;
 
 let mockStyle: 'standard' | 'paper' = 'standard';
 let mockServices: unknown;
@@ -96,6 +105,36 @@ describe.each(['standard', 'paper'] as const)('To buy screen (%s)', (style) => {
       buy_category_uuid: categories.list()[0]!.uuid,
     });
     expect(mockChanged).toHaveBeenCalled();
+  });
+
+  test('the microphone fills the bar while you speak and adds one item when you stop', async () => {
+    const { tasks, categories } = setup();
+    mockEngine.starts.length = 0;
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('buy-mic'));
+    await act(async () => undefined);
+    expect(mockEngine.starts).toHaveLength(1);
+    await act(async () => mockEngine.say(['dish soap 2,50 hash'], false));
+    expect(screen.getByDisplayValue('dish soap 2,50 hash')).toBeTruthy();
+    await act(async () => mockEngine.say(['dish soap 2,50'], true));
+    await act(async () => mockEngine.finish()); // la frase è finita: una sola, quindi l'ascolto si chiude
+    const added = tasks.list('buy').find((t) => t.title === 'dish soap')!;
+    expect(added).toMatchObject({ buy_price_cents: 250 });
+    expect(categories.list().length).toBeGreaterThan(0);
+    expect(screen.queryByDisplayValue('dish soap 2,50')).toBeNull(); // la barra si svuota
+    expect(mockChanged).toHaveBeenCalled();
+  });
+
+  test('without permission the microphone says dictation is not available and adds nothing', async () => {
+    const { tasks } = setup();
+    mockEngine.granted = false;
+    const before = tasks.list('buy').length;
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('buy-mic'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('buy-mic-error')).toBeTruthy();
+    expect(tasks.list('buy')).toHaveLength(before);
+    mockEngine.granted = true;
   });
 
   test('a new #category is created on the fly', async () => {

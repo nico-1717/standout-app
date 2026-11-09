@@ -2,7 +2,10 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { appendDictated, dictationLang } from '@/core/speech/dictation';
+import { useDictation } from '@/core/speech/useDictation';
 import { addDaysIso } from '@/features/tasks/groups';
+import { MicButton } from '@/ui/MicButton';
 
 import type { DiaryTheme } from './diaryTheme';
 import { Rings } from './DiaryParts';
@@ -173,7 +176,7 @@ function WriteArea({
   paper: 'lined' | 'dotted' | 'plain';
   onSave: (text: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [draft, setDraft] = useState<string | null>(null);
   const [h, setH] = useState(0);
   const timer = useLater(700);
@@ -183,6 +186,29 @@ function WriteArea({
     timer.cancel();
     setDraft(null);
     onSave(text);
+  };
+  // dettatura: il testo di partenza + le frasi definitive; il provvisorio si vede ma non si salva
+  const dictated = useRef('');
+  const mic = useDictation({
+    lang: dictationLang(i18n.language),
+    onInterim: (text) => {
+      // le parole che si stanno ancora dicendo: si vedono così come sono, la punteggiatura arriva a frase finita
+      const base = dictated.current;
+      setDraft(
+        base && !base.endsWith('\n') ? `${base.replace(/[ \t]+$/, '')} ${text}` : base + text,
+      );
+    },
+    onFinal: (text) => {
+      dictated.current = appendDictated(dictated.current, text, i18n.language);
+      setDraft(dictated.current);
+      timer.later(() => commit(dictated.current));
+    },
+    onStop: () => commit(dictated.current),
+  });
+  const micToggle = () => {
+    if (mic.active) return mic.stop();
+    dictated.current = shown;
+    mic.start();
   };
   const minH = d.line * 8;
   const height = Math.max(minH, h);
@@ -275,6 +301,21 @@ function WriteArea({
           }}
         />
       </View>
+      <View style={{ position: 'absolute', right: 8, top: 8 }}>
+        <MicButton
+          testID="diary-mic"
+          active={mic.active}
+          onPress={micToggle}
+          label={t('diario.detta_invece_di_scrivere')}
+          size={34}
+          tint={d.accent}
+        />
+      </View>
+      {mic.error ? (
+        <Text testID="diary-mic-error" style={{ color: d.ink3, fontSize: 12, marginTop: 4 }}>
+          {t('diario.dettatura_non_disponibile')}
+        </Text>
+      ) : null}
     </View>
   );
 }

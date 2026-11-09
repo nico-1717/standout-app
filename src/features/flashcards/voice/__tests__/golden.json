@@ -1,0 +1,1640 @@
+{
+  "out": [
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "ripeti",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "ripeti per favore",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "puoi ripetere la domanda",
+      "intent": "ripeti",
+      "score": 0.8421,
+      "weighted": 0.8421
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "mostra la risposta",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "show",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "answer",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "and sir",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "swear",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "giusto",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "that's right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "wrong",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "ron",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "sbagliato",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "non lo so",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "I knew it",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "continue",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "boss",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "avanti",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "ripassiamo",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "password",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "the capital of France is Paris",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "corretto grazie mille",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "ok then correct",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "hello",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "core ect",
+      "intent": "corretto",
+      "score": 0.75,
+      "weighted": 0.75
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "sbagliatto",
+      "intent": "errato",
+      "score": 0.9,
+      "weighted": 0.9
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "question",
+      "say": "uno due tre quattro cinque corretto",
+      "intent": "corretto",
+      "score": 0.97,
+      "weighted": 0.7518
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ripeti",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ripeti per favore",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "puoi ripetere la domanda",
+      "intent": "ripeti",
+      "score": 0.8421,
+      "weighted": 0.8421
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "mostra la risposta",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "show",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "answer",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "and sir",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "swear",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "giusto",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "that's right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "wrong",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ron",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "sbagliato",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "non lo so",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "I knew it",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "continue",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "boss",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "avanti",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ripassiamo",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "password",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "the capital of France is Paris",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "corretto grazie mille",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ok then correct",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "hello",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "core ect",
+      "intent": "corretto",
+      "score": 0.75,
+      "weighted": 0.75
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "sbagliatto",
+      "intent": "errato",
+      "score": 0.9,
+      "weighted": 0.9
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "answer",
+      "say": "uno due tre quattro cinque corretto",
+      "intent": "corretto",
+      "score": 0.97,
+      "weighted": 0.7518
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ripeti",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ripeti per favore",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "puoi ripetere la domanda",
+      "intent": "ripeti",
+      "score": 0.8421,
+      "weighted": 0.8421
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "mostra la risposta",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "show",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "answer",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "and sir",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "swear",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "giusto",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "that's right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "wrong",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ron",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "sbagliato",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "non lo so",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "I knew it",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "continue",
+      "intent": "continua",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "boss",
+      "intent": "boss",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "avanti",
+      "intent": "continua",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ripassiamo",
+      "intent": "boss",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "password",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "the capital of France is Paris",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "corretto grazie mille",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ok then correct",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "hello",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "core ect",
+      "intent": "corretto",
+      "score": 0.75,
+      "weighted": 0.75
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "sbagliatto",
+      "intent": "errato",
+      "score": 0.9,
+      "weighted": 0.9
+    },
+    {
+      "site": "it",
+      "vocab": true,
+      "phase": "ck",
+      "say": "uno due tre quattro cinque corretto",
+      "intent": "corretto",
+      "score": 0.97,
+      "weighted": 0.7518
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "ripeti",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "ripeti per favore",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "puoi ripetere la domanda",
+      "intent": "ripeti",
+      "score": 0.8421,
+      "weighted": 0.8421
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "mostra la risposta",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "show",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "answer",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "and sir",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "swear",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "giusto",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "that's right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "wrong",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "ron",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "sbagliato",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "non lo so",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "I knew it",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "continue",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "boss",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "avanti",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "ripassiamo",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "password",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "the capital of France is Paris",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "corretto grazie mille",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "ok then correct",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "hello",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "core ect",
+      "intent": "corretto",
+      "score": 0.75,
+      "weighted": 0.75
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "sbagliatto",
+      "intent": "errato",
+      "score": 0.9,
+      "weighted": 0.9
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "question",
+      "say": "uno due tre quattro cinque corretto",
+      "intent": "corretto",
+      "score": 0.97,
+      "weighted": 0.7518
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ripeti",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ripeti per favore",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "puoi ripetere la domanda",
+      "intent": "ripeti",
+      "score": 0.8421,
+      "weighted": 0.8421
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "mostra la risposta",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "show",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "answer",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "and sir",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "swear",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "giusto",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "that's right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "wrong",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ron",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "sbagliato",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "non lo so",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "I knew it",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "continue",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "boss",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "avanti",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ripassiamo",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "password",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "the capital of France is Paris",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "corretto grazie mille",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "ok then correct",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "hello",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "core ect",
+      "intent": "corretto",
+      "score": 0.75,
+      "weighted": 0.75
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "sbagliatto",
+      "intent": "errato",
+      "score": 0.9,
+      "weighted": 0.9
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "answer",
+      "say": "uno due tre quattro cinque corretto",
+      "intent": "corretto",
+      "score": 0.97,
+      "weighted": 0.7518
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ripeti",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ripeti per favore",
+      "intent": "ripeti",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "puoi ripetere la domanda",
+      "intent": "ripeti",
+      "score": 0.8421,
+      "weighted": 0.8421
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "mostra la risposta",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "show",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "answer",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "and sir",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "swear",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "giusto",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "that's right",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "wrong",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ron",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "sbagliato",
+      "intent": "errato",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "non lo so",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "I knew it",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "continue",
+      "intent": "continua",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "boss",
+      "intent": "boss",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "avanti",
+      "intent": "continua",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ripassiamo",
+      "intent": "boss",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "password",
+      "intent": "risposta",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "the capital of France is Paris",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "corretto grazie mille",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "ok then correct",
+      "intent": "corretto",
+      "score": 1,
+      "weighted": 1
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "hello",
+      "intent": null,
+      "score": null,
+      "weighted": null
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "core ect",
+      "intent": "corretto",
+      "score": 0.75,
+      "weighted": 0.75
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "sbagliatto",
+      "intent": "errato",
+      "score": 0.9,
+      "weighted": 0.9
+    },
+    {
+      "site": "en",
+      "vocab": true,
+      "phase": "ck",
+      "say": "uno due tre quattro cinque corretto",
+      "intent": "corretto",
+      "score": 0.97,
+      "weighted": 0.7518
+    }
+  ],
+  "loose": [
+    { "site": "it", "set": "risposta", "say": "swear", "intent": "risposta", "score": 1 },
+    { "site": "it", "set": "corretto+errato", "say": "swear", "intent": null, "score": null },
+    { "site": "it", "set": "risposta", "say": "sir", "intent": "risposta", "score": 1 },
+    { "site": "it", "set": "corretto+errato", "say": "sir", "intent": null, "score": null },
+    { "site": "it", "set": "risposta", "say": "ansa", "intent": "risposta", "score": 1 },
+    { "site": "it", "set": "corretto+errato", "say": "ansa", "intent": null, "score": null },
+    { "site": "it", "set": "risposta", "say": "write", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "write", "intent": "corretto", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "right", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "right", "intent": "corretto", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "ron", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "ron", "intent": "errato", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "long", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "long", "intent": "errato", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "rong", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "rong", "intent": "errato", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "core ect", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "core ect", "intent": "corretto", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "wrongg", "intent": null, "score": null },
+    {
+      "site": "it",
+      "set": "corretto+errato",
+      "say": "wrongg",
+      "intent": "errato",
+      "score": 0.8333
+    },
+    { "site": "it", "set": "risposta", "say": "corect", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "corect", "intent": "corretto", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "sbaliato", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "sbaliato", "intent": "errato", "score": 1 },
+    { "site": "it", "set": "risposta", "say": "hello", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "hello", "intent": null, "score": null },
+    {
+      "site": "it",
+      "set": "risposta",
+      "say": "the quick brown fox jumps",
+      "intent": null,
+      "score": null
+    },
+    {
+      "site": "it",
+      "set": "corretto+errato",
+      "say": "the quick brown fox jumps",
+      "intent": null,
+      "score": null
+    },
+    { "site": "it", "set": "risposta", "say": "shoe", "intent": "risposta", "score": 1 },
+    { "site": "it", "set": "corretto+errato", "say": "shoe", "intent": null, "score": null },
+    { "site": "it", "set": "risposta", "say": "anzer", "intent": "risposta", "score": 1 },
+    { "site": "it", "set": "corretto+errato", "say": "anzer", "intent": null, "score": null },
+    { "site": "it", "set": "risposta", "say": "xyz", "intent": null, "score": null },
+    { "site": "it", "set": "corretto+errato", "say": "xyz", "intent": null, "score": null },
+    { "site": "en", "set": "risposta", "say": "swear", "intent": "risposta", "score": 1 },
+    { "site": "en", "set": "corretto+errato", "say": "swear", "intent": null, "score": null },
+    { "site": "en", "set": "risposta", "say": "sir", "intent": "risposta", "score": 1 },
+    { "site": "en", "set": "corretto+errato", "say": "sir", "intent": null, "score": null },
+    { "site": "en", "set": "risposta", "say": "ansa", "intent": "risposta", "score": 1 },
+    { "site": "en", "set": "corretto+errato", "say": "ansa", "intent": null, "score": null },
+    { "site": "en", "set": "risposta", "say": "write", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "write", "intent": "corretto", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "right", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "right", "intent": "corretto", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "ron", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "ron", "intent": "errato", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "long", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "long", "intent": "errato", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "rong", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "rong", "intent": "errato", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "core ect", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "core ect", "intent": "corretto", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "wrongg", "intent": null, "score": null },
+    {
+      "site": "en",
+      "set": "corretto+errato",
+      "say": "wrongg",
+      "intent": "errato",
+      "score": 0.8333
+    },
+    { "site": "en", "set": "risposta", "say": "corect", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "corect", "intent": "corretto", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "sbaliato", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "sbaliato", "intent": "errato", "score": 1 },
+    { "site": "en", "set": "risposta", "say": "hello", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "hello", "intent": null, "score": null },
+    {
+      "site": "en",
+      "set": "risposta",
+      "say": "the quick brown fox jumps",
+      "intent": null,
+      "score": null
+    },
+    {
+      "site": "en",
+      "set": "corretto+errato",
+      "say": "the quick brown fox jumps",
+      "intent": null,
+      "score": null
+    },
+    { "site": "en", "set": "risposta", "say": "shoe", "intent": "risposta", "score": 1 },
+    { "site": "en", "set": "corretto+errato", "say": "shoe", "intent": null, "score": null },
+    { "site": "en", "set": "risposta", "say": "anzer", "intent": "risposta", "score": 1 },
+    { "site": "en", "set": "corretto+errato", "say": "anzer", "intent": null, "score": null },
+    { "site": "en", "set": "risposta", "say": "xyz", "intent": null, "score": null },
+    { "site": "en", "set": "corretto+errato", "say": "xyz", "intent": null, "score": null }
+  ],
+  "ans": [
+    { "raw": "to give up", "said": "give up", "variants": ["to give up", "give up"], "ok": true },
+    { "raw": "to give up", "said": "gif up", "variants": ["to give up", "give up"], "ok": false },
+    { "raw": "(the) house / home", "said": "home", "variants": ["house", "home"], "ok": true },
+    { "raw": "cat", "said": "cut", "variants": ["cat"], "ok": false },
+    { "raw": "cat", "said": "cat", "variants": ["cat"], "ok": true },
+    { "raw": "dog", "said": "a dog", "variants": ["dog"], "ok": true },
+    {
+      "raw": "to give up",
+      "said": "uhm give up now",
+      "variants": ["to give up", "give up"],
+      "ok": true
+    },
+    { "raw": "chat", "said": "chap", "variants": ["chat"], "ok": false },
+    { "raw": "Paris", "said": "paris", "variants": ["paris"], "ok": true },
+    { "raw": "la casa", "said": "casa", "variants": ["la casa", "casa"], "ok": true },
+    { "raw": "東京", "said": "東京", "variants": ["東京"], "ok": true }
+  ]
+}

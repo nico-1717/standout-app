@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import '@/core/i18n';
+import { FakeEngine } from '@/core/speech/__tests__/fakeEngine';
+import { phoneEngine } from '@/core/speech/recognizer';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { DiaryRepo } from '@/features/diary/repo';
 import { DEFAULT_DIARY_SETTINGS, type DiarySettings } from '@/features/diary/settings';
@@ -22,6 +24,13 @@ const mockUpdate = jest.fn((p: Partial<DiarySettings>) => {
 });
 const mockBack = jest.fn();
 const mockNavigate = jest.fn();
+
+// il microfono è finto: si "dice" una frase dal test
+jest.mock('@/core/speech/recognizer', () => {
+  const { FakeEngine: Fake } = jest.requireActual('@/core/speech/__tests__/fakeEngine');
+  return { ...jest.requireActual('@/core/speech/recognizer'), phoneEngine: new Fake() };
+});
+const mockEngine = phoneEngine as unknown as FakeEngine;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, navigate: mockNavigate, push: jest.fn() }),
@@ -126,6 +135,32 @@ describe.each(['standard', 'paper'] as const)('Diary screen (%s)', (style) => {
     expect(diary.day(TODAY).note).toBe('A calm day');
     await fireEvent.press(screen.getByTestId('diary-undo'));
     expect(diary.day(TODAY).note).toBe('');
+  });
+
+  test('dictation: phrases are added with punctuation, the live words are shown but saved only when final', async () => {
+    const { diary } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('diary-mic'));
+    await act(async () => undefined);
+    await act(async () => mockEngine.say(['I went for a run'], false));
+    expect(screen.getByDisplayValue('I went for a run')).toBeTruthy();
+    expect(diary.day(TODAY).note).toBe(''); // il provvisorio non si salva
+    await act(async () => mockEngine.say(['I went for a run in the park'], true));
+    await act(async () => mockEngine.finish());
+    await act(async () => mockEngine.say(['comma'], true));
+    await fireEvent.press(screen.getByTestId('diary-mic')); // stop: salva subito
+    expect(diary.day(TODAY).note).toBe('I went for a run in the park,');
+  });
+
+  test('dictation: no permission → a short note, the text is untouched', async () => {
+    const { diary } = setup();
+    mockEngine.granted = false;
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('diary-mic'));
+    await act(async () => undefined);
+    expect(screen.getByTestId('diary-mic-error')).toBeTruthy();
+    expect(diary.day(TODAY).note).toBe('');
+    mockEngine.granted = true;
   });
 
   test('the habits ring shows done/total and opens the summary', async () => {

@@ -70,7 +70,15 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Standout uses the microphone so you can record your voice on a flashcard."
+          "microphonePermission": "Standout uses the microphone so you can record your voice on a flashcard, dictate your diary and play flashcards hands-free."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Standout uses the microphone so you can record your voice on a flashcard, dictate your diary and play flashcards hands-free.",
+          "speechRecognitionPermission": "Standout uses speech recognition so you can dictate your diary, add shopping items by voice and play flashcards hands-free. What you say is turned into text by Apple or Google.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ]
     ],
