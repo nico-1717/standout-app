@@ -50,6 +50,24 @@ export interface StorageUsage {
   quota: number;
 }
 
+/** Un posto proposto dalla ricerca. Le coordinate ci sono già solo con la scorta (OpenStreetMap); con Google arrivano dopo. */
+export interface PlaceHit {
+  name: string;
+  detail: string;
+  full: string;
+  ref: string;
+  lat: number | null;
+  lon: number | null;
+}
+
+/** Le coordinate del posto scelto. */
+export interface PlacePoint {
+  lat: number;
+  lon: number;
+  full: string;
+  ref: string;
+}
+
 export type TokenSupplier = () => Promise<string>;
 
 export class AccountApi {
@@ -138,6 +156,42 @@ export class AccountApi {
   async storage(): Promise<StorageUsage> {
     const r = await this.json<Partial<StorageUsage>>(await this.send('GET', '/api/v1/storage'));
     return { used: Number(r.used ?? 0), quota: Number(r.quota ?? 0) };
+  }
+
+  /** I posti che corrispondono al testo (almeno 3 lettere; meno: nessuna chiamata). Serve rete. */
+  async placeSearch(q: string, lang: string): Promise<PlaceHit[]> {
+    const text = q.trim().replace(/\s+/g, ' ');
+    if (text.length < 3) return [];
+    const r = await this.json<{ places?: PlaceHit[] }>(
+      await this.send(
+        'GET',
+        `/api/v1/places/search?q=${encodeURIComponent(text)}&lang=${encodeURIComponent(lang)}`,
+      ),
+    );
+    return (r.places ?? []).map((p) => ({
+      name: String(p.name ?? ''),
+      detail: String(p.detail ?? ''),
+      full: String(p.full ?? p.name ?? ''),
+      ref: String(p.ref ?? ''),
+      lat: p.lat === null || p.lat === undefined ? null : Number(p.lat),
+      lon: p.lon === null || p.lon === undefined ? null : Number(p.lon),
+    }));
+  }
+
+  /** Le coordinate di un posto scelto dall'elenco; null se il sito non lo trova. */
+  async placeDetails(ref: string, lang: string): Promise<PlacePoint | null> {
+    try {
+      const r = await this.json<{ place?: PlacePoint }>(
+        await this.send(
+          'GET',
+          `/api/v1/places/details?ref=${encodeURIComponent(ref)}&lang=${encodeURIComponent(lang)}`,
+        ),
+      );
+      return r.place ?? null;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
   }
 
   /** Esce da TUTTI i dispositivi, anche questo (il server chiude ogni sessione). */

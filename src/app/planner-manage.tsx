@@ -24,10 +24,10 @@ const SWATCHES = [
 /** «Calendari e categorie» del planner: nomi, colori, visibilità e parole chiave. */
 export default function PlannerManage() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed, uiStyle, plannerSettings } = useApp();
+  const { services, version, changed, uiStyle, plannerSettings, account } = useApp();
   const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const repo = services?.planner ?? null;
   const book = services?.book ?? null;
@@ -373,6 +373,8 @@ export default function PlannerManage() {
             book={book}
             contacts={data.contacts}
             places={data.places}
+            search={account}
+            lang={i18n.language}
             look={{ pt, card, input, heading }}
             changed={changed}
           />

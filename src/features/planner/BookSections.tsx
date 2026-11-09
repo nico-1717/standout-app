@@ -11,6 +11,14 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { cleanEmail, type BookRepo, type Contact, type Place } from './book';
+import {
+  PlaceHits,
+  PlaceMap,
+  PlaceStatus,
+  usePlacePick,
+  usePlaceSearch,
+  type PlacesApi,
+} from './PlaceSearch';
 import type { PlannerTheme } from './plannerTheme';
 
 /* «Rubrica» e «Luoghi salvati» nella pagina Calendari e categorie: si leggono, si cambiano sul posto, si tolgono.
@@ -210,6 +218,11 @@ function PlaceRow({
           changed();
         }}
       />
+      {p.place_lat !== null && p.place_lon !== null ? (
+        <View testID={`place-onmap-${p.uuid}`} style={{ marginTop: 6 }}>
+          <PlaceMap pt={pt} lat={p.place_lat} lon={p.place_lon} name={p.place_name ?? p.label} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -219,12 +232,17 @@ export function BookSections({
   book,
   contacts,
   places,
+  search: searchApi,
+  lang = 'en',
   look,
   changed,
 }: {
   book: BookRepo;
   contacts: Contact[];
   places: Place[];
+  /** la ricerca dei posti sul sito (solo online); senza, l'indirizzo resta un testo libero */
+  search?: PlacesApi;
+  lang?: string;
   look: Look;
   changed: () => void;
 }) {
@@ -235,6 +253,8 @@ export function BookSections({
   const [mailError, setMailError] = useState<string | null>(null);
   const [label, setLabel] = useState('');
   const [address, setAddress] = useState('');
+  const search = usePlaceSearch(searchApi, lang);
+  const chosen = usePlacePick(searchApi, lang);
 
   const addContact = () => {
     const clean = cleanEmail(mail);
@@ -246,9 +266,22 @@ export function BookSections({
     changed();
   };
   const addPlace = () => {
-    if (!book.addPlace({ label, address })) return;
+    const pt = chosen.place;
+    if (
+      !book.addPlace({
+        label,
+        address,
+        placeName: pt?.name ?? null,
+        lat: pt?.lat ?? null,
+        lon: pt?.lon ?? null,
+        ref: pt?.ref ?? null,
+      })
+    )
+      return;
     setLabel('');
     setAddress('');
+    chosen.clear();
+    search.close();
     changed();
   };
 
@@ -330,7 +363,13 @@ export function BookSections({
           <TextInput
             testID="place-new-address"
             value={address}
-            onChangeText={setAddress}
+            onChangeText={(v) => {
+              setAddress(v);
+              // scrivendo a mano l'aggancio cade
+              chosen.clear();
+              search.type(v);
+            }}
+            onBlur={() => setTimeout(search.close, 200)}
             onSubmitEditing={addPlace}
             placeholder={t('planner.app_indirizzo')}
             placeholderTextColor={pt.ink3}
@@ -345,6 +384,29 @@ export function BookSections({
             <Text style={{ color: pt.accentInk, fontSize: 22 }}>＋</Text>
           </Pressable>
         </View>
+        <PlaceHits
+          pt={pt}
+          hits={search.hits}
+          onPick={(h) => {
+            search.close();
+            setAddress(h.full || h.name);
+            if (!label.trim()) setLabel(h.name.slice(0, 60));
+            chosen.pick(h);
+          }}
+        />
+        {chosen.place ? (
+          <PlaceStatus
+            pt={pt}
+            place={chosen.place}
+            waiting={chosen.waiting}
+            onClear={chosen.clear}
+          />
+        ) : null}
+        {chosen.notFound ? (
+          <Text testID="place-not-found" style={{ color: pt.ink3, fontSize: 12 }}>
+            {t('planner.posizione_non_trovata_resta_il')}
+          </Text>
+        ) : null}
       </View>
     </>
   );

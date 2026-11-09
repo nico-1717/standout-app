@@ -47,11 +47,11 @@ import { isBand, pxPerMinute } from '@/features/planner/layout';
 /** Il planner: vista giorno (con le ore), settimana (un elenco per giorno) e mese (una griglia). */
 export default function PlannerScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { services, version, changed, uiStyle, plannerSettings, authState } = useApp();
+  const { services, version, changed, uiStyle, plannerSettings, authState, account } = useApp();
   const userId = authState?.status === 'signedIn' ? authState.user.id : 0;
   const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const today = localToday();
@@ -684,6 +684,8 @@ export default function PlannerScreen() {
           pt={pt}
           repo={repo}
           book={services?.book}
+          places={account}
+          lang={i18n.language}
           calendars={calendars}
           categories={categories}
           target={sheet.target}

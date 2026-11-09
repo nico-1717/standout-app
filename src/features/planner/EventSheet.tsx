@@ -1,5 +1,5 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { GuestsField, PlacesField, type PickedPlace } from './BookParts';
+import { PlaceHits, PlaceStatus, usePlaceSearch, type PlacesApi } from './PlaceSearch';
+import type { PlaceHit } from '@/core/account/accountApi';
 import type { BookRepo, GuestInput, Place } from './book';
 import type { EventView } from './events';
 import {
@@ -214,6 +216,10 @@ export function EventSheet(p: {
   repo: PlannerRepo;
   /** la rubrica e i luoghi salvati; senza, la scheda non mostra invitati né scelte rapide */
   book?: BookRepo;
+  /** la ricerca dei posti sul sito (solo online); senza, il luogo resta un testo libero */
+  places?: PlacesApi;
+  /** la lingua dei risultati della ricerca */
+  lang?: string;
   calendars: Calendar[];
   categories: Category[];
   target: SheetTarget;
@@ -288,7 +294,48 @@ export function EventSheet(p: {
   // il luogo scelto dalle scelte rapide; 'keep' = non toccato (resta quello che l'evento ha già)
   const [place, setPlace] = useState<PickedPlace | null | 'keep'>('keep');
   const suggested = book && !view?.location ? (book.suggestPlace(f.title)?.uuid ?? null) : null;
+  const search = usePlaceSearch(p.places, p.lang ?? 'en');
+  // le coordinate del posto appena scelto stanno arrivando: il riferimento atteso (una risposta vecchia non comanda)
+  const [waiting, setWaiting] = useState(false);
+  const wanted = useRef<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const forget = () => {
+    wanted.current = null;
+    setWaiting(false);
+    setNotFound(false);
+  };
+  const pickHit = (h: PlaceHit) => {
+    search.close();
+    forget();
+    set('location', h.full || h.name);
+    setPlace({ name: h.name, lat: h.lat, lon: h.lon, ref: h.ref || null });
+    // la scorta (OpenStreetMap) manda già le coordinate; Google solo per il posto scelto davvero: una seconda chiamata
+    if ((h.lat !== null && h.lon !== null) || !h.ref || !p.places) return;
+    wanted.current = h.ref;
+    setWaiting(true);
+    p.places
+      .placeDetails(h.ref, p.lang ?? 'en')
+      .then((point) => {
+        if (wanted.current !== h.ref) return;
+        wanted.current = null;
+        setWaiting(false);
+        if (!point) return setNotFound(true);
+        setPlace((now) =>
+          now && now !== 'keep' && now.ref === h.ref
+            ? { ...now, lat: point.lat, lon: point.lon }
+            : now,
+        );
+      })
+      .catch(() => {
+        if (wanted.current !== h.ref) return;
+        wanted.current = null;
+        setWaiting(false);
+        setNotFound(true);
+      });
+  };
   const pickPlace = (pl: Place) => {
+    search.close();
+    forget();
     set('location', pl.address || pl.label);
     setPlace({
       name: pl.place_name ?? pl.label,
@@ -297,6 +344,13 @@ export function EventSheet(p: {
       ref: pl.place_ref,
     });
   };
+  // il posto agganciato: quello scelto adesso, o quello che l'evento ha già (se non lo si è toccato)
+  const shownPlace: PickedPlace | null =
+    place === 'keep'
+      ? view && view.placeLat !== null && view.placeLon !== null
+        ? { name: view.placeName, lat: view.placeLat, lon: view.placeLon, ref: null }
+        : null
+      : place;
   const inSeries = !!view && (view.isOccurrence || view.isException || view.repeat !== 'none');
 
   const input = (): EventInput => ({
@@ -711,11 +765,33 @@ export function EventSheet(p: {
             value={f.location}
             onChangeText={(v) => {
               set('location', v);
+              // scrivendo a mano l'aggancio cade: coordinate vecchie accanto a un indirizzo nuovo sono peggio di niente
               setPlace(null);
+              forget();
+              search.type(v);
             }}
+            onBlur={() => setTimeout(search.close, 200)}
+            placeholder={p.places ? t('planner.cerca_un_indirizzo_o_un') : undefined}
             placeholderTextColor={pt.ink3}
             style={inputStyle}
           />
+          <PlaceHits pt={pt} hits={search.hits} onPick={pickHit} />
+          {shownPlace ? (
+            <PlaceStatus
+              pt={pt}
+              place={shownPlace}
+              waiting={waiting}
+              onClear={() => {
+                setPlace(null);
+                forget();
+              }}
+            />
+          ) : null}
+          {notFound ? (
+            <Text testID="place-not-found" style={{ color: pt.ink3, marginTop: 6 }}>
+              {t('planner.posizione_non_trovata_resta_il')}
+            </Text>
+          ) : null}
           <PlacesField
             pt={pt}
             places={places}

@@ -92,4 +92,52 @@ describe('AccountApi', () => {
     const c = make(() => ({ status: 500 }));
     expect(await c.api.resendVerification()).toBe('errore');
   });
+  test('storage reads used and quota as numbers', async () => {
+    const { api, calls } = make(() => ({ json: { ok: true, used: '1234', quota: 524288000 } }));
+    expect(await api.storage()).toEqual({ used: 1234, quota: 524288000 });
+    expect(calls[0].url).toBe('https://site/api/v1/storage');
+  });
+
+  test('placeSearch: under 3 letters makes no call; otherwise it sends the clean text and the language', async () => {
+    const { api, calls } = make(() => ({
+      json: {
+        ok: true,
+        places: [
+          {
+            name: 'Duomo',
+            detail: 'Milano',
+            full: 'Duomo, Milano',
+            ref: 'r1',
+            lat: null,
+            lon: null,
+          },
+          { name: 'Bar', detail: '', full: 'Bar', ref: 'r2', lat: 41.9, lon: 12.5 },
+        ],
+      },
+    }));
+    expect(await api.placeSearch(' du ', 'it')).toEqual([]);
+    expect(calls).toHaveLength(0);
+    const r = await api.placeSearch('  duomo   di milano ', 'it');
+    expect(calls[0].url).toBe('https://site/api/v1/places/search?q=duomo%20di%20milano&lang=it');
+    expect(r.map((p) => [p.ref, p.lat, p.lon])).toEqual([
+      ['r1', null, null],
+      ['r2', 41.9, 12.5],
+    ]);
+  });
+
+  test('placeDetails gives the point, null for 404, and throws for other errors', async () => {
+    const ok = make(() => ({ json: { ok: true, place: { lat: 1, lon: 2, full: 'x', ref: 'r' } } }));
+    expect(await ok.api.placeDetails('r', 'en')).toEqual({ lat: 1, lon: 2, full: 'x', ref: 'r' });
+    expect(ok.calls[0].url).toBe('https://site/api/v1/places/details?ref=r&lang=en');
+    const nf = make(() => ({
+      status: 404,
+      json: { ok: false, code: 'not_found', error: 'Not found' },
+    }));
+    expect(await nf.api.placeDetails('r', 'en')).toBeNull();
+    const rl = make(() => ({
+      status: 429,
+      json: { ok: false, code: 'rate_limited', error: 'Too many' },
+    }));
+    await expect(rl.api.placeDetails('r', 'en')).rejects.toBeInstanceOf(ApiError);
+  });
 });

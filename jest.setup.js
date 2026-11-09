@@ -46,3 +46,12 @@ jest.mock('expo-image-manipulator', () => {
     SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
   };
 });
+
+// la mappa nativa non c'è nei test: una vista semplice che tiene i figli (il segnaposto)
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MapView = (props) => React.createElement(View, { testID: 'native-map' }, props.children);
+  const Marker = () => null;
+  return { __esModule: true, default: MapView, Marker };
+});
