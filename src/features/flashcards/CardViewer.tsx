@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { haptic } from '@/ui/motion';
 
 import { CardImage } from './CardImage';
 import { DocView } from './DocView';
+import { FlipCard } from './FlipCard';
 import type { PlayView } from './gameKit';
 
 /**
@@ -41,6 +43,14 @@ export function CardViewer(p: {
   };
 
   const card = p.cards[index];
+  const face = (border: string) => ({
+    borderRadius: 18,
+    backgroundColor: th.surface,
+    borderWidth: 1,
+    borderColor: border,
+    overflow: 'hidden' as const,
+  });
+  const body = { padding: 20, gap: 14, flexGrow: 1, justifyContent: 'center' as const };
   return (
     <Modal visible animationType="fade" onRequestClose={p.onClose} testID={id}>
       <View
@@ -78,35 +88,24 @@ export function CardViewer(p: {
             testID={`${id}-card`}
             accessibilityRole="button"
             accessibilityLabel={t('fc.res_gira')}
-            onPress={() => setFlipped(!flipped)}
+            onPress={() => {
+              setFlipped(!flipped);
+              haptic.select();
+            }}
             onTouchStart={(e) => {
               touch.current = e.nativeEvent.pageX;
             }}
             onTouchEnd={onEnd}
-            style={{
-              flex: 1,
-              margin: 16,
-              borderRadius: 18,
-              backgroundColor: th.surface,
-              borderWidth: 1,
-              borderColor: flipped ? th.brand : th.hairline,
-            }}
+            style={{ flex: 1, margin: 16 }}
           >
-            <ScrollView
-              contentContainerStyle={{
-                padding: 20,
-                gap: 14,
-                flexGrow: 1,
-                justifyContent: 'center',
-              }}
-            >
-              {flipped ? (
-                <>
-                  <DocView testID={`${id}-answer`} raw={card.answer} size={20} />
-                  <CardImage testID={`${id}-answer-image`} name={card.answerImage} height={220} />
-                </>
-              ) : (
-                <>
+            <FlipCard
+              key={index}
+              flipped={flipped}
+              style={{ flex: 1 }}
+              frontStyle={face(th.hairline)}
+              backStyle={face(th.brand)}
+              front={
+                <ScrollView contentContainerStyle={body}>
                   <DocView testID={`${id}-question`} raw={card.question} size={20} />
                   <CardImage
                     testID={`${id}-question-image`}
@@ -116,9 +115,15 @@ export function CardViewer(p: {
                   <Text style={{ color: th.text3, textAlign: 'center', fontSize: 12 }}>
                     {t('fc.res_tocca_girare')}
                   </Text>
-                </>
-              )}
-            </ScrollView>
+                </ScrollView>
+              }
+              back={
+                <ScrollView contentContainerStyle={body}>
+                  <DocView testID={`${id}-answer`} raw={card.answer} size={20} />
+                  <CardImage testID={`${id}-answer-image`} name={card.answerImage} height={220} />
+                </ScrollView>
+              }
+            />
           </Pressable>
         ) : (
           <Text style={{ color: th.text2, textAlign: 'center', marginTop: 40 }}>

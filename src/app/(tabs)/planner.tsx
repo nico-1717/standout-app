@@ -38,6 +38,8 @@ import {
   useNowMinutes,
 } from '@/features/planner/PlannerParts';
 import { weekPhraseId } from '@/features/planner/phrases';
+import { MonthScene } from '@/features/planner/ambient/MonthScene';
+import { ambientOpacity } from '@/features/planner/ambient/scene';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthView, WeekView, monthGrid } from '@/features/planner/Views';
 import { isBand, pxPerMinute } from '@/features/planner/layout';
@@ -219,8 +221,17 @@ export default function PlannerScreen() {
           backgroundColor: pt.page,
           borderBottomWidth: 0.5,
           borderBottomColor: pt.hair,
+          overflow: 'hidden',
         }}
       >
+        {uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
+          <MonthScene
+            month={monthOf(date)}
+            opacity={ambientOpacity(plannerSettings.ambient_opacity)}
+            page={pt.page}
+            sky={!pt.dark}
+          />
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6 }}>
           {arrow(t('planner.giorno_precedente'), -1, 'day-prev')}
           <View style={{ flex: 1, alignItems: 'center' }}>

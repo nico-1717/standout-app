@@ -79,6 +79,14 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     jest.restoreAllMocks();
   });
 
+  test('the month picture is drawn behind the header in the paper style only', async () => {
+    setup();
+    await renderIt();
+    const scene = screen.queryByTestId('month-scene', { includeHiddenElements: true });
+    if (style === 'paper') expect(scene).toBeTruthy();
+    else expect(scene).toBeNull();
+  });
+
   test('an empty day says so, and shows today in the title', async () => {
     setup();
     await renderIt();

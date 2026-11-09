@@ -37,3 +37,5 @@ log out when you finish.
 Tests cannot judge movement, sound or touch. Please look at these by eye:
 - **Pomodoro break**: the outdoor drawing moves slowly (sun, tree, grass, birds, bee, butterfly, steam); the tip is easy to read; with iPhone "Reduce Motion" on, the drawing stands still.
 - **Pomodoro hourglass**: the small hourglass button in the header switches ring ⇄ hourglass (the website follows the same choice). At the start of a session the glass turns over, sand falls, grains drop while the timer runs and stop when you pause.
+- **Planner month picture** (Calm paper style, Planner › header): sky colour changes with the month; the tree sways slowly; the animal sits (the dog, turtle and hedgehog walk across, the sleigh glides); petals/snow/dust fall; bees/butterflies cross. Check it does not slow scrolling, and that "Reduce Motion" freezes it.
+- **Flashcard flip** (open any card viewer): the card turns like a real card, about half a second, with a light tap on iPhone.
