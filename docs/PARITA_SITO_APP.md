@@ -39,7 +39,7 @@ portata nel protocollo di sincronizzazione**; `da fare` = serve tutto; `solo onl
 | A18 | Barra laterale / menu (`partials/sidebar.php`, `sidebar.html`): scorciatoie «Inserisci» (`fc_corsi_lista.php`) | — | Barra a schede in basso + «Altro»; scorciatoia Inserisci | P2 | fatto — «+ Inserisci» nel riquadro Flashcard della Home: Università (scegli il mazzo → inserimento) o Vocabolario (la lingua → corso) | |
 | A19 | Blocco con Face ID / impronta | — (solo locale) | Impostazioni › Sicurezza (NUOVO rispetto al sito, spento di default) | P4 | **fatto** (da provare sul telefono: serve Face ID, impronta o codice) | |
 | A20 | Coda «problemi di sincronizzazione» e «conservate entrambe le versioni» | `sync/*` | Impostazioni › Sincronizzazione (NUOVO: serve al protocollo) | P1 | fatto | Pagina «Sincronizzazione»: stato, «Sincronizza ora», modifiche rifiutate con motivo semplice e «Ho capito». «Conservate entrambe le versioni»: il protocollo non le crea (vince il server), quindi non c'è altro da mostrare |
-| A21 | Quota immagini/audio e spazio usato | `sync/quota` (nuova) | Impostazioni › Spazio | P2 | da fare | |
+| A21 | Quota immagini/audio e spazio usato | `GET /api/v1/storage` + `lib/media_api.php` (413 `quota_exceeded`) | Impostazioni › Spazio (barra, avviso al 90%, avviso se un file è stato rifiutato) | P2 | fatto | limite unico 500 MB, stesso su ogni hosting |
 
 ## 2. Home (`home/`)
 

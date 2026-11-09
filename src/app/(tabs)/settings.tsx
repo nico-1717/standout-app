@@ -8,6 +8,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { accents, type AccentId } from '@/core/theme/tokens';
 import { Card, Header, PrimaryButton } from '@/ui/kit';
 import { LockCard } from '@/core/lock/LockCard';
+import { SpaceCard } from '@/features/account/SpaceCard';
 import { RemindersCard } from '@/features/reminders/RemindersCard';
 import { SyncBadge } from '@/ui/SyncBadge';
 
@@ -257,6 +258,7 @@ export default function SettingsScreen() {
         </Card>
         <RemindersCard />
         <LockCard />
+        <SpaceCard />
         <Pressable
           testID="open-sync"
           accessibilityRole="button"

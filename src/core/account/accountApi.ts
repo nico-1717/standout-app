@@ -44,6 +44,12 @@ export interface AiUsage {
   tokens: AiMeter;
 }
 
+/** Lo spazio dei file (immagini e audio) sul sito: usato e limite, in byte. */
+export interface StorageUsage {
+  used: number;
+  quota: number;
+}
+
 export type TokenSupplier = () => Promise<string>;
 
 export class AccountApi {
@@ -126,6 +132,12 @@ export class AccountApi {
       await this.send('GET', '/api/v1/home/ai_usage'),
     );
     return r.plan ?? null;
+  }
+
+  /** Quanto spazio occupano i miei file sul sito e quanto ne posso usare. Serve rete. */
+  async storage(): Promise<StorageUsage> {
+    const r = await this.json<Partial<StorageUsage>>(await this.send('GET', '/api/v1/storage'));
+    return { used: Number(r.used ?? 0), quota: Number(r.quota ?? 0) };
   }
 
   /** Esce da TUTTI i dispositivi, anche questo (il server chiude ogni sessione). */

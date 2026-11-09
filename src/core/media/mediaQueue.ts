@@ -65,6 +65,9 @@ export interface MediaReport {
   dropped: number;
 }
 
+/** Il codice con cui il sito rifiuta un file perché lo spazio dell'utente è finito. */
+export const QUOTA_CODE = 'quota_exceeded';
+
 /**
  * La coda dei file da mandare al sito. Un telefono non carica subito: scrive qui «metti questo file in questo campo»
  * (o «toglilo») e ci pensa `run()` quando c'è rete e la riga è già arrivata sul server. Per ogni campo c'è una sola
@@ -73,6 +76,7 @@ export interface MediaReport {
  */
 export class MediaQueue {
   private running: Promise<MediaReport> | null = null;
+  private refused = 0;
 
   constructor(
     private readonly db: SqlDb,
@@ -150,6 +154,16 @@ export class MediaQueue {
     this.db.run('DELETE FROM media_queue WHERE row_uuid = ?', [uuid]);
   }
 
+  /** Quanti file il sito ha rifiutato perché lo spazio è finito, da quando l'app è aperta (0 = nessuno). */
+  spaceRefused(): number {
+    return this.refused;
+  }
+
+  /** L'utente ha visto l'avviso (o ha liberato spazio): si riparte da zero. */
+  clearSpaceRefused(): void {
+    this.refused = 0;
+  }
+
   run(): Promise<MediaReport> {
     if (this.running) return this.running;
     this.running = this.drain().finally(() => {
@@ -215,7 +229,9 @@ export class MediaQueue {
           continue;
         }
         if (err instanceof ApiError && (err.status === 422 || err.status === 413)) {
-          // il server dice che il file non va bene: ripetere non serve
+          // il server dice che il file non va bene: ripetere non serve. Se è lo spazio finito, lo si ricorda
+          // per dirlo all'utente (il file locale si perde, ma la carta resta e l'utente sa cosa fare).
+          if (err.code === QUOTA_CODE) this.refused++;
           gone();
           report.dropped++;
           continue;

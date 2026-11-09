@@ -16,6 +16,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@/core/lock/LockCard', () => ({ LockCard: () => null }));
 jest.mock('@/features/reminders/RemindersCard', () => ({ RemindersCard: () => null }));
+jest.mock('@/features/account/SpaceCard', () => ({ SpaceCard: () => null }));
 jest.mock('@/ui/SyncBadge', () => ({ SyncBadge: () => null }));
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({

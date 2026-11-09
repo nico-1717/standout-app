@@ -3,7 +3,7 @@ import { migrate } from '@/core/db/migrations';
 import { ApiError } from '@/core/api/httpApi';
 import { enqueue } from '@/core/sync/outbox';
 
-import { MAX_NOT_FOUND, MediaQueue, isMediaSlot, type MediaApi } from '../mediaQueue';
+import { MAX_NOT_FOUND, MediaQueue, QUOTA_CODE, isMediaSlot, type MediaApi } from '../mediaQueue';
 
 function setup() {
   const db = memoryDb();
@@ -165,5 +165,21 @@ describe('MediaQueue', () => {
     q.dropRow('c1');
     expect(q.count()).toBe(0);
     expect(deleted).toEqual(['file:///a.jpg']);
+  });
+  test('a file refused because the space is full is dropped, counted, and the count can be cleared', async () => {
+    const { q, db, failWith } = setup();
+    q.putFile('fc_study_cards', 'c1', 'question_image', 'file:///a.jpg', 'image/jpeg');
+    failWith(new ApiError(413, QUOTA_CODE, 'full'));
+    expect(await q.run()).toEqual({ done: 0, waiting: 0, dropped: 1 });
+    expect(q.count()).toBe(0);
+    expect(q.spaceRefused()).toBe(1);
+    expect(imageOf(db)).toBeNull();
+    // un 422 qualunque (file non valido) non conta come spazio finito
+    q.putFile('fc_study_cards', 'c1', 'question_image', 'file:///b.jpg', 'image/jpeg');
+    failWith(new ApiError(422, 'invalid_file', 'bad'));
+    await q.run();
+    expect(q.spaceRefused()).toBe(1);
+    q.clearSpaceRefused();
+    expect(q.spaceRefused()).toBe(0);
   });
 });
