@@ -130,3 +130,28 @@ describe('pomodoro import: whole files', () => {
     ).toBeNull();
   });
 });
+
+describe('column choice', () => {
+  const rows = [
+    ['a', 'b', 'c', 'd'],
+    ['2026-11-01 10:00', 'Pomodoro', 'Algebra', '25'],
+  ];
+
+  test('without a header the guess is by position; the user can move the duration', () => {
+    const guess = parsePomodoroRows(rows);
+    // per posizione la durata è la sesta colonna: qui non c'è, quindi non c'è nessuna sessione
+    expect(guess).toBeNull();
+    const p = parsePomodoroRows(rows, { start: 0, dur: 3, type: 1, title: 2 });
+    expect(p?.sessions).toHaveLength(1);
+    expect(p?.sessions[0]).toMatchObject({ start: '2026-11-01 10:00:00', dur: 1500, mode: 0 });
+  });
+
+  test('turning the title off drops the sub-project', () => {
+    const withHeader = [
+      ['StartTime', 'Type', 'Title', 'Duration', 'List'],
+      ['2026-11-01 10:00', 'Pomodoro', 'Algebra', '25', 'Maths'],
+    ];
+    expect(parsePomodoroRows(withHeader)?.titles).toHaveLength(1);
+    expect(parsePomodoroRows(withHeader, { title: -1 })?.titles).toHaveLength(0);
+  });
+});

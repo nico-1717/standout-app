@@ -248,8 +248,24 @@ export function statusExcluded(raw: string): boolean {
   );
 }
 
+/** Le colonne scelte a mano per ciascun foglio (per numero): -1 = nessuna colonna per quel campo. */
+export type ColumnChoice = Record<number, Partial<Cols>>;
+
+/** Le colonne di un foglio come le ha capite l'app, con le scelte dell'utente sopra, e dove sta l'intestazione. */
+export function sheetColumns(
+  sheet: SheetData,
+  choice?: Partial<Cols>,
+): { headerAt: number; auto: Cols; cols: Cols } {
+  const { index: headerAt, cols: auto } = findHeader(sheet.rows);
+  return { headerAt, auto, cols: { ...auto, ...choice } };
+}
+
 /** Tutti i fogli di un file → abitudini e check-in da importare. */
-export function parseHabitSheets(sheets: SheetData[], fallbackName = 'Habit'): ImportParsed {
+export function parseHabitSheets(
+  sheets: SheetData[],
+  fallbackName = 'Habit',
+  choice?: ColumnChoice,
+): ImportParsed {
   const habits: ImportHabit[] = [];
   const logs: ImportLog[] = [];
   const warnings: ImportWarning[] = [];
@@ -257,8 +273,8 @@ export function parseHabitSheets(sheets: SheetData[], fallbackName = 'Habit'): I
   const skippedSheets: string[] = [];
   let skippedRows = 0;
 
-  for (const sheet of sheets) {
-    const { index: headerAt, cols } = findHeader(sheet.rows);
+  for (const [sheetAt, sheet] of sheets.entries()) {
+    const { headerAt, cols } = sheetColumns(sheet, choice?.[sheetAt]);
     const dataRows = sheet.rows.slice(headerAt + 1).filter((r) => !isEmptyRow(r));
     if (dataRows.length === 0) {
       skippedSheets.push(sheet.name);

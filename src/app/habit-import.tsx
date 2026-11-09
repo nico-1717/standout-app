@@ -5,19 +5,35 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
-import { readXlsx } from '@/core/files/xlsx';
+import { columnsOf } from '@/core/files/columns';
+import { readXlsx, type SheetData } from '@/core/files/xlsx';
 import { pickDocument } from '@/core/media/pickFile';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import {
   parseHabitSheets,
   readImportFile,
+  sheetColumns,
+  type ColumnChoice,
+  type ColKey,
   type ImportParsed,
   type ImportWarning,
 } from '@/features/habits/importFile';
 import { planImport, saveImport, type ImportResult } from '@/features/habits/importSave';
+import { ColumnChooser } from '@/features/import/ColumnChooser';
 import { Card, Header, PrimaryButton, TextButton } from '@/ui/kit';
 
 const SHOWN = 30;
+
+/** I campi che l'importazione cerca, nell'ordine in cui si mostrano. */
+const FIELDS: { key: ColKey; label: string }[] = [
+  { key: 'habit', label: 'import.campo_abitudine' },
+  { key: 'date', label: 'import.campo_data' },
+  { key: 'time', label: 'import.campo_ora' },
+  { key: 'status', label: 'import.campo_stato' },
+  { key: 'count', label: 'import.campo_checkin' },
+  { key: 'mood', label: 'import.campo_umore' },
+  { key: 'note', label: 'import.campo_nota' },
+];
 
 /**
  * «Importa» (habits_import.php): si sceglie un .xlsx o .csv di un'altra app, si vede cosa c'è dentro (abitudini nuove o già
@@ -39,6 +55,11 @@ export default function HabitImportScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  // il file letto e le colonne scelte a mano: cambiando una colonna si rilegge il file
+  const [sheets, setSheets] = useState<SheetData[]>([]);
+  const [choice, setChoice] = useState<ColumnChoice>({});
+  const [showCols, setShowCols] = useState(false);
+  const [sheetAt, setSheetAt] = useState(0);
 
   const existing = useMemo(
     () =>
@@ -62,24 +83,36 @@ export default function HabitImportScreen() {
     }
   };
 
+  /** Legge i fogli con le colonne date; ritorna false se non ci sono abitudini (e dice perché). */
+  const analyse = (sh: SheetData[], ch: ColumnChoice): boolean => {
+    const p = parseHabitSheets(sh, t('import.abitudine_importata'), ch);
+    if (!p.habits.length) {
+      setParsed(null);
+      setError(t('import.nessuna_abitudine'));
+      return false;
+    }
+    const pl = planImport(p, existing);
+    setError('');
+    setParsed(p);
+    setLink(Object.fromEntries(pl.map((r) => [r.key, r.existing])));
+    setOpen(null);
+    setMore(false);
+    return true;
+  };
+
   const choose = async () => {
     setError('');
     setBusy(true);
     try {
       const doc = await pickDocument();
       if (!doc) return;
-      const sheets = readImportFile(doc.name, doc.bytes, readXlsx);
-      const p = parseHabitSheets(sheets, t('import.abitudine_importata'));
-      if (!p.habits.length) {
-        setError(t('import.nessuna_abitudine'));
-        return;
-      }
-      const pl = planImport(p, existing);
+      const read = readImportFile(doc.name, doc.bytes, readXlsx);
       setFileName(doc.name);
-      setParsed(p);
-      setLink(Object.fromEntries(pl.map((r) => [r.key, r.existing])));
-      setOpen(null);
-      setMore(false);
+      setSheets(read);
+      setChoice({});
+      setSheetAt(0);
+      // se l'app non ha capito nulla, si apre subito la scelta delle colonne
+      setShowCols(!analyse(read, {}));
     } catch (e) {
       const code = e instanceof Error ? e.message : '';
       setError(
@@ -90,6 +123,57 @@ export default function HabitImportScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const pickColumn = (key: ColKey, index: number) => {
+    const next: ColumnChoice = { ...choice, [sheetAt]: { ...choice[sheetAt], [key]: index } };
+    setChoice(next);
+    analyse(sheets, next);
+  };
+
+  const columnsCard = () => {
+    const sheet = sheets[sheetAt];
+    if (!sheet) return null;
+    const { headerAt, cols } = sheetColumns(sheet, choice[sheetAt]);
+    return (
+      <Card>
+        <View style={{ padding: 16, gap: 12 }}>
+          <Text style={{ color: th.text, fontSize: 16, fontWeight: '700' }}>
+            {t('import.colonne_titolo')}
+          </Text>
+          {sheets.length > 1 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {sheets.map((sh, i) => (
+                <Pressable
+                  key={i}
+                  testID={`hi-sheet-${i}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: i === sheetAt }}
+                  onPress={() => setSheetAt(i)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    backgroundColor: i === sheetAt ? th.brand : th.surface2,
+                  }}
+                >
+                  <Text style={{ color: i === sheetAt ? '#fff' : th.text, fontSize: 13 }}>
+                    {sh.name || `#${i + 1}`}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          <ColumnChooser
+            idPrefix="hi-col"
+            fields={FIELDS.map((f) => ({ key: f.key, label: t(f.label) }))}
+            columns={columnsOf(sheet, headerAt)}
+            value={cols}
+            onChange={(k, i) => pickColumn(k as ColKey, i)}
+          />
+        </View>
+      </Card>
+    );
   };
 
   const save = () => {
@@ -150,34 +234,37 @@ export default function HabitImportScreen() {
             </View>
           </Card>
         ) : !parsed ? (
-          <Card>
-            <View style={{ padding: 16, gap: 12 }}>
-              <Text style={{ color: th.text, fontSize: 17, fontWeight: '600' }}>
-                {t('import.scegli_file')}
-              </Text>
-              <Text style={{ color: th.text2, fontSize: 14, lineHeight: 20 }}>
-                {t('import.spiegazione')
-                  .replace(/<br\s*\/?>/g, '\n')
-                  .replace(/<[^>]+>/g, '')}
-              </Text>
-              <Text style={{ color: th.text3, fontSize: 13 }}>{t('import.formati')}</Text>
-              <PrimaryButton
-                testID="hi-pick"
-                label={t('import.sfoglia')}
-                busy={busy}
-                onPress={() => void choose()}
-              />
-              {error ? (
-                <Text
-                  testID="hi-error"
-                  accessibilityRole="alert"
-                  style={{ color: th.red, fontSize: 14 }}
-                >
-                  {error}
+          <>
+            <Card>
+              <View style={{ padding: 16, gap: 12 }}>
+                <Text style={{ color: th.text, fontSize: 17, fontWeight: '600' }}>
+                  {t('import.scegli_file')}
                 </Text>
-              ) : null}
-            </View>
-          </Card>
+                <Text style={{ color: th.text2, fontSize: 14, lineHeight: 20 }}>
+                  {t('import.spiegazione')
+                    .replace(/<br\s*\/?>/g, '\n')
+                    .replace(/<[^>]+>/g, '')}
+                </Text>
+                <Text style={{ color: th.text3, fontSize: 13 }}>{t('import.formati')}</Text>
+                <PrimaryButton
+                  testID="hi-pick"
+                  label={t('import.sfoglia')}
+                  busy={busy}
+                  onPress={() => void choose()}
+                />
+                {error ? (
+                  <Text
+                    testID="hi-error"
+                    accessibilityRole="alert"
+                    style={{ color: th.red, fontSize: 14 }}
+                  >
+                    {error}
+                  </Text>
+                ) : null}
+              </View>
+            </Card>
+            {sheets.length > 0 ? columnsCard() : null}
+          </>
         ) : (
           <>
             <Card>
@@ -192,15 +279,24 @@ export default function HabitImportScreen() {
                   {t('import.n_nuove_su', { nuove: newCount, tot: plan.length })}
                 </Text>
                 <TextButton
+                  testID="hi-columns"
+                  label={t('import.colonne_controlla')}
+                  onPress={() => setShowCols(!showCols)}
+                />
+                <TextButton
                   testID="hi-change"
                   label={t('import.cambia_file')}
                   onPress={() => {
                     setParsed(null);
+                    setSheets([]);
+                    setChoice({});
+                    setShowCols(false);
                     setError('');
                   }}
                 />
               </View>
             </Card>
+            {showCols ? columnsCard() : null}
             {parsed.warnings.length > 0 && (
               <Card>
                 <View testID="hi-warnings" style={{ padding: 16, gap: 6 }}>

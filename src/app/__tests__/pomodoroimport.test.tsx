@@ -85,4 +85,22 @@ describe('pomodoro import screen', () => {
     await fireEvent.press(screen.getByTestId('pi-pick'));
     expect(screen.queryByTestId('pi-save')).toBeNull();
   });
+
+  test('when the columns are not recognised, the chooser opens and the duration can be picked', async () => {
+    const { db } = setup();
+    (pickDocument as jest.Mock).mockResolvedValueOnce(
+      csv('a,b,c,d\n2026-11-01 10:00,Pomodoro,Algebra,25\n'),
+    );
+    await render(wrap(<PomodoroImportScreen />));
+    await fireEvent.press(screen.getByTestId('pi-pick'));
+    await waitFor(() => expect(screen.getByTestId('pi-error')).toBeTruthy());
+    expect(screen.getByTestId('pi-col-chooser')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('pi-col-start-0'));
+    await fireEvent.press(screen.getByTestId('pi-col-dur-3'));
+    await waitFor(() => expect(screen.getByTestId('pi-save')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('pi-save'));
+    expect(
+      db.all<{ n: number }>('SELECT COUNT(*) AS n FROM pomodoro_sessions')[0]!.n,
+    ).toBeGreaterThanOrEqual(1);
+  });
 });

@@ -104,4 +104,42 @@ describe('habit import screen', () => {
     expect(screen.queryByTestId('hi-save')).toBeNull();
     expect(screen.queryByTestId('hi-error')).toBeNull();
   });
+
+  test('when the app cannot find the date, the column chooser opens and fixes it', async () => {
+    const { habits } = setup();
+    (pickDocument as jest.Mock).mockResolvedValueOnce(
+      csv('x,y,when\na,b,2026-11-01\nc,d,2026-11-02\n'),
+    );
+    await render(wrap(<HabitImportScreen />));
+    await fireEvent.press(screen.getByTestId('hi-pick'));
+    await waitFor(() => expect(screen.getByTestId('hi-error')).toBeTruthy());
+    expect(screen.getByTestId('hi-col-chooser')).toBeTruthy();
+    expect(screen.queryByTestId('hi-save')).toBeNull();
+    // un esempio dei valori della colonna che si guarda
+    await fireEvent.press(screen.getByTestId('hi-col-date-2'));
+    await waitFor(() => expect(screen.getByTestId('hi-save')).toBeTruthy());
+    expect(screen.getByTestId('hi-col-date-example')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('hi-save'));
+    const all = habits.list();
+    expect(all).toHaveLength(1);
+    expect(habits.logsOf(all[0]!.uuid).map((l) => l.log_date)).toEqual([
+      '2026-11-01',
+      '2026-11-02',
+    ]);
+  });
+
+  test('from the preview the chooser can be opened and a column switched off', async () => {
+    setup();
+    (pickDocument as jest.Mock).mockResolvedValueOnce(
+      csv('Habit,Date,Note\nRun,2026-11-01,felt good\n'),
+    );
+    await render(wrap(<HabitImportScreen />));
+    await fireEvent.press(screen.getByTestId('hi-pick'));
+    await waitFor(() => expect(screen.getByTestId('hi-columns')).toBeTruthy());
+    expect(screen.queryByTestId('hi-col-chooser')).toBeNull();
+    await fireEvent.press(screen.getByTestId('hi-columns'));
+    expect(screen.getByTestId('hi-col-chooser')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('hi-col-note-none'));
+    expect(screen.getByTestId('hi-save')).toBeTruthy();
+  });
 });

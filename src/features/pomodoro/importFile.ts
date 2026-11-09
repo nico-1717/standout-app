@@ -364,8 +364,9 @@ const cleanName = (v: string): string => {
 };
 
 /** Il primo foglio di un file → liste, titoli e sessioni da importare. Torna null se non c'è nessuna sessione valida. */
-export function parsePomodoroRows(allRows: string[][]): PomoParsed | null {
-  const { index: headerAt, cols } = findHeader(allRows);
+export function parsePomodoroRows(allRows: string[][], choice?: Partial<PCols>): PomoParsed | null {
+  const { index: headerAt, cols: auto } = findHeader(allRows);
+  const cols: PCols = { ...auto, ...choice };
   const header = headerAt >= 0 ? (allRows[headerAt] ?? []) : [];
   const durHeader = cols.dur >= 0 && header[cols.dur] !== undefined ? norm(header[cols.dur]!) : '';
   const rows = allRows.slice(headerAt + 1).filter((r) => r.some((c) => c.trim() !== ''));
@@ -457,7 +458,19 @@ export function parsePomodoroRows(allRows: string[][]): PomoParsed | null {
 }
 
 /** Un file scelto → le sue sessioni. Come il sito legge solo il primo foglio. Lancia come `readImportFile` degli esercizi. */
-export function parsePomodoroSheets(sheets: SheetData[]): PomoParsed | null {
+export function parsePomodoroSheets(
+  sheets: SheetData[],
+  choice?: Partial<PCols>,
+): PomoParsed | null {
   const first = sheets[0];
-  return first ? parsePomodoroRows(first.rows) : null;
+  return first ? parsePomodoroRows(first.rows, choice) : null;
+}
+
+/** Le colonne del primo foglio come le ha capite l'app, con le scelte dell'utente sopra, e dove sta l'intestazione. */
+export function pomodoroColumns(
+  sheet: SheetData,
+  choice?: Partial<PCols>,
+): { headerAt: number; cols: PCols } {
+  const { index: headerAt, cols: auto } = findHeader(sheet.rows);
+  return { headerAt, cols: { ...auto, ...choice } };
 }

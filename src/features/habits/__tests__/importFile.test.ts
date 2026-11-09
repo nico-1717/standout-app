@@ -11,6 +11,7 @@ import {
   parseHabitSheets,
   parseTime,
   readImportFile,
+  sheetColumns,
   statusExcluded,
 } from '../importFile';
 import { HabitsRepo } from '../repo';
@@ -161,5 +162,46 @@ describe('import: whole files', () => {
       expect(r.logs.find((l) => l.date === '2026-11-01')!.count).toBe(2);
       expect(r.warnings).toEqual([]);
     }
+  });
+});
+
+describe('column choice', () => {
+  const sheet = (rows: string[][]) => ({ name: 'Run', rows });
+
+  test('with no recognisable header the date is not found, until the user picks its column', () => {
+    const rows = [
+      ['x', 'y', 'when'],
+      ['a', 'b', '2026-11-01'],
+      ['c', 'd', '2026-11-02'],
+    ];
+    expect(parseHabitSheets([sheet(rows)]).habits).toHaveLength(0);
+    const p = parseHabitSheets([sheet(rows)], 'Habit', { 0: { date: 2 } });
+    expect(p.habits.map((h) => h.name)).toEqual(['Run']);
+    expect(p.logs.map((l) => l.date)).toEqual(['2026-11-01', '2026-11-02']);
+  });
+
+  test('a column can be turned off, and the choice is per sheet', () => {
+    const rows = [
+      ['Date', 'Habit Log'],
+      ['2026-11-01', 'felt good'],
+    ];
+    expect(parseHabitSheets([sheet(rows)]).logs[0]!.note).toBe('felt good');
+    const off = parseHabitSheets([sheet(rows)], 'Habit', { 0: { note: -1 } });
+    expect(off.logs[0]!.note).toBe('');
+    // la scelta del foglio 1 non tocca il foglio 0
+    const two = parseHabitSheets([sheet(rows), sheet(rows)], 'Habit', { 1: { note: -1 } });
+    expect(two.logs.map((l) => l.note)).toEqual(['felt good', '']);
+  });
+
+  test('sheetColumns shows the guess with the choice on top', () => {
+    const rows = [
+      ['Date', 'Time'],
+      ['2026-11-01', '10:00'],
+    ];
+    const r = sheetColumns(sheet(rows), { time: -1 });
+    expect(r.headerAt).toBe(0);
+    expect(r.auto.time).toBe(1);
+    expect(r.cols.time).toBe(-1);
+    expect(r.cols.date).toBe(0);
   });
 });
