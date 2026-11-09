@@ -304,6 +304,37 @@ describe('Pomodoro screen', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ current_break: null });
   });
 
+  test('a break shows the drawing and one short tip; when it is over the tip goes away', async () => {
+    setup();
+    mockSettings = {
+      ...DEFAULT_POMODORO_SETTINGS,
+      current_break: {
+        start_time: stamp(new Date(Date.now() - 60000)),
+        planned_duration_min: 5,
+        project_uuid: null,
+      },
+    };
+    await renderIt();
+    expect(screen.getByTestId('break-scene')).toBeTruthy();
+    expect(screen.getByTestId('break-tip').props.children).toEqual(expect.any(String));
+    expect(screen.getByTestId('break-tip').props.children).not.toMatch(/pausa_consiglio/);
+  });
+
+  test('a finished break has no tip', async () => {
+    setup();
+    mockSettings = {
+      ...DEFAULT_POMODORO_SETTINGS,
+      current_break: {
+        start_time: stamp(new Date(Date.now() - 10 * 60000)),
+        planned_duration_min: 5,
+        project_uuid: null,
+      },
+    };
+    await renderIt();
+    expect(screen.queryByTestId('break-tip')).toBeNull();
+    expect(screen.getByTestId('break-scene')).toBeTruthy();
+  });
+
   test('saves a custom duration and deletes it again', async () => {
     const { pomodoro } = setup();
     await renderIt();

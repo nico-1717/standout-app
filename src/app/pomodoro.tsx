@@ -18,6 +18,8 @@ import {
   type Session,
 } from '@/features/pomodoro/logic';
 import type { PresetKind } from '@/features/pomodoro/repo';
+import { BreakScene } from '@/features/pomodoro/BreakScene';
+import { breakTipIndex } from '@/features/pomodoro/breakTips';
 import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
@@ -524,14 +526,23 @@ export default function PomodoroScreen() {
     const total = brk.planned_duration_min * 60;
     const left = total - Math.floor((nowMs - stampMs(brk.start_time)) / 1000);
     const over = left <= 0;
+    const tip = t(`pomodoro.pausa_consiglio_${breakTipIndex(brk.start_time)}`);
     body = (
       <View style={{ gap: 14 }}>
+        <View style={{ alignItems: 'center' }}>
+          <BreakScene color={th.text} accent={th.teal} />
+        </View>
         {big(
           clock(Math.max(0, left)),
           over ? 1 : 1 - left / total,
           th.teal,
           over ? t('pomodoro.pausa_finita') : t('pomodoro.pausa_in_corso'),
         )}
+        {!over ? (
+          <Text testID="break-tip" style={{ color: th.text2, textAlign: 'center' }}>
+            {tip}
+          </Text>
+        ) : null}
         {over ? (
           <Text style={{ color: th.text2, textAlign: 'center' }}>
             {t('pomodoro.torna_al_lavoro')}
