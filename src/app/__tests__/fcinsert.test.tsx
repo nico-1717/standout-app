@@ -6,7 +6,7 @@ import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { MediaQueue } from '@/core/media/mediaQueue';
 import { imageFromLink } from '@/core/media/fetchImage';
-import { pickImage } from '@/core/media/pickImage';
+import { pickImage, pickImages } from '@/core/media/pickImage';
 import { FlashcardsRepo } from '@/features/flashcards/repo';
 
 import InsertScreen from '../fc-insert';
@@ -14,7 +14,7 @@ import InsertScreen from '../fc-insert';
 jest.mock('@/core/media/phoneFiles', () => ({
   keepFile: jest.fn((uri: string) => `file:///docs/media_queue/${uri.split('/').pop()}`),
 }));
-jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
+jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn(), pickImages: jest.fn() }));
 jest.mock('@/core/media/fetchImage', () => ({ imageFromLink: jest.fn() }));
 const mockTrigger = jest.fn();
 let mockServices: unknown;
@@ -275,5 +275,96 @@ describe('insert many cards', () => {
     expect(screen.getByTestId('fci-mode-paste')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fci-mode-rows'));
     expect(screen.getByTestId('fci-q-0').props.value).toBe('');
+  });
+  describe('from images', () => {
+    const pics = (prefix: string, n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        uri: `file:///docs/${prefix}${i}.jpg`,
+        mime: 'image/jpeg',
+      }));
+
+    test('questions and answers are paired in order; fixing a pair by tapping changes the cards', async () => {
+      const { flashcards, deck, db } = setup();
+      (pickImages as jest.Mock)
+        .mockResolvedValueOnce(pics('q', 3))
+        .mockResolvedValueOnce(pics('a', 3));
+      await render(wrap(<InsertScreen />));
+      await fireEvent.press(screen.getByTestId('fci-mode-images'));
+      await fireEvent.press(screen.getByTestId('fci-pics-q'));
+      await fireEvent.press(screen.getByTestId('fci-pics-a'));
+      expect(screen.getByTestId('fci-pics-note')).toHaveTextContent(/3 cards at most/);
+      await fireEvent.press(screen.getByTestId('fci-pics-create'));
+      expect(screen.getByTestId('fcm-sheet')).toBeTruthy();
+      expect(screen.getByTestId('fcm-count')).toHaveTextContent('3 pairs · 0 unmatched');
+
+      // q0 era con a0: la si libera e la si lega ad a2 (che era di q2)
+      await fireEvent.press(screen.getByTestId('fcm-q-0'));
+      await fireEvent.press(screen.getByTestId('fcm-a-2'));
+      expect(screen.getByTestId('fcm-count')).toHaveTextContent('2 pairs · 2 unmatched');
+      await fireEvent.press(screen.getByTestId('fcm-create'));
+
+      const cards = flashcards.cards(deck);
+      expect(cards).toHaveLength(4);
+      const files = db.all<{ slot: string; file: string }>(
+        'SELECT slot, file FROM media_queue ORDER BY file',
+      );
+      expect(files.map((f) => f.file.split('/').pop())).toEqual([
+        'a0.jpg',
+        'a1.jpg',
+        'a2.jpg',
+        'q0.jpg',
+        'q1.jpg',
+        'q2.jpg',
+      ]);
+      // q0 e a2 sono sulla stessa carta
+      const rows = db.all<{ row_uuid: string; file: string }>(
+        'SELECT row_uuid, file FROM media_queue',
+      );
+      const card = (name: string) => rows.find((r) => r.file.endsWith(name))!.row_uuid;
+      expect(card('q0.jpg')).toBe(card('a2.jpg'));
+      expect(card('q1.jpg')).toBe(card('a1.jpg'));
+      expect(new Set([card('q2.jpg'), card('a0.jpg')]).size).toBe(2);
+      expect(mockTrigger).toHaveBeenCalled();
+      expect(screen.getByTestId('fci-done')).toHaveTextContent(/Cards created: 4/);
+    });
+
+    test('with only one group there is nothing to match: one card per picture, no sheet', async () => {
+      const { flashcards, deck } = setup();
+      (pickImages as jest.Mock).mockResolvedValueOnce(pics('q', 2));
+      await render(wrap(<InsertScreen />));
+      await fireEvent.press(screen.getByTestId('fci-mode-images'));
+      await fireEvent.press(screen.getByTestId('fci-pics-q'));
+      expect(screen.getByTestId('fci-pics-note')).toHaveTextContent('2 cards, one per image.');
+      await fireEvent.press(screen.getByTestId('fci-pics-create'));
+      expect(screen.queryByTestId('fcm-sheet')).toBeNull();
+      expect(flashcards.cards(deck)).toHaveLength(2);
+    });
+
+    test('cancelling the pairing creates nothing; with no pictures chosen nothing happens', async () => {
+      const { flashcards, deck } = setup();
+      (pickImages as jest.Mock)
+        .mockResolvedValueOnce(pics('q', 2))
+        .mockResolvedValueOnce(pics('a', 2));
+      await render(wrap(<InsertScreen />));
+      await fireEvent.press(screen.getByTestId('fci-mode-images'));
+      await fireEvent.press(screen.getByTestId('fci-pics-create'));
+      expect(screen.queryByTestId('fcm-sheet')).toBeNull();
+      await fireEvent.press(screen.getByTestId('fci-pics-q'));
+      await fireEvent.press(screen.getByTestId('fci-pics-a'));
+      await fireEvent.press(screen.getByTestId('fci-pics-create'));
+      await fireEvent.press(screen.getByTestId('fcm-cancel'));
+      expect(screen.queryByTestId('fcm-sheet')).toBeNull();
+      expect(flashcards.cards(deck)).toHaveLength(0);
+    });
+
+    test('a choice that is cancelled in the picker keeps the previous pictures', async () => {
+      setup();
+      (pickImages as jest.Mock).mockResolvedValueOnce(pics('q', 2)).mockResolvedValueOnce([]);
+      await render(wrap(<InsertScreen />));
+      await fireEvent.press(screen.getByTestId('fci-mode-images'));
+      await fireEvent.press(screen.getByTestId('fci-pics-q'));
+      await fireEvent.press(screen.getByTestId('fci-pics-q'));
+      expect(screen.getByTestId('fci-pics-note')).toHaveTextContent('2 cards, one per image.');
+    });
   });
 });

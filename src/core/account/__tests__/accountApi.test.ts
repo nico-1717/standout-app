@@ -140,4 +140,25 @@ describe('AccountApi', () => {
     }));
     await expect(rl.api.placeDetails('r', 'en')).rejects.toBeInstanceOf(ApiError);
   });
+  test('diaryAiRun posts to the website page with the language; "expected" refusals are replies, not errors', async () => {
+    const { api, calls } = make(() => ({
+      status: 200,
+      json: { ok: false, error: 'limite_piano', stima: 40, disponibili: 10 },
+    }));
+    const r = await api.diaryAiRun({ azione: 'stima', anno: 2026, q: 3 }, 'it-IT');
+    expect(r).toMatchObject({ ok: false, error: 'limite_piano', stima: 40 });
+    expect(calls[0].url).toBe('https://site/planner/diario_ai.php?lang=it');
+    expect(calls[0].method).toBe('POST');
+    expect(calls[0].body).toEqual({ azione: 'stima', anno: 2026, q: 3 });
+  });
+
+  test('diaryAiRun: a server page that is not JSON is an error', async () => {
+    const fn = (async () => ({
+      ok: false,
+      status: 502,
+      text: async () => '<html>',
+    })) as unknown as typeof fetch;
+    const api = new AccountApi('https://site', async () => 't', '1', 'ios', fn);
+    await expect(api.diaryAiRun({}, 'en')).rejects.toBeInstanceOf(ApiError);
+  });
 });

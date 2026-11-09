@@ -50,6 +50,29 @@ export interface StorageUsage {
   quota: number;
 }
 
+/** La risposta di `/planner/diario_ai.php`: gli errori attesi (crediti finiti, troppo poco scritto…) sono risposte, non guasti. */
+export type DiaryAiReply = {
+  ok: boolean;
+  error?: string;
+  /** l'IA ha sbagliato ma non ha addebitato niente: si può riprovare */
+  riprovabile?: boolean;
+  /** crediti stimati / disponibili */
+  stima?: number;
+  /** `null` = il piano non ha un limite */
+  disponibili?: number | null;
+  sufficiente?: boolean;
+  id?: number;
+  titolo?: string;
+  capitoli?: string[];
+  pezzi?: number;
+  fatto?: boolean;
+  fatti?: number;
+  totale?: number;
+  capitolo?: string;
+  crediti?: number;
+  libro_possibile?: boolean;
+};
+
 /** Un posto proposto dalla ricerca. Le coordinate ci sono già solo con la scorta (OpenStreetMap); con Google arrivano dopo. */
 export interface PlaceHit {
   name: string;
@@ -227,6 +250,27 @@ export class AccountApi {
         await this.send('GET', `/api/v1/diary/ai/books/${Math.trunc(id)}`),
       )
     ).book;
+  }
+
+  /**
+   * Il diario e l'IA (resoconto del trimestre, libro): la STESSA pagina del sito, che accetta anche il token dell'app
+   * (stesso piano, stessi crediti, stessi limiti). Serve rete. `azione`: stima | resoconto | libro_piano | libro_avanti.
+   */
+  async diaryAiRun(body: Record<string, unknown>, lang: string): Promise<DiaryAiReply> {
+    const res = await this.send(
+      'POST',
+      `/planner/diario_ai.php?lang=${encodeURIComponent(lang.slice(0, 2))}`,
+      body,
+    );
+    let j: DiaryAiReply | null = null;
+    try {
+      j = JSON.parse(await res.text()) as DiaryAiReply;
+    } catch {
+      /* pagina d'errore del server */
+    }
+    // una risposta del sito con {ok:false,error} è una risposta: chi chiama decide cosa dire
+    if (j && typeof j.ok === 'boolean') return j;
+    throw new ApiError(res.status, 'http_error', `HTTP ${res.status}`);
   }
 
   /** Reinvia l'email di verifica. Ritorna lo stato del server: inviata | gia_verificata | attendi | errore. */

@@ -12,10 +12,13 @@ export function AiList({
   d,
   list,
   onOpen,
+  bare = false,
 }: {
   d: DiaryTheme;
   list: AiListData;
   onOpen: (kind: 'report' | 'book', id: number) => void;
+  /** il titolo «Resoconti e libro» lo scrive già chi sta sopra */
+  bare?: boolean;
 }) {
   const { t } = useTranslation();
   if (!list.reports.length && !list.books.length) return null;
@@ -42,12 +45,14 @@ export function AiList({
   );
   return (
     <View testID="ai-list" style={{ gap: 8, marginTop: 20 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: d.ink, fontFamily: d.serif, fontSize: 20, fontWeight: '700' }}
-      >
-        {t('diario.dn_ai_titolo')}
-      </Text>
+      {bare ? null : (
+        <Text
+          accessibilityRole="header"
+          style={{ color: d.ink, fontFamily: d.serif, fontSize: 20, fontWeight: '700' }}
+        >
+          {t('diario.dn_ai_titolo')}
+        </Text>
+      )}
       {list.reports.map((r) =>
         row(
           `ai-report-${r.id}`,

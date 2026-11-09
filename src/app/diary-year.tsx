@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { diaryTheme } from '@/features/diary/diaryTheme';
 import type { AiList as AiListData } from '@/features/diary/aiReading';
 import { AiList } from '@/features/diary/AiList';
+import { AiMaker } from '@/features/diary/AiMaker';
 import type { Insights } from '@/features/diary/insights';
 import { YearPage } from '@/features/diary/YearPage';
 import { localToday } from '@/features/tasks/groups';
@@ -16,7 +17,7 @@ import { localToday } from '@/features/tasks/groups';
 /** «Il diario in numeri»: l'anno a colpo d'occhio. I numeri li calcola il server, quindi serve la rete. */
 export default function DiaryYearScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { account, uiStyle, diarySettings } = useApp();
@@ -28,6 +29,8 @@ export default function DiaryYearScreen() {
   );
   const [retry, setRetry] = useState(0);
   const [ai, setAi] = useState<AiListData | null>(null);
+  const [aiTick, setAiTick] = useState(0);
+  const refreshAi = () => setAiTick((n) => n + 1);
 
   // i resoconti e i libri dell'IA: se non si riesce a leggerli, la lista semplicemente non c'è
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function DiaryYearScreen() {
     return () => {
       alive = false;
     };
-  }, [account]);
+  }, [account, aiTick]);
 
   useEffect(() => {
     let alive = true;
@@ -156,10 +159,23 @@ export default function DiaryYearScreen() {
             onOpenDay={(date) => router.push({ pathname: '/diary', params: { data: date } })}
           />
         )}
+        {!loading && load.data ? (
+          <AiMaker
+            d={d}
+            data={load.data}
+            list={ai}
+            api={{ run: (body) => account.diaryAiRun(body, i18n.language) }}
+            onChanged={refreshAi}
+            onOpen={(kind, id) =>
+              router.push({ pathname: '/diary-read', params: { [kind]: String(id) } })
+            }
+          />
+        ) : null}
         {ai ? (
           <AiList
             d={d}
             list={ai}
+            bare={!loading && !!load.data}
             onOpen={(kind, id) =>
               router.push({ pathname: '/diary-read', params: { [kind]: String(id) } })
             }

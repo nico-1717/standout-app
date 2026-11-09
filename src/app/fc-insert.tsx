@@ -6,10 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
-import { pickImage } from '@/core/media/pickImage';
+import { pickImage, pickImages } from '@/core/media/pickImage';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DraftAudioField } from '@/features/media/DraftAudioField';
 import { MAX_LINK_JOBS, attachLinkImages, type LinkJob } from '@/features/flashcards/linkImages';
+import { ImageMatchSheet } from '@/features/flashcards/ImageMatchSheet';
+import { needsMatching, singleCards, type ImageCard } from '@/features/flashcards/imageMatch';
 import { PasteImport } from '@/features/flashcards/PasteImport';
 import {
   loadInsertDraft,
@@ -20,7 +22,7 @@ import {
 } from '@/features/flashcards/insertRows';
 import { Card, Header, PrimaryButton } from '@/ui/kit';
 
-type Mode = 'paste' | 'rows';
+type Mode = 'paste' | 'rows' | 'images';
 /**
  * Inserisci molte carte in un mazzo (fc_insert.php, fc_smart_import.js): o si incolla un testo e si capisce da solo il formato
  * (Excel, CSV, JSON, «domanda - risposta»), oppure si scrivono le righe una sotto l'altra. Parametro `deck`.
@@ -42,6 +44,10 @@ export default function InsertScreen() {
     () => (services ? loadInsertDraft(services.db, deckId) : null) ?? [{ q: '', a: '' }],
   );
   const [done, setDone] = useState<number | null>(null);
+  // «dalle immagini»: le foto scelte per le domande e per le risposte, e l'abbinamento aperto
+  const [qPics, setQPics] = useState<string[]>([]);
+  const [aPics, setAPics] = useState<string[]>([]);
+  const [matching, setMatching] = useState(false);
   const [pictures, setPictures] = useState<{
     done: number;
     total: number;
@@ -149,6 +155,20 @@ export default function InsertScreen() {
     const file = await pickImage(source);
     if (file) setPhoto(i, key, file.uri);
   };
+  const createFromImages = (cards: ImageCard[]) => {
+    setMatching(false);
+    saveAll(
+      cards.map((c): NewCard => ({
+        q: '',
+        a: '',
+        kid: false,
+        ...(c.q ? { qi: c.q } : {}),
+        ...(c.a ? { ai: c.a } : {}),
+      })),
+    );
+    setQPics([]);
+    setAPics([]);
+  };
   const rowsToSave = rowsToCreate(rows);
   const input = {
     backgroundColor: th.surface2,
@@ -187,6 +207,7 @@ export default function InsertScreen() {
             [
               ['paste', t('fc.ibfai_sec_importa_titolo')],
               ['rows', t('fc.app_aggiungi_carta')],
+              ['images', t('fc.ibfai_sec_img_titolo')],
             ] as [Mode, string][]
           ).map(([m, label]) => (
             <Pressable
@@ -227,7 +248,76 @@ export default function InsertScreen() {
           </Text>
         ) : null}
 
-        {mode === 'paste' ? (
+        {mode === 'images' ? (
+          <View style={{ gap: 12 }}>
+            <Text style={{ color: th.text2 }}>{t('fc.ibfai_sec_img_sub')}</Text>
+            {(
+              [
+                ['q', 'fc.ibfai_immagini_domande', qPics, setQPics],
+                ['a', 'fc.ibfai_immagini_risposte', aPics, setAPics],
+              ] as const
+            ).map(([side, label, pics, setPics]) => (
+              <Card key={side} style={{ padding: 12, gap: 8 }}>
+                <Text style={{ color: th.text, fontWeight: '700' }}>{t(label)}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {pics.map((u, i) => (
+                    <Image
+                      key={u + i}
+                      source={{ uri: u }}
+                      contentFit="cover"
+                      accessibilityIgnoresInvertColors
+                      style={{ width: 44, height: 44, borderRadius: 8 }}
+                    />
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 18 }}>
+                  <Pressable
+                    testID={`fci-pics-${side}`}
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setDone(null);
+                      void pickImages().then((got) => {
+                        if (got.length) setPics(got.map((g) => g.uri));
+                      });
+                    }}
+                    hitSlop={6}
+                  >
+                    <Text style={{ color: th.brand, fontWeight: '600' }}>
+                      🖼 {pics.length ? `${pics.length} ✓` : t(label)}
+                    </Text>
+                  </Pressable>
+                  {pics.length ? (
+                    <Pressable
+                      testID={`fci-pics-${side}-clear`}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('vocab.mi_rimuovi_immagine')}
+                      onPress={() => setPics([])}
+                      hitSlop={8}
+                    >
+                      <Text style={{ color: th.red }}>✕</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </Card>
+            ))}
+            {qPics.length || aPics.length ? (
+              <Text testID="fci-pics-note" style={{ color: th.text2, fontSize: 13 }}>
+                {needsMatching(qPics.length, aPics.length)
+                  ? t('fc.ibfai_nota_abbinamento', { n: Math.max(qPics.length, aPics.length) })
+                  : t('fc.ibfai_nota_una_immagine', { n: qPics.length || aPics.length })}
+              </Text>
+            ) : null}
+            <PrimaryButton
+              testID="fci-pics-create"
+              label={t('fc.ibfai_crea_carte')}
+              onPress={() => {
+                if (!qPics.length && !aPics.length) return;
+                if (needsMatching(qPics.length, aPics.length)) setMatching(true);
+                else createFromImages(singleCards(qPics, aPics));
+              }}
+            />
+          </View>
+        ) : mode === 'paste' ? (
           <PasteImport
             onCreate={saveAll}
             onEdit={() => {
@@ -391,6 +481,13 @@ export default function InsertScreen() {
           </View>
         )}
       </ScrollView>
+      <ImageMatchSheet
+        visible={matching}
+        questions={qPics}
+        answers={aPics}
+        onCancel={() => setMatching(false)}
+        onCreate={createFromImages}
+      />
     </View>
   );
 }

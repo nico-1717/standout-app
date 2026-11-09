@@ -171,7 +171,7 @@ describe.each(['standard', 'paper'] as const)('Diary insights screen (%s)', (sty
     expect(screen.getByText('A calm spring')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('ai-report-4'));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/diary-read', params: { report: '4' } });
-    expect(screen.getByText('My book')).toBeTruthy();
+    expect(screen.getAllByText('My book').length).toBeGreaterThan(0);
     expect(screen.getByText(/in progress/)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('ai-book-9'));
     expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/diary-read', params: { book: '9' } });

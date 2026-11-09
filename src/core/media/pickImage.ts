@@ -29,11 +29,38 @@ export async function pickImage(source: 'library' | 'camera'): Promise<PickedFil
       ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
       : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
   const asset = result.canceled ? null : result.assets?.[0];
-  if (!asset) return null;
+  return asset ? shrink(asset) : null;
+}
+
+type Asset = { uri: string; width: number; height: number };
+
+/** Riduce una foto scelta a JPEG (lato lungo 1600 px, qualità 80%) e la tiene al sicuro nella cartella dell'app. */
+async function shrink(asset: Asset): Promise<PickedFile> {
   const { width, height } = fitSize(asset.width, asset.height);
   const ctx = ImageManipulator.ImageManipulator.manipulate(asset.uri);
   if (width < asset.width || height < asset.height) ctx.resize({ width, height });
   const ref = await ctx.renderAsync();
   const out = await ref.saveAsync({ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG });
   return { uri: keepFile(out.uri, 'jpg'), mime: 'image/jpeg' };
+}
+
+/** Quante foto si possono scegliere in una volta sola (come la lista ordinata che il sito si aspetta dalle cartelle). */
+export const MAX_PICKED = 60;
+
+/**
+ * Sceglie parecchie foto dalla libreria in una volta, nell'ordine in cui il telefono le dà (quello della selezione),
+ * e le riduce una per una. Lista vuota = annullato.
+ */
+export async function pickImages(): Promise<PickedFile[]> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 1,
+    allowsMultipleSelection: true,
+    selectionLimit: MAX_PICKED,
+    orderedSelection: true,
+  });
+  if (result.canceled) return [];
+  const out: PickedFile[] = [];
+  for (const a of (result.assets ?? []).slice(0, MAX_PICKED)) out.push(await shrink(a));
+  return out;
 }
