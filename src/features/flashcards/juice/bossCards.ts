@@ -14,6 +14,9 @@ export interface BossCard {
   meaning: string | null;
   promptImage: string | null;
   revealImage: string | null;
+  /** la lingua con cui la voce legge `prompt` e `reveal` («en-GB»); `null` = non si legge */
+  promptLang: string | null;
+  revealLang: string | null;
 }
 
 /**
@@ -33,6 +36,8 @@ export function bossCards(kit: GameKit, game: string, missed: readonly Target[])
         meaning: null,
         promptImage: v.questionImage,
         revealImage: v.answerImage,
+        promptLang: v.questionVoice?.lang ?? null,
+        revealLang: v.answerVoice?.lang ?? null,
       };
     }
     // la parola è un lato solo della carta: l'altro è la traduzione, qualunque sia il verso di questa posizione
@@ -46,6 +51,9 @@ export function bossCards(kit: GameKit, game: string, missed: readonly Target[])
       meaning: v.meaning,
       promptImage: null,
       revealImage: null,
+      // la parola si legge nella lingua che si impara, la traduzione nell'altra
+      promptLang: (v.question === word ? v.answerVoice : v.questionVoice)?.lang ?? null,
+      revealLang: v.exampleVoice,
     };
   });
 }

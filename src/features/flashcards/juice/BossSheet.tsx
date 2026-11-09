@@ -32,6 +32,16 @@ interface BossProps {
   /** alla fine, con quante ne ha prese */
   onFinish: (got: number, total: number) => void;
   onClose: () => void;
+  /** a voce: a che punto è il giro (ogni volta che cambia carta o si mostra la risposta) */
+  onPhase?: (phase: 'q' | 'a' | 'over', index: number) => void;
+  /** a voce: i comandi per muovere il giro dall'esterno; `null` quando il foglio si chiude */
+  onControl?: (c: BossControl | null) => void;
+}
+
+/** Quello che «Mostra», «L'ho presa» e «Mancata» fanno, a disposizione di chi comanda a voce. */
+export interface BossControl {
+  reveal: () => void;
+  answer: (ok: boolean) => void;
 }
 
 function BossRound({
@@ -44,6 +54,8 @@ function BossRound({
   onWrong,
   onFinish,
   onClose,
+  onPhase,
+  onControl,
 }: BossProps) {
   const th = useTheme();
   const { t } = useTranslation();
@@ -62,6 +74,11 @@ function BossRound({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [over]);
 
+  const phase = over ? 'over' : shown ? 'a' : 'q';
+  useEffect(() => {
+    onPhase?.(phase, i);
+  }, [phase, i, onPhase]);
+
   const answer = (ok: boolean) => {
     if (ok) {
       setGot(got + 1);
@@ -70,6 +87,17 @@ function BossRound({
     setShown(false);
     setI(i + 1);
   };
+
+  useEffect(() => {
+    if (!onControl) return;
+    onControl({
+      reveal: () => setShown(true),
+      answer: (ok) => {
+        if (!over) answer(ok);
+      },
+    });
+    return () => onControl(null);
+  });
 
   const btn = (testID: string, label: string, bg: string, fg: string, onPress: () => void) => (
     <Pressable

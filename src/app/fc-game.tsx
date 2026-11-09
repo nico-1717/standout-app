@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +31,7 @@ import {
 } from '@/features/flashcards/gameJuice';
 import { kitForGame, type ExampleView, type VoiceSpec } from '@/features/flashcards/gameKit';
 import { playSound, type SoundName } from '@/features/flashcards/gameSounds';
-import { BossSheet } from '@/features/flashcards/juice/BossSheet';
+import { BossSheet, type BossControl } from '@/features/flashcards/juice/BossSheet';
 import { bossCards, type BossCard } from '@/features/flashcards/juice/bossCards';
 import { CheckpointSheet, type RecordLine } from '@/features/flashcards/juice/CheckpointSheet';
 import { ErrorsSheet } from '@/features/flashcards/juice/ErrorsSheet';
@@ -41,10 +41,26 @@ import { JuiceBar } from '@/features/flashcards/juice/JuiceBar';
 import { ROAD_ACCENT, RoadTrack } from '@/features/flashcards/juice/RoadTrack';
 import { StreakPill } from '@/features/flashcards/juice/StreakPill';
 import { useGameConfetti } from '@/features/flashcards/juice/useGameConfetti';
+import type { VoiceAction } from '@/features/flashcards/voice/brain';
+import { commandExample, VoiceIntroSheet } from '@/features/flashcards/voice/VoiceIntroSheet';
+import { VoiceLayer } from '@/features/flashcards/voice/VoiceLayer';
+import type { Phase } from '@/features/flashcards/voice/commands';
+import { answerVariants } from '@/features/flashcards/voice/commands';
+import { resolveVoiceLang } from '@/features/flashcards/voice/dicts';
+import {
+  DEFAULT_READING,
+  answerSegments,
+  parseReading,
+  plainSpeech,
+  questionSegments,
+  type ReadableCard,
+  type Segment,
+} from '@/features/flashcards/voice/reading';
 import { Confetti } from '@/features/habits/Confetti';
 import { gapParts, speakable } from '@/features/languages/gap';
 import { Card, PrimaryButton, TextButton } from '@/ui/kit';
 import { haptic } from '@/ui/motion';
+import { MicButton } from '@/ui/MicButton';
 import { SpeakButton } from '@/ui/SpeakButton';
 
 interface Item {
@@ -98,7 +114,7 @@ function stateOf(a: string | null): 'open' | 'correct' | 'wrong' | 'seen' {
  */
 export default function GameScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services, localPrefs } = useApp();
@@ -130,6 +146,22 @@ export default function GameScreen() {
   const [ck, setCk] = useState<CkState | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [errorsRange, setErrorsRange] = useState<[number, number] | null>(null);
+  // la partita a voce: accesa o no, il foglio che la spiega, i comandi del boss e a che punto è il suo giro
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [introOpen, setIntroOpen] = useState(false);
+  const bossControl = useRef<BossControl | null>(null);
+  const [bossAt, setBossAt] = useState<{ phase: 'q' | 'a' | 'over'; index: number }>({
+    phase: 'q',
+    index: 0,
+  });
+  const onBossPhase = useCallback(
+    (phase: 'q' | 'a' | 'over', index: number) =>
+      setBossAt((b) => (b.phase === phase && b.index === index ? b : { phase, index })),
+    [],
+  );
+  const onBossControl = useCallback((c: BossControl | null) => {
+    bossControl.current = c;
+  }, []);
   // tutte le risposte della partita (per i dischi con gli errori): si rileggono a ogni voto, non a ogni disegno
   const allPlays = useMemo(
     () => (kit && game ? kit.games.allPlays(game) : []),
@@ -445,6 +477,83 @@ export default function GameScreen() {
     );
   };
 
+  // ---- la partita a voce: in che fase si è, cosa leggere, cosa si può dire, cosa fa ogni comando ----
+  const voiceLang = resolveVoiceLang(localPrefs.fcVoiceLang, i18n.language);
+  const reading = parseReading(kit.vocab ? localPrefs.fcVoiceRead : DEFAULT_READING);
+  const say = (intent: string) => commandExample(voiceLang, intent);
+  const bossCard = ck?.phase === 'boss' ? ck.cards[bossAt.index] : undefined;
+  const segment = (text: string | null | undefined, lang: string | null): Segment[] => {
+    const plain = plainSpeech(text);
+    return plain && lang ? [{ text: plain, lang, once: true }] : [];
+  };
+  let voicePhase: Phase = 'idle';
+  let voiceKey = 'idle';
+  let voiceScript: Segment[] = [];
+  let voiceHint: string | null = null;
+  const sayRightWrong = () =>
+    t('fc.vg_di_corretta_sbagliata', { corretta: say('corretto'), sbagliata: say('errato') });
+  if (ck?.phase === 'sheet') {
+    voicePhase = 'ck';
+    voiceKey = `ck:${ck.due.k}`;
+    const n = ck.summary.missed.length;
+    const prec = Math.round(
+      (ck.summary.correct / Math.max(1, ck.summary.correct + ck.summary.wrong)) * 100,
+    );
+    voiceScript = segment(
+      t(n ? 'fc.vg_ck_errori' : 'fc.vg_ck_perfetto', { k: ck.due.k, prec, n }),
+      voiceLang,
+    );
+    voiceHint = ck.cards.length
+      ? t('fc.vg_di_continua_boss', { continua: say('continua'), boss: say('boss') })
+      : t('fc.vg_di_continua', { continua: say('continua') });
+  } else if (ck) {
+    // il boss: una carta alla volta; a giro finito basta dire «continua»
+    if (bossAt.phase === 'over' || !bossCard) {
+      voicePhase = 'ck';
+      voiceKey = 'boss:over';
+      voiceHint = t('fc.vg_di_continua', { continua: say('continua') });
+    } else if (bossAt.phase === 'q') {
+      voicePhase = 'boss-q';
+      voiceKey = `boss:${bossAt.index}:q`;
+      voiceScript = segment(bossCard.prompt, bossCard.promptLang ?? (kit.vocab ? null : voiceLang));
+      voiceHint = t('fc.vg_di_risposta', { risposta: say('risposta') });
+    } else {
+      voicePhase = 'boss-a';
+      voiceKey = `boss:${bossAt.index}:a`;
+      voiceScript = segment(bossCard.reveal, bossCard.revealLang ?? (kit.vocab ? null : voiceLang));
+      voiceHint = sayRightWrong();
+    }
+  } else if (current) {
+    voicePhase = shown ? 'answer' : 'question';
+    voiceKey = `${current.play.uuid}:${shown ? 'a' : 'q'}`;
+    // un mazzo di studio non ha una lingua per carta: si legge nella lingua dei comandi
+    const fallback: VoiceSpec = { lang: voiceLang, once: true };
+    const readable: ReadableCard = kit.vocab
+      ? current
+      : {
+          ...current,
+          questionVoice: current.questionVoice ?? fallback,
+          answerVoice: current.answerVoice ?? fallback,
+        };
+    voiceScript = shown ? answerSegments(readable, reading) : questionSegments(readable, reading);
+    voiceHint = shown ? sayRightWrong() : t('fc.vg_di_risposta', { risposta: say('risposta') });
+  }
+
+  const onVoice = (a: VoiceAction) => {
+    if (ck) {
+      if (ck.phase === 'sheet') {
+        if (a.kind === 'continue') proceed();
+        else if (a.kind === 'boss' && ck.cards.length) setCk({ ...ck, phase: 'boss' });
+      } else if (a.kind === 'reveal' || a.kind === 'reveal-read') bossControl.current?.reveal();
+      else if (a.kind === 'grade') bossControl.current?.answer(a.correct);
+      else if (a.kind === 'continue') proceed();
+      return;
+    }
+    if (!current) return;
+    if (a.kind === 'reveal' || a.kind === 'reveal-read') setShown(true);
+    else if (a.kind === 'grade') grade(current, a.correct ? 'correct' : 'wrong');
+  };
+
   const label = (it: Item) => t(it.isChild ? 'fc.gm_sottoconcetto' : 'fc.gm_concetto_principale');
   const mark = (s: ReturnType<typeof stateOf>) =>
     s === 'correct' ? '✓' : s === 'wrong' ? '✗' : s === 'seen' ? '•' : '○';
@@ -495,6 +604,14 @@ export default function GameScreen() {
           <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
         </Pressable>
         <View style={{ flex: 1 }} />
+        <MicButton
+          testID="fcg-voice"
+          active={voiceOn}
+          label={t('fc.vg_titolo')}
+          size={32}
+          tint={th.brand}
+          onPress={() => setIntroOpen(true)}
+        />
         <Pressable
           testID="fcg-gear"
           accessibilityRole="button"
@@ -769,9 +886,39 @@ export default function GameScreen() {
               } else sound('checkpoint');
             }}
             onClose={proceed}
+            onPhase={onBossPhase}
+            onControl={onBossControl}
           />
         </>
       ) : null}
+      <VoiceLayer
+        active={voiceOn}
+        phase={voicePhase}
+        vocab={kit.vocab}
+        expected={kit.vocab && current && !shown ? answerVariants(current.answer ?? '') : []}
+        cardKey={current?.play.uuid ?? ck?.due.k.toString() ?? ''}
+        scriptKey={voiceKey}
+        script={voiceScript}
+        lang={voiceLang}
+        hint={voiceHint}
+        onAction={onVoice}
+        onStop={() => setVoiceOn(false)}
+        onOpen={() => setIntroOpen(true)}
+      />
+      <VoiceIntroSheet
+        visible={introOpen}
+        active={voiceOn}
+        vocab={kit.vocab}
+        onStart={() => {
+          setIntroOpen(false);
+          setVoiceOn(true);
+        }}
+        onStop={() => {
+          setIntroOpen(false);
+          setVoiceOn(false);
+        }}
+        onClose={() => setIntroOpen(false)}
+      />
       <ErrorsSheet
         visible={errorsRange !== null}
         from={errorsRange?.[0] ?? 0}

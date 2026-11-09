@@ -9,6 +9,14 @@ export const cleanCheckpoint = (v: unknown): number =>
     ? v
     : DEFAULT_CHECKPOINT;
 
+/** La lingua in cui si dicono i comandi della partita a voce: '' = quella dell'app. */
+export const VOICE_LANGS = ['', 'it-IT', 'en-US', 'en-GB'] as const;
+export const cleanVoiceLang = (v: unknown): string =>
+  typeof v === 'string' && (VOICE_LANGS as readonly string[]).includes(v) ? v : '';
+/** Cosa legge la voce nelle parole: le quattro cifre del sito («1100»). */
+export const cleanVoiceRead = (v: unknown): string =>
+  typeof v === 'string' && /^[01][12][01][012]$/.test(v) ? v : '1100';
+
 /** Preferenze che restano su questo telefono (il sito non le ha): non si sincronizzano. */
 export interface LocalPrefs {
   /** colori più forti e linee ben visibili (Altro › Stile) */
@@ -17,12 +25,18 @@ export interface LocalPrefs {
   fcCheckpoint: number;
   /** flashcard: i suoni del gioco (come `fcv_suoni` del sito, per dispositivo) */
   fcSounds: boolean;
+  /** flashcard a voce: lingua dei comandi ('' = quella dell'app) */
+  fcVoiceLang: string;
+  /** flashcard a voce, parole: cosa si legge (`fcv_lettura` del sito) */
+  fcVoiceRead: string;
 }
 
 export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
   highContrast: false,
   fcCheckpoint: DEFAULT_CHECKPOINT,
   fcSounds: true,
+  fcVoiceLang: '',
+  fcVoiceRead: '1100',
 };
 
 const KEY = 'local_prefs';
@@ -33,6 +47,8 @@ function clean(raw: unknown): LocalPrefs {
     highContrast: r.highContrast === true,
     fcCheckpoint: cleanCheckpoint(r.fcCheckpoint),
     fcSounds: r.fcSounds !== false,
+    fcVoiceLang: cleanVoiceLang(r.fcVoiceLang),
+    fcVoiceRead: cleanVoiceRead(r.fcVoiceRead),
   };
 }
 
