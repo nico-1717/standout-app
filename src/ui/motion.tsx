@@ -31,6 +31,8 @@ export const haptic = {
   tap: () => run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
   select: () => run(() => Haptics.selectionAsync()),
   success: () => run(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
+  warning: () => run(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
+  heavy: () => run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),
 };
 
 function run(fn: () => Promise<void>) {

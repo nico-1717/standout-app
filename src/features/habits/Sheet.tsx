@@ -25,6 +25,8 @@ export function Sheet(p: {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** uno strato sopra al foglio che non prende i tocchi (i coriandoli) */
+  overlay?: ReactNode;
   testID?: string;
 }) {
   const { th } = p;
@@ -84,6 +86,7 @@ export function Sheet(p: {
               </View>
             )}
           </KeyboardAvoidingView>
+          {p.overlay}
         </View>
       )}
     </Modal>

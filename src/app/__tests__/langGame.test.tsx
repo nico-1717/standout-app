@@ -34,7 +34,13 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 jest.mock('@/core/app/AppProvider', () => ({
-  useApp: () => ({ services: mockServices, version: 0, changed: jest.fn() }),
+  useApp: () => ({
+    services: mockServices,
+    version: 0,
+    changed: jest.fn(),
+    localPrefs: { fcCheckpoint: 10, fcSounds: false },
+    updateLocalPrefs: jest.fn(),
+  }),
 }));
 
 function setup() {

@@ -20,6 +20,7 @@ import StatsScreen from '../fc-stats';
 
 let mockServices: unknown;
 let mockVersion = 0;
+let mockPrefs = { fcCheckpoint: 10, fcSounds: false } as Record<string, unknown>;
 let mockParams: Record<string, string> = {};
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -33,11 +34,18 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 jest.mock('@/core/app/AppProvider', () => ({
-  useApp: () => ({ services: mockServices, version: mockVersion, changed: jest.fn() }),
+  useApp: () => ({
+    services: mockServices,
+    version: mockVersion,
+    changed: jest.fn(),
+    localPrefs: mockPrefs,
+    updateLocalPrefs: jest.fn(),
+  }),
 }));
 
 function setup() {
   mockVersion = 0;
+  mockPrefs = { fcCheckpoint: 10, fcSounds: false };
   mockParams = {};
   mockPush.mockClear();
   mockBack.mockClear();
@@ -150,9 +158,79 @@ describe('playing', () => {
     await fireEvent.press(screen.getByTestId('fcg-reveal'));
     await fireEvent.press(screen.getByTestId('fcg-learnt'));
 
+    // l'ultimo tratto chiude con la pausa dei risultati; si va alla pagina del risultato quando la si chiude
+    expect(screen.getByTestId('fcg-checkpoint')).toBeTruthy();
+    expect(screen.getByLabelText(/75%/)).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('fcg-ck-continue'));
+
     expect(mockReplace).toHaveBeenCalledWith({ pathname: '/fc-result', params: { game } });
     expect(games.tally(game)).toMatchObject({ correct: 3, wrong: 1 });
     expect(games.game(game)!.score).toBe(75);
+  });
+
+  test('with checkpoints off the last answer goes straight to the result', async () => {
+    const { game } = started();
+    mockPrefs = { fcCheckpoint: 0, fcSounds: false };
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    for (const id of ['fcg-correct', 'fcg-correct', 'fcg-correct', 'fcg-correct']) {
+      await fireEvent.press(screen.getByTestId('fcg-reveal'));
+      await fireEvent.press(screen.getByTestId(id));
+    }
+    expect(screen.queryByTestId('fcg-checkpoint')).toBeNull();
+    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/fc-result', params: { game } });
+  });
+
+  test('the checkpoint offers the boss round for the missed card; winning it, then continuing, ends the game', async () => {
+    const { games, game } = started();
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    for (const id of ['fcg-correct', 'fcg-wrong', 'fcg-correct', 'fcg-correct']) {
+      await fireEvent.press(screen.getByTestId('fcg-reveal'));
+      await fireEvent.press(screen.getByTestId(id));
+    }
+    expect(screen.getByTestId('fcg-ck-boss')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcg-ck-boss'));
+    expect(within(screen.getByTestId('fcg-boss-prompt')).getByText('Q2')).toBeTruthy();
+    expect(screen.queryByTestId('fcg-boss-reveal')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcg-boss-show'));
+    expect(within(screen.getByTestId('fcg-boss-reveal')).getByText('A2')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcg-boss-yes'));
+    expect(screen.getByTestId('fcg-boss-result')).toBeTruthy();
+    expect(screen.getByText('Boss defeated!')).toBeTruthy();
+    // il boss non cambia i voti della partita
+    expect(games.tally(game)).toMatchObject({ correct: 3, wrong: 1 });
+    await fireEvent.press(screen.getByTestId('fcg-boss-end'));
+    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/fc-result', params: { game } });
+  });
+
+  test('three right answers in a row celebrate the streak with a toast', async () => {
+    const s = setup();
+    const deck = s.flashcards.createDeck({ name: 'Streak' })!;
+    for (let i = 1; i <= 5; i++) s.flashcards.addCard(deck, `Q${i}`, `A${i}`);
+    const r = s.games.start({ decks: [deck], status: 'all', order: 'in_order' });
+    if (r.kind !== 'started') throw new Error('empty');
+    mockPrefs = { fcCheckpoint: 0, fcSounds: false };
+    mockParams = { game: r.game, position: '1' };
+    await render(wrap(<GameScreen />));
+    for (let i = 0; i < 3; i++) {
+      expect(screen.queryByTestId('fcg-toast')).toBeNull();
+      await fireEvent.press(screen.getByTestId('fcg-reveal'));
+      await fireEvent.press(screen.getByTestId('fcg-correct'));
+    }
+    expect(within(screen.getByTestId('fcg-toast')).getByText(/on fire/i)).toBeTruthy();
+    expect(screen.getByTestId('fcg-streak')).toBeTruthy();
+  });
+
+  test('the gear opens the settings with the checkpoint steps', async () => {
+    const { game } = started();
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    await fireEvent.press(screen.getByTestId('fcg-gear'));
+    expect(screen.getByTestId('fcg-settings')).toBeTruthy();
+    expect(screen.getByTestId('fcg-ck-step-25')).toBeTruthy();
+    expect(screen.getByTestId('fcg-sounds')).toBeTruthy();
   });
 
   test('a recorded audio plays from the question; the answer one shows after the reveal', async () => {

@@ -514,6 +514,43 @@ export class GameRepo {
   }
 
   /**
+   * Il livello di una sola carta (o carta figlia), senza rileggere tutta la storia: serve ai richiami «sale/scende di
+   * livello» dopo ogni voto. Stessa regola di `histories()`, ma sulle sole risposte di quella carta.
+   */
+  levelOfCard(target: string, isChild: boolean): Level {
+    const rows = this.db.all<{ user_answer: string; retry: number }>(
+      `SELECT p.user_answer, (g.parent_uuid IS NOT NULL) AS retry
+         FROM ${this.scope.plays} p LEFT JOIN fc_games g ON g.uuid = p.game_uuid
+        WHERE p.${isChild ? 'child_uuid' : 'card_uuid'} = ? AND p.user_answer IN ('Correct', 'Wrong')${
+          this.isVocab ? ' AND g.course_uuid = ?' : ''
+        }
+        ORDER BY p.play_date ASC, p.rowid ASC`,
+      this.isVocab ? [target, this.scope.course!] : [target],
+    );
+    const h: CardHistory = { c: 0, w: 0, u: '' };
+    for (const r of rows) {
+      const ok = r.user_answer === 'Correct';
+      if (ok) h.c += 1;
+      else h.w += 1;
+      h.u = (h.u + answerLetter(ok, !!r.retry)).slice(-HISTORY_LENGTH);
+    }
+    return levelOf(h.c, h.w, h.u);
+  }
+
+  /** Quante righe (carta + sottocarte) ha ogni posizione della sequenza, dalla 1: per l'anello doppio del tracciato. */
+  cardsPerPosition(gameUuid: string): number[] {
+    const seq = this.db.all<{ position: number; card_uuid: string }>(
+      `SELECT position, card_uuid FROM ${this.scope.sequence} WHERE game_uuid = ? ORDER BY position ASC`,
+      [gameUuid],
+    );
+    const kids = this.childrenByParent();
+    const out: number[] = [];
+    for (const r of seq) out[r.position - 1] = 1 + (kids.get(r.card_uuid)?.length ?? 0);
+    for (let i = 0; i < out.length; i++) out[i] ??= 1;
+    return out;
+  }
+
+  /**
    * I numeri di ogni mazzo, con tutto quello che ha sotto (come `fcm_numeri` del sito): le carte per livello (i titoli non
    * contano), quante «le sai» (tastino o livello), le partite giocate sul mazzo o su uno sopra, l'ultima, e le carte da
    * ripassare (difficilissima, difficile, da imparare).
@@ -656,6 +693,16 @@ export class GameRepo {
       } else current = 0;
     }
     return { current, best, answers };
+  }
+
+  /** Un record da battere (`veloce` vince il più basso). Serve ai checkpoint: ritorna se è migliorato e il valore di prima. */
+  bumpRecord(
+    kind: string,
+    value: number,
+    gameUuid: string,
+    lowerWins = false,
+  ): { before: number | null; changed: boolean; first: boolean } {
+    return this.study.bumpRecord(kind, value, gameUuid, lowerWins);
   }
 
   /**

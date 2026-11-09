@@ -10,9 +10,41 @@ import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import type { Grade, PlayRow } from '@/features/flashcards/game';
+import {
+  NEW_STATE,
+  blockBestStreak,
+  checkpointCount,
+  checkpointDue,
+  checkpointsDone,
+  countsForFastest,
+  finalStretch,
+  levelToast,
+  passedMilestone,
+  readJuice,
+  stepKey,
+  stepOf,
+  summarizeBlock,
+  writeJuice,
+  type BlockSummary,
+  type Due,
+  type JuiceState,
+} from '@/features/flashcards/gameJuice';
 import { kitForGame, type ExampleView, type VoiceSpec } from '@/features/flashcards/gameKit';
+import { playSound, type SoundName } from '@/features/flashcards/gameSounds';
+import { BossSheet } from '@/features/flashcards/juice/BossSheet';
+import { bossCards, type BossCard } from '@/features/flashcards/juice/bossCards';
+import { CheckpointSheet, type RecordLine } from '@/features/flashcards/juice/CheckpointSheet';
+import { ErrorsSheet } from '@/features/flashcards/juice/ErrorsSheet';
+import { GameSettingsSheet } from '@/features/flashcards/juice/GameSettingsSheet';
+import { ToastHost, useToasts } from '@/features/flashcards/juice/GameToasts';
+import { JuiceBar } from '@/features/flashcards/juice/JuiceBar';
+import { ROAD_ACCENT, RoadTrack } from '@/features/flashcards/juice/RoadTrack';
+import { StreakPill } from '@/features/flashcards/juice/StreakPill';
+import { useGameConfetti } from '@/features/flashcards/juice/useGameConfetti';
+import { Confetti } from '@/features/habits/Confetti';
 import { gapParts, speakable } from '@/features/languages/gap';
 import { Card, PrimaryButton, TextButton } from '@/ui/kit';
+import { haptic } from '@/ui/motion';
 import { SpeakButton } from '@/ui/SpeakButton';
 
 interface Item {
@@ -37,6 +69,19 @@ interface Item {
 const gapBlank = (text: string): string =>
   text.length <= 4 ? '____' : text.length <= 9 ? '________' : '____________';
 
+/** Un checkpoint che aspetta di essere letto: il tratto, il riassunto, i record e dove si va dopo. */
+interface CkState {
+  due: Due;
+  count: number;
+  summary: BlockSummary;
+  bestStreak: number;
+  records: RecordLine[];
+  /** la posizione a cui si va quando si chiude */
+  next: number;
+  phase: 'sheet' | 'boss';
+  cards: BossCard[];
+}
+
 /** Il colore e il nome del voto che una riga ha adesso. */
 function stateOf(a: string | null): 'open' | 'correct' | 'wrong' | 'seen' {
   if (a === 'Correct') return 'correct';
@@ -56,7 +101,7 @@ export default function GameScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services } = useApp();
+  const { services, localPrefs } = useApp();
   const params = useLocalSearchParams<{ game?: string; position?: string; nc?: string }>();
   const game = params.game ?? '';
 
@@ -78,8 +123,24 @@ export default function GameScreen() {
   const [shown, setShown] = useState(false);
   const [tapped, setTapped] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const refresh = () => setTick((n) => n + 1);
+  const toasts = useToasts();
+  const fx = useGameConfetti();
+  const [ck, setCk] = useState<CkState | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [errorsRange, setErrorsRange] = useState<[number, number] | null>(null);
+  // tutte le risposte della partita (per i dischi con gli errori): si rileggono a ogni voto, non a ogni disegno
+  const allPlays = useMemo(
+    () => (kit && game ? kit.games.allPlays(game) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kit, game, tick, pos],
+  );
+  const perPosition = useMemo(
+    () => (kit && game ? kit.games.cardsPerPosition(game) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kit, game, added.length],
+  );
 
   if (!services || !game || !kit) return null;
   const { games } = kit;
@@ -157,12 +218,130 @@ export default function GameScreen() {
   const streak = games.streak(game);
   const record = kit.records().combo ?? 0;
 
+  const sound = (name: SoundName, run = 0) => {
+    if (localPrefs.fcSounds) playSound(name, run);
+  };
+
+  /** Il checkpoint di un tratto appena finito: il riassunto, i record battuti, la festa. */
+  const openCheckpoint = (due: Due, js: JuiceState, next: number) => {
+    const plays = games.allPlays(game);
+    const summary = summarizeBlock(plays, due.from, due.to);
+    const records: RecordLine[] = [];
+    if (countsForFastest(summary) && summary.perCard !== null) {
+      const r = games.bumpRecord('veloce', summary.perCard, game, true);
+      if (r.changed && !r.first) {
+        records.push({ icon: '⏱️', text: t('fcv.ck_record_veloce', { s: summary.perCard }) });
+      }
+    }
+    const mastered = games.mastered();
+    if (mastered > 0) {
+      const r = games.bumpRecord('padroneggiate', mastered, game);
+      if (passedMilestone(r.before, mastered) !== null) {
+        records.push({
+          icon: '⭐',
+          text: t(kit.vocab ? 'fcv.ck_padroneggiate' : 'fcv.ck_padroneggiate_carte', {
+            n: mastered,
+          }),
+        });
+      }
+    }
+    const combo = games.saveCombo(game);
+    if (combo.changed) {
+      records.push({ icon: '🔥', text: t('fcv.ck_record_serie', { n: combo.value }) });
+    }
+    const acc =
+      summary.correct + summary.wrong ? summary.correct / (summary.correct + summary.wrong) : 0;
+    writeJuice(services.db, game, { ...js, ckDone: due.k });
+    setCk({
+      due,
+      count: checkpointCount(total, js.ckEvery, due.k),
+      summary,
+      bestStreak: blockBestStreak(plays, due.from, due.to),
+      records,
+      next,
+      phase: 'sheet',
+      cards: bossCards(kit, game, summary.missed),
+    });
+    sound('checkpoint');
+    haptic.success();
+    if (acc >= 0.8 || records.length) fx.fire(acc === 1 ? 150 : 90);
+  };
+
+  /** Si chiude la pausa (o il boss) e si prosegue dove si era. */
+  const proceed = () => {
+    if (!ck) return;
+    const next = ck.next;
+    setCk(null);
+    fx.clear();
+    go(next);
+  };
+
   const grade = (it: Item, g: Grade) => {
+    const every = localPrefs.fcCheckpoint;
+    const stored = readJuice(services.db, game);
+    let js = stored ?? NEW_STATE;
+    if (!stored || js.ckEvery !== every) {
+      js = { ...js, ckEvery: every, ckDone: checkpointsDone(games.frontier(game), every) };
+    }
+    const before = games.levelOfCard(it.target, it.isChild);
+    const prev = streak.current;
     const r = games.grade(game, pos, it.target, it.isChild, g);
-    // la serie si è spezzata: si salva se è un record
-    if (g === 'wrong' && streak.current >= 3) games.saveCombo(game);
+    const after = games.levelOfCard(it.target, it.isChild);
+    const now = games.streak(game);
+
+    if (g === 'wrong') {
+      sound('wrong');
+      haptic.warning();
+      if (prev >= 3) {
+        // la serie si è spezzata: si salva se è un record
+        games.saveCombo(game);
+        toasts.push({ kind: 'lost', icon: '💔', title: t('fcv.gj_persa', { n: prev }) });
+      }
+    } else {
+      const n = now.current;
+      if (stepOf(n) > stepOf(prev)) {
+        sound('step');
+        haptic.success();
+        toasts.push({
+          kind: 'step',
+          icon: '🔥',
+          title: t(stepKey(stepOf(n))),
+          sub: t('fcv.gj_di_fila', { n }),
+        });
+      } else {
+        sound('right', n);
+        haptic.tap();
+      }
+      if (record >= 3 && n > record && !js.recordHit) {
+        js = { ...js, recordHit: true };
+        toasts.push({ kind: 'record', icon: '🏆', title: t('fcv.gj_record_combo', { n }) });
+      }
+    }
+
+    const lt = levelToast(before, after);
+    if (lt) {
+      toasts.push({ kind: lt.up ? 'up' : 'down', icon: lt.up ? '⬆️' : '⬇️', title: t(lt.key) });
+      if (lt.up) sound('level');
+      if (lt.up && after === 'la_sai') fx.fire(60);
+    }
+
+    const front = games.frontier(game);
+    const fs = finalStretch(total, front);
+    if (fs.on && !js.finalShown) {
+      js = { ...js, finalShown: true };
+      toasts.push({ kind: 'final', icon: '🏁', title: t('fcv.gj_finale', { n: fs.left }) });
+    }
+
     setShown(false);
-    if (r.ok && r.unanswered === 0) go(r.next);
+    const done = r.ok && r.unanswered === 0;
+    const due = done ? checkpointDue(front, total, every, js.ckDone) : null;
+    if (due) {
+      // la pausa passa davanti: si va avanti quando si chiude
+      openCheckpoint(due, js, r.next);
+      return;
+    }
+    writeJuice(services.db, game, js);
+    if (done) go(r.next);
     else refresh();
   };
 
@@ -272,6 +451,24 @@ export default function GameScreen() {
   const markColor = (s: ReturnType<typeof stateOf>) =>
     s === 'correct' ? th.green : s === 'wrong' ? th.red : th.text2;
 
+  const front = games.frontier(game);
+  const wrongRows = allPlays.filter((p) => p.user_answer === 'Wrong');
+  const everyNow = localPrefs.fcCheckpoint;
+  const errorRows =
+    errorsRange === null
+      ? []
+      : wrongRows
+          .filter((p) => p.position >= errorsRange[0] && p.position <= errorsRange[1])
+          .map((p) => {
+            const isChild = !!p.child_uuid;
+            const target = (isChild ? p.child_uuid : p.card_uuid) ?? '';
+            return {
+              key: p.uuid,
+              position: p.position,
+              label: kit.label(game, p.position, target, isChild),
+            };
+          });
+
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       <View
@@ -282,6 +479,7 @@ export default function GameScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 12,
         }}
       >
         <Pressable
@@ -296,10 +494,16 @@ export default function GameScreen() {
         >
           <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
         </Pressable>
-        <Text testID="fcg-progress" style={{ color: th.text2, fontWeight: '600' }}>
-          {t('fc.gm_posizione', { n: pos, tot: total })}
-          {streak.current >= 2 ? `  🔥 ${streak.current}` : ''}
-        </Text>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          testID="fcg-gear"
+          accessibilityRole="button"
+          accessibilityLabel={t('fcv.gs_titolo')}
+          onPress={() => setSettingsOpen(true)}
+          hitSlop={10}
+        >
+          <Text style={{ color: th.brand, fontSize: 20 }}>⚙︎</Text>
+        </Pressable>
         <Pressable
           testID="fcg-conclude"
           accessibilityRole="button"
@@ -311,16 +515,28 @@ export default function GameScreen() {
           </Text>
         </Pressable>
       </View>
-      <View
-        style={{ height: 4, marginHorizontal: 16, borderRadius: 2, backgroundColor: th.surface2 }}
-      >
-        <View
-          style={{
-            height: 4,
-            borderRadius: 2,
-            backgroundColor: th.brand,
-            width: `${total > 0 ? Math.min(100, (closed / total) * 100) : 0}%`,
-          }}
+      <View style={{ marginHorizontal: 16 }}>
+        <JuiceBar
+          progress={total > 0 ? closed / total : 0}
+          final={finalStretch(total, front).on}
+          track={th.surface2}
+        />
+      </View>
+      <View style={{ marginHorizontal: 16, marginTop: 10 }}>
+        <RoadTrack
+          model={{ tot: total, pos, front, done: games.tally(game).played, cp: perPosition }}
+          every={everyNow}
+          wrong={wrongRows.map((p) => p.position)}
+          accent={ROAD_ACCENT}
+          onErrors={(a, b) => setErrorsRange([a, b])}
+          title={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text testID="fcg-progress" style={{ color: th.text2, fontWeight: '600' }}>
+                {t('fc.gm_posizione', { n: pos, tot: total })}
+              </Text>
+              <StreakPill n={streak.current} />
+            </View>
+          }
         />
       </View>
 
@@ -508,6 +724,66 @@ export default function GameScreen() {
           </Card>
         ) : null}
       </ScrollView>
+
+      <ToastHost toast={toasts.toast} top={insets.top + 56} />
+      {/* con una pausa aperta i coriandoli li disegna il suo foglio, non questo strato */}
+      {ck ? null : <Confetti bursts={fx.bursts} onDone={fx.done} />}
+
+      {ck ? (
+        <>
+          <CheckpointSheet
+            visible={ck.phase === 'sheet'}
+            due={ck.due}
+            count={ck.count}
+            summary={ck.summary}
+            bestStreak={ck.bestStreak}
+            records={ck.records}
+            labelOf={(target, isChild, position) => kit.label(game, position, target, isChild)}
+            bursts={fx.bursts}
+            onBurstDone={fx.done}
+            onContinue={proceed}
+            onBoss={() => {
+              sound('tap');
+              setCk({ ...ck, phase: 'boss' });
+            }}
+          />
+          <BossSheet
+            visible={ck.phase === 'boss'}
+            cards={ck.cards}
+            vocab={kit.vocab}
+            bursts={fx.bursts}
+            onBurstDone={fx.done}
+            onRight={(got) => {
+              sound('right', got + 2);
+              haptic.tap();
+            }}
+            onWrong={() => {
+              sound('wrong');
+              haptic.warning();
+            }}
+            onFinish={(got, n) => {
+              if (got === n) {
+                sound('boss');
+                haptic.success();
+                fx.fire(170);
+              } else sound('checkpoint');
+            }}
+            onClose={proceed}
+          />
+        </>
+      ) : null}
+      <ErrorsSheet
+        visible={errorsRange !== null}
+        from={errorsRange?.[0] ?? 0}
+        to={errorsRange?.[1] ?? 0}
+        rows={errorRows}
+        onClose={() => setErrorsRange(null)}
+      />
+      <GameSettingsSheet
+        visible={settingsOpen}
+        vocab={kit.vocab}
+        onClose={() => setSettingsOpen(false)}
+      />
     </View>
   );
 }
