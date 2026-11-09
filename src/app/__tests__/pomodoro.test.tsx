@@ -346,4 +346,21 @@ describe('Pomodoro screen', () => {
     await fireEvent.press(screen.getByTestId('dur-del-pomodoro-40'));
     expect(pomodoro.presets('pomodoro')).toEqual([25, 50]);
   });
+
+  test('the header button switches between ring and hourglass and keeps the choice', async () => {
+    setup();
+    const { rerender } = await renderIt();
+    expect(screen.queryByTestId('hourglass')).toBeNull();
+    fireEvent.press(screen.getByTestId('pomodoro-view'));
+    expect(mockUpdate).toHaveBeenCalledWith({ last_display_style: 'clessidra' });
+    await rerender(
+      <ThemeProvider>
+        <PomodoroScreen />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('hourglass')).toBeTruthy();
+    expect(screen.getByTestId('pomodoro-clock')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('pomodoro-view'));
+    expect(mockUpdate).toHaveBeenLastCalledWith({ last_display_style: 'cerchio' });
+  });
 });

@@ -5,17 +5,15 @@ import { getState, setState } from '../sync/engine';
 export interface LocalPrefs {
   /** colori più forti e linee ben visibili (Altro › Stile) */
   highContrast: boolean;
-  /** in Pomodoro, la clessidra al posto dell'anello */
-  hourglass: boolean;
 }
 
-export const DEFAULT_LOCAL_PREFS: LocalPrefs = { highContrast: false, hourglass: false };
+export const DEFAULT_LOCAL_PREFS: LocalPrefs = { highContrast: false };
 
 const KEY = 'local_prefs';
 
 function clean(raw: unknown): LocalPrefs {
   const r = (raw ?? {}) as Record<string, unknown>;
-  return { highContrast: r.highContrast === true, hourglass: r.hourglass === true };
+  return { highContrast: r.highContrast === true };
 }
 
 export class LocalPrefsStore {

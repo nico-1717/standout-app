@@ -32,3 +32,8 @@ speed), so before a store release always test on a real iPhone too (TestFlight w
 Every device (your iPad, your girlfriend's iPhone) must be registered once with `eas device:create`, and needs
 Developer Mode on. If you log in on her phone with your account, your tasks are stored on her phone until you log out:
 log out when you finish.
+
+## Things only a real phone can show (check these first)
+Tests cannot judge movement, sound or touch. Please look at these by eye:
+- **Pomodoro break**: the outdoor drawing moves slowly (sun, tree, grass, birds, bee, butterfly, steam); the tip is easy to read; with iPhone "Reduce Motion" on, the drawing stands still.
+- **Pomodoro hourglass**: the small hourglass button in the header switches ring ⇄ hourglass (the website follows the same choice). At the start of a session the glass turns over, sand falls, grains drop while the timer runs and stop when you pause.

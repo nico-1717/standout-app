@@ -28,7 +28,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     setUiStyle: mockSetUiStyle,
     settings: { ui_style: 'standard', accent: 'blue', lang: null },
     updateSettings: jest.fn(),
-    localPrefs: { highContrast: mockHigh, hourglass: false },
+    localPrefs: { highContrast: mockHigh },
     updateLocalPrefs: mockUpdateLocalPrefs,
   }),
 }));

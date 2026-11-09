@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
@@ -19,6 +19,7 @@ import {
 } from '@/features/pomodoro/logic';
 import type { PresetKind } from '@/features/pomodoro/repo';
 import { BreakScene } from '@/features/pomodoro/BreakScene';
+import { Hourglass } from '@/features/pomodoro/Hourglass';
 import { breakTipIndex } from '@/features/pomodoro/breakTips';
 import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
@@ -372,10 +373,19 @@ export default function PomodoroScreen() {
     </View>
   );
 
-  const big = (text: string, pct: number, color: string, sub?: string) => (
-    <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 8 }}>
-      <Ring size={250} pct={pct} color={color} track={th.hairline} />
-      <View style={{ position: 'absolute', alignItems: 'center' }}>
+  const glassView = pomodoroSettings.last_display_style === 'clessidra';
+  const toggleView = () =>
+    updatePomodoroSettings({ last_display_style: glassView ? 'cerchio' : 'clessidra' });
+
+  const big = (
+    text: string,
+    pct: number,
+    color: string,
+    sub?: string,
+    opts: { running?: boolean; flip?: boolean; rest?: boolean } = {},
+  ) => {
+    const label = (
+      <>
         <Text
           testID="pomodoro-clock"
           style={{ color: th.text, fontSize: 52, fontWeight: '200', fontVariant: ['tabular-nums'] }}
@@ -383,9 +393,29 @@ export default function PomodoroScreen() {
           {text}
         </Text>
         {sub ? <Text style={{ color: th.text2, marginTop: 2 }}>{sub}</Text> : null}
+      </>
+    );
+    if (glassView) {
+      return (
+        <View style={{ alignItems: 'center', marginVertical: 8, gap: 6 }}>
+          <Hourglass
+            fraction={opts.rest ? 1 : pct}
+            running={!!opts.running}
+            flip={!!opts.flip}
+            color={color}
+            glass={th.text3}
+          />
+          <View style={{ alignItems: 'center' }}>{label}</View>
+        </View>
+      );
+    }
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 8 }}>
+        <Ring size={250} pct={pct} color={color} track={th.hairline} />
+        <View style={{ position: 'absolute', alignItems: 'center' }}>{label}</View>
       </View>
-    </View>
-  );
+    );
+  };
 
   /* ---------------- le viste ---------------- */
 
@@ -410,6 +440,7 @@ export default function PomodoroScreen() {
             : s.mode === 1
               ? t('pomodoro.cronometro_in_corso')
               : t('pomodoro.concentrazione'),
+          { running: !paused, flip: secs < 3 },
         )}
         <View style={{ alignItems: 'center' }}>{projectLine(s.project_uuid)}</View>
         {stopping ? (
@@ -537,6 +568,7 @@ export default function PomodoroScreen() {
           over ? 1 : 1 - left / total,
           th.teal,
           over ? t('pomodoro.pausa_finita') : t('pomodoro.pausa_in_corso'),
+          { running: !over },
         )}
         {!over ? (
           <Text testID="break-tip" style={{ color: th.text2, textAlign: 'center' }}>
@@ -563,6 +595,7 @@ export default function PomodoroScreen() {
           1,
           colorOf(done.project_uuid),
           t('pomodoro.concluso'),
+          { rest: true },
         )}
         <View style={{ alignItems: 'center', gap: 4 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('pomodoro.ottimo_lavoro')}</Text>
@@ -628,7 +661,9 @@ export default function PomodoroScreen() {
             </Pressable>
           ))}
         </View>
-        {big(mode === 0 ? clock(minutes * 60) : '00:00', 0, th.brand, t('pomodoro.pronto'))}
+        {big(mode === 0 ? clock(minutes * 60) : '00:00', 0, th.brand, t('pomodoro.pronto'), {
+          rest: true,
+        })}
         {mode === 0 ? (
           <Card style={{ padding: 16, gap: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -682,6 +717,24 @@ export default function PomodoroScreen() {
         title={t('pomodoro.nuovo_pomodoro')}
         right={
           <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
+            <Pressable
+              testID="pomodoro-view"
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('pomodoro.cambia_vista')}
+              accessibilityState={{ selected: glassView }}
+              onPress={toggleView}
+            >
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M6 2h12M6 22h12M6 2v3.3c0 .6.24 1.2.66 1.6L12 12l5.34-5.1c.42-.4.66-1 .66-1.6V2M18 22v-3.3c0-.6-.24-1.2-.66-1.6L12 12l-5.34 5.1c-.42.4-.66 1-.66 1.6V22"
+                  stroke={glassView ? th.brand : th.text2}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </Pressable>
             <Pressable
               testID="pomodoro-history"
               accessibilityRole="button"
