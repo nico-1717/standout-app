@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +26,8 @@ export default function SettingsScreen() {
     setUiStyle,
     settings,
     updateSettings,
+    localPrefs,
+    updateLocalPrefs,
   } = useApp();
   const user = authState.status === 'signedIn' ? authState.user : null;
   const problems = services
@@ -183,10 +185,27 @@ export default function SettingsScreen() {
           </View>
         </Card>
         <Card index={9} style={{ padding: 16, gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.alto_contrasto')}</Text>
+              <Text style={{ color: th.text2, fontSize: 13 }}>
+                {t('stile.alto_contrasto_desc')}
+              </Text>
+            </View>
+            <Switch
+              testID="high-contrast"
+              value={localPrefs.highContrast}
+              onValueChange={(v) => updateLocalPrefs({ highContrast: v })}
+              accessibilityLabel={t('stile.alto_contrasto')}
+            />
+          </View>
+        </Card>
+        <Card index={9} style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.colore')}</Text>
           <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
             {(Object.keys(accents) as AccentId[]).map((a) => (
               <Pressable
+                hitSlop={5}
                 key={a}
                 onPress={() => updateSettings({ accent: a })}
                 accessibilityRole="radio"

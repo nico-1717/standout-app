@@ -276,6 +276,7 @@ export default function LangDeckScreen() {
             <SectionLabel>{t('fc.cfc_colore_cartella')}</SectionLabel>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               <Pressable
+                hitSlop={6}
                 testID="ld-color-auto"
                 accessibilityRole="radio"
                 accessibilityLabel={t('fc.app_colore_auto')}
@@ -297,6 +298,7 @@ export default function LangDeckScreen() {
                 const on = !!deck.color_edited && deck.color.toUpperCase() === c;
                 return (
                   <Pressable
+                    hitSlop={6}
                     key={c}
                     testID={`ld-color-${c.slice(1)}`}
                     accessibilityRole="radio"

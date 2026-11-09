@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { DiaryTheme } from './diaryTheme';
@@ -17,6 +17,7 @@ import {
   type Layer,
   type Row,
 } from './insights';
+import { Text } from '@/ui/CappedText';
 
 const fmtNum = (v: number | null, dec = 1) =>
   v === null ? '–' : v.toLocaleString(undefined, { maximumFractionDigits: dec });

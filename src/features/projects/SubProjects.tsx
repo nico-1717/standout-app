@@ -164,6 +164,7 @@ export function SubProjects(p: {
           {panel === 'color' ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               <Pressable
+                hitSlop={5}
                 testID="sub-color-auto"
                 accessibilityRole="button"
                 accessibilityLabel={t('progetti.colore_auto_padre')}
@@ -183,6 +184,7 @@ export function SubProjects(p: {
               </Pressable>
               {p.swatches.map((c) => (
                 <Pressable
+                  hitSlop={5}
                   key={c}
                   testID={`sub-color-${c.slice(1)}`}
                   accessibilityRole="button"

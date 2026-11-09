@@ -353,6 +353,7 @@ export default function ProjectScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {SWATCHES.map((c) => (
               <Pressable
+                hitSlop={5}
                 key={c}
                 testID={`swatch-${c.slice(1)}`}
                 accessibilityRole="button"

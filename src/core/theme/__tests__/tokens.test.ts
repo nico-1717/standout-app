@@ -48,6 +48,27 @@ describe('le due vesti (Glass e Calm paper)', () => {
     },
   );
 
+  it.each(styles.flatMap((s) => schemes.map((c) => [s, c] as const)))(
+    '%s/%s: il grigio dei testi piccoli (text3) arriva a 4.5:1 su sfondo e carta',
+    (style, scheme) => {
+      const p = surfacesFor(style, scheme);
+      expect(ratio(p.text3, p.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(p.text3, p.surface)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it.each(styles.flatMap((s) => schemes.map((c) => [s, c] as const)))(
+    '%s/%s: con «Alto contrasto» tutti i testi arrivano a 7:1',
+    (style, scheme) => {
+      const p = surfacesFor(style, scheme, true);
+      for (const t of [p.text, p.text2, p.text3]) {
+        expect(ratio(t, p.bg)).toBeGreaterThanOrEqual(7);
+        expect(ratio(t, p.surface)).toBeGreaterThanOrEqual(7);
+      }
+      expect(surfacesFor(style, scheme, true).bg).toBe(surfacesFor(style, scheme).bg);
+    },
+  );
+
   it('Glass ha ombra morbida e barra fluttuante; Paper ha linee sottili, serif e barra piatta', () => {
     const g = shapeFor('standard', 'light');
     const p = shapeFor('paper', 'light');

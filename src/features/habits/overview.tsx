@@ -4,7 +4,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -26,6 +25,7 @@ import { cardShadow } from '@/ui/kit';
 
 import type { HabitsTheme } from './habitsTheme';
 import type { WeekCell } from './globalStats';
+import { Text } from '@/ui/CappedText';
 
 /* Pezzi della pagina principale e delle schede «Statistiche» / «Vista tabella» (habits.css: hb-stat, hb-hbars, hb-line, hb-radar, hb-week-grid). */
 

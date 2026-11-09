@@ -26,3 +26,10 @@ Idea da mostrare a Nico (con immagini) prima di toccare qualcosa: un tema "alto 
 - Prova con VoiceOver (iPhone) e TalkBack (Android): ordine di lettura, etichette dei bottoni con solo icona/emoji (le principali sono fatte, resta da sentirle).
 - Dimensione del testo di sistema (Dynamic Type) al 200%: controllare che i layout non si rompano.
 - Grafici: il grafico dei voti, le barre delle abitudini e dei mazzi, la linea, il radar, le barre orizzontali, la settimana e il mese del Pomodoro ora si leggono come un solo elemento («etichetta: valore, …»); la mappa a quadratini delle abitudini è nascosta al lettore (i numeri stanno nelle carte intorno); la torta del Pomodoro ha già la sua riga. Restano da fare i giochi (da sentire sul telefono).
+
+## Fatto il 2026-11-09 (dopo le risposte di Nico)
+- Grigi dei testi piccoli più scuri nei quattro temi (rapporto ≥ 4,5 su sfondo e carta, controllato da test).
+- Interruttore «Alto contrasto» in Altro (solo su questo telefono): testi ≥ 7:1 e linee ben visibili; sfondi invariati.
+- Tetto al 150% per il testo nelle schermate dense (settimana del planner, tabelle e grafici delle abitudini, statistiche e percorso delle flashcard, pagine del diario, pillole, storico Pomodoro, piano): `src/ui/CappedText.tsx`. Le altre schermate seguono il telefono senza limite.
+- 28 bottoni sotto i 44 punti hanno più area di tocco (`hitSlop`), senza cambiare l'aspetto.
+- Nico ha scelto di **lasciare** i testi da 10 e 11 punti come sul sito.

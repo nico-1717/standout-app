@@ -56,6 +56,7 @@ export default function PlannerSettingsScreen() {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <Text style={label}>{text}</Text>
       <Pressable
+        hitSlop={4}
         testID={`${id}-minus`}
         accessibilityRole="button"
         accessibilityLabel="−"
@@ -75,6 +76,7 @@ export default function PlannerSettingsScreen() {
         {show(value)}
       </Text>
       <Pressable
+        hitSlop={4}
         testID={`${id}-plus`}
         accessibilityRole="button"
         accessibilityLabel="+"
@@ -120,6 +122,7 @@ export default function PlannerSettingsScreen() {
             <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
               {(Object.keys(PALETTES) as PaletteKey[]).map((k) => (
                 <Pressable
+                  hitSlop={6}
                   key={k}
                   testID={`ps-palette-${k}`}
                   accessibilityRole="radio"

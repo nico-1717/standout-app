@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Bars, StatCard } from './charts';
@@ -9,6 +9,7 @@ import { addDays, dayProgress, isoWeekday, type Habit, type HabitLog } from './l
 import { HBars, stateColor } from './overview';
 import { Sheet } from './Sheet';
 import { barsLast } from './stats';
+import { Text } from '@/ui/CappedText';
 
 export interface TableSheetProps {
   visible: boolean;

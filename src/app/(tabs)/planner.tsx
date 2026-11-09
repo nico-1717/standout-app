@@ -261,6 +261,7 @@ export default function PlannerScreen() {
             </Text>
           </Pressable>
           <Pressable
+            hitSlop={2}
             testID="planner-search"
             accessibilityRole="button"
             accessibilityLabel={t('planner.cerca')}
@@ -273,6 +274,7 @@ export default function PlannerScreen() {
             </Svg>
           </Pressable>
           <Pressable
+            hitSlop={2}
             testID="planner-manage"
             accessibilityRole="button"
             accessibilityLabel={`${t('planner.calendari')} · ${t('planner.categorie')}`}
@@ -282,6 +284,7 @@ export default function PlannerScreen() {
             <Text style={{ color: pt.ink2, fontSize: 20 }}>☰</Text>
           </Pressable>
           <Pressable
+            hitSlop={2}
             testID="planner-settings"
             accessibilityRole="button"
             accessibilityLabel={t('planner.impostazioni')}

@@ -87,9 +87,13 @@ function Shell() {
 
 /** Il tema segue il colore scelto nelle impostazioni (lo stesso del sito). */
 function Themed() {
-  const { settings } = useApp();
+  const { settings, localPrefs } = useApp();
   return (
-    <ThemeProvider accent={settings.accent} uiStyle={settings.ui_style}>
+    <ThemeProvider
+      accent={settings.accent}
+      uiStyle={settings.ui_style}
+      highContrast={localPrefs.highContrast}
+    >
       <Shell />
     </ThemeProvider>
   );

@@ -64,6 +64,7 @@ import { phoneFiles, privateFiles } from '../media/phoneFiles';
 import { PrivateImages } from '../media/privateImages';
 import i18n, { pickLanguage } from '../i18n';
 import { getLocales } from 'expo-localization';
+import { DEFAULT_LOCAL_PREFS, LocalPrefsStore, type LocalPrefs } from '../settings/localPrefs';
 import { DEFAULT_SETTINGS, SettingsStore, type Settings } from '../settings/settings';
 import type { UiStyle } from '@/features/buy/buyTheme';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
@@ -125,6 +126,9 @@ interface AppContextValue {
   /** Stile, colore del sito e lingua: uguali a quelli del sito, cambiati qui o là. */
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
+  /** Preferenze che restano su questo telefono: alto contrasto, clessidra. */
+  localPrefs: LocalPrefs;
+  updateLocalPrefs: (patch: Partial<LocalPrefs>) => void;
   /** Le preferenze della pagina Abitudini (colore, giorni in barra, gruppi…): uguali a quelle del sito. */
   habitSettings: HabitSettings;
   updateHabitSettings: (patch: Partial<HabitSettings>) => void;
@@ -187,6 +191,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [syncInfo, setSyncInfo] = useState<SyncStatusInfo>(IDLE);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const settingsStore = useRef<SettingsStore | null>(null);
+  const [localPrefs, setLocalPrefs] = useState<LocalPrefs>(DEFAULT_LOCAL_PREFS);
+  const localPrefsStore = useRef<LocalPrefsStore | null>(null);
   const [habitSettings, setHabitSettings] = useState<HabitSettings>(DEFAULT_HABIT_SETTINGS);
   const habitSettingsStore = useRef<HabitSettingsStore | null>(null);
   const [diarySettings, setDiarySettings] = useState<DiarySettings>(DEFAULT_DIARY_SETTINGS);
@@ -262,6 +268,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const store = new SettingsStore(opened.db);
         settingsStore.current = store;
         setSettings(store.read());
+        const lpStore = new LocalPrefsStore(opened.db);
+        localPrefsStore.current = lpStore;
+        setLocalPrefs(lpStore.read());
         const hStore = new HabitSettingsStore(opened.db);
         habitSettingsStore.current = hStore;
         setHabitSettings(hStore.read());
@@ -556,6 +565,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [services],
   );
+  const updateLocalPrefs = useCallback((patch: Partial<LocalPrefs>) => {
+    const store = localPrefsStore.current;
+    if (store) setLocalPrefs(store.update(patch));
+  }, []);
   const setUiStyle = useCallback(
     (st: UiStyle) => updateSettings({ ui_style: st }),
     [updateSettings],
@@ -582,6 +595,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSyncInfo(IDLE);
       setSettings(DEFAULT_SETTINGS);
       settingsStore.current = null;
+      localPrefsStore.current = null;
+      setLocalPrefs(DEFAULT_LOCAL_PREFS);
       setHabitSettings(DEFAULT_HABIT_SETTINGS);
       habitSettingsStore.current = null;
       setDiarySettings(DEFAULT_DIARY_SETTINGS);
@@ -617,6 +632,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUiStyle,
       settings,
       updateSettings,
+      localPrefs,
+      updateLocalPrefs,
       habitSettings,
       updateHabitSettings,
       diarySettings,
@@ -646,6 +663,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUiStyle,
       settings,
       updateSettings,
+      localPrefs,
+      updateLocalPrefs,
       habitSettings,
       updateHabitSettings,
       diarySettings,

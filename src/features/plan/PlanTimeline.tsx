@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -11,6 +11,7 @@ import { addDays, mondayOf } from './engine';
 import { dayLabel, monthLabel, shortHours } from './format';
 import type { PlanRepo } from './repo';
 import { calendarView } from './view';
+import { Text } from '@/ui/CappedText';
 
 type Mode = 'week' | 'month';
 
@@ -234,6 +235,7 @@ export function PlanTimeline(p: {
                     const mt = minText(sg.mins);
                     return (
                       <Pressable
+                        hitSlop={9}
                         key={sg.from}
                         testID={`tl-bar-${n.project}-${sg.from}`}
                         accessibilityRole="button"

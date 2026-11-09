@@ -309,6 +309,7 @@ export function DayPage(p: DayPageProps) {
     const tint = lv ? LEVEL_TEXT[lv] : d.ink3;
     return (
       <Pressable
+        hitSlop={2}
         testID={kind === 'mood' ? 'diary-mood' : 'diary-energy'}
         accessibilityRole="button"
         accessibilityLabel={t(kind === 'mood' ? 'diario.com_e_andata' : 'diario.energia')}

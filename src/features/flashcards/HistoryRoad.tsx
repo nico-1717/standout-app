@@ -1,9 +1,10 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 import type { HistoryChain } from './history';
+import { Text } from '@/ui/CappedText';
 
 /** L'oro del sito (`#C98A00` di giorno, `#FFD60A` di notte). */
 export const GOLD = { light: '#C98A00', dark: '#FFD60A' } as const;

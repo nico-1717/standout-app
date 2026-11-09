@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +19,7 @@ import {
 import { badges, streaks } from '@/features/flashcards/stats';
 import { localToday } from '@/features/tasks/groups';
 import { Card, Header, SectionLabel, bigNumber } from '@/ui/kit';
+import { Text } from '@/ui/CappedText';
 
 type Period = 7 | 30 | 90 | 0;
 
@@ -308,6 +309,7 @@ export default function FlashcardStatsScreen() {
               { id: 'more', label: '+', step: 5, a11y: t('fc.aumenta') },
             ].map((b) => (
               <Pressable
+                hitSlop={4}
                 key={b.id}
                 testID={`fcst-goal-${b.id}`}
                 accessibilityRole="button"

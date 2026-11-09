@@ -238,6 +238,7 @@ export function RichEditor({
                 : block?.t === 'li' && block.c === c;
           return (
             <Pressable
+              hitSlop={5}
               key={c}
               testID={`${testID}-c-${c}`}
               accessibilityRole="button"
@@ -333,6 +334,7 @@ export function RichEditor({
               ) : null}
               {k === 'ck' ? (
                 <Pressable
+                  hitSlop={11}
                   testID={`${testID}-check-${i}`}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: b.t === 'li' && b.ck === 1 }}

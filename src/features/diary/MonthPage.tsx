@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { DiaryTheme } from './diaryTheme';
@@ -8,6 +8,7 @@ import { Face } from './Face';
 import { LEVEL_TEXT } from './faces';
 import type { MonthSummary } from './logic';
 import { monthEnd, weekStart } from './logic';
+import { Text } from '@/ui/CappedText';
 
 const num = (v: number | null) => (v === null ? '–' : String(v).replace('.', ','));
 

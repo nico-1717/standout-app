@@ -651,6 +651,7 @@ export default function FlashcardsScreen() {
             {bulk === 'color' ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 <Pressable
+                  hitSlop={6}
                   testID="fc-sel-color-auto"
                   accessibilityRole="button"
                   onPress={() => {
@@ -672,6 +673,7 @@ export default function FlashcardsScreen() {
                 </Pressable>
                 {DECK_SWATCHES.map((c) => (
                   <Pressable
+                    hitSlop={6}
                     key={c}
                     testID={`fc-sel-color-${c.slice(1)}`}
                     accessibilityRole="button"

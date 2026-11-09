@@ -30,7 +30,7 @@ const SURFACES: Record<UiStyle, Record<SchemeName, Surfaces>> = {
       surface2: '#E7EBF5',
       text: '#14161C',
       text2: '#5C6171',
-      text3: '#7D8294',
+      text3: '#656B7D',
       hairline: 'rgba(60,70,110,.12)',
       hairline2: 'rgba(60,70,110,.20)',
       headerGlass: 'rgba(238,241,248,.84)',
@@ -41,7 +41,7 @@ const SURFACES: Record<UiStyle, Record<SchemeName, Surfaces>> = {
       surface2: '#232632',
       text: '#F5F6FA',
       text2: '#A3A8B8',
-      text3: '#767B8C',
+      text3: '#8A8FA0',
       hairline: 'rgba(255,255,255,.10)',
       hairline2: 'rgba(255,255,255,.16)',
       headerGlass: 'rgba(9,10,15,.80)',
@@ -54,7 +54,7 @@ const SURFACES: Record<UiStyle, Record<SchemeName, Surfaces>> = {
       surface2: '#EFE8DB',
       text: '#26211A',
       text2: '#6B6152',
-      text3: '#9A8F7C',
+      text3: '#736A57',
       hairline: '#E3D9C8',
       hairline2: '#D4C8B2',
       headerGlass: 'rgba(246,241,233,.92)',
@@ -65,7 +65,7 @@ const SURFACES: Record<UiStyle, Record<SchemeName, Surfaces>> = {
       surface2: '#26221C',
       text: '#F2EBDD',
       text2: '#A89F8E',
-      text3: '#7C7466',
+      text3: '#948B7A',
       hairline: '#2E2922',
       hairline2: '#3B352C',
       headerGlass: 'rgba(20,18,15,.92)',
@@ -94,8 +94,30 @@ export interface Shape {
   titleWeight: '400' | '800';
 }
 
-export function surfacesFor(style: UiStyle, scheme: SchemeName): Surfaces {
-  return SURFACES[style][scheme];
+/** Alto contrasto (interruttore locale in Altro › Stile): testi pieni e linee ben visibili, sfondi invariati. */
+const HIGH_CONTRAST: Record<
+  SchemeName,
+  Pick<Surfaces, 'text' | 'text2' | 'text3' | 'hairline' | 'hairline2'>
+> = {
+  light: {
+    text: '#000000',
+    text2: '#262626',
+    text3: '#3D3D3D',
+    hairline: 'rgba(0,0,0,.45)',
+    hairline2: 'rgba(0,0,0,.75)',
+  },
+  dark: {
+    text: '#FFFFFF',
+    text2: '#EBEBEB',
+    text3: '#D2D2D2',
+    hairline: 'rgba(255,255,255,.55)',
+    hairline2: 'rgba(255,255,255,.85)',
+  },
+};
+
+export function surfacesFor(style: UiStyle, scheme: SchemeName, highContrast = false): Surfaces {
+  const base = SURFACES[style][scheme];
+  return highContrast ? { ...base, ...HIGH_CONTRAST[scheme] } : base;
 }
 
 export function shapeFor(style: UiStyle, scheme: SchemeName): Shape {

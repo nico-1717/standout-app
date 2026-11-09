@@ -93,6 +93,7 @@ export default function Categories() {
             <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
               {SWATCHES.map((s) => (
                 <Pressable
+                  hitSlop={8}
                   accessibilityRole="button"
                   key={s}
                   onPress={() => {

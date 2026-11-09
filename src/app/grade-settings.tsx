@@ -171,6 +171,7 @@ export default function GradeSettingsScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {facs.map(([key, f]) => (
               <Pressable
+                hitSlop={5}
                 key={key}
                 testID={`gset-fac-${key}`}
                 accessibilityRole="button"

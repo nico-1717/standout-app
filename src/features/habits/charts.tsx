@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { alpha } from '@/features/buy/buyTheme';
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -8,6 +8,7 @@ import { bigNumber, cardShadow } from '@/ui/kit';
 
 import type { HabitsTheme } from './habitsTheme';
 import type { Bar, CalCell, HeatWeek } from './stats';
+import { Text } from '@/ui/CappedText';
 
 /* I grafici del sito (public/planner/habits.css: hb-card, hb-kpi, hb-bars, hb-heat, hb-cal), disegnati con View. */
 

@@ -17,6 +17,8 @@ export interface Theme extends Palette, Omit<Shape, 'style'> {
   style: UiStyle;
   brand: string;
   brandSoft: string;
+  /** l'interruttore «Alto contrasto» (solo su questo telefono) */
+  highContrast: boolean;
 }
 
 const ThemeContext = createContext<Theme | null>(null);
@@ -24,10 +26,12 @@ const ThemeContext = createContext<Theme | null>(null);
 export function ThemeProvider({
   accent = DEFAULT_ACCENT,
   uiStyle = 'standard',
+  highContrast = false,
   children,
 }: {
   accent?: AccentId;
   uiStyle?: UiStyle;
+  highContrast?: boolean;
   children: ReactNode;
 }) {
   const scheme: SchemeName = useColorScheme() === 'dark' ? 'dark' : 'light';
@@ -35,11 +39,12 @@ export function ThemeProvider({
     () => ({
       scheme,
       ...palettes[scheme],
-      ...surfacesFor(uiStyle, scheme),
+      ...surfacesFor(uiStyle, scheme, highContrast),
       ...shapeFor(uiStyle, scheme),
       ...brandFor(scheme, accent),
+      highContrast,
     }),
-    [scheme, accent, uiStyle],
+    [scheme, accent, uiStyle, highContrast],
   );
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }

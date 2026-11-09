@@ -53,6 +53,7 @@ export default function PlannerManage() {
     <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
       {SWATCHES.map((c) => (
         <Pressable
+          hitSlop={8}
           key={c}
           testID={`${id}-${c}`}
           accessibilityRole="radio"
@@ -142,6 +143,7 @@ export default function PlannerManage() {
           <View key={c.uuid} style={card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Pressable
+                hitSlop={11}
                 testID={`cal-vis-${c.uuid}`}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: !!c.is_visible }}
@@ -237,6 +239,7 @@ export default function PlannerManage() {
             <View key={c.uuid} style={card}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Pressable
+                  hitSlop={11}
                   testID={`cat-vis-${c.uuid}`}
                   accessibilityRole="switch"
                   accessibilityState={{ checked: !c.is_hidden }}

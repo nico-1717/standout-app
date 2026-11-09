@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +14,7 @@ import { localToday } from '@/features/tasks/groups';
 import type { Task } from '@/features/tasks/repo';
 import { diaryFakeText } from '@/features/planner/weekPanel';
 import { studyToday, type StudyBlock } from '@/features/plan/studyToday';
+import { Text } from '@/ui/CappedText';
 
 type Tab = 'todo' | 'buy' | 'study' | 'pills';
 const TABS: Tab[] = ['todo', 'buy', 'study', 'pills'];

@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
   type ViewStyle,
@@ -31,6 +30,7 @@ import {
   type Level,
   type PlanDraft,
 } from './pillsLogic';
+import { Text } from '@/ui/CappedText';
 
 /* I pezzi della schermata Pastiglie, con l'aspetto di todo_widget.css (.td-pill-*). */
 

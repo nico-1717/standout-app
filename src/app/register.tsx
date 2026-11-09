@@ -156,6 +156,7 @@ export default function Register() {
           style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginVertical: 10 }}
         >
           <Pressable
+            hitSlop={10}
             testID="reg-accept"
             accessibilityRole="checkbox"
             accessibilityState={{ checked: accept }}

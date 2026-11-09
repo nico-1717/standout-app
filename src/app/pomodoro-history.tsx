@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Svg, { Circle } from 'react-native-svg';
@@ -15,6 +15,7 @@ import { subtreeIds } from '@/features/projects/logic';
 import { localToday } from '@/features/tasks/groups';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Text } from '@/ui/CappedText';
 
 const PAGE = 20;
 const PIE_C = 2 * Math.PI * 34;

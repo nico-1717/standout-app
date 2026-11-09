@@ -140,6 +140,7 @@ export default function PlannerRoutines() {
             <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
               {SWATCHES.map((c) => (
                 <Pressable
+                  hitSlop={8}
                   key={c}
                   testID={`routine-color-${c}`}
                   accessibilityRole="radio"

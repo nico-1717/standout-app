@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View, type GestureResponderEvent } from 'react-native';
+import { Pressable, View, type GestureResponderEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { mix } from '@/features/buy/buyTheme';
@@ -11,6 +11,7 @@ import { minutesOf, timeOf } from './model';
 import { blockBackground, eventColor, longHex, type PlannerTheme } from './plannerTheme';
 import type { Category, Calendar } from './repo';
 import { useEventDrag } from './useEventDrag';
+import { Text } from '@/ui/CappedText';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
 export function useNowMinutes(active: boolean): number | null {
