@@ -1,0 +1,62 @@
+name: iOS build for TestFlight
+# Manual only: GitHub > Actions > "iOS build for TestFlight" > Run workflow.
+# The build itself runs on Expo's servers (EAS); this job only starts it and sends it to TestFlight when ready.
+on:
+  workflow_dispatch:
+    inputs:
+      link_project:
+        description: 'Link the app to the Expo account first (only if the first run says the project does not exist)'
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # Apple sign-in without a password: an App Store Connect API key
+      EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      EXPO_ASC_API_KEY_PATH: ${{ github.workspace }}/asc-key.p8
+      EXPO_APPLE_TEAM_ID: VLQG7FPB29
+      EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Check the secrets are there
+        run: |
+          for v in EXPO_TOKEN EXPO_ASC_KEY_ID EXPO_ASC_ISSUER_ID; do
+            if [ -z "${!v}" ]; then echo "::error::Secret for $v is missing (see docs/PHONE_TEST.md)"; exit 1; fi
+          done
+          if [ -z "${{ secrets.ASC_KEY_P8 }}" ]; then echo "::error::Secret ASC_KEY_P8 is missing"; exit 1; fi
+      - name: Write the Apple key (only on this temporary machine)
+        run: |
+          printf '%s\n' "${{ secrets.ASC_KEY_P8 }}" > asc-key.p8
+          chmod 600 asc-key.p8
+      - name: Tell the store upload which key to use
+        run: |
+          node -e '
+            const fs = require("fs");
+            const c = JSON.parse(fs.readFileSync("eas.json", "utf8"));
+            c.submit = c.submit || {};
+            c.submit.production = c.submit.production || {};
+            c.submit.production.ios = {
+              ascApiKeyPath: process.env.EXPO_ASC_API_KEY_PATH,
+              ascApiKeyIssuerId: process.env.EXPO_ASC_ISSUER_ID,
+              ascApiKeyId: process.env.EXPO_ASC_KEY_ID,
+            };
+            fs.writeFileSync("eas.json", JSON.stringify(c, null, 2));
+          '
+      - name: Link the project to the Expo account
+        if: ${{ inputs.link_project }}
+        run: eas init --non-interactive --force
+      - name: Build and send to TestFlight
+        run: eas build --platform ios --profile production --non-interactive --no-wait --auto-submit
