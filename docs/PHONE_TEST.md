@@ -13,8 +13,16 @@ So we make a "development build" once, install it, and then it updates over Wi-F
 5. For the live test against the real site no server is needed: the app talks to https://nisama.altervista.org.
 
 ## iPhone
-Installing on a real iPhone needs the Apple Developer account (99 USD/year). Until you decide that,
-test on Android; the same code runs on iOS.
+Installing on a real iPhone needs the Apple Developer account (99 USD/year), which is now approved.
+1. On your computer: `eas login`, then `eas device:create` and open the link it shows **on the iPhone**
+   (it installs a small profile that registers the phone).
+2. On the iPhone: Settings > Privacy & Security > Developer Mode > on (the phone restarts).
+3. `eas build --profile development --platform ios`. EAS asks for your Apple ID once and makes the
+   certificates for you. Say yes to everything it proposes.
+4. When it finishes, open the link it prints **on the iPhone** and install. Then run `npx expo start --dev-client`
+   on the computer and open the app: it loads over Wi-Fi.
+5. For TestFlight (later, no cable needed): `eas build --profile production --platform ios`, then `eas submit --platform ios`.
+   Create the app first in App Store Connect with the bundle id `app.standout.mobile`.
 
 ## Security note
 The development build is signed with a debug key and is only for you. Never share the APK.
