@@ -30,6 +30,17 @@ describe('motore di sincronizzazione', () => {
     ]);
   });
 
+  it('un invitato il cui evento non esiste più sul sito si scarta in silenzio (nessun problema da mostrare)', async () => {
+    const server = new FakeServer();
+    server.external('event_guests', 'orphan-1', { email: 'a@b.it', event_uuid: null });
+    server.external('todos', 'ok-1', { title: 'buona', sort_key: 'a0' });
+    const a = phone(server);
+    const rep = await a.engine.syncOnce();
+    expect(rep.snapshotDone).toBe(true);
+    expect(titles(a.repo)).toEqual(['buona']);
+    expect(a.db.all('SELECT tbl FROM sync_problems')).toEqual([]);
+  });
+
   it('crea sul telefono, invia, e un secondo telefono lo riceve', async () => {
     const server = new FakeServer();
     const a = phone(server);

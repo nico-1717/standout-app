@@ -156,7 +156,14 @@ export class SyncEngine {
   private async pullAll(report: SyncReport): Promise<void> {
     for (;;) {
       const cursor = getState(this.db, CURSOR_KEY) ?? START;
-      const res = await this.api.pull(cursor, PULL_PAGE);
+      let res;
+      try {
+        res = await this.api.pull(cursor, PULL_PAGE);
+      } catch (e) {
+        // dice a che punto della copia si è fermato (la tabella è il numero dopo il secondo «:»): aiuta a capire quale pagina fallisce
+        if (e instanceof Error) e.message = `[pull ${cursor}] ${e.message}`;
+        throw e;
+      }
       if (res.resync_required) {
         // il registro del server è andato oltre il punto del telefono: si riparte da una copia completa
         setState(this.db, CURSOR_KEY, START);
@@ -168,19 +175,14 @@ export class SyncEngine {
           try {
             this.applyChange(c, !!res.snapshot);
           } catch (e) {
+            const msg = String((e as Error)?.message ?? e);
+            // una riga figlia il cui genitore non esiste più sul sito (il sito non ha chiavi esterne): non è utilizzabile, si scarta senza allarmare
+            if (c.op === 'upsert' && /NOT NULL constraint failed: \w+\.\w+_uuid/.test(msg))
+              continue;
             // una riga che il telefono non sa salvare non deve fermare tutto il resto (progetti, flashcard…): si ricorda e si va avanti
             this.db.run(
               `INSERT INTO sync_problems (tbl, uuid, code, field, message, patch, op, created_at) VALUES (?,?,?,?,?,?,?,?)`,
-              [
-                c.table,
-                c.uuid,
-                'unreadable',
-                null,
-                String((e as Error)?.message ?? e).slice(0, 200),
-                '{}',
-                c.op,
-                this.clock(),
-              ],
+              [c.table, c.uuid, 'unreadable', null, msg.slice(0, 200), '{}', c.op, this.clock()],
             );
           }
         }
