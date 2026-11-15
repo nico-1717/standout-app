@@ -252,4 +252,6 @@ Regola: ogni schermata ha lo stesso disegno della pagina del sito; cambia solo l
 | Planner (Settimana, Mese, intestazione, avatar) | uguale |
 | To do, To buy, Pastiglie: titolo, schede a pillola, nota veloce gialla, foglio, avatar | uguale; mancano «Ordina con l'IA», «Seleziona» in To buy |
 | Home: intestazione con serie, tasti rapidi, riquadri (Oggi, Flashcard, Progetti, Voti, Numeri, Curiosità), colori iOS (ignora lo stile Paper, come il sito) | uguale |
-| Abitudini, Pomodoro, Flashcard (+ mazzi, partita, statistiche), Diario, Voti, Impostazioni/Account, Lingue | da rifare, in questo ordine |
+| Abitudini (testata, striscia dei giorni, riquadri scuri, elenco), Pomodoro (orologio, tasti tondi, progetto), Flashcard: pagina iniziale (Studio, Lingue, anello del giorno, settimana) | uguale |
+| Diario (stile standard: data grande, pillola del mese, riquadri Umore/Energia/Abitudini, schede, microfono, barra a pillola), Voti (stato vuoto, avatar), Impostazioni (profilo e elenco delle pagine a gruppi) | uguale; lo stile Paper resta quello del quaderno |
+| Flashcard: mazzi (`/flashcards`), partita, statistiche; Account; Lingue; Progetti: dettagli | da rifare |
