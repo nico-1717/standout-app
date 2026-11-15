@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { localToday } from '@/features/tasks/groups';
-import { addDaysIso, addMonths, mondayOf, monthOf } from '@/features/planner/dates';
+import { addDaysIso, addMonths, mondayOf, monthOf, yearOf } from '@/features/planner/dates';
 import type { EventView } from '@/features/planner/events';
 import type { Priority, Routine } from '@/features/planner/repo';
 import { SmartBar, SmartReport, type SmartNote } from '@/features/planner/SmartBar';
@@ -40,7 +40,7 @@ import { weekPhraseId } from '@/features/planner/phrases';
 import { MonthScene } from '@/features/planner/ambient/MonthScene';
 import { ambientOpacity } from '@/features/planner/ambient/scene';
 import { plannerTheme } from '@/features/planner/plannerTheme';
-import { MonthView, WeekView, monthGrid } from '@/features/planner/Views';
+import { MonthAgenda, MonthView, WeekGrid, monthGrid } from '@/features/planner/Views';
 import { isBand, pxPerMinute } from '@/features/planner/layout';
 
 /** Il planner: vista giorno (con le ore), settimana (un elenco per giorno) e mese (una griglia). */
@@ -49,7 +49,7 @@ export default function PlannerScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width, height: screenH } = useWindowDimensions();
   const {
     services,
     version,
@@ -73,6 +73,8 @@ export default function PlannerScreen() {
   const [monthOpen, setMonthOpen] = useState(false);
   const [prioOpen, setPrioOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
+  const [monthsOpen, setMonthsOpen] = useState(false);
+  const [agendaFrom, setAgendaFrom] = useState<string | null>(null);
   const [topH, setTopH] = useState(0);
   const [barH, setBarH] = useState(0);
   // «Abitudini e progetti»: i dati si leggono solo all'apertura del foglio
@@ -111,9 +113,10 @@ export default function PlannerScreen() {
       };
     }
     const grid = monthGrid(date);
-    const from = mode === 'month' ? grid[0]![0]! : week[0]!;
-    const to = mode === 'month' ? grid[grid.length - 1]![6]! : week[6]!;
-    const inSpan = repo.visibleEventsInRange(from, to);
+    const inSpan =
+      mode === 'month'
+        ? repo.visibleEventsInRange(grid[0]![0]!, grid[grid.length - 1]![6]!)
+        : ([] as EventView[]);
     return {
       events: mode === 'day' ? repo.visibleEventsInRange(date, date) : [],
       calendars: repo.calendars(),
@@ -124,6 +127,24 @@ export default function PlannerScreen() {
       weekNo: repo.weekNumber(week[0]!, plannerSettings),
     };
   }, [repo, version, date, week, mode, plannerSettings]);
+
+  // la settimana e l'elenco del mese chiedono da sé gli eventi che servono
+  const load = useCallback(
+    (from: string, to: string) => (repo ? repo.visibleEventsInRange(from, to) : []),
+    [repo],
+  );
+  // i giorni del mese che hanno qualcosa scritto nel diario (il segnalibro nella casella)
+  const diaryDays = useMemo(() => {
+    void version;
+    const out: Record<string, boolean> = {};
+    if (mode !== 'month' || !services?.diary) return out;
+    for (const delta of [-1, 0, 1]) {
+      const m = addMonths(date, delta).slice(0, 7);
+      for (const [d, v] of Object.entries(services.diary.month(m).days))
+        if (v.has_text || v.has_lists) out[d] = true;
+    }
+    return out;
+  }, [services, version, date, mode]);
 
   // le pastiglie la cui ora è passata e nessuno ha risposto (solo nella vista giorno, come sul sito)
   const dueDoses = useMemo(() => {
@@ -158,15 +179,9 @@ export default function PlannerScreen() {
   }, [date]);
 
   const swipeHandlers = useDaySwipe((delta) =>
-    setDate((d) =>
-      mode === 'day'
-        ? addDaysIso(d, delta)
-        : mode === 'week'
-          ? addDaysIso(d, 7 * delta)
-          : addMonths(d, delta),
-    ),
+    setDate((d) => (mode === 'day' ? addDaysIso(d, delta) : addMonths(d, delta))),
   );
-  const now = useNowMinutes(date === today);
+  const now = useNowMinutes(date === today || mode === 'week');
   const open = useCallback(
     (ev: EventView) => setSheet({ key: Date.now(), target: { mode: 'edit', view: ev } }),
     [],
@@ -259,40 +274,50 @@ export default function PlannerScreen() {
     mode === 'day' ? 'planner.giorno' : mode === 'week' ? 'planner.settimana_2' : 'planner.mese',
   );
   const barTop = topH + barH;
+  const agendaH = Math.round(screenH * 0.58);
 
   return (
     <View style={{ flex: 1, backgroundColor: pt.page }}>
-      <PlannerTopbar
-        pt={pt}
-        inset={insets.top}
-        date={date}
-        today={today}
-        weekNo={weekNo}
-        week={week}
-        view={mode}
-        viewLabel={viewLabel}
-        letter={(userName || '?').slice(0, 1).toUpperCase()}
-        affirmation={plannerSettings.show_affirmations ? affirmation : null}
-        ambient={
-          uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
-            <MonthScene
-              month={monthOf(date)}
-              opacity={ambientOpacity(plannerSettings.ambient_opacity)}
-              page={pt.page}
-              sky={!pt.dark}
-            />
-          ) : null
-        }
-        onHeight={setTopH}
-        onViewPress={(x) => setViewMenu(x)}
-        onToday={() => setDate(today)}
-        onWeek={() => router.push({ pathname: '/planner-week', params: { date } })}
-        onSettings={() => router.push('/planner-settings')}
-        onAvatar={() => router.push('/account')}
-        onSearch={() => setSearching(true)}
-        onFilter={() => router.push('/planner-manage')}
-        onMini={() => setMonthOpen(true)}
-      />
+      <View style={{ display: agendaFrom ? 'none' : 'flex' }}>
+        <PlannerTopbar
+          pt={pt}
+          inset={insets.top}
+          date={date}
+          today={today}
+          weekNo={weekNo}
+          week={week}
+          view={mode}
+          viewLabel={viewLabel}
+          letter={(userName || '?').slice(0, 1).toUpperCase()}
+          affirmation={plannerSettings.show_affirmations ? affirmation : null}
+          ambient={
+            uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
+              <MonthScene
+                month={monthOf(date)}
+                opacity={ambientOpacity(plannerSettings.ambient_opacity)}
+                page={pt.page}
+                sky={!pt.dark}
+              />
+            ) : null
+          }
+          onHeight={setTopH}
+          onViewPress={(x) => setViewMenu(x)}
+          onToday={() => setDate(today)}
+          onWeek={() => router.push({ pathname: '/planner-week', params: { date } })}
+          onSettings={() => router.push('/planner-settings')}
+          onAvatar={() => router.push('/account')}
+          onSearch={() => setSearching(true)}
+          onFilter={() => router.push('/planner-manage')}
+          onMini={() => setMonthOpen(true)}
+          monthsOpen={monthsOpen}
+          onMonthName={() => setMonthsOpen((v) => !v)}
+          onMonthPick={(d) => {
+            const delta = yearOf(d) * 12 + monthOf(d) - (yearOf(date) * 12 + monthOf(date));
+            setDate(addMonths(date, delta));
+            setMonthsOpen(false);
+          }}
+        />
+      </View>
       {mode === 'day' ? (
         <View
           testID="day-bar"
@@ -321,39 +346,62 @@ export default function PlannerScreen() {
         </View>
       ) : null}
 
-      <View style={{ flex: 1 }} {...swipeHandlers}>
-        {mode !== 'day' ? (
-          <ScrollView testID="span-scroll" contentContainerStyle={{ paddingBottom: 120 }}>
-            {mode === 'week' ? (
-              <WeekView
-                pt={pt}
-                categories={categories}
-                calendars={calendars}
-                days={week}
-                events={span}
-                today={today}
-                onPickDay={(d) => {
-                  setDate(d);
-                  setMode('day');
-                }}
-                onOpen={open}
-                onToggle={toggle}
-              />
-            ) : (
-              <MonthView
-                pt={pt}
-                categories={categories}
-                calendars={calendars}
-                month={date}
-                events={span}
-                today={today}
-                onPickDay={(d) => {
-                  setDate(d);
-                  setMode('day');
-                }}
-              />
-            )}
-          </ScrollView>
+      <View
+        style={{
+          flex: 1,
+          marginBottom: agendaFrom ? agendaH : 0,
+          paddingTop: agendaFrom ? insets.top + 6 : 0,
+        }}
+        {...(mode === 'week' ? {} : swipeHandlers)}
+      >
+        {mode === 'week' ? (
+          <WeekGrid
+            pt={pt}
+            categories={categories}
+            calendars={calendars}
+            date={date}
+            today={today}
+            version={version}
+            now={now}
+            load={load}
+            bottomPad={60}
+            onFocus={setDate}
+            onPickDay={(d) => {
+              setDate(d);
+              setMode('day');
+            }}
+            onOpen={open}
+            onCreate={(d, startMin) => {
+              const h = String(Math.floor(startMin / 60)).padStart(2, '0');
+              const m = String(startMin % 60).padStart(2, '0');
+              setSheet({ key: Date.now(), target: { mode: 'new', date: d, start: `${h}:${m}` } });
+            }}
+          />
+        ) : mode === 'month' ? (
+          <MonthView
+            pt={pt}
+            categories={categories}
+            calendars={calendars}
+            month={date}
+            events={span}
+            today={today}
+            diary={diaryDays}
+            bottomPad={agendaFrom ? 6 : 96}
+            pullHidden={!!agendaFrom}
+            onPickDay={(d) => {
+              if (agendaFrom) {
+                setAgendaFrom(null);
+                return;
+              }
+              setDate(d);
+              setMode('day');
+            }}
+            onOpenDiary={(d) => router.push({ pathname: '/diary', params: { data: d } })}
+            onPull={() => {
+              const first = `${date.slice(0, 7)}-01`;
+              setAgendaFrom(today.slice(0, 7) === date.slice(0, 7) ? today : first);
+            }}
+          />
         ) : (
           <ScrollView
             ref={scroller}
@@ -448,7 +496,7 @@ export default function PlannerScreen() {
         )}
       </View>
 
-      {plannerSettings.show_motivational ? (
+      {plannerSettings.show_motivational && mode !== 'month' ? (
         <Text
           testID="week-quote"
           numberOfLines={3}
@@ -502,7 +550,7 @@ export default function PlannerScreen() {
         style={({ pressed }) => ({
           position: 'absolute',
           right: 14,
-          bottom: 54,
+          bottom: mode === 'month' ? 14 : 54,
           width: 54,
           height: 54,
           borderRadius: 27,
@@ -537,6 +585,26 @@ export default function PlannerScreen() {
         />
       ) : null}
 
+      {mode === 'month' && agendaFrom ? (
+        <MonthAgenda
+          pt={pt}
+          categories={categories}
+          calendars={calendars}
+          from={agendaFrom}
+          today={today}
+          version={version}
+          height={agendaH}
+          load={load}
+          onOpen={open}
+          onGoDay={(d) => {
+            setAgendaFrom(null);
+            setDate(d);
+            setMode('day');
+          }}
+          onClose={() => setAgendaFrom(null)}
+        />
+      ) : null}
+
       <SmartReport pt={pt} note={note} onHide={() => setNote(null)} />
 
       {viewMenu !== null ? (
@@ -548,6 +616,8 @@ export default function PlannerScreen() {
           onPick={(v) => {
             setMode(v);
             setViewMenu(null);
+            setMonthsOpen(false);
+            setAgendaFrom(null);
           }}
           onClose={() => setViewMenu(null)}
         />

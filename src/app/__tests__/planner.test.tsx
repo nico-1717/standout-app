@@ -6,7 +6,7 @@ import { migrate } from '@/core/db/migrations';
 import i18n from '@/core/i18n';
 import { upsertRow } from '@/core/sync/rows';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
-import { addDaysIso, mondayOf } from '@/features/planner/dates';
+import { addDaysIso, addMonths, mondayOf } from '@/features/planner/dates';
 import { weekPhraseId } from '@/features/planner/phrases';
 import { PlannerRepo } from '@/features/planner/repo';
 import { localToday } from '@/features/tasks/groups';
@@ -248,6 +248,41 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(screen.getByText('Dentist')).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`month-day-${TODAY}`));
     expect(screen.getByTestId('day-scroll')).toBeTruthy();
+  });
+
+  test('week grid: tapping a day header opens that day, tapping a column opens a new event at that hour', async () => {
+    setup();
+    await renderIt();
+    await pickView('week');
+    const tomorrow = addDaysIso(TODAY, 1);
+    await fireEvent.press(screen.getByTestId(`week-head-${tomorrow}`));
+    expect(screen.getByTestId('day-title')).toHaveTextContent(String(Number(tomorrow.slice(8))));
+    expect(screen.getByTestId('day-scroll')).toBeTruthy();
+    await pickView('week');
+    await fireEvent.press(screen.getByTestId(`week-col-${TODAY}`));
+    expect(screen.getByTestId('sheet-title')).toBeTruthy();
+  });
+
+  test('month: the pull handle lists the next events, a day name goes to that day, the chips jump to a month', async () => {
+    const repo = setup();
+    const later = addDaysIso(TODAY, 2);
+    repo.create({ title: 'Dentist', date: later, start: '15:00', end: '16:00' });
+    await renderIt();
+    await pickView('month');
+    await fireEvent.press(screen.getByTestId('month-pull'));
+    expect(screen.getByTestId('month-agenda')).toBeTruthy();
+    expect(screen.getByTestId(`agenda-go-${later}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('agenda-close'));
+    expect(screen.queryByTestId('month-agenda')).toBeNull();
+    await fireEvent.press(screen.getByTestId('month-pull'));
+    await fireEvent.press(screen.getByTestId(`agenda-go-${later}`));
+    expect(screen.getByTestId('day-title')).toHaveTextContent(String(Number(later.slice(8))));
+    await pickView('month');
+    await fireEvent.press(screen.getByTestId('planner-month-name'));
+    const next = addMonths(TODAY, 1).slice(0, 7);
+    await fireEvent.press(screen.getByTestId(`month-chip-${next}`));
+    expect(screen.queryByTestId('months-bar')).toBeNull();
+    expect(screen.getByTestId(`month-day-${next}-15`)).toBeTruthy();
   });
 
   test('picking a day of another week in week view shows that week', async () => {

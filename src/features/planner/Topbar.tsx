@@ -1,11 +1,17 @@
-import { useState, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  View,
+  useWindowDimensions,
+  type ScrollViewInstance,
+} from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/ui/CappedText';
 
-import { addDaysIso, dayOfMonth, monthOf, weekdayOf, yearOf } from './dates';
+import { addDaysIso, addMonths, dayOfMonth, monthOf, weekdayOf, yearOf } from './dates';
 import { LineIcon, ToolButton } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
 import { monthGrid } from './Views';
@@ -460,6 +466,71 @@ export function ViewMenu(p: {
   );
 }
 
+/** La fila dei mesi (.pl-months-bar): tre anni di mesi, quello di adesso in colore; scorre di lato. */
+function MonthChips(p: { pt: PlannerTheme; date: string; onPick: (date: string) => void }) {
+  const { t } = useTranslation();
+  const { pt } = p;
+  const { width } = useWindowDimensions();
+  const scroller = useRef<ScrollViewInstance>(null);
+  const base = `${p.date.slice(0, 7)}-01`;
+  const items = Array.from({ length: 37 }, (_, i) => {
+    const d = addMonths(base, i - 18);
+    const sameYear = yearOf(d) === yearOf(base);
+    return {
+      d,
+      on: i === 18,
+      label:
+        t(`planner.mese_${monthOf(d)}`).slice(0, 3) +
+        (sameYear ? '' : ` ${String(yearOf(d)).slice(2)}`),
+    };
+  });
+  return (
+    <ScrollView
+      ref={scroller}
+      testID="months-bar"
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ marginTop: 8 }}
+      contentContainerStyle={{ gap: 6, paddingHorizontal: 2 }}
+    >
+      {items.map((i) => (
+        <Pressable
+          key={i.d}
+          testID={`month-chip-${i.d.slice(0, 7)}`}
+          accessibilityRole="button"
+          onPress={() => p.onPick(i.d)}
+          onLayout={
+            i.on
+              ? (e) =>
+                  scroller.current?.scrollTo({
+                    x: e.nativeEvent.layout.x - width / 2 + e.nativeEvent.layout.width / 2,
+                    animated: false,
+                  })
+              : undefined
+          }
+          style={{
+            paddingVertical: 6,
+            paddingHorizontal: 14,
+            borderRadius: 999,
+            backgroundColor: i.on ? pt.accentSoft : pt.field,
+          }}
+        >
+          <Text
+            style={{
+              color: i.on ? pt.accentInk : pt.ink2,
+              fontSize: 12.5,
+              fontWeight: i.on ? '500' : '400',
+              fontFamily: pt.sans,
+            }}
+          >
+            {i.label}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
 /**
  * La barra in alto del planner, come quella del sito: riga 1 (settimana, oggi, vista · impostazioni, profilo),
  * l'affermazione, riga 2 (cerca e filtro sopra il numero del giorno · mese e anno · calendarietto).
@@ -484,11 +555,16 @@ export function PlannerTopbar(p: {
   onSearch: () => void;
   onFilter: () => void;
   onMini: () => void;
+  /** nella vista mese: il nome del mese apre/chiude la fila dei mesi, un mese scelto porta lì */
+  monthsOpen?: boolean;
+  onMonthName?: () => void;
+  onMonthPick?: (date: string) => void;
   onHeight?: (h: number) => void;
 }) {
   const { t } = useTranslation();
   const { pt } = p;
   const [viewX, setViewX] = useState(0);
+  const inMonth = p.view === 'month';
   const month = t(`planner.mese_${monthOf(p.today)}`);
   const standard = pt.style === 'standard';
   return (
@@ -576,7 +652,14 @@ export function PlannerTopbar(p: {
         </Text>
       ) : null}
 
-      <View style={{ flexDirection: 'row', marginTop: 9, minHeight: 75, gap: 10 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          marginTop: inMonth ? 8 : 9,
+          minHeight: inMonth ? 44 : 78,
+          gap: 10,
+        }}
+      >
         <View style={{ flex: 1, justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             <ToolButton
@@ -596,42 +679,55 @@ export function PlannerTopbar(p: {
               <LineIcon name="filter" color={pt.ink} size={16} />
             </ToolButton>
           </View>
-          <Pressable
-            testID="planner-day"
-            accessibilityRole="button"
-            onPress={p.onToday}
-            style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}
-          >
-            <Text
-              testID="day-title"
-              style={{
-                color: pt.ink,
-                fontSize: 43,
-                lineHeight: 39,
-                fontWeight: standard ? '700' : '400',
-                letterSpacing: -1.5,
-                fontFamily: pt.serif,
-              }}
+          {inMonth ? null : (
+            <Pressable
+              testID="planner-day"
+              accessibilityRole="button"
+              onPress={p.onToday}
+              style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}
             >
-              {dayOfMonth(p.date)}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={{
-                color: pt.ink2,
-                fontSize: 13,
-                fontWeight: '600',
-                letterSpacing: 0.13,
-                paddingBottom: 3,
-                flexShrink: 1,
-                fontFamily: pt.sans,
-              }}
-            >
-              {upper(t(`planner.gg_${weekdayOf(p.date)}`))}
-            </Text>
-          </Pressable>
+              <Text
+                testID="day-title"
+                style={{
+                  color: pt.ink,
+                  fontSize: 43,
+                  lineHeight: 39,
+                  fontWeight: standard ? '700' : '400',
+                  letterSpacing: -1.5,
+                  fontFamily: pt.serif,
+                }}
+              >
+                {dayOfMonth(p.date)}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: pt.ink2,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  letterSpacing: 0.13,
+                  paddingBottom: 3,
+                  flexShrink: 1,
+                  fontFamily: pt.sans,
+                }}
+              >
+                {upper(t(`planner.gg_${weekdayOf(p.date)}`))}
+              </Text>
+            </Pressable>
+          )}
         </View>
-        <View style={{ alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 1 }}>
+        <Pressable
+          testID="planner-month-name"
+          accessibilityRole="button"
+          disabled={!inMonth}
+          onPress={p.onMonthName}
+          style={{
+            alignItems: 'flex-end',
+            justifyContent: 'flex-start',
+            paddingTop: 1,
+            marginRight: inMonth ? 10 : 0,
+          }}
+        >
           <Text
             numberOfLines={1}
             style={{
@@ -655,9 +751,14 @@ export function PlannerTopbar(p: {
           >
             {yearOf(p.date)}
           </Text>
-        </View>
-        <MiniMonth pt={pt} date={p.date} today={p.today} week={p.week} onPress={p.onMini} />
+        </Pressable>
+        {inMonth ? null : (
+          <MiniMonth pt={pt} date={p.date} today={p.today} week={p.week} onPress={p.onMini} />
+        )}
       </View>
+      {inMonth && p.monthsOpen ? (
+        <MonthChips pt={pt} date={p.date} onPick={(d) => p.onMonthPick?.(d)} />
+      ) : null}
     </View>
   );
 }

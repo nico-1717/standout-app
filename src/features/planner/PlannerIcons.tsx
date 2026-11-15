@@ -22,6 +22,7 @@ type IconName =
   | 'star'
   | 'clock'
   | 'check'
+  | 'book'
   | 'plus';
 
 const GEAR =
@@ -41,6 +42,7 @@ const STROKES: Partial<Record<IconName, number>> = {
   clock: 1.7,
   check: 1.7,
   plus: 2.2,
+  book: 2.2,
 };
 
 export function LineIcon({
@@ -120,6 +122,7 @@ export function LineIcon({
         </>
       )}
       {name === 'check' && <Path d="M5 12.5l4 4L19 7" {...line} />}
+      {name === 'book' && <Path d="M6 4h12v16H8a2 2 0 01-2-2z" {...line} />}
       {name === 'plus' && <Path d="M12 5v14M5 12h14" {...line} />}
     </Svg>
   );
