@@ -40,6 +40,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     changed: jest.fn(),
     localPrefs: mockPrefs,
     updateLocalPrefs: jest.fn(),
+    authState: { status: 'signedIn', user: { username: 'nico' } },
   }),
 }));
 

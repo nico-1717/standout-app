@@ -140,10 +140,11 @@ export function shapeFor(style: UiStyle, scheme: SchemeName): Shape {
   }
   return {
     style,
-    radiusCard: 26,
+    // come sul sito (stile standard): carta piatta, angoli grandi, nessun bordo e nessuna ombra nel buio
+    radiusCard: 24,
     radiusButton: 16,
-    cardEdge: dark ? 'rgba(255,255,255,.09)' : 'rgba(255,255,255,.95)',
-    cardShadow: dark ? '0 10px 34px rgba(0,0,0,.45)' : '0 10px 34px rgba(30,50,110,.10)',
+    cardEdge: 'transparent',
+    cardShadow: dark ? undefined : '0 1px 3px rgba(0,0,0,.06)',
     floatingBar: true,
     barBg: dark ? 'rgba(26,28,38,.92)' : 'rgba(255,255,255,.92)',
     display: undefined,

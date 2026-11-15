@@ -17,6 +17,7 @@ import {
   speedStats,
 } from '@/features/flashcards/forecast';
 import { badges, streaks } from '@/features/flashcards/stats';
+import { HoIcon, hoTheme, type HoIconName } from '@/features/home/HomeKit';
 import { localToday } from '@/features/tasks/groups';
 import { Card, Header, SectionLabel, bigNumber } from '@/ui/kit';
 import { Text } from '@/ui/CappedText';
@@ -94,10 +95,12 @@ function Bars({
  */
 export default function FlashcardStatsScreen() {
   const th = useTheme();
+  const ho = hoTheme(th);
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, authState } = useApp();
+  const userName = authState.status === 'signedIn' ? authState.user.username : '';
   const [period, setPeriod] = useState<Period>(30);
   const [today] = useState(() => localToday());
   const [focus, setFocus] = useState<string | null>(null);
@@ -193,16 +196,40 @@ export default function FlashcardStatsScreen() {
       ? Math.round((drill.afterError.fixed / drill.afterError.opportunities) * 100)
       : null;
 
-  const tile = (id: string, label: string, value: string, note: string) => (
-    <Card key={id} style={{ flex: 1, padding: 12, gap: 2 }}>
-      <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
-        {label.toUpperCase()}
-      </Text>
-      <Text testID={id} style={[{ color: th.text }, bigNumber(th, 22)]}>
+  const tile = (
+    id: string,
+    icon: HoIconName,
+    color: string,
+    soft: string,
+    label: string,
+    value: string,
+    note: string,
+  ) => (
+    <View
+      key={id}
+      style={{ flex: 1, backgroundColor: ho.surface, borderRadius: 24, padding: 14, gap: 2 }}
+    >
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          backgroundColor: soft,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 6,
+        }}
+      >
+        <HoIcon name={icon} color={color} size={17} />
+      </View>
+      <Text testID={id} style={{ color: ho.text, fontSize: 24, fontWeight: '800' }}>
         {value}
       </Text>
-      <Text style={{ color: th.text2, fontSize: 11 }}>{note}</Text>
-    </Card>
+      <Text style={{ color: ho.text2, fontSize: 13, fontWeight: '700' }} numberOfLines={2}>
+        {label}
+      </Text>
+      <Text style={{ color: ho.text3, fontSize: 12 }}>{note}</Text>
+    </View>
   );
 
   const periods: { v: Period; label: string }[] = [
@@ -217,16 +244,42 @@ export default function FlashcardStatsScreen() {
       <Header
         top={insets.top}
         title={t('fc.statistiche')}
+        account={{
+          letter: (userName[0] ?? '?').toUpperCase(),
+          label: t('app.account'),
+          onPress: () => router.push('/account'),
+        }}
         right={
-          <Pressable testID="fcst-close" accessibilityRole="button" onPress={() => router.back()}>
-            <Text style={{ color: th.brand, fontSize: 17 }}>{t('comune.chiudi')}</Text>
+          <Pressable
+            testID="fcst-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            hitSlop={8}
+            onPress={() => router.back()}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: ho.surface2,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: ho.text2, fontSize: 16, fontWeight: '700' }}>✕</Text>
           </Pressable>
         }
       />
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 40 }}
       >
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: ho.surface,
+            borderRadius: 16,
+            padding: 4,
+          }}
+        >
           {periods.map((p) => (
             <Pressable
               key={p.v}
@@ -235,13 +288,20 @@ export default function FlashcardStatsScreen() {
               accessibilityState={{ selected: period === p.v }}
               onPress={() => setPeriod(p.v)}
               style={{
-                paddingVertical: 7,
-                paddingHorizontal: 12,
-                borderRadius: 16,
-                backgroundColor: period === p.v ? th.brand : th.surface2,
+                flex: 1,
+                alignItems: 'center',
+                paddingVertical: 10,
+                borderRadius: 12,
+                backgroundColor: period === p.v ? ho.surface2 : 'transparent',
               }}
             >
-              <Text style={{ color: period === p.v ? '#fff' : th.text, fontWeight: '600' }}>
+              <Text
+                style={{
+                  color: period === p.v ? ho.text : ho.text2,
+                  fontSize: 15,
+                  fontWeight: '700',
+                }}
+              >
                 {p.label}
               </Text>
             </Pressable>
@@ -255,14 +315,33 @@ export default function FlashcardStatsScreen() {
         ) : null}
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          {tile('fcst-played', t('fc.carte_giocate'), String(played), sub)}
+          {tile(
+            'fcst-played',
+            'folder',
+            ho.blue,
+            ho.blueSoft,
+            t('fc.carte_giocate'),
+            String(played),
+            sub,
+          )}
           {tile(
             'fcst-accuracy',
+            'check',
+            ho.green,
+            ho.greenSoft,
             t('fc.precisione'),
             played > 0 ? `${Math.round((correct / played) * 100)}%` : '—',
             sub,
           )}
-          {tile('fcst-time', t('fc.tempo_di_studio'), formatDuration(seconds), sub)}
+          {tile(
+            'fcst-time',
+            'timer',
+            ho.orange,
+            ho.orangeSoft,
+            t('fc.tempo_di_studio'),
+            formatDuration(seconds),
+            sub,
+          )}
         </View>
 
         <Card style={{ padding: 14, gap: 4 }}>
