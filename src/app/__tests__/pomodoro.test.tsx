@@ -40,6 +40,7 @@ jest.mock('@/features/pomodoro/alarm', () => ({
 jest.mock('@/features/reminders/notifier', () => ({ askPermission: jest.fn(async () => true) }));
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
+    authState: { status: 'signedIn', user: { username: 'nico' } },
     services: mockServices,
     version: mockVersion,
     changed: mockChanged,

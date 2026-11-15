@@ -69,7 +69,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { mix } from '@/features/buy/buyTheme';
 import { haptic, Rise } from '@/ui/motion';
-import { SyncBadge } from '@/ui/SyncBadge';
+import { Avatar } from '@/ui/Avatar';
 
 /** Come sul sito: tutte, da fare, oppure una fascia della giornata (compare solo se c'è un'abitudine in quella fascia). */
 type Filter = 'all' | 'todo' | `part:${Habit['day_part']}`;
@@ -87,7 +87,15 @@ const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
 export default function HabitsScreen() {
   const th = useTheme();
-  const { services, version, changed, habitSettings: SETTINGS, updateHabitSettings } = useApp();
+  const {
+    services,
+    version,
+    changed,
+    habitSettings: SETTINGS,
+    updateHabitSettings,
+    authState,
+  } = useApp();
+  const userName = authState.status === 'signedIn' ? authState.user.username : '';
   const ht = useMemo(
     () => habitsTheme(th.scheme, SETTINGS.accent_color, th.style),
     [th.scheme, th.style, SETTINGS.accent_color],
@@ -528,18 +536,34 @@ export default function HabitsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: ht.bg }}>
-      <HabitsHeader
-        th={ht}
-        top={insets.top}
-        eyebrow={labelDate(day, today, t)}
-        title={t('abitudini.titolo')}
-        right={<SyncBadge />}
-        onTable={() => setPanel('table')}
-        onStats={() => setPanel('stats')}
-        onSettings={() => setPanel('settings')}
-      />
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <View
+        style={{
+          backgroundColor: ht.headerGlass,
+          borderBottomWidth: 0.5,
+          borderBottomColor: ht.hairline,
+        }}
+      >
+        <HabitsHeader
+          th={ht}
+          top={insets.top}
+          eyebrow={labelDate(day, today, t)}
+          title={t('abitudini.titolo')}
+          right={
+            <Avatar
+              letter={(userName[0] ?? '?').toUpperCase()}
+              label={t('app.account')}
+              onPress={() => router.push('/account')}
+              testID="habits-avatar"
+            />
+          }
+          onTable={() => setPanel('table')}
+          onStats={() => setPanel('stats')}
+          onSettings={() => setPanel('settings')}
+        />
         <DayStrip cells={cells} selected={day} today={today} th={ht} onSelect={setDay} />
+      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <View style={{ height: 14 }} />
         <StatCarousel
           th={ht}
           cards={cards}
@@ -555,19 +579,33 @@ export default function HabitsScreen() {
           writeLabel={journal?.note || journal?.mood ? null : t('abitudini.scrivi')}
           onWrite={() => router.push({ pathname: '/diary', params: { data: day } })}
         />
-        <Text
-          testID="list-title"
+        <View
           style={{
-            color: ht.text,
-            fontWeight: '800',
-            fontSize: 20,
-            marginHorizontal: 20,
-            marginTop: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingHorizontal: 16,
+            marginBottom: 10,
           }}
         >
-          {t('abitudini.n_di_n_completate', { fatte: progress.done, totale: progress.total })}
-        </Text>
-        <FilterChips th={ht} value={filter} onChange={setFilter} items={filters} />
+          <Text
+            testID="list-title"
+            style={{
+              color: ht.text2,
+              fontWeight: '800',
+              fontSize: 12,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              flexShrink: 0,
+              maxWidth: '40%',
+            }}
+          >
+            {t('abitudini.n_di_n_completate', { fatte: progress.done, totale: progress.total })}
+          </Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <FilterChips th={ht} value={filter} onChange={setFilter} items={filters} />
+          </View>
+        </View>
         {nothing && (
           <View style={{ alignItems: 'center', paddingHorizontal: 32, marginTop: 40, gap: 6 }}>
             <Text style={{ color: ht.text, fontWeight: '800', fontSize: 17 }}>

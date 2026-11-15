@@ -39,6 +39,7 @@ export function DayStrip(p: {
     >
       {p.cells.map((c) => {
         const sel = c.day === p.selected;
+        const perfect = c.hasHabits && c.pct >= 1;
         return (
           <Pressable
             key={c.day}
@@ -46,25 +47,47 @@ export function DayStrip(p: {
             accessibilityRole="button"
             accessibilityState={{ selected: sel }}
             onPress={() => p.onSelect(c.day)}
-            style={[
-              styles.cell,
-              sel && { backgroundColor: th.surface },
-              sel && cardShadow(th.scheme === 'dark'),
-            ]}
+            style={[styles.cell, sel && { backgroundColor: th.ink }]}
           >
-            <Text style={[styles.dow, { color: sel ? th.accent : th.text2 }]}>{c.dow}</Text>
+            <Text style={[styles.dow, { color: sel ? th.inkText2 : th.text3 }]}>{c.dow}</Text>
             <View style={styles.ringBox}>
+              {perfect ? (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: -5,
+                    left: -5,
+                    right: -5,
+                    bottom: -5,
+                    borderRadius: 22,
+                    borderWidth: 2,
+                    borderColor: `${th.accent}66`,
+                  }}
+                />
+              ) : null}
               <Ring
                 size={34}
-                stroke={4}
+                stroke={2.6}
                 pct={c.hasHabits ? c.pct : 0}
-                color={c.pct >= 1 ? th.green : th.accent}
-                track={th.surface3}
+                color={sel ? th.inkText : th.accent}
+                track={sel ? th.inkTrack : th.hairline}
               />
-              <Text style={[styles.num, { color: c.day === p.today ? th.accent : th.text }]}>
+              <Text
+                style={[
+                  styles.num,
+                  { color: sel ? th.inkText : c.day === p.today ? th.accent : th.text },
+                ]}
+              >
                 {c.num}
               </Text>
             </View>
+            <View
+              style={[
+                styles.mark,
+                c.hasHabits && c.pct > 0 && { backgroundColor: sel ? th.inkText : th.accent },
+              ]}
+            />
           </Pressable>
         );
       })}
@@ -104,12 +127,22 @@ export function TodayCard(p: {
         <Text style={[styles.pct, { color: th.text }]}>{Math.round(p.pct * 100)}%</Text>
       </View>
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ color: th.text, fontWeight: '800', fontSize: 18 }}>{p.title}</Text>
-        <Text style={{ color: th.text2, fontSize: 13 }}>{p.sub}</Text>
+        <Text style={{ color: th.text, fontWeight: '800', fontSize: 17, letterSpacing: -0.5 }}>
+          {p.title}
+        </Text>
+        <Text style={{ color: th.text2, fontSize: 13, fontWeight: '600' }} numberOfLines={2}>
+          {p.sub}
+        </Text>
         <View style={styles.chipRow}>
           {p.chips.map((c) => (
-            <View key={c} style={[styles.miniChip, { backgroundColor: th.surface2 }]}>
-              <Text style={{ color: th.text, fontWeight: '800', fontSize: 12.5 }}>{c}</Text>
+            <View
+              key={c}
+              style={[
+                styles.miniChip,
+                { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
+              ]}
+            >
+              <Text style={{ color: th.text2, fontWeight: '700', fontSize: 11.5 }}>{c}</Text>
             </View>
           ))}
           {p.writeLabel ? (
@@ -120,7 +153,7 @@ export function TodayCard(p: {
                 { borderWidth: 1, borderStyle: 'dashed', borderColor: th.hairline2 },
               ]}
             >
-              <Text style={{ color: th.text2, fontWeight: '700', fontSize: 12.5 }}>
+              <Text style={{ color: th.text3, fontWeight: '700', fontSize: 11.5 }}>
                 {p.writeLabel}
               </Text>
             </View>
@@ -153,9 +186,14 @@ export function FilterChips<K extends string>(p: {
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
             onPress={() => p.onChange(i.key)}
-            style={[styles.chip, { backgroundColor: on ? th.text : th.surface }]}
+            style={[
+              styles.chip,
+              on
+                ? { backgroundColor: th.ink }
+                : { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
+            ]}
           >
-            <Text style={{ color: on ? th.bg : th.text, fontWeight: '700', fontSize: 13.5 }}>
+            <Text style={{ color: on ? th.inkText : th.text2, fontWeight: '700', fontSize: 11.5 }}>
               {i.label}
             </Text>
           </Pressable>
@@ -166,36 +204,51 @@ export function FilterChips<K extends string>(p: {
 }
 
 export function GroupLabel({ text, th }: { text: string; th: HabitsTheme }) {
-  return <Text style={[styles.group, { color: th.text2 }]}>{text.toUpperCase()}</Text>;
+  return (
+    <View style={styles.groupRow}>
+      <Text style={[styles.group, { color: th.text3 }]}>{text.toUpperCase()}</Text>
+      <View style={{ flex: 1, height: 0.5, backgroundColor: th.hairline }} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  strip: { paddingHorizontal: 12, paddingVertical: 10, gap: 4 },
-  cell: { width: 50, alignItems: 'center', paddingVertical: 8, borderRadius: 18, gap: 5 },
-  dow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  strip: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 12, gap: 8 },
+  cell: {
+    width: 46,
+    alignItems: 'center',
+    paddingTop: 7,
+    paddingBottom: 8,
+    borderRadius: 20,
+    gap: 5,
+  },
+  dow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  mark: { width: 5, height: 5, borderRadius: 3, backgroundColor: 'transparent' },
   ringBox: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  num: { position: 'absolute', fontSize: 12.5, fontWeight: '800' },
+  num: { position: 'absolute', fontSize: 14, fontWeight: '800', letterSpacing: -0.4 },
   today: {
     marginHorizontal: 16,
-    marginTop: 4,
+    marginBottom: 18,
     borderRadius: 26,
-    padding: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
   bigRing: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center' },
   pct: { position: 'absolute', fontSize: 19, fontWeight: '800' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  miniChip: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
-  chips: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
-  chip: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8 },
-  group: {
-    marginHorizontal: 20,
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 9 },
+  miniChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  chips: { gap: 6, alignItems: 'center' },
+  chip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 18,
     marginTop: 18,
     marginBottom: 8,
-    fontSize: 11.5,
-    fontWeight: '800',
-    letterSpacing: 1.1,
   },
+  group: { fontSize: 11, fontWeight: '800', letterSpacing: 1.1 },
 });

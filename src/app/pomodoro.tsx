@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -20,11 +20,13 @@ import {
 import type { PresetKind } from '@/features/pomodoro/repo';
 import { BreakScene } from '@/features/pomodoro/BreakScene';
 import { Hourglass } from '@/features/pomodoro/Hourglass';
+import { RoundButton } from '@/features/pomodoro/RoundButton';
 import { breakTipIndex } from '@/features/pomodoro/breakTips';
 import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Avatar } from '@/ui/Avatar';
+import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
 const GREY = '#8E8E93';
 
@@ -33,13 +35,14 @@ function Ring({
   pct,
   color,
   track,
+  stroke = 11,
 }: {
   size: number;
   pct: number;
   color: string;
   track: string;
+  stroke?: number;
 }) {
-  const stroke = 11;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, pct));
@@ -81,7 +84,9 @@ export default function PomodoroScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed, pomodoroSettings, updatePomodoroSettings } = useApp();
+  const { services, version, changed, pomodoroSettings, updatePomodoroSettings, authState } =
+    useApp();
+  const userName = authState.status === 'signedIn' ? authState.user.username : '';
 
   const {
     project: projectParam,
@@ -284,12 +289,11 @@ export default function PomodoroScreen() {
       onPress={onPress}
       onLongPress={onLong}
       style={{
-        paddingVertical: 10,
-        paddingHorizontal: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 14,
         borderRadius: 999,
-        backgroundColor: on ? th.brand : th.surface,
-        borderWidth: 1,
-        borderColor: on ? th.brand : th.hairline2,
+        backgroundColor: on ? th.brand : th.surface2,
+        boxShadow: on ? undefined : `inset 0 0 0 0.5px ${th.hairline}`,
       }}
     >
       <Text style={{ color: on ? '#fff' : th.text, fontWeight: '600' }}>{label}</Text>
@@ -300,7 +304,7 @@ export default function PomodoroScreen() {
     const builtin: readonly number[] = kind === 'pomodoro' ? [25, 50] : [5, 10];
     return (
       <View style={{ gap: 10 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
           {list.map((m) => (
             <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Pill
@@ -382,22 +386,57 @@ export default function PomodoroScreen() {
     pct: number,
     color: string,
     sub?: string,
-    opts: { running?: boolean; flip?: boolean; rest?: boolean } = {},
+    opts: { running?: boolean; flip?: boolean; rest?: boolean; chip?: string } = {},
   ) => {
     const label = (
       <>
         <Text
           testID="pomodoro-clock"
-          style={{ color: th.text, fontSize: 52, fontWeight: '200', fontVariant: ['tabular-nums'] }}
+          style={{
+            color: th.text,
+            fontSize: 64,
+            lineHeight: 70,
+            fontWeight: '800',
+            letterSpacing: -2.5,
+            fontVariant: ['tabular-nums'],
+          }}
         >
           {text}
         </Text>
-        {sub ? <Text style={{ color: th.text2, marginTop: 2 }}>{sub}</Text> : null}
+        {opts.chip ? (
+          <View
+            style={{
+              marginTop: 6,
+              paddingHorizontal: 11,
+              paddingVertical: 4,
+              borderRadius: 999,
+              backgroundColor: th.surface2,
+              boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+            }}
+          >
+            <Text style={{ color: th.text2, fontSize: 13, fontWeight: '700' }}>{opts.chip}</Text>
+          </View>
+        ) : null}
       </>
     );
+    const kicker = sub ? (
+      <Text
+        style={{
+          color: th.text2,
+          fontSize: 13,
+          fontWeight: '700',
+          letterSpacing: 1.3,
+          textTransform: 'uppercase',
+          textAlign: 'center',
+        }}
+      >
+        {sub}
+      </Text>
+    ) : null;
     if (glassView) {
       return (
-        <View style={{ alignItems: 'center', marginVertical: 8, gap: 6 }}>
+        <View style={{ alignItems: 'center', marginVertical: 8, gap: 10 }}>
+          {kicker}
           <Hourglass
             fraction={opts.rest ? 1 : pct}
             running={!!opts.running}
@@ -410,9 +449,22 @@ export default function PomodoroScreen() {
       );
     }
     return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 8 }}>
-        <Ring size={250} pct={pct} color={color} track={th.hairline} />
-        <View style={{ position: 'absolute', alignItems: 'center' }}>{label}</View>
+      <View style={{ alignItems: 'center', marginVertical: 8, gap: 18 }}>
+        {kicker}
+        <View style={{ width: 280, height: 280, alignItems: 'center', justifyContent: 'center' }}>
+          <View
+            style={{
+              position: 'absolute',
+              width: 244,
+              height: 244,
+              borderRadius: 122,
+              backgroundColor: th.surface,
+              boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+            }}
+          />
+          <Ring size={280} stroke={10} pct={pct} color={color} track={th.hairline} />
+          <View style={{ position: 'absolute', alignItems: 'center' }}>{label}</View>
+        </View>
       </View>
     );
   };
@@ -509,48 +561,61 @@ export default function PomodoroScreen() {
             )}
           </Card>
         ) : (
-          <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
             {paused ? (
-              <PrimaryButton
+              <RoundButton
+                kind="play"
                 testID="pomodoro-resume"
                 label={t('pomodoro.riprendi')}
                 onPress={() => resume(s)}
+                large
               />
             ) : (
-              <PrimaryButton
+              <RoundButton
+                kind="pause"
                 testID="pomodoro-pause"
                 label={t('pomodoro.pausa')}
                 onPress={() => pause(s)}
+                large
               />
             )}
-            <TextButton
+            <RoundButton
+              kind="stop"
               testID="pomodoro-stop"
-              danger
               label={t('pomodoro.stop')}
               onPress={() => setStopping(true)}
+              large
             />
           </View>
         )}
-        <Card style={{ padding: 12 }}>
+        <View style={{ alignItems: 'center', gap: 10 }}>
           <Pressable
             accessibilityRole="button"
             testID="change-project"
             onPress={() => setPicking(!picking)}
+            style={[
+              styles.pill,
+              { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
+            ]}
           >
-            <Text style={{ color: th.brand }}>{t('pomodoro.collega_progetto')} ›</Text>
+            <Text style={{ color: th.brand, fontWeight: '700' }}>
+              {t('pomodoro.collega_progetto')} ›
+            </Text>
           </Pressable>
           {picking ? (
-            <ProjectPicker
-              projects={data.projects}
-              value={s.project_uuid}
-              onPick={(id) => {
-                services.pomodoro.setProject(s.uuid, id);
-                setPicking(false);
-                changed();
-              }}
-            />
+            <View style={{ alignSelf: 'stretch' }}>
+              <ProjectPicker
+                projects={data.projects}
+                value={s.project_uuid}
+                onPick={(id) => {
+                  services.pomodoro.setProject(s.uuid, id);
+                  setPicking(false);
+                  changed();
+                }}
+              />
+            </View>
           ) : null}
-        </Card>
+        </View>
       </View>
     );
   } else if (brk) {
@@ -639,7 +704,17 @@ export default function PomodoroScreen() {
   } else {
     body = (
       <View style={{ gap: 14 }}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignSelf: 'center',
+            gap: 4,
+            padding: 3,
+            borderRadius: 14,
+            backgroundColor: th.surface2,
+            boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+          }}
+        >
           {([0, 1] as const).map((m) => (
             <Pressable
               key={m}
@@ -648,61 +723,76 @@ export default function PomodoroScreen() {
               accessibilityState={{ selected: mode === m }}
               onPress={() => setMode(m)}
               style={{
-                flex: 1,
+                minWidth: 112,
                 alignItems: 'center',
-                paddingVertical: 12,
-                borderRadius: 14,
-                backgroundColor: mode === m ? th.brand : th.surface,
+                paddingVertical: 8,
+                paddingHorizontal: 14,
+                borderRadius: 11,
+                backgroundColor: mode === m ? th.surface : 'transparent',
+                boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,.18)' : undefined,
               }}
             >
-              <Text style={{ color: mode === m ? '#fff' : th.text, fontWeight: '600' }}>
+              <Text
+                style={{ color: mode === m ? th.text : th.text2, fontWeight: '700', fontSize: 15 }}
+              >
                 {m === 0 ? t('pomodoro.timer') : t('pomodoro.cronometro')}
               </Text>
             </Pressable>
           ))}
         </View>
-        {big(mode === 0 ? clock(minutes * 60) : '00:00', 0, th.brand, t('pomodoro.pronto'), {
-          rest: true,
-        })}
-        {mode === 0 ? (
-          <Card style={{ padding: 16, gap: 10 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <SectionLabel>{t('pomodoro.durata')}</SectionLabel>
-              <Pressable
-                testID="dur-manage"
-                accessibilityRole="button"
-                onPress={() => setManaging(!managing)}
-              >
-                <Text style={{ color: th.brand }}>{t('pomodoro.gestisci')}</Text>
-              </Pressable>
-            </View>
-            {durations('pomodoro', data.pomos, minutes, setMinutes)}
-          </Card>
-        ) : null}
-        <Card style={{ padding: 16, gap: 8 }}>
+        <View style={{ alignItems: 'center', gap: 10 }}>
           <Pressable
             accessibilityRole="button"
             testID="pick-project"
             onPress={() => setPicking(!picking)}
+            style={[
+              styles.pill,
+              { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
+            ]}
           >
-            <SectionLabel>{t('pomodoro.storico_progetto')}</SectionLabel>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              {projectLine(project)}
-              <Text style={{ color: th.brand }}>›</Text>
-            </View>
+            {projectLine(project)}
           </Pressable>
           {picking ? (
-            <ProjectPicker
-              projects={data.projects}
-              value={project}
-              onPick={(id) => {
-                setProject(id);
-                setPicking(false);
-              }}
-            />
+            <View style={{ alignSelf: 'stretch' }}>
+              <ProjectPicker
+                projects={data.projects}
+                value={project}
+                onPick={(id) => {
+                  setProject(id);
+                  setPicking(false);
+                }}
+              />
+            </View>
           ) : null}
-        </Card>
-        <PrimaryButton testID="pomodoro-start" label={t('pomodoro.start')} onPress={start} />
+        </View>
+        {big(mode === 0 ? clock(minutes * 60) : '00:00', 0, th.brand, t('pomodoro.pronto'), {
+          rest: true,
+          chip: mode === 0 ? t('pomodoro.pausa_di', { minuti: breakMin }) : undefined,
+        })}
+        {mode === 0 ? (
+          <View style={{ gap: 8, alignItems: 'center' }}>
+            {durations('pomodoro', data.pomos, minutes, setMinutes)}
+            <Pressable
+              testID="dur-manage"
+              accessibilityRole="button"
+              onPress={() => setManaging(!managing)}
+              hitSlop={8}
+            >
+              <Text style={{ color: th.brand, fontWeight: '600', fontSize: 13.5 }}>
+                {t('pomodoro.gestisci')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+        <View style={{ alignItems: 'center', marginTop: 4 }}>
+          <RoundButton
+            kind="play"
+            testID="pomodoro-start"
+            label={t('pomodoro.start')}
+            onPress={start}
+            large
+          />
+        </View>
       </View>
     );
   }
@@ -712,47 +802,98 @@ export default function PomodoroScreen() {
       {autoParam === '1' && fromPlan && !active && !brk ? (
         <AutoStart go={() => void start()} />
       ) : null}
-      <Header
-        top={insets.top}
-        title={t('pomodoro.nuovo_pomodoro')}
-        right={
-          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
-            <Pressable
-              testID="pomodoro-view"
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('pomodoro.cambia_vista')}
-              accessibilityState={{ selected: glassView }}
-              onPress={toggleView}
-            >
-              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M6 2h12M6 22h12M6 2v3.3c0 .6.24 1.2.66 1.6L12 12l5.34-5.1c.42-.4.66-1 .66-1.6V2M18 22v-3.3c0-.6-.24-1.2-.66-1.6L12 12l-5.34 5.1c-.42.4-.66 1-.66 1.6V22"
-                  stroke={glassView ? th.brand : th.text2}
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </Pressable>
-            <Pressable
-              testID="pomodoro-history"
-              accessibilityRole="button"
-              onPress={() => router.push('/pomodoro-history')}
-            >
-              <Text style={{ color: th.brand, fontSize: 15 }}>{t('pomodoro.storico')}</Text>
-            </Pressable>
-            <Pressable
-              testID="pomodoro-close"
-              accessibilityRole="button"
-              accessibilityLabel={t('comune.chiudi')}
-              onPress={() => router.back()}
-            >
-              <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
-            </Pressable>
-          </View>
-        }
-      />
+      <View
+        style={{
+          paddingTop: insets.top + 10,
+          paddingBottom: 10,
+          paddingHorizontal: 16,
+          backgroundColor: th.headerGlass,
+          borderBottomWidth: 0.5,
+          borderBottomColor: th.hairline,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <Pressable
+          testID="pomodoro-close"
+          accessibilityRole="button"
+          accessibilityLabel={t('comune.chiudi')}
+          onPress={() => router.back()}
+          hitSlop={6}
+          style={[
+            styles.pill,
+            { width: 34, height: 34, paddingHorizontal: 0, backgroundColor: th.surface2 },
+          ]}
+        >
+          <Text style={{ color: th.text, fontSize: 20, lineHeight: 22, fontWeight: '600' }}>‹</Text>
+        </Pressable>
+        <Text
+          accessibilityRole="header"
+          style={{ flex: 1, color: th.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.7 }}
+        >
+          Pomodoro
+        </Text>
+        <Pressable
+          testID="pomodoro-history"
+          accessibilityRole="button"
+          onPress={() => router.push('/pomodoro-history')}
+          style={[
+            styles.pill,
+            {
+              flexDirection: 'row',
+              gap: 7,
+              backgroundColor: th.surface2,
+              boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+            },
+          ]}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Circle cx={12} cy={12} r={8} stroke={th.text} strokeWidth={2} />
+            <Path d="M12 8v4.4l3 1.8" stroke={th.text} strokeWidth={2} strokeLinecap="round" />
+          </Svg>
+          <Text style={{ color: th.text, fontWeight: '700', fontSize: 15 }}>
+            {t('pomodoro.storico')}
+          </Text>
+        </Pressable>
+        <Avatar
+          letter={(userName[0] ?? '?').toUpperCase()}
+          label={t('app.account')}
+          onPress={() => router.push('/account')}
+          testID="pomodoro-avatar"
+        />
+      </View>
+      <Pressable
+        testID="pomodoro-view"
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={t('pomodoro.cambia_vista')}
+        accessibilityState={{ selected: glassView }}
+        onPress={toggleView}
+        style={{
+          position: 'absolute',
+          left: 16,
+          top: insets.top + 62,
+          zIndex: 5,
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: th.surface2,
+          boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+        }}
+      >
+        <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M6 2h12M6 22h12M6 2v3.3c0 .6.24 1.2.66 1.6L12 12l5.34-5.1c.42-.4.66-1 .66-1.6V2M18 22v-3.3c0-.6-.24-1.2-.66-1.6L12 12l-5.34 5.1c-.42.4-.66 1-.66 1.6V22"
+            stroke={glassView ? th.brand : th.text2}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </Pressable>
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32, gap: 14 }}
         keyboardShouldPersistTaps="handled"
@@ -793,3 +934,14 @@ export default function PomodoroScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: {
+    minHeight: 34,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

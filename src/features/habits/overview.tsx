@@ -15,13 +15,13 @@ import Svg, {
   LinearGradient as SvgGradient,
   Path,
   Polygon,
+  RadialGradient,
   Stop,
   Text as SvgText,
 } from 'react-native-svg';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { alpha } from '@/features/buy/buyTheme';
-import { cardShadow } from '@/ui/kit';
 
 import type { HabitsTheme } from './habitsTheme';
 import type { WeekCell } from './globalStats';
@@ -79,7 +79,10 @@ export function HabitsHeader(p: {
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={[styles.hBtn, { backgroundColor: th.surface }, cardShadow(th.scheme === 'dark')]}
+      style={[
+        styles.hBtn,
+        { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
+      ]}
     >
       <HeaderIcon kind={kind} color={th.text} />
     </Pressable>
@@ -87,36 +90,45 @@ export function HabitsHeader(p: {
   return (
     <View
       style={{
-        paddingTop: p.top + 8,
-        paddingHorizontal: 20,
-        paddingBottom: 6,
+        paddingTop: p.top + 10,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
         flexDirection: 'row',
         alignItems: 'flex-end',
         justifyContent: 'space-between',
+        gap: 12,
       }}
     >
-      <View>
-        <Text style={{ color: th.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.6 }}>
+      <View style={{ flexShrink: 1 }}>
+        <Text
+          style={{
+            color: th.accent,
+            fontSize: 10,
+            fontWeight: '800',
+            letterSpacing: 1.4,
+            marginBottom: 3,
+          }}
+        >
           {p.eyebrow.toUpperCase()}
         </Text>
         <Text
           accessibilityRole="header"
           style={{
             color: th.text,
-            fontSize: display ? 38 : 32,
+            fontSize: display ? 28 : 21,
             fontFamily: display,
             fontWeight: display ? undefined : '800',
-            letterSpacing: display ? -1 : -0.9,
+            letterSpacing: display ? -0.6 : -0.74,
           }}
         >
           {p.title}
         </Text>
       </View>
-      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-        {p.right}
+      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
         {btn('table', p.onTable, 'table')}
         {btn('stats', p.onStats, 'statistics')}
         {p.onSettings && btn('settings', p.onSettings, 'settings')}
+        {p.right}
       </View>
     </View>
   );
@@ -197,63 +209,109 @@ export function StatCarousel(p: {
         }}
       >
         {p.cards.map((c) => (
-          <View
+          <LinearGradient
             key={c.key}
             testID={`stat-${c.key}`}
+            colors={[th.ink2, th.ink]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={[
               styles.stat,
-              { width: cardW, backgroundColor: th.surface },
-              cardShadow(th.scheme === 'dark'),
+              {
+                width: cardW,
+                boxShadow: `0 18px 38px -20px rgba(0,0,0,.55), inset 0 0 0 0.5px ${th.inkHairline}`,
+              },
             ]}
           >
-            <LinearGradient
-              colors={[alpha(c.color, 0.28), alpha(c.color, 0)]}
-              start={{ x: 1, y: 0 }}
-              end={{ x: 0.3, y: 0.7 }}
-              style={StyleSheet.absoluteFill}
+            <Svg
               pointerEvents="none"
-            />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 18 }}>{c.emoji}</Text>
+              width={190}
+              height={190}
+              style={{ position: 'absolute', right: -70, top: -90, opacity: 0.55 }}
+            >
+              <Defs>
+                <RadialGradient id={`glow-${c.key}`} cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor={c.color} stopOpacity={0.7} />
+                  <Stop offset="0.68" stopColor={c.color} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={95} cy={95} r={95} fill={`url(#glow-${c.key})`} />
+            </Svg>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+              <Text style={{ fontSize: 15 }}>{c.emoji}</Text>
               <Text
-                style={{ color: th.text2, fontSize: 12, fontWeight: '800', letterSpacing: 1.2 }}
+                style={{
+                  color: th.inkText2,
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 1.3,
+                }}
               >
                 {c.kicker.toUpperCase()}
               </Text>
             </View>
             <View style={styles.statRight}>
               {c.spark ? (
-                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 46 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 44 }}>
                   {c.spark.map((v, i) => (
                     <View
                       key={i}
                       style={{
-                        width: 7,
+                        width: 5,
                         height: Math.max(6, Math.round(v * 44)),
                         borderRadius: 3,
                         backgroundColor: c.color,
+                        boxShadow: `0 0 10px ${alpha(c.color, 0.6)}`,
                       }}
                     />
                   ))}
                 </View>
               ) : c.ring != null ? (
-                <MiniRing pct={c.ring} color={c.color} track={th.surface3} />
+                <MiniRing pct={c.ring} color={c.color} track={th.inkTrack} />
               ) : null}
             </View>
             <View style={{ marginTop: 'auto' }}>
-              <Text style={{ color: th.text, fontSize: 40, fontWeight: '800', letterSpacing: -1 }}>
-                {c.value}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 9 }}>
+                <Text
+                  style={{
+                    color: th.inkText,
+                    fontSize: 47,
+                    lineHeight: 41,
+                    fontWeight: '800',
+                    letterSpacing: -2.7,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {c.value}
+                </Text>
                 {!!c.suffix && (
-                  <Text style={{ fontSize: 20, color: th.text2, fontWeight: '700' }}>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      color: th.inkText,
+                      opacity: 0.7,
+                      fontWeight: '800',
+                      paddingBottom: 3,
+                    }}
+                  >
                     {c.suffix}
                   </Text>
                 )}
-              </Text>
-              <Text style={{ color: th.text2, fontSize: 13.5 }} numberOfLines={2}>
+              </View>
+              <Text
+                style={{
+                  color: th.inkText2,
+                  fontSize: 12,
+                  fontWeight: '600',
+                  maxWidth: '70%',
+                  marginTop: 8,
+                }}
+                numberOfLines={2}
+              >
                 {c.sub}
               </Text>
             </View>
-          </View>
+          </LinearGradient>
         ))}
       </ScrollView>
       <View style={styles.dots}>
@@ -261,10 +319,10 @@ export function StatCarousel(p: {
           <View
             key={c.key}
             style={{
-              width: i === idx ? 22 : 7,
-              height: 7,
-              borderRadius: 4,
-              backgroundColor: i === idx ? th.accent : th.surface3,
+              width: i === idx ? 20 : 6,
+              height: 6,
+              borderRadius: i === idx ? 3 : 3,
+              backgroundColor: i === idx ? th.accent : th.hairline2,
             }}
           />
         ))}
@@ -568,8 +626,14 @@ export function WeekGrid(p: {
 }
 
 const styles = StyleSheet.create({
-  hBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  stat: { height: 168, borderRadius: 28, padding: 18, overflow: 'hidden' },
-  statRight: { position: 'absolute', right: 18, top: 44 },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 6 },
+  hBtn: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  stat: {
+    minHeight: 132,
+    borderRadius: 26,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    overflow: 'hidden',
+  },
+  statRight: { position: 'absolute', right: 16, bottom: 14 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 11, marginBottom: 16 },
 });

@@ -49,6 +49,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
+    authState: { status: 'signedIn', user: { username: 'nico' } },
     services: mockServices,
     version: mockVersion,
     changed: () => {
