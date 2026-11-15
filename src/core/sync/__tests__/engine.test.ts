@@ -16,6 +16,20 @@ function phone(server: FakeServer) {
 const titles = (repo: TasksRepo) => repo.list().map((t) => t.title);
 
 describe('motore di sincronizzazione', () => {
+  it('una riga che il telefono non sa salvare non ferma le altre: si ricorda e si va avanti', async () => {
+    const server = new FakeServer();
+    // «title» mancante: il telefono non può salvarla (campo obbligatorio)
+    server.external('todos', 'bad-1', { created_at: '2026-11-01 10:00:00' });
+    server.external('todos', 'ok-1', { title: 'buona', sort_key: 'a0' });
+    const a = phone(server);
+    const rep = await a.engine.syncOnce();
+    expect(rep.snapshotDone).toBe(true);
+    expect(titles(a.repo)).toEqual(['buona']);
+    expect(a.db.all<{ tbl: string; code: string }>('SELECT tbl, code FROM sync_problems')).toEqual([
+      { tbl: 'todos', code: 'unreadable' },
+    ]);
+  });
+
   it('crea sul telefono, invia, e un secondo telefono lo riceve', async () => {
     const server = new FakeServer();
     const a = phone(server);

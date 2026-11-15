@@ -8,6 +8,8 @@ export interface SyncStatusInfo {
   lastSyncAt: number | null;
   /** Quante modifiche aspettano ancora di essere inviate. */
   pending: number;
+  /** Il motivo dell'ultimo tentativo fallito (per chi deve capire perché non arriva niente); vuoto se è andato bene. */
+  lastError?: string | null;
 }
 
 export interface SchedulerDeps {
@@ -106,7 +108,12 @@ export class SyncScheduler {
     try {
       await this.attempt();
       this.failures = 0;
-      this.set({ status: 'idle', lastSyncAt: this.now(), pending: this.d.pendingCount() });
+      this.set({
+        status: 'idle',
+        lastSyncAt: this.now(),
+        pending: this.d.pendingCount(),
+        lastError: null,
+      });
     } catch (e) {
       this.failures++;
       const sessionClosed =
@@ -115,6 +122,7 @@ export class SyncScheduler {
       this.set({
         status: offline ? 'offline' : 'error',
         pending: this.d.pendingCount(),
+        lastError: String((e as Error)?.message ?? e).slice(0, 300),
       });
       if (sessionClosed) return this.stop(); // l'AuthService porta alla schermata di login
       if (this.stopped) return;

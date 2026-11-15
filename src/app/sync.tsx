@@ -59,6 +59,11 @@ export default function SyncScreen() {
           <Text style={{ color: th.text2, fontSize: 13 }}>
             {t('app.sync_ultima', { quando: when(syncInfo.lastSyncAt) })}
           </Text>
+          {syncInfo.lastError ? (
+            <Text testID="sync-error" selectable style={{ color: th.text3, fontSize: 12 }}>
+              {syncInfo.lastError}
+            </Text>
+          ) : null}
           <PrimaryButton
             testID="sync-now"
             label={t('app.sync_ora')}

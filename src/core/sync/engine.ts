@@ -164,7 +164,26 @@ export class SyncEngine {
       }
       this.db.transaction(() => {
         if (cursor === START) this.db.run('DELETE FROM snapshot_seen');
-        for (const c of res.changes) this.applyChange(c, !!res.snapshot);
+        for (const c of res.changes) {
+          try {
+            this.applyChange(c, !!res.snapshot);
+          } catch (e) {
+            // una riga che il telefono non sa salvare non deve fermare tutto il resto (progetti, flashcard…): si ricorda e si va avanti
+            this.db.run(
+              `INSERT INTO sync_problems (tbl, uuid, code, field, message, patch, op, created_at) VALUES (?,?,?,?,?,?,?,?)`,
+              [
+                c.table,
+                c.uuid,
+                'unreadable',
+                null,
+                String((e as Error)?.message ?? e).slice(0, 200),
+                '{}',
+                c.op,
+                this.clock(),
+              ],
+            );
+          }
+        }
         setState(this.db, CURSOR_KEY, String(res.cursor));
         if (res.snapshot && !res.more) this.finishSnapshot();
       });
