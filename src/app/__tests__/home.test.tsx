@@ -158,7 +158,7 @@ describe('Home', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-setup', params: { preselect: deck } });
     mockPush.mockClear();
     await fireEvent.press(screen.getByTestId('home-track-vocab-play'));
-    expect(mockPush).toHaveBeenCalledWith('/flashcards');
+    expect(mockPush).toHaveBeenCalledWith('/fc-hub');
   });
 
   test('Insert sheet: University picks a deck; Vocabulary goes to the language', async () => {

@@ -832,7 +832,7 @@ export function CardsTracks({
         title={t('home.fc_studio')}
         open={study.open}
         idle={study.next ? nextSub(t, study.next) : t('home.nessun_mazzo')}
-        onTitle={() => go('/flashcards')}
+        onTitle={() => go('/fc-hub')}
         onContinue={() => study.open && resume(study.open)}
         onPlay={() => go('/fc-setup', study.next ? { preselect: study.next.uuid } : undefined)}
       />
@@ -844,10 +844,10 @@ export function CardsTracks({
         open={vocab.open}
         idle={vocab.course ? vocab.course.name : t('home.nessuna_lingua')}
         playLabel={vocab.course ? undefined : t('home.aggiungi_lingua')}
-        onTitle={() => go('/flashcards')}
+        onTitle={() => go('/fc-hub')}
         onContinue={() => vocab.open && resume(vocab.open)}
         onPlay={() =>
-          vocab.course ? go('/fc-setup', { course: vocab.course.uuid }) : go('/flashcards')
+          vocab.course ? go('/fc-setup', { course: vocab.course.uuid }) : go('/fc-hub')
         }
       />
       <Pressable

@@ -26,6 +26,7 @@ export interface Ho {
   blueSoft: string;
   green: string;
   greenInk: string;
+  greenSoft: string;
   red: string;
   redInk: string;
   redSoft: string;
@@ -58,6 +59,7 @@ export function hoTheme(th: Theme): Ho {
         blueSoft: 'rgba(10,132,255,.18)',
         green: '#30D158',
         greenInk: '#5FDB82',
+        greenSoft: 'rgba(52,199,89,.17)',
         red: '#FF453A',
         redInk: '#FF6961',
         redSoft: 'rgba(255,69,58,.18)',
@@ -86,6 +88,7 @@ export function hoTheme(th: Theme): Ho {
         blueSoft: 'rgba(0,122,255,.10)',
         green: '#34C759',
         greenInk: '#1E8E3E',
+        greenSoft: 'rgba(52,199,89,.14)',
         red: '#FF3B30',
         redInk: '#C4291C',
         redSoft: 'rgba(255,59,48,.12)',
@@ -120,6 +123,14 @@ const IC: Record<string, string> = {
   bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
   note: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 11h8M8 15h5"/>',
+  globe:
+    '<circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5s1.3-6.7 3.9-9.5z"/>',
+  play: '<path d="M8 5.1v13.8a1 1 0 001.5.9l11-6.9a1 1 0 000-1.8l-11-6.9A1 1 0 008 5.1z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  flame:
+    '<path d="M12.6 2.2c.4 2.6-.5 4.6-2.2 6.3-1.4 1.4-2.9 2.8-2.9 5.4 0 1 .3 1.8.8 2.5-.9-.3-1.7-1-2.2-1.9C5 16 5 17 5 17.6 5 21 8 23 12 23s7-2.4 7-6.5c0-3.2-1.6-5.2-3-7 .1 1.3-.3 2.4-1 3.1.2-3.9-.9-7.6-2.4-10.4z"/>',
+  target:
+    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
 };
 export type HoIconName = keyof typeof IC;
 

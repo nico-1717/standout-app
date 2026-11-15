@@ -123,7 +123,7 @@ export default function SettingsScreen() {
         <Pressable
           testID="open-flashcards"
           accessibilityRole="button"
-          onPress={() => router.push('/flashcards')}
+          onPress={() => router.push('/fc-hub')}
         >
           <Card index={5} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>

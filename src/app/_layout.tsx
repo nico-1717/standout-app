@@ -58,6 +58,7 @@ function Shell() {
           <Stack.Screen name="grade-group" options={{ presentation: 'modal' }} />
           <Stack.Screen name="grade-bonus" options={{ presentation: 'modal' }} />
           <Stack.Screen name="grade-settings" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="fc-hub" options={{ presentation: 'modal' }} />
           <Stack.Screen name="flashcards" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-deck" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-card" options={{ presentation: 'modal' }} />

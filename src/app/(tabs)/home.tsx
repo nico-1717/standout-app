@@ -273,7 +273,7 @@ export default function HomeScreen() {
           id="cards"
           title={t(WIDGET_TITLE.cards)}
           action={t('home.apri')}
-          onAction={() => go('/flashcards')}
+          onAction={() => go('/fc-hub')}
         >
           <CardsTracks
             td={td}
