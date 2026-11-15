@@ -26,9 +26,9 @@ describe('To do · To buy · Pills tabs', () => {
 
   test('shows the three lists and marks the current one', async () => {
     await renderTabs('buy');
-    expect(screen.getByText('To do')).toBeTruthy();
-    expect(screen.getByText('To buy')).toBeTruthy();
-    expect(screen.getByText('Pills')).toBeTruthy();
+    expect(screen.getByText('to do')).toBeTruthy();
+    expect(screen.getByText('to buy')).toBeTruthy();
+    expect(screen.getByText('pills')).toBeTruthy();
     expect(screen.getByTestId('todo-tab-buy').props.accessibilityState.selected).toBe(true);
     expect(screen.getByTestId('todo-tab-todo').props.accessibilityState.selected).toBe(false);
   });

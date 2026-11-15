@@ -23,28 +23,29 @@ type Surfaces = Pick<
 >;
 
 const SURFACES: Record<UiStyle, Record<SchemeName, Surfaces>> = {
+  // Gli stessi grigi di iOS del sito (stile_standard.css: --so-*), chiaro e scuro.
   standard: {
     light: {
-      bg: '#EEF1F8',
+      bg: '#F2F2F7',
       surface: '#FFFFFF',
-      surface2: '#E7EBF5',
-      text: '#14161C',
-      text2: '#5C6171',
-      text3: '#656B7D',
-      hairline: 'rgba(60,70,110,.12)',
-      hairline2: 'rgba(60,70,110,.20)',
-      headerGlass: 'rgba(238,241,248,.84)',
+      surface2: '#E9E9EE',
+      text: '#1C1C1E',
+      text2: '#55555A',
+      text3: '#6E6E73',
+      hairline: 'rgba(60,60,67,.16)',
+      hairline2: 'rgba(60,60,67,.28)',
+      headerGlass: 'rgba(249,249,251,.94)',
     },
     dark: {
-      bg: '#07080C',
-      surface: '#171923',
-      surface2: '#232632',
-      text: '#F5F6FA',
-      text2: '#A3A8B8',
-      text3: '#8A8FA0',
-      hairline: 'rgba(255,255,255,.10)',
-      hairline2: 'rgba(255,255,255,.16)',
-      headerGlass: 'rgba(9,10,15,.80)',
+      bg: '#000000',
+      surface: '#1C1C1E',
+      surface2: '#2C2C2E',
+      text: '#F5F5F7',
+      text2: '#BDBDC2',
+      text3: '#8E8E93',
+      hairline: 'rgba(120,120,128,.40)',
+      hairline2: 'rgba(120,120,128,.60)',
+      headerGlass: 'rgba(22,22,24,.94)',
     },
   },
   paper: {

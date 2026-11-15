@@ -1,10 +1,11 @@
-import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
+import { dictationLang } from '@/core/speech/dictation';
+import { useDictation } from '@/core/speech/useDictation';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import {
   GROUP_ORDER,
@@ -25,13 +26,13 @@ import {
   sansOf,
   type When,
 } from '@/features/tasks/TodoParts';
-import { TodoTabs } from '@/features/tasks/TodoTabs';
+import { TodoSheetHead } from '@/features/tasks/TodoSheetHead';
 import { TaskProjectSheet } from '@/features/tasks/ProjectSheet';
 import { TodoRow, type RowActions } from '@/features/tasks/TodoRow';
 import { cleanMinutes, humanDay, type UnderstoodPiece } from '@/features/tasks/todoLogic';
 import { todoTheme } from '@/features/tasks/todoTheme';
 import { cardShadow } from '@/ui/kit';
-import { SyncBadge } from '@/ui/SyncBadge';
+import { PageTop } from '@/ui/PageTop';
 
 /** Quello che serve a tenere ferma una riga mentre la si tocca: giorno, ora e «fatta» di prima (il sito non riordina «da sotto il dito»). */
 type Pin = Pick<Task, 'uuid' | 'due_date' | 'due_time' | 'is_done'>;
@@ -148,9 +149,13 @@ export default function TodoScreen() {
   }
 
   function add() {
-    if (!services) return;
+    if (addLines(text)) setText('');
+  }
+
+  function addLines(raw: string): boolean {
+    if (!services) return false;
     // più righe incollate = più attività (come sul sito: si toglie l'elenco puntato davanti)
-    const lines = text
+    const lines = raw
       .split(/\r?\n/)
       .map((s) => s.replace(/^[\s\-•*·]+|^\d{1,2}[.)]\s+/, '').trim())
       .filter(Boolean)
@@ -167,11 +172,29 @@ export default function TodoScreen() {
       });
       any = true;
     }
-    if (!any) return;
-    setText('');
+    if (!any) return false;
     release();
     changed();
+    return true;
   }
+
+  // il microfono: una frase = un'attività (la stessa lettura di quando si scrive: «dentista domani alle 15»)
+  const mic = useDictation({
+    lang: dictationLang(i18n.language),
+    once: true,
+    onInterim: setText,
+    onFinal: setText,
+    onStop: (heard) => {
+      if (heard.trim()) {
+        setText('');
+        addLines(heard);
+      }
+    },
+  });
+  const micToggle = () => {
+    if (mic.active) mic.stop();
+    else mic.start();
+  };
 
   function confirmDelete(task: Task) {
     const name = task.title.trim();
@@ -314,17 +337,15 @@ export default function TodoScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
-          paddingTop: selecting ? 0 : insets.top + 12,
           paddingHorizontal: selecting ? 0 : 16,
           paddingBottom: 120,
         }}
       >
         {!selecting && (
-          <View style={styles.top}>
-            <SyncBadge />
+          <View style={{ marginHorizontal: -16 }}>
+            <PageTop back="todo.planner" testID="todo-top" />
           </View>
         )}
-        {!selecting && <TodoTabs current="todo" bt={td} />}
         <View
           style={[
             styles.sheet,
@@ -333,65 +354,16 @@ export default function TodoScreen() {
             cardShadow(td.dark),
           ]}
         >
-          {!selecting && (
-            <>
-              <View style={styles.head}>
-                <Text
-                  style={[
-                    {
-                      color: td.ink,
-                      fontSize: paper ? 32 : 30,
-                      letterSpacing: paper ? 0 : -0.6,
-                      fontWeight: paper ? '400' : '700',
-                      fontStyle: paper ? 'italic' : 'normal',
-                      fontFamily: paper ? td.serif : undefined,
-                    },
-                  ]}
-                >
-                  {t('todo.titolo')}
-                </Text>
-                <Text
-                  style={[
-                    {
-                      color: td.ink3,
-                      fontSize: paper ? 9.5 : 11,
-                      letterSpacing: paper ? 1.9 : 0.1,
-                      textTransform: 'uppercase',
-                      flexShrink: 1,
-                      textAlign: 'right',
-                    },
-                    sansOf(td),
-                  ]}
-                >
-                  {t('todo.sottotitolo')}
-                </Text>
-              </View>
-              <Text
-                style={{
-                  color: td.ink2,
-                  fontSize: paper ? 15 : 14,
-                  lineHeight: 21,
-                  fontStyle: 'italic',
-                  fontFamily: paper ? td.serif : undefined,
-                  marginTop: 2,
-                  marginBottom: 16,
-                }}
-              >
-                {t('todo.nota')}
-              </Text>
-            </>
-          )}
-
-          {!selecting && <QuickNoteCard td={td} paper={paper} />}
+          {!selecting && <TodoSheetHead td={td} current="todo" />}
 
           <View style={styles.label}>
             <Text
               style={[
                 {
                   color: td.ink3,
-                  fontSize: 9,
+                  fontSize: paper ? 9 : 10.5,
                   fontWeight: '500',
-                  letterSpacing: 1.6,
+                  letterSpacing: paper ? 1.6 : 0.1,
                   textTransform: 'uppercase',
                 },
                 sansOf(td),
@@ -409,7 +381,7 @@ export default function TodoScreen() {
                 style={[
                   {
                     color: selecting ? td.accent : td.ink2,
-                    fontSize: 12,
+                    fontSize: paper ? 12 : 13,
                     fontWeight: selecting ? '500' : '400',
                   },
                   sansOf(td),
@@ -427,7 +399,13 @@ export default function TodoScreen() {
             onSubmit={add}
             onFocus={release}
             pieces={pieces}
+            mic={{ active: mic.active, onPress: micToggle }}
           />
+          {mic.error ? (
+            <Text testID="todo-mic-error" style={{ color: td.ink2, fontSize: 13, marginTop: -6 }}>
+              {t('diario.dettatura_non_disponibile')}
+            </Text>
+          ) : null}
 
           {!services ? (
             <Text style={[styles.empty, { color: td.ink2 }]}>{t('comune.carica')}</Text>
@@ -519,7 +497,6 @@ export default function TodoScreen() {
 }
 
 const styles = StyleSheet.create({
-  top: { alignItems: 'flex-end', marginBottom: 10, paddingHorizontal: 4 },
   sheet: { paddingTop: 22, paddingHorizontal: 18, paddingBottom: 26 },
   head: {
     flexDirection: 'row',

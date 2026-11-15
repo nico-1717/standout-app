@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
@@ -32,10 +31,10 @@ import {
 import type { DoseView } from '@/features/pills/repo';
 import { localToday } from '@/features/tasks/groups';
 import { TodoIcon, sansOf } from '@/features/tasks/TodoParts';
-import { TodoTabs } from '@/features/tasks/TodoTabs';
+import { TodoSheetHead } from '@/features/tasks/TodoSheetHead';
 import { todoTheme } from '@/features/tasks/todoTheme';
 import { cardShadow } from '@/ui/kit';
-import { SyncBadge } from '@/ui/SyncBadge';
+import { PageTop } from '@/ui/PageTop';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -49,7 +48,6 @@ interface Editing {
 export default function PillsScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
-  const insets = useSafeAreaInsets();
   const { services, version, changed, uiStyle } = useApp();
   const td = todoTheme(uiStyle, th);
   const paper = td.style === 'paper';
@@ -242,15 +240,13 @@ export default function PillsScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
-          paddingTop: insets.top + 12,
           paddingHorizontal: 16,
           paddingBottom: 120,
         }}
       >
-        <View style={styles.top}>
-          <SyncBadge />
+        <View style={{ marginHorizontal: -16 }}>
+          <PageTop back="todo.planner" testID="pills-top" />
         </View>
-        <TodoTabs current="pills" bt={td} />
         <View
           style={[
             styles.sheet,
@@ -258,48 +254,7 @@ export default function PillsScreen() {
             cardShadow(td.dark),
           ]}
         >
-          <View style={styles.head}>
-            <Text
-              style={{
-                color: td.ink,
-                fontSize: paper ? 32 : 30,
-                letterSpacing: paper ? 0 : -0.6,
-                fontWeight: paper ? '400' : '700',
-                fontStyle: paper ? 'italic' : 'normal',
-                fontFamily: paper ? td.serif : undefined,
-              }}
-            >
-              {t('todo.titolo')}
-            </Text>
-            <Text
-              style={[
-                {
-                  color: td.ink3,
-                  fontSize: paper ? 9.5 : 11,
-                  letterSpacing: paper ? 1.9 : 0.1,
-                  textTransform: 'uppercase',
-                  flexShrink: 1,
-                  textAlign: 'right',
-                },
-                sansOf(td),
-              ]}
-            >
-              {t('todo.sottotitolo')}
-            </Text>
-          </View>
-          <Text
-            style={{
-              color: td.ink2,
-              fontSize: paper ? 15 : 14,
-              lineHeight: 21,
-              fontStyle: 'italic',
-              fontFamily: paper ? td.serif : undefined,
-              marginTop: 2,
-              marginBottom: 16,
-            }}
-          >
-            {t('todo.nota')}
-          </Text>
+          <TodoSheetHead td={td} current="pills" />
 
           <View style={{ marginBottom: 8 }}>{label(t('todo.tipo_pills'))}</View>
 

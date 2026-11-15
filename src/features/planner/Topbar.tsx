@@ -6,9 +6,9 @@ import {
   useWindowDimensions,
   type ScrollViewInstance,
 } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
+import { Avatar } from '@/ui/Avatar';
 import { Text } from '@/ui/CappedText';
 
 import { addDaysIso, addMonths, dayOfMonth, monthOf, weekdayOf, yearOf } from './dates';
@@ -132,43 +132,6 @@ function TodayTile(p: { pt: PlannerTheme; month: string; day: number; onPress: (
           {p.day}
         </Text>
       </View>
-    </Pressable>
-  );
-}
-
-/** Il pallino del profilo: sfumatura blu-viola con un filo bianco e l'iniziale (.standout-fab-avatar). */
-function Avatar(p: { letter: string; onPress: () => void; label: string }) {
-  return (
-    <Pressable
-      testID="planner-avatar"
-      accessibilityRole="button"
-      accessibilityLabel={p.label}
-      onPress={p.onPress}
-      style={({ pressed }) => ({
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 3px 10px rgba(0,0,0,.16)',
-        transform: [{ scale: pressed ? 0.94 : 1 }],
-      })}
-    >
-      <View style={{ position: 'absolute', left: 0, top: 0 }}>
-        <Svg width={34} height={34}>
-          <Defs>
-            <LinearGradient id="plAvatar" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#5B8DEF" />
-              <Stop offset="1" stopColor="#A78BFA" />
-            </LinearGradient>
-          </Defs>
-          <Rect x={0} y={0} width={34} height={34} fill="url(#plAvatar)" />
-        </Svg>
-      </View>
-      <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>{p.letter}</Text>
     </Pressable>
   );
 }
@@ -628,7 +591,12 @@ export function PlannerTopbar(p: {
         >
           <LineIcon name="gear" color={pt.ink} size={16} />
         </ToolButton>
-        <Avatar letter={p.letter} label={t('app.account')} onPress={p.onAvatar} />
+        <Avatar
+          letter={p.letter}
+          label={t('app.account')}
+          onPress={p.onAvatar}
+          testID="planner-avatar"
+        />
       </View>
 
       {p.affirmation ? (

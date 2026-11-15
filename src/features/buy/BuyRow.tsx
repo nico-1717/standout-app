@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { LineIcon } from '../planner/PlannerIcons';
 import { ImageField } from '../media/ImageField';
 import type { Task } from '../tasks/repo';
 import { alpha, mix, type BuyTheme } from './buyTheme';
@@ -157,7 +158,7 @@ export const BuyRow = memo(function BuyRow({
             inputMode="decimal"
             style={[
               font,
-              { color: bt.ink2, fontSize: 14, minWidth: 48, textAlign: 'right', padding: 0 },
+              { color: bt.ink2, fontSize: 14, width: 50, textAlign: 'right', padding: 0 },
             ]}
           />
         </View>
@@ -168,16 +169,13 @@ export const BuyRow = memo(function BuyRow({
           accessibilityLabel={t('todo.tb_dettagli')}
           accessibilityState={{ expanded: open }}
         >
-          <Text
-            style={{
-              color: paper ? alpha(bt.ink, 0.4) : bt.ink3,
-              fontSize: 16,
-              width: 22,
-              textAlign: 'center',
-            }}
-          >
-            {open ? '⌃' : '⌄'}
-          </Text>
+          <View style={{ width: 22, alignItems: 'center' }}>
+            <LineIcon
+              name={open ? 'chevUp' : 'chevDown'}
+              color={paper ? alpha(bt.ink, 0.4) : bt.ink3}
+              size={18}
+            />
+          </View>
         </Pressable>
       </View>
       {open ? (

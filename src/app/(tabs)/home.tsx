@@ -15,7 +15,6 @@ import {
   GradesWidget,
   NumbersWidget,
   ProjectsWidget,
-  Shortcuts,
   TodayWidget,
   TriviaWidget,
   WidgetBox,
@@ -29,26 +28,54 @@ import { InsertSheet } from '@/features/flashcards/InsertSheet';
 import { DraftsPanel } from '@/features/flashcards/DraftsPanel';
 import { QuickNoteCard } from '@/features/notes/QuickNoteCard';
 import { todoTheme } from '@/features/tasks/todoTheme';
+import { dayMonth } from '@/features/home/widgets';
+import { HoHeader, HoQuick, hoTheme, type HoIconName } from '@/features/home/HomeKit';
 
 /** I tasti rapidi che esistono già nell'app: href del sito → schermata e nome. Gli altri (carte, voti) arrivano con le loro pagine. */
-const SHORTCUTS: { href: string; route: string; key: string; color: string }[] = [
+const SHORTCUTS: { href: string; route: string; key: string; color: string; icon: HoIconName }[] = [
   {
     href: 'planner/planner.php',
+    icon: 'calendar',
     route: '/(tabs)/planner',
     key: 'sidebar.planner',
     color: '#FF453A',
   },
-  { href: 'planner/todo.php', route: '/(tabs)', key: 'sidebar.todo', color: '#30D158' },
-  { href: 'projects/progetti.php', route: '/projects', key: 'sidebar.progetti', color: '#5E5CE6' },
-  { href: 'projects/pomodoro.php', route: '/pomodoro', key: 'sidebar.pomodoro', color: '#FF6B3D' },
+  {
+    href: 'planner/todo.php',
+    icon: 'check',
+    route: '/(tabs)',
+    key: 'sidebar.todo',
+    color: '#30D158',
+  },
+  {
+    href: 'projects/progetti.php',
+    icon: 'folder',
+    route: '/projects',
+    key: 'sidebar.progetti',
+    color: '#5E5CE6',
+  },
+  {
+    href: 'projects/pomodoro.php',
+    icon: 'timer',
+    route: '/pomodoro',
+    key: 'sidebar.pomodoro',
+    color: '#FF6B3D',
+  },
   {
     href: 'planner/habits.php',
+    icon: 'heart',
     route: '/(tabs)/habits',
     key: 'sidebar.abitudini',
     color: '#FF375F',
   },
-  { href: 'planner/diario.php', route: '/diary', key: 'sidebar.diario', color: '#AC8E68' },
-  { href: 'exams/voti.php', route: '/grades', key: 'sidebar.voti', color: '#E8A600' },
+  {
+    href: 'planner/diario.php',
+    icon: 'book',
+    route: '/diary',
+    key: 'sidebar.diario',
+    color: '#AC8E68',
+  },
+  { href: 'exams/voti.php', icon: 'cap', route: '/grades', key: 'sidebar.voti', color: '#E8A600' },
 ];
 
 const WIDGET_TITLE: Record<HomeWidget['id'], string> = {
@@ -89,11 +116,13 @@ export default function HomeScreen() {
     gradeSettings,
   } = useApp();
   const td = todoTheme(uiStyle, th);
+  const ho = hoTheme(th);
   const [editing, setEditing] = useState(false);
   const [trivia] = useState(() => pickTrivia(i18n.language));
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const name = authState.status === 'signedIn' ? authState.user.username : '';
+  const streak = services ? homeNumbers(services, localToday()).streak : 0;
 
   const today = useMemo(
     () => (services ? buildToday(services, new Date()) : null),
@@ -125,7 +154,7 @@ export default function HomeScreen() {
       // «Voti» ha il colore scelto nella pagina Voti; se non ne è stato scelto uno resta l'oro di partenza (come il sito)
       const chosen = gradeSettings?.accent_color?.toUpperCase();
       const color = h === 'exams/voti.php' && chosen && chosen !== '#0A84FF' ? chosen : s.color;
-      out.push({ href: h, route: s.route, label: t(s.key), color });
+      out.push({ href: h, route: s.route, label: t(s.key), color, icon: s.icon });
     }
     return out;
   }
@@ -154,19 +183,37 @@ export default function HomeScreen() {
     );
   }
 
-  const dateText = new Intl.DateTimeFormat(i18n.language, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  }).format(now);
+  const dateText = dayMonth(i18n.language, now, 'long', 'long');
 
   function body(w: HomeWidget) {
-    if (w.id === 'shortcuts')
+    if (w.id === 'shortcuts') {
+      const list = shortcutList(w);
       return (
-        <WidgetBox td={td} id="shortcuts" title={t(WIDGET_TITLE.shortcuts)}>
-          <Shortcuts td={td} items={shortcutList(w)} onGo={(s) => go(s.route)} />
-        </WidgetBox>
+        <View testID="home-w-shortcuts" style={{ marginHorizontal: -16 }}>
+          <HoQuick
+            ho={ho}
+            items={list.map((x) => ({
+              key: x.href,
+              label: x.label,
+              icon: x.icon ?? 'right',
+              color: x.color ?? ho.blue,
+            }))}
+            onGo={(k) => {
+              const x = list.find((y) => y.href === k);
+              if (x) go(x.route);
+            }}
+            iconTestIDOf={(k) => {
+              const x = list.find((y) => y.href === k);
+              return `home-dot-${(x?.route ?? k).replace(/[^a-z]/gi, '')}`;
+            }}
+            testIDOf={(k) => {
+              const x = list.find((y) => y.href === k);
+              return `home-go-${(x?.route ?? k).replace(/[^a-z]/gi, '')}`;
+            }}
+          />
+        </View>
       );
+    }
     if (w.id === 'agenda')
       return (
         <WidgetBox
@@ -190,6 +237,9 @@ export default function HomeScreen() {
                 changed();
               }}
               onOpenEvent={() => go('/(tabs)/planner')}
+              onOpenTodo={() => go('/(tabs)')}
+              onOpenBuy={() => go('/(tabs)/buy')}
+              onOpenHabits={() => go('/(tabs)/habits')}
             />
           ) : null}
         </WidgetBox>
@@ -300,66 +350,36 @@ export default function HomeScreen() {
   return (
     <ScrollView
       testID="home-screen"
-      style={{ flex: 1, backgroundColor: td.page }}
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingBottom: 32,
-        paddingHorizontal: 16,
-        gap: 12,
-      }}
+      style={{ flex: 1, backgroundColor: ho.bg }}
+      contentContainerStyle={{ paddingBottom: 32, gap: 14 }}
     >
-      <View style={styles.head}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text
-            style={{
-              color: th.text2,
-              fontSize: 13,
-              fontWeight: '600',
-              letterSpacing: th.display ? 1.2 : 0.2,
-              textTransform: th.display ? 'uppercase' : 'capitalize',
-            }}
-          >
-            {dateText}
-          </Text>
-          <Text
-            testID="home-greeting"
-            accessibilityRole="header"
-            style={[
-              styles.hello,
-              { color: td.ink },
-              th.display
-                ? { fontFamily: th.display, fontWeight: undefined, fontSize: 36, lineHeight: 40 }
-                : null,
-            ]}
-          >
-            {t(greetingKey(now.getHours()), { nome: name })}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          testID={editing ? 'home-done' : 'home-customise'}
-          onPress={() => setEditing((v) => !v)}
-          hitSlop={8}
-        >
-          <Text style={{ color: td.accent, fontWeight: '600' }}>
-            {editing ? t('home.fine') : t('home.personalizza')}
-          </Text>
-        </Pressable>
-      </View>
+      <HoHeader
+        ho={ho}
+        top={insets.top}
+        date={dateText}
+        hello={t(greetingKey(now.getHours()), { nome: name })}
+        streak={streak}
+        editing={editing}
+        onEdit={() => setEditing((v) => !v)}
+        letter={(name[0] ?? '?').toUpperCase()}
+        onAvatar={() => go('/account')}
+        avatarLabel={t('app.account')}
+        editLabel={editing ? t('home.fine') : t('home.personalizza')}
+      />
 
       {editing ? (
-        <View style={{ gap: 10 }}>
-          <Text style={{ color: td.ink2 }}>{t('home.personalizza_aiuto')}</Text>
+        <View style={{ gap: 10, paddingHorizontal: 16 }}>
+          <Text style={{ color: ho.text2 }}>{t('home.personalizza_aiuto')}</Text>
           {homeLayout.map((w, i) => (
             <View
               key={w.id}
               testID={`home-edit-${w.id}`}
-              style={[styles.edit, { backgroundColor: td.panel, borderColor: td.hair }]}
+              style={[styles.edit, { backgroundColor: ho.surface, borderColor: ho.hair }]}
             >
               <View style={styles.editRow}>
                 <Text
                   style={{
-                    color: w.on ? td.ink : td.ink3,
+                    color: w.on ? ho.text : ho.text3,
                     flex: 1,
                     fontWeight: '600',
                   }}
@@ -373,7 +393,7 @@ export default function HomeScreen() {
                   onPress={() => move(i, -1)}
                   hitSlop={8}
                 >
-                  <Text style={{ color: td.accent, fontSize: 18 }}>↑</Text>
+                  <Text style={{ color: ho.blue, fontSize: 18 }}>↑</Text>
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
@@ -382,7 +402,7 @@ export default function HomeScreen() {
                   onPress={() => move(i, 1)}
                   hitSlop={8}
                 >
-                  <Text style={{ color: td.accent, fontSize: 18 }}>↓</Text>
+                  <Text style={{ color: ho.blue, fontSize: 18 }}>↓</Text>
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
@@ -390,7 +410,7 @@ export default function HomeScreen() {
                   onPress={() => toggle(i)}
                   hitSlop={8}
                 >
-                  <Text style={{ color: td.accent, fontWeight: '600' }}>
+                  <Text style={{ color: ho.blue, fontWeight: '600' }}>
                     {w.on ? t('home.nascondi') : t('home.mostra')}
                   </Text>
                 </Pressable>
@@ -406,9 +426,9 @@ export default function HomeScreen() {
                         accessibilityLabel={t('home.sposta_sinistra')}
                         hitSlop={8}
                       >
-                        <Text style={{ color: td.accent }}>◀</Text>
+                        <Text style={{ color: ho.blue }}>◀</Text>
                       </Pressable>
-                      <Text style={{ color: td.ink2 }}>{s.label}</Text>
+                      <Text style={{ color: ho.text2 }}>{s.label}</Text>
                       <Pressable
                         accessibilityRole="button"
                         testID={`home-sc-right-${s.route.replace(/[^a-z]/gi, '')}`}
@@ -416,7 +436,7 @@ export default function HomeScreen() {
                         accessibilityLabel={t('home.sposta_destra')}
                         hitSlop={8}
                       >
-                        <Text style={{ color: td.accent }}>▶</Text>
+                        <Text style={{ color: ho.blue }}>▶</Text>
                       </Pressable>
                     </View>
                   ))}
@@ -430,7 +450,7 @@ export default function HomeScreen() {
             onPress={() => updateHomeLayout(DEFAULT_HOME_LAYOUT)}
             style={{ alignSelf: 'flex-start' }}
           >
-            <Text style={{ color: td.accent, fontWeight: '600' }}>{t('home.ripristina')}</Text>
+            <Text style={{ color: ho.blue, fontWeight: '600' }}>{t('home.ripristina')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -438,7 +458,9 @@ export default function HomeScreen() {
           .filter((w) => w.on)
           .map((w, i) => (
             <Rise key={w.id} index={i + 1}>
-              {body(w)}
+              <View style={w.id === 'shortcuts' ? undefined : { paddingHorizontal: 16 }}>
+                {body(w)}
+              </View>
             </Rise>
           ))
       )}

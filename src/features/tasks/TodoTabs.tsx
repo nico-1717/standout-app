@@ -13,8 +13,6 @@ const TABS: { id: TodoTab; label: string; href: '/' | '/buy' | '/pills' }[] = [
   { id: 'pills', label: 'todo.tipo_pills', href: '/pills' },
 ];
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
 /**
  * Le tre liste che sul sito stanno nello stesso riquadro (todo_widget: «to do · to buy · pills»). Nell'app le
  * schede Spesa e Pastiglie non hanno un posto nella barra in basso, quindi si passa da una all'altra da qui.
@@ -24,7 +22,9 @@ export function TodoTabs({
   bt,
 }: {
   current: TodoTab;
-  bt: Pick<BuyTheme, 'panel' | 'card' | 'ink2' | 'accent' | 'onAccent' | 'sans' | 'style'>;
+  bt: Pick<BuyTheme, 'panel' | 'card' | 'page' | 'ink' | 'ink2' | 'sans' | 'style'> & {
+    dark?: boolean;
+  };
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -32,7 +32,7 @@ export function TodoTabs({
   return (
     <View
       accessibilityRole="tablist"
-      style={[styles.row, { backgroundColor: bt.panel, borderRadius: paper ? 14 : 18 }]}
+      style={[styles.row, { backgroundColor: bt.panel, borderRadius: 999 }]}
     >
       {TABS.map((tab) => {
         const on = tab.id === current;
@@ -49,22 +49,26 @@ export function TodoTabs({
             }}
             style={[
               styles.tab,
-              { borderRadius: paper ? 11 : 15 },
-              on && { backgroundColor: bt.accent },
+              { borderRadius: 999 },
+              on && {
+                backgroundColor: bt.dark && !paper ? bt.page : bt.card,
+                boxShadow: '0 1px 2px rgba(0,0,0,.08), 0 6px 14px -8px rgba(0,0,0,.28)',
+              },
             ]}
           >
             <Text
               numberOfLines={1}
               style={[
                 {
-                  color: on ? bt.onAccent : bt.ink2,
-                  fontSize: 14,
-                  fontWeight: on ? '700' : '500',
+                  color: on ? bt.ink : bt.ink2,
+                  fontSize: 13,
+                  fontWeight: '500',
+                  letterSpacing: 0.26,
                 },
                 bt.sans ? { fontFamily: bt.sans } : null,
               ]}
             >
-              {cap(t(tab.label))}
+              {t(tab.label).toLowerCase()}
             </Text>
           </Pressable>
         );
@@ -74,6 +78,6 @@ export function TodoTabs({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', padding: 4, gap: 4, marginBottom: 12 },
-  tab: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', padding: 4, gap: 4, marginBottom: 14 },
+  tab: { flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
 });

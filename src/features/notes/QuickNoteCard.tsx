@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
+import { mix } from '@/features/buy/buyTheme';
 import type { TodoTheme } from '@/features/tasks/todoTheme';
 
 import { DEFAULT_CATEGORY_COLOR, type BuyCategory } from '@/features/buy/logic';
@@ -128,18 +130,37 @@ export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) 
   const lines = noteLines(text);
   const n = lines.length;
   const mono = paper ? td.serif : undefined;
+  const dark = td.dark && !paper;
+  const gold = dark ? '#E5CB7A' : '#A8873A';
+  const goldInk = dark ? '#E5CB7A' : '#8F7835';
+  const ink = dark ? td.ink : '#4A443D';
 
   return (
     <View
       testID="quick-note"
       style={[
         styles.box,
-        { backgroundColor: td.panel, borderColor: focused ? td.accent : td.hair },
+        {
+          backgroundColor: mix('#F2D98A', td.card, dark ? 0.12 : 0.2),
+          boxShadow: focused
+            ? 'inset 0 0 0 1.4px rgba(217,184,79,.65), 0 12px 26px -16px rgba(74,68,61,.38)'
+            : 'inset 0 0 0 0.5px rgba(217,184,79,.3), 0 8px 20px -16px rgba(74,68,61,.3)',
+        },
       ]}
     >
       <View style={styles.head}>
-        <Text style={[styles.title, { color: td.ink2 }]}>{t('todo.nota_titolo')}</Text>
-        <Text testID="note-status" style={[styles.status, { color: td.ink3 }]}>
+        <Svg width={16} height={16} viewBox="0 0 24 24">
+          <Path
+            d="M6 3.5h8l4 4V20a.5.5 0 01-.5.5h-11A.5.5 0 016 20zM14 3.5V8h4M9 12.5h6M9 16h6"
+            stroke={gold}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </Svg>
+        <Text style={[styles.title, { color: goldInk }]}>{t('todo.nota_titolo')}</Text>
+        <Text testID="note-status" style={[styles.status, { color: gold }]}>
           {status === 'saving'
             ? t('todo.nota_salvo')
             : status === 'saved'
@@ -157,26 +178,38 @@ export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) 
           if (hasTimer.current) flush();
         }}
         placeholder={t('todo.nota_ph')}
-        placeholderTextColor={td.ink3}
+        placeholderTextColor={dark ? 'rgba(229,203,122,.55)' : 'rgba(143,120,53,.6)'}
         multiline
         maxLength={NOTE_MAX}
         scrollEnabled
-        style={[styles.input, { color: td.ink, fontFamily: mono }]}
+        style={[styles.input, { color: ink, fontFamily: mono }]}
       />
-      <View style={styles.foot}>
-        <Text testID="note-count" style={{ color: td.ink3, fontSize: 12 }}>
-          {n ? t(n === 1 ? 'todo.nota_riga_1' : 'todo.nota_righe_n', { n }) : ''}
-        </Text>
-        <Text
-          testID="note-sort"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: n === 0 }}
-          onPress={() => n && openSort()}
-          style={{ color: n ? td.accent : td.ink3, fontSize: 13, fontWeight: '500' }}
+      {n > 0 && (
+        <View
+          style={[styles.foot, { borderTopWidth: 0.5, borderTopColor: 'rgba(217,184,79,.28)' }]}
         >
-          {t('todo.nota_mano')}
-        </Text>
-      </View>
+          <Text testID="note-count" style={{ color: gold, fontSize: 12, marginRight: 'auto' }}>
+            {t(n === 1 ? 'todo.nota_riga_1' : 'todo.nota_righe_n', { n })}
+          </Text>
+          <Pressable
+            testID="note-sort"
+            accessibilityRole="button"
+            onPress={openSort}
+            style={({ pressed }) => [
+              styles.btn,
+              {
+                backgroundColor: dark ? 'rgba(255,255,255,.1)' : 'rgba(255,253,250,.75)',
+                transform: [{ scale: pressed ? 0.95 : 1 }],
+              },
+              dark ? null : { boxShadow: 'inset 0 0 0 0.5px rgba(217,184,79,.4)' },
+            ]}
+          >
+            <Text style={{ color: dark ? td.ink : '#6F5E2C', fontSize: 13 }}>
+              {t('todo.nota_mano')}
+            </Text>
+          </Pressable>
+        </View>
+      )}
       {notice ? (
         <Text testID="note-notice" style={{ color: td.accent, fontSize: 13, marginTop: 6 }}>
           {notice}
@@ -198,10 +231,17 @@ export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) 
 }
 
 const styles = StyleSheet.create({
-  box: { borderWidth: 1, borderRadius: 16, padding: 12, marginBottom: 18 },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: '500' },
-  status: { fontSize: 11 },
-  input: { minHeight: 44, maxHeight: 220, fontSize: 15, lineHeight: 21, paddingTop: 8 },
-  foot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  box: {
+    borderRadius: 20,
+    paddingTop: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    marginBottom: 18,
+  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  title: { fontSize: 10.5, letterSpacing: 1.7, textTransform: 'uppercase', fontWeight: '500' },
+  status: { marginLeft: 'auto', fontSize: 11.5 },
+  input: { minHeight: 46, maxHeight: 260, fontSize: 16, lineHeight: 24, paddingVertical: 4 },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6 },
+  btn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999 },
 });

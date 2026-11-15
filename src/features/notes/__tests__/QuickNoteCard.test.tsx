@@ -133,9 +133,10 @@ describe('QuickNoteCard', () => {
     expect(screen.getByTestId('note-input').props.value).toBe('dal sito');
   });
 
-  test('sort by hand is off for an empty note', async () => {
+  test('the sort button only shows when the note has lines (like the website)', async () => {
     await ui();
-    await fireEvent.press(screen.getByTestId('note-sort'));
+    expect(screen.queryByTestId('note-sort')).toBeNull();
+    expect(screen.queryByTestId('note-count')).toBeNull();
     expect(screen.queryByTestId('sort-modal')).toBeNull();
   });
 

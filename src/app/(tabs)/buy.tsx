@@ -10,7 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
@@ -18,7 +17,7 @@ import { dictationLang } from '@/core/speech/dictation';
 import { useDictation } from '@/core/speech/useDictation';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { BuyRow, type RowActions } from '@/features/buy/BuyRow';
-import { alpha, buyTheme, mix, type BuyTheme } from '@/features/buy/buyTheme';
+import { alpha, mix, type BuyTheme } from '@/features/buy/buyTheme';
 import { BuyHistoryStore, suggest, type HistoryEntry } from '@/features/buy/history';
 import {
   DEFAULT_CATEGORY_COLOR,
@@ -30,18 +29,19 @@ import {
   type BuyCategory,
 } from '@/features/buy/logic';
 import type { Task } from '@/features/tasks/repo';
-import { TodoTabs } from '@/features/tasks/TodoTabs';
+import { TodoSheetHead } from '@/features/tasks/TodoSheetHead';
+import { todoTheme } from '@/features/tasks/todoTheme';
 import { cardShadow } from '@/ui/kit';
-import { MicButton } from '@/ui/MicButton';
-import { SyncBadge } from '@/ui/SyncBadge';
+import { PjIcon } from '@/features/projects/PjIcons';
+import { TodoIcon } from '@/features/tasks/TodoParts';
+import { PageTop } from '@/ui/PageTop';
 
 export default function BuyScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { services, version, changed, uiStyle } = useApp();
-  const bt = buyTheme(uiStyle, th);
+  const bt = todoTheme(uiStyle, th);
   const paper = bt.style === 'paper';
   const [text, setText] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
@@ -283,226 +283,235 @@ export default function BuyScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: bt.page }}>
-      <View
-        style={{
-          paddingTop: insets.top + 12,
-          paddingBottom: 12,
-          paddingHorizontal: 16,
-          backgroundColor: paper ? bt.page : th.headerGlass,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: bt.hair,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Text
-          style={[
-            font,
-            {
-              color: bt.ink,
-              fontSize: paper ? 26 : 21,
-              fontWeight: paper ? '400' : '800',
-              letterSpacing: -0.42,
-              fontFamily: paper ? bt.serif : undefined,
-              fontStyle: paper ? 'italic' : 'normal',
-            },
-          ]}
-        >
-          {t('planner.to_buy')}
-        </Text>
-        <SyncBadge />
-      </View>
-
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 150 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 150 }}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <TodoTabs current="buy" bt={bt} />
+        <View style={{ marginHorizontal: -16 }}>
+          <PageTop back="todo.planner" testID="buy-top" />
+        </View>
         <View
           style={[
-            styles.addBar,
-            paper
-              ? { backgroundColor: bt.card, borderRadius: 14, ...cardShadow(false) }
-              : { backgroundColor: bt.card, borderRadius: 20 },
+            { backgroundColor: bt.card, borderRadius: 26, paddingTop: 22, paddingHorizontal: 18 },
+            { paddingBottom: 26 },
+            cardShadow(bt.dark),
           ]}
         >
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            onSubmitEditing={() => addLines(text)}
-            returnKeyType="done"
-            blurOnSubmit={false}
-            multiline={false}
-            placeholder={t('todo.tb_aggiungi_ph')}
-            placeholderTextColor={bt.ink3}
-            style={{
-              flex: 1,
-              color: bt.ink,
-              fontSize: paper ? 22 : 16,
-              fontFamily: paper ? bt.hand : undefined,
-              paddingVertical: 8,
-            }}
-          />
-          <MicButton
-            testID="buy-mic"
-            active={mic.active}
-            onPress={micToggle}
-            label={t('todo.tn_detta')}
-            size={36}
-            tint={bt.accent}
-          />
-          <Pressable
-            onPress={() => addLines(text)}
-            accessibilityRole="button"
-            accessibilityLabel={t('comune.aggiungi')}
-            style={[
-              styles.addGo,
-              { backgroundColor: paper ? bt.ink : bt.accent, borderRadius: paper ? 12 : 16 },
-            ]}
-          >
-            <Text style={{ color: paper ? bt.card : '#fff', fontSize: 22, lineHeight: 24 }}>+</Text>
-          </Pressable>
-        </View>
-
-        {micError ? (
-          <Text testID="buy-mic-error" style={{ color: bt.ink2, fontSize: 13, marginTop: 6 }}>
-            {micError}
-          </Text>
-        ) : null}
-
-        {chips.length ? (
-          <View testID="buy-suggestions" style={{ marginTop: 10 }}>
-            {!text.trim() ? (
-              <Text style={[font, { color: bt.ink3, fontSize: 12, marginBottom: 6 }]}>
-                {t('todo.tb_ricompra')}
-              </Text>
-            ) : null}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ gap: 8 }}
+          <TodoSheetHead td={bt} current="buy" />
+          <View style={styles.labelRow}>
+            <Text
+              style={[
+                font,
+                {
+                  color: bt.ink3,
+                  fontSize: paper ? 9 : 10.5,
+                  fontWeight: '500',
+                  letterSpacing: paper ? 1.6 : 0.1,
+                  textTransform: 'uppercase',
+                },
+              ]}
             >
-              {chips.map((e) => {
-                const cat = cats.find((c) => c.uuid === e.cat) ?? null;
-                return (
-                  <Pressable
-                    key={e.title}
-                    accessibilityRole="button"
-                    accessibilityLabel={e.title}
-                    onPress={() => addSuggestion(e)}
-                    onLongPress={() => forgetSuggestion(e)}
-                    delayLongPress={650}
-                    style={[
-                      styles.chip,
-                      { backgroundColor: paper ? bt.panel : bt.card, borderColor: bt.hair },
-                    ]}
-                  >
-                    {cat ? <View style={[styles.dot, { backgroundColor: colorOf(cat) }]} /> : null}
-                    <Text style={[font, { color: bt.ink, fontSize: 14 }]}>{e.title}</Text>
-                    {e.cents !== null ? (
-                      <Text style={[font, { color: bt.ink3, fontSize: 12 }]}>{euro(e.cents)}</Text>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+              {t('planner.to_buy')}
+            </Text>
           </View>
-        ) : null}
-
-        <View style={styles.sumRow}>
-          <Text
+          <View
             style={[
-              font,
-              { color: bt.ink2, fontSize: paper ? 12 : 15, letterSpacing: paper ? 1 : 0 },
+              styles.addBar,
+              paper
+                ? { backgroundColor: bt.card, borderRadius: 14, ...cardShadow(false) }
+                : { backgroundColor: bt.panel, borderRadius: 20 },
             ]}
           >
-            <Text style={{ color: bt.ink, fontWeight: paper ? '500' : '700' }}>{open.length}</Text>{' '}
-            {t(open.length === 1 ? 'todo.tb_da_comprare_1' : 'todo.tb_da_comprare_n')}
-            {paper && total ? (
-              <Text style={{ color: bt.ink, fontWeight: '500' }}>{`  ·  ${euro(total)}`}</Text>
-            ) : null}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/categories')}
-            style={
-              paper
-                ? undefined
-                : {
-                    backgroundColor: bt.panel === bt.page ? bt.card : bt.panel,
-                    borderRadius: 999,
-                    paddingHorizontal: 14,
-                    paddingVertical: 9,
-                  }
-            }
-          >
-            <Text style={[font, { color: bt.ink2, fontSize: 13 }]}>{t('todo.categorie')}</Text>
-          </Pressable>
-        </View>
-
-        {!open.length && !cart.length ? (
-          <View style={{ alignItems: 'center', marginTop: 40, gap: 6 }}>
-            <Text style={[font, { color: bt.ink, fontWeight: '600' }]}>
-              {t('todo.niente_da_comprare')}
-            </Text>
-            <Text style={[font, { color: bt.ink2, textAlign: 'center' }]}>
-              {t('todo.tb_vuoto_aiuto')}
-            </Text>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              onSubmitEditing={() => addLines(text)}
+              returnKeyType="done"
+              blurOnSubmit={false}
+              multiline={false}
+              placeholder={t('todo.tb_aggiungi_ph')}
+              placeholderTextColor={bt.ink3}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                color: bt.ink,
+                fontSize: paper ? 22 : 16,
+                fontFamily: paper ? bt.hand : undefined,
+                paddingVertical: 8,
+              }}
+            />
+            <Pressable
+              testID="buy-mic"
+              accessibilityRole="button"
+              accessibilityState={{ selected: mic.active }}
+              accessibilityLabel={t('todo.tn_detta')}
+              onPress={micToggle}
+              hitSlop={6}
+              style={{ padding: 6 }}
+            >
+              <PjIcon name="mic" color={mic.active ? bt.accent : bt.ink3} size={19} width={1.9} />
+            </Pressable>
+            <Pressable
+              onPress={() => addLines(text)}
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.aggiungi')}
+              style={[
+                styles.addGo,
+                { backgroundColor: paper ? bt.ink : bt.accent, borderRadius: paper ? 12 : 16 },
+              ]}
+            >
+              <TodoIcon name="plus" color={paper ? bt.card : '#fff'} size={20} width={2.4} />
+            </Pressable>
           </View>
-        ) : null}
 
-        {paper ? (
-          <PaperSheet
-            bt={bt}
-            show={open.length + cart.length > 0}
-            cap={`${t('todo.tb_lista')} · ${dateLabel}`}
-          >
-            {groups.map((g, gi) => (
-              <View key={g.cat?.uuid ?? 'none'} style={{ marginTop: gi === 0 ? 0 : 18 }}>
-                <View style={styles.paperHead}>
-                  <Text style={{ fontFamily: bt.serif, fontSize: 21, color: bt.ink }}>
-                    {g.cat ? g.cat.name : t('todo.senza_categoria')}
-                  </Text>
-                  <View style={[styles.lead, { borderColor: alpha(bt.ink, 0.28) }]} />
-                  <Text style={[font, { color: bt.ink2, fontSize: 13 }]}>
-                    {sumCents(g.items) ? euro(sumCents(g.items)) : ''}
-                  </Text>
-                </View>
-                {renderRows(g.items, colorOf(g.cat))}
-              </View>
-            ))}
-            {cartBlock}
-          </PaperSheet>
-        ) : (
-          <>
-            {groups.map((g) => {
-              const c = colorOf(g.cat);
-              const tint = mix(c, bt.card, 0.15);
-              const nameColor = mix(c, bt.ink, 0.62);
-              return (
-                <View key={g.cat?.uuid ?? 'none'} style={[styles.lane, { backgroundColor: tint }]}>
-                  <View style={styles.laneHead}>
-                    <View style={[styles.dot, { backgroundColor: c }]} />
-                    <Text style={{ color: nameColor, fontSize: 15, fontWeight: '600' }}>
+          {micError ? (
+            <Text testID="buy-mic-error" style={{ color: bt.ink2, fontSize: 13, marginTop: 6 }}>
+              {micError}
+            </Text>
+          ) : null}
+
+          {chips.length ? (
+            <View testID="buy-suggestions" style={{ marginTop: 10 }}>
+              {!text.trim() ? (
+                <Text style={[font, { color: bt.ink3, fontSize: 12, marginBottom: 6 }]}>
+                  {t('todo.tb_ricompra')}
+                </Text>
+              ) : null}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ gap: 8 }}
+              >
+                {chips.map((e) => {
+                  const cat = cats.find((c) => c.uuid === e.cat) ?? null;
+                  return (
+                    <Pressable
+                      key={e.title}
+                      accessibilityRole="button"
+                      accessibilityLabel={e.title}
+                      onPress={() => addSuggestion(e)}
+                      onLongPress={() => forgetSuggestion(e)}
+                      delayLongPress={650}
+                      style={[
+                        styles.chip,
+                        { backgroundColor: paper ? bt.panel : bt.card, borderColor: bt.hair },
+                      ]}
+                    >
+                      {cat ? (
+                        <View style={[styles.dot, { backgroundColor: colorOf(cat) }]} />
+                      ) : null}
+                      <Text style={[font, { color: bt.ink, fontSize: 14 }]}>{e.title}</Text>
+                      {e.cents !== null ? (
+                        <Text style={[font, { color: bt.ink3, fontSize: 12 }]}>
+                          {euro(e.cents)}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          <View style={styles.sumRow}>
+            <Text
+              style={[
+                font,
+                { color: bt.ink2, fontSize: paper ? 12 : 15, letterSpacing: paper ? 1 : 0 },
+              ]}
+            >
+              <Text style={{ color: bt.ink, fontWeight: paper ? '500' : '700' }}>
+                {open.length}
+              </Text>{' '}
+              {t(open.length === 1 ? 'todo.tb_da_comprare_1' : 'todo.tb_da_comprare_n')}
+              {paper && total ? (
+                <Text style={{ color: bt.ink, fontWeight: '500' }}>{`  ·  ${euro(total)}`}</Text>
+              ) : null}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/categories')}
+              style={
+                paper
+                  ? undefined
+                  : {
+                      backgroundColor: bt.panel === bt.page ? bt.card : bt.panel,
+                      borderRadius: 999,
+                      paddingHorizontal: 14,
+                      paddingVertical: 9,
+                    }
+              }
+            >
+              <Text style={[font, { color: bt.ink2, fontSize: 13 }]}>{t('todo.categorie')}</Text>
+            </Pressable>
+          </View>
+
+          {!open.length && !cart.length ? (
+            <View style={{ alignItems: 'center', marginTop: 40, gap: 6 }}>
+              <Text style={[font, { color: bt.ink, fontWeight: '600' }]}>
+                {t('todo.niente_da_comprare')}
+              </Text>
+              <Text style={[font, { color: bt.ink2, textAlign: 'center' }]}>
+                {t('todo.tb_vuoto_aiuto')}
+              </Text>
+            </View>
+          ) : null}
+
+          {paper ? (
+            <PaperSheet
+              bt={bt}
+              show={open.length + cart.length > 0}
+              cap={`${t('todo.tb_lista')} · ${dateLabel}`}
+            >
+              {groups.map((g, gi) => (
+                <View key={g.cat?.uuid ?? 'none'} style={{ marginTop: gi === 0 ? 0 : 18 }}>
+                  <View style={styles.paperHead}>
+                    <Text style={{ fontFamily: bt.serif, fontSize: 21, color: bt.ink }}>
                       {g.cat ? g.cat.name : t('todo.senza_categoria')}
                     </Text>
-                    <Text style={{ color: mix(c, bt.ink2, 0.45), fontSize: 13, flex: 1 }}>
-                      {g.items.length}
-                    </Text>
-                    <Text style={{ color: nameColor, fontSize: 13, fontWeight: '500' }}>
+                    <View style={[styles.lead, { borderColor: alpha(bt.ink, 0.28) }]} />
+                    <Text style={[font, { color: bt.ink2, fontSize: 13 }]}>
                       {sumCents(g.items) ? euro(sumCents(g.items)) : ''}
                     </Text>
                   </View>
-                  {renderRows(g.items, c)}
+                  {renderRows(g.items, colorOf(g.cat))}
                 </View>
-              );
-            })}
-            {cartBlock}
-          </>
-        )}
+              ))}
+              {cartBlock}
+            </PaperSheet>
+          ) : (
+            <>
+              {groups.map((g) => {
+                const c = colorOf(g.cat);
+                const tint = mix(c, bt.card, 0.15);
+                const nameColor = mix(c, bt.ink, 0.62);
+                return (
+                  <View
+                    key={g.cat?.uuid ?? 'none'}
+                    style={[styles.lane, { backgroundColor: tint }]}
+                  >
+                    <View style={styles.laneHead}>
+                      <View style={[styles.dot, { backgroundColor: c }]} />
+                      <Text style={{ color: nameColor, fontSize: 15, fontWeight: '600' }}>
+                        {g.cat ? g.cat.name : t('todo.senza_categoria')}
+                      </Text>
+                      <Text style={{ color: mix(c, bt.ink2, 0.45), fontSize: 13, flex: 1 }}>
+                        {g.items.length}
+                      </Text>
+                      <Text style={{ color: nameColor, fontSize: 13, fontWeight: '500' }}>
+                        {sumCents(g.items) ? euro(sumCents(g.items)) : ''}
+                      </Text>
+                    </View>
+                    {renderRows(g.items, c)}
+                  </View>
+                );
+              })}
+              {cartBlock}
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {!paper && (open.length > 0 || cart.length > 0) ? (
@@ -600,6 +609,12 @@ function PaperSheet({
 }
 
 const styles = StyleSheet.create({
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   addBar: {
     flexDirection: 'row',
     alignItems: 'center',

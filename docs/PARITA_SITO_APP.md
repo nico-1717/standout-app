@@ -241,3 +241,15 @@ Due vesti scelte in Altro › Stile (stesso campo `ui_style` del sito: `standard
 | Planner, Diario: carta anche in scuro | fatto |
 | Flashcards, Pomodoro, Voti, Progetti, Impostazioni: colori, intestazioni, numeri grandi in serif (Paper), entrata a cascata delle carte | fatto; le forme interne delle singole pagine si rifiniscono sul telefono |
 | Vetro sfocato vero e scheletri di caricamento | non servono ora: nulla scorre sotto la barra e i dati sono locali (si rivede se cambia) |
+
+
+## Pagina per pagina: «uguale al sito» (richiesto da Nico il 15/11/2026)
+
+Regola: ogni schermata ha lo stesso disegno della pagina del sito; cambia solo la barra in basso al posto della barra laterale. Si confronta con le foto del sito (`web2_*`) usando la prova a schermo intero (react-native-web).
+
+| Schermata | Stato |
+|---|---|
+| Planner (Settimana, Mese, intestazione, avatar) | uguale |
+| To do, To buy, Pastiglie: titolo, schede a pillola, nota veloce gialla, foglio, avatar | uguale; mancano «Ordina con l'IA», «Seleziona» in To buy |
+| Home: intestazione con serie, tasti rapidi, riquadri (Oggi, Flashcard, Progetti, Voti, Numeri, Curiosità), colori iOS (ignora lo stile Paper, come il sito) | uguale |
+| Abitudini, Pomodoro, Flashcard (+ mazzi, partita, statistiche), Diario, Voti, Impostazioni/Account, Lingue | da rifare, in questo ordine |

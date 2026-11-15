@@ -9,6 +9,7 @@ import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { CategoriesRepo } from '@/features/buy/categoriesRepo';
+import { QuickNoteStore } from '@/features/notes/quickNote';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import BuyScreen from '../(tabs)/buy';
@@ -29,7 +30,9 @@ const mockChanged = jest.fn(() => {
   mockVersion += 1;
 });
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), back: jest.fn(), navigate: jest.fn() }),
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -66,6 +69,7 @@ function setup() {
     db,
     tasks,
     categories,
+    notes: new QuickNoteStore(db),
     media,
     privateImages,
     scheduler: { trigger: jest.fn() },

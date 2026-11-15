@@ -1,3 +1,4 @@
+import { QuickNoteStore } from '@/features/notes/quickNote';
 import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -64,7 +65,7 @@ function setup(withPlans = true) {
         }),
       )
     : '';
-  mockServices = { db, pills, scheduler: { trigger: jest.fn() } };
+  mockServices = { db, pills, notes: new QuickNoteStore(db), scheduler: { trigger: jest.fn() } };
   return { db, pills, vit, omega };
 }
 

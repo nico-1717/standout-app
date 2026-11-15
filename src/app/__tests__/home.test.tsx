@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { processColor } from 'react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -195,8 +196,8 @@ describe('Home', () => {
   test('the Voti shortcut wears the colour chosen in the grades settings, or gold if none', async () => {
     setup();
     await renderIt();
-    expect(screen.getByTestId('home-dot-grades').props.style.backgroundColor).toBe('#E8A600');
-    expect(screen.getByTestId('home-dot-projects').props.style.backgroundColor).toBe('#5E5CE6');
+    expect(screen.getByTestId('home-dot-grades').props.colors[1]).toBe(processColor('#E8A600'));
+    expect(screen.getByTestId('home-dot-projects').props.colors[1]).toBe(processColor('#5E5CE6'));
   });
 
   test('today shows what is on now, a due task can be ticked off, a late pill can be taken', async () => {
@@ -223,7 +224,7 @@ describe('Home', () => {
       is_active: true,
     });
     const view = await renderIt();
-    expect(screen.getByText('Long day', { exact: false })).toBeTruthy();
+    expect(screen.getAllByText('Long day', { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText('Pay rent')).toBeTruthy();
     // la pastiglia delle 00:01 è in ritardo
     const dose = pills.day(today).doses[0]!;
