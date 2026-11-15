@@ -24,7 +24,10 @@ const mockEngine = phoneEngine as unknown as FakeEngine;
 
 let mockStyle: 'standard' | 'paper' = 'standard';
 let mockServices: unknown;
-const mockChanged = jest.fn();
+let mockVersion = 0;
+const mockChanged = jest.fn(() => {
+  mockVersion += 1;
+});
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }) }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -33,7 +36,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
     services: mockServices,
-    version: 0,
+    version: mockVersion,
     changed: mockChanged,
     uiStyle: mockStyle,
     syncInfo: { status: 'idle', lastSyncAt: null, pending: 0 },
@@ -81,6 +84,7 @@ describe.each(['standard', 'paper'] as const)('To buy screen (%s)', (style) => {
   beforeEach(() => {
     mockStyle = style;
     mockChanged.mockClear();
+    mockVersion = 0;
   });
 
   test('shows groups, totals and the cart', async () => {
@@ -162,5 +166,39 @@ describe.each(['standard', 'paper'] as const)('To buy screen (%s)', (style) => {
     expect(db.all('SELECT tbl, row_uuid, slot, op FROM media_queue')).toEqual([
       { tbl: 'todos', row_uuid: milk.uuid, slot: 'buy_image', op: 'put' },
     ]);
+  });
+  test('what you buy comes back as a "Buy again" chip, and a long press forgets it', async () => {
+    const { tasks, categories } = setup();
+    await renderIt();
+    expect(screen.queryByTestId('buy-suggestions')).toBeNull();
+    // tick "Oat milk" as taken: it goes into the memory
+    await fireEvent.press(screen.getAllByRole('checkbox')[0]!);
+    const milk = tasks.list('buy').find((x) => x.title === 'Oat milk')!;
+    expect(milk.is_done).toBeTruthy();
+    // Oat milk is in the cart now, not in the open list: it is offered again
+    expect(screen.getByTestId('buy-suggestions')).toBeTruthy();
+    expect(screen.getByText('Buy again')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Oat milk'));
+    const again = tasks.list('buy').filter((x) => x.title === 'Oat milk' && !x.is_done);
+    expect(again).toHaveLength(1);
+    expect(again[0]).toMatchObject({
+      buy_price_cents: 189,
+      buy_category_uuid: categories.list()[0]!.uuid,
+    });
+    // it is in the list again, so the chip is gone (the real provider re-renders on `changed()`)
+    await fireEvent.changeText(screen.getByPlaceholderText(/milk 1\.20/i), ' ');
+    expect(screen.queryByTestId('buy-suggestions')).toBeNull();
+  });
+
+  test('typing shows matching chips and a long press forgets one', async () => {
+    const { tasks } = setup();
+    await renderIt();
+    await fireEvent.press(screen.getAllByRole('checkbox')[0]!); // Oat milk bought
+    const milk = tasks.list('buy').find((x) => x.title === 'Oat milk')!;
+    tasks.remove(milk.uuid); // gone from the list, still remembered
+    mockVersion += 1;
+    await fireEvent.changeText(screen.getByPlaceholderText(/milk 1\.20/i), 'oa');
+    await fireEvent(screen.getByLabelText('Oat milk'), 'longPress');
+    expect(screen.queryByTestId('buy-suggestions')).toBeNull();
   });
 });

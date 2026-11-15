@@ -19,6 +19,7 @@ import { useDictation } from '@/core/speech/useDictation';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { BuyRow, type RowActions } from '@/features/buy/BuyRow';
 import { alpha, buyTheme, mix, type BuyTheme } from '@/features/buy/buyTheme';
+import { BuyHistoryStore, suggest, type HistoryEntry } from '@/features/buy/history';
 import {
   DEFAULT_CATEGORY_COLOR,
   formatEuro,
@@ -43,6 +44,17 @@ export default function BuyScreen() {
   const paper = bt.style === 'paper';
   const [text, setText] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
+  const historyStore = useMemo(
+    () => (services ? new BuyHistoryStore(services.db) : null),
+    [services],
+  );
+  // `histTick` si alza quando la memoria degli acquisti cambia, così i suggerimenti si rileggono
+  const [histTick, setHistTick] = useState(0);
+  const history = useMemo(
+    () => historyStore?.read() ?? {},
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [historyStore, histTick],
+  );
 
   const items = useMemo(
     () => (services ? services.tasks.list('buy') : []),
@@ -58,6 +70,46 @@ export default function BuyScreen() {
   const { groups, cart, open } = useMemo(() => groupBuy(items, cats), [items, cats]);
   const euro = (c: number) => formatEuro(c, i18n.language);
   const total = sumCents(open);
+  const chips = suggest(
+    history,
+    parseQuickAdd(text, cats).title,
+    open.map((o) => o.title),
+  );
+
+  function rememberBought(list: readonly Task[], onlyNew: boolean) {
+    if (!historyStore) return;
+    const known = historyStore.read();
+    const fresh = list.filter((t0) => !onlyNew || !(norm(t0.title) in known));
+    if (!fresh.length) return;
+    historyStore.remember(
+      fresh.map((t0) => ({
+        title: t0.title,
+        cat: t0.buy_category_uuid,
+        cents: t0.buy_price_cents,
+      })),
+    );
+    setHistTick((n) => n + 1);
+  }
+
+  function addSuggestion(e: HistoryEntry) {
+    if (!services) return;
+    const catOk = e.cat && cats.some((c) => c.uuid === e.cat);
+    services.tasks.create(
+      {
+        title: e.title,
+        ...(catOk && e.cat ? { buy_category_uuid: e.cat } : {}),
+        ...(e.cents !== null ? { buy_price_cents: e.cents } : {}),
+      },
+      { listType: 'buy' },
+    );
+    setText('');
+    changed();
+  }
+
+  function forgetSuggestion(e: HistoryEntry) {
+    historyStore?.forget(e.title);
+    setHistTick((n) => n + 1);
+  }
 
   function addLines(raw: string) {
     if (!services) return;
@@ -115,6 +167,7 @@ export default function BuyScreen() {
 
   const actions: RowActions = {
     toggle: (task) => {
+      if (!task.is_done) rememberBought([task], false);
       services?.tasks.update(task.uuid, { is_done: !task.is_done });
       changed();
     },
@@ -209,6 +262,7 @@ export default function BuyScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => {
+              rememberBought(cart, true);
               services?.tasks.removeMany(cart.map((c) => c.uuid));
               changed();
             }}
@@ -313,6 +367,46 @@ export default function BuyScreen() {
           <Text testID="buy-mic-error" style={{ color: bt.ink2, fontSize: 13, marginTop: 6 }}>
             {micError}
           </Text>
+        ) : null}
+
+        {chips.length ? (
+          <View testID="buy-suggestions" style={{ marginTop: 10 }}>
+            {!text.trim() ? (
+              <Text style={[font, { color: bt.ink3, fontSize: 12, marginBottom: 6 }]}>
+                {t('todo.tb_ricompra')}
+              </Text>
+            ) : null}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ gap: 8 }}
+            >
+              {chips.map((e) => {
+                const cat = cats.find((c) => c.uuid === e.cat) ?? null;
+                return (
+                  <Pressable
+                    key={e.title}
+                    accessibilityRole="button"
+                    accessibilityLabel={e.title}
+                    onPress={() => addSuggestion(e)}
+                    onLongPress={() => forgetSuggestion(e)}
+                    delayLongPress={650}
+                    style={[
+                      styles.chip,
+                      { backgroundColor: paper ? bt.panel : bt.card, borderColor: bt.hair },
+                    ]}
+                  >
+                    {cat ? <View style={[styles.dot, { backgroundColor: colorOf(cat) }]} /> : null}
+                    <Text style={[font, { color: bt.ink, fontSize: 14 }]}>{e.title}</Text>
+                    {e.cents !== null ? (
+                      <Text style={[font, { color: bt.ink3, fontSize: 12 }]}>{euro(e.cents)}</Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
         ) : null}
 
         <View style={styles.sumRow}>
@@ -534,6 +628,15 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   paperHead: {
     flexDirection: 'row',
     alignItems: 'baseline',
