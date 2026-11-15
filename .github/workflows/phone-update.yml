@@ -53,8 +53,9 @@ jobs:
           eas build:list --platform ios --build-profile production --limit 15 --json --non-interactive > builds.json
           LAST="$(jq -r '[.[] | select((.status|ascii_upcase) as $s | ["FINISHED","IN_QUEUE","IN_PROGRESS","NEW"] | index($s))][0].runtimeVersion // ""' builds.json)"
           echo "Runtime of the latest build: ${LAST:-none}"
-          RECENT="$(jq -r --arg since "$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ)" '[.[] | select(.createdAt > $since)] | length' builds.json)"
-          echo "Builds in the last 6 hours: $RECENT"
+          # Only builds that already contain the update system count (older ones have no runtime version).
+          RECENT="$(jq -r --arg since "$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ)" '[.[] | select(.createdAt > $since and (.runtimeVersion // "") != "")] | length' builds.json)"
+          echo "Builds with the update system in the last 6 hours: $RECENT"
           if [ "$CURRENT" = "$LAST" ]; then
             echo "need=no" >> "$GITHUB_OUTPUT"
             echo "Same native part: the over-the-air update is enough."
