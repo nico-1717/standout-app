@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -8,12 +8,88 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { accents, type AccentId } from '@/core/theme/tokens';
 import { Card, Header, PrimaryButton } from '@/ui/kit';
 import { LockCard } from '@/core/lock/LockCard';
+import { HoIcon, hoTheme, type Ho, type HoIconName } from '@/features/home/HomeKit';
+import { Avatar } from '@/ui/Avatar';
 import { SpaceCard } from '@/features/account/SpaceCard';
 import { RemindersCard } from '@/features/reminders/RemindersCard';
 import { SyncBadge } from '@/ui/SyncBadge';
 
+type NavItem = {
+  id: string;
+  icon: HoIconName;
+  color: 'orange' | 'red' | 'indigo' | 'purple' | 'green' | 'blue' | 'teal' | 'pink';
+  label: string;
+  href: Href;
+};
+/** Le pagine che sul sito stanno nella barra laterale: qui, nel tab Impostazioni. */
+const NAV: NavItem[] = [
+  {
+    id: 'projects',
+    icon: 'folder',
+    color: 'orange',
+    label: 'progetti.progetti',
+    href: '/projects',
+  },
+  { id: 'diary', icon: 'book', color: 'pink', label: 'diario.titolo', href: '/diary' },
+  {
+    id: 'pomodoro',
+    icon: 'timer',
+    color: 'red',
+    label: 'pomodoro.tipo_pomodoro',
+    href: '/pomodoro',
+  },
+  { id: 'grades', icon: 'cap', color: 'indigo', label: 'voti.voti', href: '/grades' },
+  { id: 'flashcards', icon: 'cards', color: 'purple', label: 'fc.flashcard', href: '/fc-hub' },
+  { id: 'buy', icon: 'list', color: 'teal', label: 'planner.to_buy', href: '/buy' },
+  { id: 'pills', icon: 'pill', color: 'green', label: 'todo.tipo_pills', href: '/pills' },
+];
+
+function NavRow(p: {
+  ho: Ho;
+  testID: string;
+  icon: HoIconName;
+  color: string;
+  label: string;
+  first: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID={p.testID}
+      accessibilityRole="button"
+      onPress={p.onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderTopWidth: p.first ? 0 : StyleSheet.hairlineWidth,
+        borderTopColor: p.ho.hair,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 9,
+          backgroundColor: p.color,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <HoIcon name={p.icon} color="#FFFFFF" size={18} />
+      </View>
+      <Text style={{ flex: 1, color: p.ho.text, fontSize: 17, fontWeight: '600' }}>{p.label}</Text>
+      <HoIcon name="right" color={p.ho.text3} size={18} />
+    </Pressable>
+  );
+}
+
 export default function SettingsScreen() {
   const th = useTheme();
+  const ho = hoTheme(th);
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -54,104 +130,61 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: th.bg }}>
       <Header title={t('comune.impostazioni')} top={insets.top} right={<SyncBadge />} />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
-        <Pressable
-          testID="open-account"
-          accessibilityRole="button"
-          onPress={() => router.push('/account')}
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }}>
+        <View
+          style={{
+            backgroundColor: ho.surface,
+            borderRadius: 24,
+            padding: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+          }}
         >
-          <Card index={0} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {user?.username}
-            </Text>
-            {user?.email ? (
-              <Text style={{ color: th.text2, marginTop: 2 }}>{user.email}</Text>
-            ) : null}
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('app.account')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
-          testID="open-projects"
-          accessibilityRole="button"
-          onPress={() => router.push('/projects')}
-        >
-          <Card index={1} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('progetti.progetti')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
-          testID="open-diary"
-          accessibilityRole="button"
-          onPress={() => router.push('/diary')}
-        >
-          <Card index={2} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('diario.titolo')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('diario.apri_il_diario')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
-          testID="open-pomodoro"
-          accessibilityRole="button"
-          onPress={() => router.push('/pomodoro')}
-        >
-          <Card index={3} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('pomodoro.tipo_pomodoro')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
-          testID="open-grades"
-          accessibilityRole="button"
-          onPress={() => router.push('/grades')}
-        >
-          <Card index={4} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('voti.voti')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
-          testID="open-flashcards"
-          accessibilityRole="button"
-          onPress={() => router.push('/fc-hub')}
-        >
-          <Card index={5} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('fc.flashcard')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable testID="open-buy" accessibilityRole="button" onPress={() => router.push('/buy')}>
-          <Card index={6} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('planner.to_buy')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
-          testID="open-pills"
-          accessibilityRole="button"
-          onPress={() => router.push('/pills')}
-        >
-          <Card index={7} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('todo.tipo_pills')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
-          </Card>
-        </Pressable>
+          <Avatar
+            letter={(user?.username?.[0] ?? '?').toUpperCase()}
+            label={t('app.account')}
+            onPress={() => router.push('/account')}
+            size={52}
+          />
+          <Pressable
+            testID="open-account"
+            accessibilityRole="button"
+            onPress={() => router.push('/account')}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{ color: ho.text, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 }}
+              >
+                {user?.username}
+              </Text>
+              {user?.email ? (
+                <Text style={{ color: ho.text2, fontSize: 14, marginTop: 1 }}>{user.email}</Text>
+              ) : null}
+              <Text style={{ color: ho.blueInk, fontSize: 14, fontWeight: '700', marginTop: 4 }}>
+                {t('app.account')}
+              </Text>
+            </View>
+            <HoIcon name="right" color={ho.text3} size={18} />
+          </Pressable>
+        </View>
+        <View style={{ backgroundColor: ho.surface, borderRadius: 24, overflow: 'hidden' }}>
+          {NAV.map((n, i) => (
+            <NavRow
+              key={n.id}
+              ho={ho}
+              testID={`open-${n.id}`}
+              icon={n.icon}
+              color={ho[n.color]}
+              label={t(n.label)}
+              first={i === 0}
+              onPress={() => router.push(n.href)}
+            />
+          ))}
+        </View>
         <Card index={8} style={{ padding: 16, gap: 10 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('stile.titolo')}</Text>
           <Text style={{ color: th.text2, fontSize: 13 }}>{t('stile.app_nota')}</Text>

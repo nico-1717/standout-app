@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { appendDictated, dictationLang } from '@/core/speech/dictation';
 import { useDictation } from '@/core/speech/useDictation';
 import { addDaysIso } from '@/features/tasks/groups';
+import { useTheme } from '@/core/theme/ThemeProvider';
+import { HoIcon, hoTheme } from '@/features/home/HomeKit';
+import { Avatar } from '@/ui/Avatar';
 import { MicButton } from '@/ui/MicButton';
 
 import type { DiaryTheme } from './diaryTheme';
@@ -60,16 +63,14 @@ function ItemRow({
   const filled = shown.trim() !== '';
   const dotColor = filled ? (type === 'good' ? (std ? '#FFB800' : d.accent) : d.accent) : d.ink3;
   return (
-    <View
-      style={[
-        styles.li,
-        std && { borderTopColor: d.hair, borderTopWidth: StyleSheet.hairlineWidth },
-      ]}
-    >
+    <View style={[styles.li]}>
       <View
         style={[
           styles.liDot,
-          { backgroundColor: dotColor, transform: [{ scale: filled && !std ? 1.4 : 1 }] },
+          std && { width: 9, height: 9, borderRadius: 5, marginLeft: 4 },
+          std && !filled
+            ? { borderWidth: 2, borderColor: d.ink2 }
+            : { backgroundColor: dotColor, transform: [{ scale: filled && !std ? 1.4 : 1 }] },
         ]}
       />
       <TextInput
@@ -91,7 +92,7 @@ function ItemRow({
         onEndEditing={(e) => commit(e.nativeEvent.text)}
         style={{
           flex: 1,
-          paddingVertical: std ? 11 : 2,
+          paddingVertical: std ? 12 : 2,
           color: d.ink,
           fontFamily: d.hand,
           fontSize: std ? d.size : d.size * 0.92,
@@ -112,20 +113,22 @@ function ListColumn(p: {
   const { t } = useTranslation();
   const { d } = p;
   const std = d.style === 'standard';
+  const th = useTheme();
+  const ho = hoTheme(th);
   const title = t(p.type === 'good' ? 'diario.cose_belle_di_oggi' : 'diario.cosa_ho_imparato_oggi');
-  const iconBg = p.type === 'good' ? 'rgba(255,204,0,0.22)' : d.accent2;
-  const iconFg = p.type === 'good' ? '#C78A00' : d.accent;
+  const iconBg = p.type === 'good' ? ho.orangeSoft : ho.blueSoft;
+  const iconFg = p.type === 'good' ? ho.orange : ho.blue;
   return (
     <View
       testID={`list-${p.type}`}
       style={[
         std
           ? {
-              backgroundColor: d.card,
-              borderRadius: 20,
+              backgroundColor: ho.surface,
+              borderRadius: 24,
               paddingHorizontal: 16,
-              paddingTop: 14,
-              paddingBottom: 6,
+              paddingTop: 16,
+              paddingBottom: 8,
             }
           : { flex: 1, minWidth: 0 },
       ]}
@@ -133,18 +136,19 @@ function ListColumn(p: {
       <View style={styles.colHead}>
         {std && (
           <View style={[styles.colIcon, { backgroundColor: iconBg }]}>
-            <Text style={{ color: iconFg, fontSize: 14 }}>{p.type === 'good' ? '☀' : '✦'}</Text>
+            <HoIcon name={p.type === 'good' ? 'sun' : 'bulb'} color={iconFg} size={17} />
           </View>
         )}
         <Text
           style={[
             styles.lab,
             {
-              color: std ? d.ink2 : d.ink3,
+              color: std ? ho.text : d.ink3,
               fontFamily: d.sans,
-              fontSize: std ? 10.5 : 9,
-              letterSpacing: std ? 0.1 : 1.6,
+              fontSize: std ? 17 : 9,
+              letterSpacing: std ? -0.2 : 1.6,
             },
+            std && { fontWeight: '700', textTransform: 'none' },
           ]}
         >
           {title}
@@ -177,6 +181,8 @@ function WriteArea({
   onSave: (text: string) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const th = useTheme();
+  const ho = hoTheme(th);
   const [draft, setDraft] = useState<string | null>(null);
   const [h, setH] = useState(0);
   const timer = useLater(700);
@@ -218,24 +224,25 @@ function WriteArea({
       style={
         std
           ? {
-              backgroundColor: d.card,
-              borderRadius: 20,
+              backgroundColor: ho.surface,
+              borderRadius: 24,
               paddingHorizontal: 16,
-              paddingTop: 14,
-              paddingBottom: 10,
+              paddingTop: 16,
+              paddingBottom: 14,
             }
           : undefined
       }
     >
       {std && (
         <View style={styles.colHead}>
-          <View style={[styles.colIcon, { backgroundColor: 'rgba(175,82,222,0.16)' }]}>
-            <Text style={{ color: '#AF52DE', fontSize: 13 }}>✎</Text>
+          <View style={[styles.colIcon, { backgroundColor: ho.purpleSoft }]}>
+            <HoIcon name="pen" color={ho.purple} size={16} />
           </View>
           <Text
             style={[
               styles.lab,
-              { color: d.ink2, fontFamily: d.sans, fontSize: 10.5, letterSpacing: 0.1 },
+              { color: ho.text, fontSize: 17, letterSpacing: -0.2, fontWeight: '700' },
+              { textTransform: 'none' },
             ]}
           >
             {t('diario.com_e_andata_oggi_lab')}
@@ -289,9 +296,15 @@ function WriteArea({
             timer.later(() => commit(v));
           }}
           onBlur={() => draft !== null && commit(draft)}
-          onContentSizeChange={(e) => setH(e.nativeEvent.contentSize.height + d.line * 0.5)}
+          onContentSizeChange={
+            // sul web (solo i test visivi) la misura include già il minimo: si rimisurerebbe all'infinito
+            Platform.OS === 'web'
+              ? undefined
+              : (e) => setH(e.nativeEvent.contentSize.height + d.line * 0.5)
+          }
           style={{
             minHeight: height,
+            marginTop: std ? 8 : 0,
             color: d.ink,
             fontFamily: d.hand,
             fontSize: d.size,
@@ -301,16 +314,41 @@ function WriteArea({
           }}
         />
       </View>
-      <View style={{ position: 'absolute', right: 8, top: 8 }}>
-        <MicButton
+      {std ? (
+        <Pressable
           testID="diary-mic"
-          active={mic.active}
+          accessibilityRole="button"
+          accessibilityLabel={t('diario.detta_invece_di_scrivere')}
+          accessibilityState={{ selected: mic.active }}
+          hitSlop={8}
           onPress={micToggle}
-          label={t('diario.detta_invece_di_scrivere')}
-          size={34}
-          tint={d.accent}
-        />
-      </View>
+          style={{
+            position: 'absolute',
+            right: 16,
+            bottom: 16,
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: mic.active ? ho.red : ho.blue,
+            boxShadow: `0 6px 16px ${mic.active ? ho.redSoft : ho.blueSoft}`,
+          }}
+        >
+          <HoIcon name="mic" color="#FFFFFF" size={20} />
+        </Pressable>
+      ) : (
+        <View style={{ position: 'absolute', right: 8, top: 8 }}>
+          <MicButton
+            testID="diary-mic"
+            active={mic.active}
+            onPress={micToggle}
+            label={t('diario.detta_invece_di_scrivere')}
+            size={34}
+            tint={d.accent}
+          />
+        </View>
+      )}
       {mic.error ? (
         <Text testID="diary-mic-error" style={{ color: d.ink3, fontSize: 12, marginTop: 4 }}>
           {t('diario.dettatura_non_disponibile')}
@@ -333,12 +371,16 @@ export interface DayPageProps {
   onOpenSummary: () => void;
   months: string[];
   weekdays: string[];
+  /** il pallino del profilo (solo nello stile standard, come sul sito) */
+  account?: { letter: string; label: string; onPress: () => void };
 }
 
 /** La pagina del giorno: faccine, data, anello delle abitudini, i due elenchi e il testo libero. */
 export function DayPage(p: DayPageProps) {
   const { d, day } = p;
   const { t } = useTranslation();
+  const th = useTheme();
+  const ho = hoTheme(th);
   const std = d.style === 'standard';
   const parts = dateParts(day.date);
   const first = p.rings[0];
@@ -357,7 +399,7 @@ export function DayPage(p: DayPageProps) {
         onPress={onPress}
         style={
           std
-            ? [styles.tile, { backgroundColor: lv ? `${tint}22` : d.card }]
+            ? [styles.tile, { backgroundColor: lv ? `${tint}22` : ho.surface }]
             : { width: 40, height: 40 }
         }
       >
@@ -370,10 +412,10 @@ export function DayPage(p: DayPageProps) {
         />
         {std && (
           <>
-            <Text style={{ color: d.ink2, fontSize: 10.5, marginTop: 4 }}>
+            <Text style={{ color: ho.text2, fontSize: 14, fontWeight: '700', marginTop: 8 }}>
               {t(kind === 'mood' ? 'diario.umore_k' : 'diario.energia')}
             </Text>
-            <Text style={{ color: lv ? tint : d.accent, fontSize: 12, fontWeight: '600' }}>
+            <Text style={{ color: lv ? tint : ho.blueInk, fontSize: 14, fontWeight: '700' }}>
               {lv ? words(lv) : t('diario.tocca_per_scegliere')}
             </Text>
           </>
@@ -433,13 +475,57 @@ export function DayPage(p: DayPageProps) {
     </View>
   );
 
+  const titleStd = (
+    <View style={styles.titleStd}>
+      <Text
+        testID="diary-num"
+        style={{
+          color: ho.text,
+          fontSize: 58,
+          lineHeight: 62,
+          fontWeight: '800',
+          letterSpacing: -3,
+        }}
+      >
+        {parts.d}
+      </Text>
+      <View style={{ flex: 1, alignItems: 'flex-start', gap: 4 }}>
+        <Text
+          style={{ color: ho.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4 }}
+          numberOfLines={1}
+        >
+          {p.weekdays[parts.wd]}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          testID="diary-month-btn"
+          onPress={p.onOpenMonth}
+          style={[styles.monthStd, { backgroundColor: ho.blueSoft }]}
+        >
+          <Text style={{ color: ho.blueInk, fontSize: 15, fontWeight: '700' }}>
+            {p.months[parts.m - 1]} {parts.y}
+          </Text>
+          <HoIcon name="calendar" color={ho.blueInk} size={15} />
+        </Pressable>
+      </View>
+      {p.account ? (
+        <Avatar
+          letter={p.account.letter}
+          label={p.account.label}
+          onPress={p.account.onPress}
+          testID="diary-avatar"
+        />
+      ) : null}
+    </View>
+  );
+
   const ring = (
     <Pressable
       testID="diary-ring"
       accessibilityRole="button"
       accessibilityLabel={t('diario.abitudini')}
       onPress={p.onOpenSummary}
-      style={std ? [styles.tile, { backgroundColor: d.card }] : { width: 54, height: 54 }}
+      style={std ? [styles.tile, { backgroundColor: ho.surface }] : { width: 54, height: 54 }}
     >
       <View
         style={{
@@ -454,8 +540,9 @@ export function DayPage(p: DayPageProps) {
           testID="diary-ring-n"
           style={{
             position: 'absolute',
-            color: d.ink2,
+            color: std ? ho.text : d.ink2,
             fontFamily: d.serif,
+            fontWeight: std ? '800' : undefined,
             fontSize: p.rings.length >= 3 ? 11 : 15,
           }}
         >
@@ -463,7 +550,9 @@ export function DayPage(p: DayPageProps) {
         </Text>
       </View>
       {std && (
-        <Text style={{ color: d.ink2, fontSize: 10.5, marginTop: 3 }}>{t('diario.abitudini')}</Text>
+        <Text style={{ color: ho.text2, fontSize: 14, fontWeight: '700', marginTop: 8 }}>
+          {t('diario.abitudini')}
+        </Text>
       )}
     </Pressable>
   );
@@ -472,7 +561,7 @@ export function DayPage(p: DayPageProps) {
     <View>
       {std ? (
         <>
-          {title}
+          {titleStd}
           <View style={styles.tiles}>
             {faceBtn('mood', p.onMood)}
             {faceBtn('energy', p.onEnergy)}
@@ -513,18 +602,26 @@ const styles = StyleSheet.create({
   tile: {
     flex: 1,
     minHeight: 104,
-    borderRadius: 20,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 6,
   },
-  monthStd: { marginTop: 8, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
+  titleStd: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingTop: 2 },
+  monthStd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
   colHead: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 4 },
   colIcon: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -47,6 +47,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     uiStyle: mockStyle,
     diarySettings: mockSettings,
     updateDiarySettings: mockUpdate,
+    authState: { status: 'signedIn', user: { username: 'nico' } },
     syncInfo: { status: 'idle', lastSyncAt: null, pending: 0 },
   }),
 }));

@@ -18,6 +18,7 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DayPage, dateParts } from '@/features/diary/DayPage';
 import { FacePop, FontPop, HabitsSummary } from '@/features/diary/DiaryParts';
+import { HoIcon, hoTheme, type HoIconName } from '@/features/home/HomeKit';
 import { diaryTheme } from '@/features/diary/diaryTheme';
 import type { DiaryItem, ListType } from '@/features/diary/logic';
 import { monthEnd, weekStart } from '@/features/diary/logic';
@@ -38,11 +39,14 @@ export default function DiaryScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed, uiStyle, diarySettings, updateDiarySettings } = useApp();
+  const { services, version, changed, uiStyle, diarySettings, updateDiarySettings, authState } =
+    useApp();
+  const userName = authState.status === 'signedIn' ? authState.user.username : '';
   const params = useLocalSearchParams<{ data?: string }>();
   const today = localToday();
   const d = diaryTheme(uiStyle, th, diarySettings);
   const std = d.style === 'standard';
+  const ho = hoTheme(th);
 
   const [date, setDate] = useState(
     typeof params.data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.data)
@@ -240,7 +244,7 @@ export default function DiaryScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             paddingTop: insets.top + 14,
-            paddingHorizontal: 18,
+            paddingHorizontal: std ? 16 : 18,
             paddingBottom: 96 + insets.bottom,
           }}
         >
@@ -253,6 +257,11 @@ export default function DiaryScreen() {
               rings={extras.rings}
               months={months}
               weekdays={weekdays}
+              account={{
+                letter: (userName[0] ?? '?').toUpperCase(),
+                label: t('app.account'),
+                onPress: () => router.push('/account'),
+              }}
               onMood={() => setFacePop('mood')}
               onEnergy={() => setFacePop('energy')}
               onNote={onNote}
@@ -283,37 +292,73 @@ export default function DiaryScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={[styles.tools, { paddingBottom: 10 + insets.bottom, backgroundColor: d.page }]}>
-        <Tool
-          d={d}
-          id="diary-back"
-          glyph="‹"
-          a11y={t('comune.chiudi')}
-          onPress={() => router.back()}
-        />
-        <Tool
-          d={d}
-          id="diary-undo"
-          glyph="↶"
-          a11y={t('diario.annulla_l_ultima_cosa')}
-          onPress={doUndo}
-          disabled={undo.length === 0}
-        />
-        <Tool
-          d={d}
-          id="diary-year"
-          glyph="▥"
-          a11y={t('diario.dn_apri')}
-          onPress={() => router.push('/diary-year')}
-        />
-        <Tool d={d} id="diary-today" glyph="◎" a11y={t('diario.vai_a_oggi')} onPress={goToday} />
-        <Tool
-          d={d}
-          id="diary-font"
-          glyph="Aa"
-          a11y={t('diario.scegli_la_scrittura')}
-          onPress={() => setFontPop(true)}
-        />
+      <View
+        style={[
+          styles.tools,
+          std && { justifyContent: 'flex-start', gap: 10, paddingHorizontal: 16 },
+          { paddingBottom: 10 + insets.bottom, backgroundColor: std ? 'transparent' : d.page },
+        ]}
+      >
+        {std ? (
+          <View style={[styles.circle, { backgroundColor: ho.surface, borderColor: ho.hair }]}>
+            <Tool
+              d={d}
+              id="diary-back"
+              icon="back"
+              glyph="‹"
+              a11y={t('comune.chiudi')}
+              onPress={() => router.back()}
+            />
+          </View>
+        ) : (
+          <Tool
+            d={d}
+            id="diary-back"
+            glyph="‹"
+            a11y={t('comune.chiudi')}
+            onPress={() => router.back()}
+          />
+        )}
+        <View
+          style={
+            std
+              ? [styles.pill, { backgroundColor: ho.surface, borderColor: ho.hair }]
+              : { flexDirection: 'row', gap: 22 }
+          }
+        >
+          <Tool
+            d={d}
+            id="diary-undo"
+            icon="undo"
+            glyph="↶"
+            a11y={t('diario.annulla_l_ultima_cosa')}
+            onPress={doUndo}
+            disabled={undo.length === 0}
+          />
+          <Tool
+            d={d}
+            id="diary-today"
+            icon="target"
+            glyph="◎"
+            a11y={t('diario.vai_a_oggi')}
+            onPress={goToday}
+          />
+          <Tool
+            d={d}
+            id="diary-year"
+            icon="bars"
+            glyph="▥"
+            a11y={t('diario.dn_apri')}
+            onPress={() => router.push('/diary-year')}
+          />
+          <Tool
+            d={d}
+            id="diary-font"
+            glyph="Aa"
+            a11y={t('diario.scegli_la_scrittura')}
+            onPress={() => setFontPop(true)}
+          />
+        </View>
       </View>
 
       {toast && (
@@ -361,6 +406,8 @@ function Tool(p: {
   d: ReturnType<typeof diaryTheme>;
   id: string;
   glyph: string;
+  /** il disegno a linea (stile standard); senza, resta il segno di testo */
+  icon?: HoIconName;
   a11y: string;
   onPress: () => void;
   disabled?: boolean;
@@ -374,7 +421,19 @@ function Tool(p: {
       onPress={p.onPress}
       style={[styles.tool, p.disabled && { opacity: 0.35 }]}
     >
-      <Text style={{ color: p.d.pencil, fontSize: 21 }}>{p.glyph}</Text>
+      {p.icon && p.d.style === 'standard' ? (
+        <HoIcon name={p.icon} color={p.d.ink2} size={22} />
+      ) : (
+        <Text
+          style={{
+            color: p.d.pencil,
+            fontSize: p.d.style === 'standard' ? 19 : 21,
+            fontWeight: p.d.style === 'standard' ? '600' : undefined,
+          }}
+        >
+          {p.glyph}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -391,6 +450,23 @@ const styles = StyleSheet.create({
     gap: 22,
     paddingTop: 10,
     paddingHorizontal: 18,
+  },
+  circle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    height: 54,
+    paddingHorizontal: 16,
+    borderRadius: 27,
+    borderWidth: StyleSheet.hairlineWidth * 2,
   },
   tool: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   toast: {
