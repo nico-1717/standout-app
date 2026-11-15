@@ -1,0 +1,70 @@
+name: Phone update
+# Runs by itself after CI passes on main (and by hand: Actions > "Phone update" > Run workflow).
+#  1. Sends the new app code to the phones over the air (EAS Update): it arrives the next time the app is opened.
+#  2. If something NATIVE changed (a new library, a new permission, the Expo version) an over-the-air update cannot
+#     carry it: then it also starts a new iOS build and sends it to TestFlight. At most one automatic build every
+#     6 hours, so a mistake can never burn through the build quota.
+# Needs one repository secret: EXPO_TOKEN (Expo > Account settings > Access tokens).
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: phone-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check the Expo token is there
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Secret EXPO_TOKEN is missing: GitHub > this repo > Settings > Secrets and variables > Actions > New repository secret (see docs/AGGIORNAMENTI_AUTOMATICI.md)"
+            exit 1
+          fi
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Send the new code to the phones
+        run: |
+          MSG="$(git log -1 --pretty=%s | cut -c1-100)"
+          eas update --branch production --platform ios --message "$MSG" --non-interactive
+      - name: Is a new native build needed?
+        id: native
+        run: |
+          CURRENT="$(npx expo-updates runtimeversion:resolve --platform ios | jq -r .runtimeVersion)"
+          echo "Runtime of this code: $CURRENT"
+          eas build:list --platform ios --build-profile production --limit 15 --json --non-interactive > builds.json
+          LAST="$(jq -r '[.[] | select((.status|ascii_upcase) as $s | ["FINISHED","IN_QUEUE","IN_PROGRESS","NEW"] | index($s))][0].runtimeVersion // ""' builds.json)"
+          echo "Runtime of the latest build: ${LAST:-none}"
+          RECENT="$(jq -r --arg since "$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ)" '[.[] | select(.createdAt > $since)] | length' builds.json)"
+          echo "Builds in the last 6 hours: $RECENT"
+          if [ "$CURRENT" = "$LAST" ]; then
+            echo "need=no" >> "$GITHUB_OUTPUT"
+            echo "Same native part: the over-the-air update is enough."
+          elif [ "$RECENT" != "0" ]; then
+            echo "need=wait" >> "$GITHUB_OUTPUT"
+            echo "::warning::The native part changed but a build was already started in the last 6 hours: not starting another one."
+          else
+            echo "need=yes" >> "$GITHUB_OUTPUT"
+            echo "The native part changed: starting a new build."
+          fi
+      - name: New build to TestFlight
+        if: steps.native.outputs.need == 'yes'
+        run: eas build --platform ios --profile production --non-interactive --no-wait --auto-submit

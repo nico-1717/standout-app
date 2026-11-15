@@ -24,15 +24,12 @@ Installing on a real iPhone needs the Apple Developer account (99 USD/year), whi
 5. For TestFlight (later, no cable needed): `eas build --profile production --platform ios`, then `eas submit --platform ios`.
    Create the app first in App Store Connect with the bundle id `app.standout.mobile`.
 
-### Without a computer (iPad only): build from GitHub
-The workflow `.github/workflows/ios-testflight.yml` starts the build on Expo's servers and sends it to TestFlight.
-1. GitHub > the `standout-app` repo > Settings > Secrets and variables > Actions > New repository secret. Add four:
-   `EXPO_TOKEN` (the Expo robot token), `ASC_KEY_P8` (the whole text of the `.p8` file, with the BEGIN and END lines),
-   `ASC_KEY_ID` (the 10-character Key ID) and `ASC_ISSUER_ID` (the Issuer ID, a long code with dashes).
-2. GitHub > Actions > "iOS build for TestFlight" > Run workflow. Follow the build on expo.dev.
-3. If it says the Expo project does not exist, run it once more with "Link the project" ticked.
-4. When the build is processed, App Store Connect > TestFlight > the build. Answer the export-compliance question there,
-   add yourself as an internal tester, and install with the TestFlight app.
+### Without a computer (iPad only): everything from GitHub
+Since November 2026 the app updates itself like the website: a push to `main` reaches the phones a few minutes later
+(over the air), and a new TestFlight build starts by itself only when something native changes.
+The one-time setup (one secret, `EXPO_TOKEN`) and how it works are in `docs/AGGIORNAMENTI_AUTOMATICI.md`.
+A manual "iOS build for TestFlight" button still exists under Actions, for a build on demand.
+When a build is processed: App Store Connect > TestFlight > the build. Add yourself as an internal tester and install with the TestFlight app.
 The `.p8` file is a password: never put it in the repo (`*.p8` is ignored) or in a chat.
 
 ## Security note

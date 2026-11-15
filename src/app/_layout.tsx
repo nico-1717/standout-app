@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '@/core/i18n';
 import { AppProvider, useApp } from '@/core/app/AppProvider';
 import { AppLock } from '@/core/lock/AppLock';
+import { useAutoUpdate } from '@/core/updates/autoUpdate';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 
 /** Chi vede quale schermata: fuori → login; dentro ma senza testi accettati → terms; poi le schede. */
@@ -100,6 +101,7 @@ function Themed() {
 }
 
 export default function RootLayout() {
+  useAutoUpdate();
   // I caratteri dello «Scontrino» (come sul sito). Se non si caricano si va avanti con quelli del telefono.
   const [loaded, fontError] = useFonts({
     Caveat_500Medium,

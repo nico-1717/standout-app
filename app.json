@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "app.standout.mobile",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -90,6 +93,13 @@
       "eas": {
         "projectId": "aa78fe12-a65e-40b5-a0a9-a7b2f325dc56"
       }
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/aa78fe12-a65e-40b5-a0a9-a7b2f325dc56",
+      "fallbackToCacheTimeout": 0
     }
   }
 }
