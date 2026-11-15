@@ -7,7 +7,17 @@ import type { PomodoroSettings, PomodoroSettingsApi } from '@/features/pomodoro/
 import type { HabitSettings, HabitSettingsApi } from '@/features/habits/habitSettings';
 import type { PutNoteResult, QuickNoteApi, ServerNote } from '@/features/notes/quickNote';
 import type { Settings, SettingsApi } from '../settings/settings';
+import { logSync } from '../sync/log';
 import type { Mutation, PullResponse, PushResult, SyncApi } from '../sync/types';
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+}
+
+function headerSummary(res: Response): string {
+  const h = (k: string) => res.headers?.get?.(k) ?? '-';
+  return `type ${h('content-type')}, length ${h('content-length')}, server ${h('server')}`;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -52,24 +62,48 @@ export class HttpSyncApi
     path: string,
     body?: unknown,
   ): Promise<T> {
-    const res = await this.fetchFn(this.baseUrl.replace(/\/$/, '') + '/api/v1' + path, {
-      method,
-      headers: {
-        Authorization: `Bearer ${await this.token()}`,
-        'Content-Type': 'application/json',
-        'X-App-Version': this.appVersion,
-        'X-App-Platform': this.platform,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const text = await res.text();
+    const started = Date.now();
+    const what = `${method} ${path.length > 90 ? path.slice(0, 90) + '…' : path}`;
+    let res: Response;
+    try {
+      res = await this.fetchFn(this.baseUrl.replace(/\/$/, '') + '/api/v1' + path, {
+        method,
+        headers: {
+          Authorization: `Bearer ${await this.token()}`,
+          'Content-Type': 'application/json',
+          'X-App-Version': this.appVersion,
+          'X-App-Platform': this.platform,
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch (e) {
+      logSync(`${what} → NO REPLY after ${Date.now() - started} ms: ${errorText(e)}`);
+      throw e;
+    }
+    let text: string;
+    try {
+      text = await res.text();
+    } catch (e) {
+      logSync(
+        `${what} → HTTP ${res.status} but the body was cut after ${Date.now() - started} ms: ${errorText(e)} (${headerSummary(res)})`,
+      );
+      throw e;
+    }
     let json: Record<string, unknown> = {};
+    let parsed = true;
     try {
       json = JSON.parse(text) as Record<string, unknown>;
     } catch {
-      /* risposta non JSON (pagina d'errore del server): resta {} */
+      parsed = false; /* risposta non JSON (pagina d'errore del server): resta {} */
     }
-    if (!res.ok || json.ok === false) {
+    const failed = !res.ok || json.ok === false;
+    logSync(
+      `${what} → HTTP ${res.status} ${text.length} B in ${Date.now() - started} ms` +
+        (failed || !parsed
+          ? ` (${headerSummary(res)})${parsed ? '' : ' NOT JSON: ' + text.slice(0, 160)}`
+          : ''),
+    );
+    if (failed) {
       throw new ApiError(
         res.status,
         String(json.code ?? 'http_error'),
@@ -89,11 +123,31 @@ export class HttpSyncApi
     return r.tables;
   }
 
-  pull(cursor: string, limit: number) {
-    return this.call<PullResponse>(
-      'GET',
-      `/sync/pull?cursor=${encodeURIComponent(cursor)}&limit=${limit}`,
-    );
+  /**
+   * Una pagina di modifiche. Se il server non risponde (connessione chiusa, errore 5xx) si riprova con pagine più
+   * piccole: 50, 10 e infine 1 riga. Così una riga o una pagina troppo pesante per l'hosting non blocca tutto il resto.
+   */
+  async pull(cursor: string, limit: number): Promise<PullResponse> {
+    let n = limit;
+    for (;;) {
+      try {
+        const r = await this.call<PullResponse>(
+          'GET',
+          `/sync/pull?cursor=${encodeURIComponent(cursor)}&limit=${n}`,
+        );
+        const rows = r.changes?.length ?? 0;
+        logSync(
+          `pull ok: ${rows} changes, next cursor ${String(r.cursor)}, more=${String(r.more)}` +
+            (r.rev ? `, server ${r.rev}` : ''),
+        );
+        return r;
+      } catch (e) {
+        const retryable = !(e instanceof ApiError) || e.status >= 500;
+        if (!retryable || n <= 1) throw e;
+        n = n > 50 ? 50 : n > 10 ? 10 : 1;
+        logSync(`pull failed, trying again with a page of ${n}`);
+      }
+    }
   }
 
   async getSettings(): Promise<Settings> {

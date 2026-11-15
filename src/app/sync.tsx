@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Pressable, Text, View } from 'react-native';
+import { useSyncExternalStore } from 'react';
+import { ScrollView, Pressable, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +12,7 @@ import {
   listProblems,
   reasonKey,
 } from '@/core/sync/problems';
+import { clearSyncLog, getSyncLog, subscribeSyncLog } from '@/core/sync/log';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Card, Header, PrimaryButton } from '@/ui/kit';
 import { SyncBadge } from '@/ui/SyncBadge';
@@ -28,6 +30,7 @@ export default function SyncScreen() {
   const { services, syncInfo, version, changed } = useApp();
   void version;
   const problems = services ? listProblems(services.db) : [];
+  const log = useSyncExternalStore(subscribeSyncLog, getSyncLog, getSyncLog);
   const when = (iso: string | number | null) =>
     iso === null
       ? t('app.sync_mai')
@@ -131,6 +134,45 @@ export default function SyncScreen() {
             ) : null}
           </>
         )}
+
+        <Card index={problems.length + 1} style={{ padding: 16, gap: 10 }}>
+          <Text style={{ color: th.text, fontWeight: '700', fontSize: 16 }}>
+            {t('app.sync_log_titolo')}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 18 }}>
+            <Pressable
+              testID="sync-log-share"
+              accessibilityRole="button"
+              onPress={() => void Share.share({ message: log.join('\n') })}
+              style={{ paddingVertical: 4 }}
+            >
+              <Text style={{ color: th.brand, fontSize: 15, fontWeight: '600' }}>
+                {t('app.sync_log_condividi')}
+              </Text>
+            </Pressable>
+            <Pressable
+              testID="sync-log-clear"
+              accessibilityRole="button"
+              onPress={clearSyncLog}
+              style={{ paddingVertical: 4 }}
+            >
+              <Text style={{ color: th.brand, fontSize: 15, fontWeight: '600' }}>
+                {t('app.sync_log_svuota')}
+              </Text>
+            </Pressable>
+          </View>
+          {log.length === 0 ? (
+            <Text style={{ color: th.text3, fontSize: 13 }}>{t('app.sync_log_vuoto')}</Text>
+          ) : (
+            <Text
+              testID="sync-log"
+              selectable
+              style={{ color: th.text2, fontSize: 11, lineHeight: 16, fontFamily: 'Menlo' }}
+            >
+              {log.join('\n')}
+            </Text>
+          )}
+        </Card>
       </ScrollView>
     </View>
   );

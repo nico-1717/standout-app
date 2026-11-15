@@ -1,4 +1,5 @@
 import { ApiError } from '../api/httpApi';
+import { logSync } from './log';
 import type { SyncReport } from './engine';
 
 export type SyncStatus = 'idle' | 'syncing' | 'offline' | 'error';
@@ -105,8 +106,10 @@ export class SyncScheduler {
     if (this.stopped) return;
     if (!this.online) return this.set({ status: 'offline' });
     this.set({ status: 'syncing' });
+    logSync(`sync start (attempt ${this.failures + 1})`);
     try {
       await this.attempt();
+      logSync('sync finished OK');
       this.failures = 0;
       this.set({
         status: 'idle',
@@ -116,6 +119,7 @@ export class SyncScheduler {
       });
     } catch (e) {
       this.failures++;
+      logSync(`sync FAILED: ${String((e as Error)?.message ?? e)}`);
       const sessionClosed =
         e instanceof ApiError && (e.code === 'token_reused' || e.code === 'invalid_token');
       const offline = e instanceof TypeError; // fetch senza rete lancia TypeError

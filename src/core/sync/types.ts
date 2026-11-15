@@ -32,6 +32,8 @@ export interface PullResponse {
   more: boolean;
   snapshot?: boolean;
   resync_required?: boolean;
+  /** la revisione del codice di sincronizzazione del server (serve solo al registro di diagnosi) */
+  rev?: string;
 }
 
 /** Il server visto dal motore. L'implementazione vera usa fetch (httpApi.ts); nei test ce n'è una finta. */

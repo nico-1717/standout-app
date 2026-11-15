@@ -3,6 +3,7 @@ import { MANIFEST, TABLES, isSyncTable, type SyncTable } from './manifest';
 import { nextBatch, pendingFor, resetSending } from './outbox';
 import { deleteRow, patchRow, rowExists, upsertRow } from './rows';
 import type { PullChange, PushResult, SyncApi, WireRow } from './types';
+import { logSync } from './log';
 
 export const PUSH_MAX = 200;
 export const PULL_PAGE = 500;
@@ -169,6 +170,8 @@ export class SyncEngine {
         setState(this.db, CURSOR_KEY, START);
         continue;
       }
+      let skipped = 0;
+      let problems = 0;
       this.db.transaction(() => {
         if (cursor === START) this.db.run('DELETE FROM snapshot_seen');
         for (const c of res.changes) {
@@ -189,6 +192,9 @@ export class SyncEngine {
         setState(this.db, CURSOR_KEY, String(res.cursor));
         if (res.snapshot && !res.more) this.finishSnapshot();
       });
+      logSync(
+        `stored ${res.changes.length} rows (${skipped} without parent skipped, ${problems} unreadable)`,
+      );
       report.pulled += res.changes.length;
       if (res.snapshot && !res.more) report.snapshotDone = true;
       if (!res.more) return;
