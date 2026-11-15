@@ -15,6 +15,7 @@ import {
 import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
 import { radius } from '@/core/theme/tokens';
 
+import { Avatar } from './Avatar';
 import { Rise } from './motion';
 
 /** L'ombra delle carte del sito (--shadow-card). Ancora usata dalle pagine non ancora passate alle nuove vesti. */
@@ -162,35 +163,64 @@ export function SectionLabel({ children }: { children: string }) {
 }
 
 /** L'intestazione: titolo a sinistra, stato a destra. Il vetro sfocato vero arriva con la rifinitura (fase 4). */
-export function Header({ title, right, top }: { title: string; right?: ReactNode; top: number }) {
+export function Header({
+  title,
+  right,
+  top,
+  account,
+  sub,
+}: {
+  title: string;
+  right?: ReactNode;
+  top: number;
+  /** il pallino del profilo, sempre all'estrema destra (come sul sito) */
+  account?: { letter: string; label: string; onPress: () => void };
+  /** la riga sotto il titolo (grigia, piccola) */
+  sub?: string;
+}) {
   const th = useTheme();
   return (
     <View
       style={{
-        paddingTop: top + 12,
-        paddingBottom: 12,
+        paddingTop: top + 10,
+        paddingBottom: 10,
         paddingHorizontal: 16,
         backgroundColor: th.headerGlass,
-        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: 0.5,
         borderBottomColor: th.hairline,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: 10,
       }}
     >
-      <Text
-        accessibilityRole="header"
-        style={{
-          color: th.text,
-          fontSize: th.titleSize,
-          fontWeight: th.display ? undefined : th.titleWeight,
-          fontFamily: th.display,
-          letterSpacing: th.display ? -0.8 : -0.6,
-        }}
-      >
-        {title}
-      </Text>
+      <View style={{ flexShrink: 1, flex: 1 }}>
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          style={{
+            color: th.text,
+            fontSize: th.display ? 28 : 21,
+            fontWeight: th.display ? undefined : '800',
+            fontFamily: th.display,
+            letterSpacing: th.display ? -0.6 : -0.42,
+          }}
+        >
+          {title}
+        </Text>
+        {sub ? (
+          <Text
+            numberOfLines={1}
+            style={{ color: th.text2, fontSize: 13, fontWeight: '500', marginTop: 2 }}
+          >
+            {sub}
+          </Text>
+        ) : null}
+      </View>
       {right}
+      {account ? (
+        <Avatar letter={account.letter} label={account.label} onPress={account.onPress} />
+      ) : null}
     </View>
   );
 }

@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -46,6 +47,7 @@ import {
   gradeLabel,
   trimNum,
 } from '@/features/grades/parts';
+import { hoTheme } from '@/features/home/HomeKit';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton, bigNumber } from '@/ui/kit';
 
 type Tab = 'done' | 'todo' | 'sim';
@@ -117,7 +119,16 @@ export default function GradesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { services, version, changed, gradeSettings: st, updateGradeSettings } = useApp();
+  const {
+    services,
+    version,
+    changed,
+    gradeSettings: st,
+    updateGradeSettings,
+    authState,
+  } = useApp();
+  const userName = authState.status === 'signedIn' ? authState.user.username : '';
+  const ho = hoTheme(th);
 
   const [tab, setTab] = useState<Tab>('done');
   const [projection, setProjection] = useState(true);
@@ -348,6 +359,11 @@ export default function GradesScreen() {
       <Header
         top={insets.top}
         title={t('voti.voti')}
+        account={{
+          letter: (userName[0] ?? '?').toUpperCase(),
+          label: t('app.account'),
+          onPress: () => router.push('/account'),
+        }}
         right={
           <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
             <Pressable
@@ -380,26 +396,63 @@ export default function GradesScreen() {
         }}
       >
         {empty ? (
-          <Card style={{ padding: 22, gap: 12, alignItems: 'center' }}>
-            <Text style={{ color: th.text, fontSize: 20, fontWeight: '800', textAlign: 'center' }}>
+          <View style={{ alignItems: 'center', paddingTop: 48, paddingHorizontal: 12, gap: 10 }}>
+            <LinearGradient
+              colors={[ho.blue, ho.teal]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ fontSize: 38 }}>🎓</Text>
+            </LinearGradient>
+            <Text
+              style={{
+                color: ho.text,
+                fontSize: 22,
+                fontWeight: '800',
+                letterSpacing: -0.5,
+                textAlign: 'center',
+              }}
+            >
               {t('voti.la_tua_carriera_in_chiaro')}
             </Text>
-            <Text style={{ color: th.text2, textAlign: 'center' }}>
+            <Text style={{ color: ho.text2, fontSize: 15, lineHeight: 21, textAlign: 'center' }}>
               {t('voti.aggiungi_i_tuoi_esami_e')}
             </Text>
-            <View style={{ alignSelf: 'stretch' }}>
-              <PrimaryButton
-                testID="grades-start-program"
-                label={t('voti.parti_dal_tuo_corso')}
-                onPress={() => router.push('/grade-settings')}
-              />
-            </View>
-            <TextButton
+            <Pressable
+              testID="grades-start-program"
+              accessibilityRole="button"
+              onPress={() => router.push('/grade-settings')}
+              style={{
+                marginTop: 12,
+                backgroundColor: ho.blue,
+                borderRadius: 999,
+                paddingVertical: 12,
+                paddingHorizontal: 26,
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                {t('voti.parti_dal_tuo_corso')}
+              </Text>
+            </Pressable>
+            <Pressable
               testID="grades-add-first"
-              label={t('voti.aggiungi_un_esame_a_mano')}
+              accessibilityRole="button"
               onPress={() => router.push('/grade-exam')}
-            />
-          </Card>
+              style={{ marginTop: 14, padding: 8 }}
+            >
+              <Text style={{ color: ho.blueInk, fontSize: 15, fontWeight: '700' }}>
+                {t('voti.aggiungi_un_esame_a_mano')}
+              </Text>
+            </Pressable>
+          </View>
         ) : (
           <>
             {/* --- media e numeri --- */}

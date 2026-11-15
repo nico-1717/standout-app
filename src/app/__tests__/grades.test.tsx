@@ -43,6 +43,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     changed: mockChanged,
     gradeSettings: mockSettings,
     updateGradeSettings: mockUpdate,
+    authState: { status: 'signedIn', user: { username: 'nico' } },
   }),
 }));
 
