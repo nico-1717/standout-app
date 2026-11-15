@@ -25,9 +25,13 @@ const dose = (o: Partial<DoseView>): DoseView => ({
 function Host({
   doses,
   onAnswer,
+  onAnswerAll,
+  onReview,
 }: {
   doses: DoseView[];
   onAnswer: (u: string, s: 'taken' | 'skipped') => void;
+  onAnswerAll?: (u: string[]) => void;
+  onReview?: () => void;
 }) {
   const th = useTheme();
   return (
@@ -37,15 +41,23 @@ function Host({
       pt={plannerTheme(th.style, th)}
       bottom={18}
       onAnswer={onAnswer}
+      onAnswerAll={onAnswerAll}
+      onReview={onReview}
     />
   );
 }
-const renderIt = (doses: DoseView[], onAnswer = jest.fn()) =>
+const renderIt = (
+  doses: DoseView[],
+  onAnswer = jest.fn(),
+  extra: { onAnswerAll?: (u: string[]) => void; onReview?: () => void } = {},
+) =>
   render(
     <ThemeProvider>
-      <Host doses={doses} onAnswer={onAnswer} />
+      <Host doses={doses} onAnswer={onAnswer} {...extra} />
     </ThemeProvider>,
   );
+
+const six = ['a', 'b', 'c', 'd', 'e', 'f'].map((u) => dose({ uuid: u }));
 
 describe('Pill notices in the planner', () => {
   test('shows nothing when no pill is waiting', async () => {
@@ -78,5 +90,33 @@ describe('Pill notices in the planner', () => {
     expect(screen.queryByTestId('pill-notice-d2')).toBeNull();
     expect(screen.queryByTestId('pill-notice-d3')).toBeNull();
     expect(onAnswer).not.toHaveBeenCalled();
+  });
+
+  test('six waiting pills become one card with "All taken" and "Review"', async () => {
+    const onAnswerAll = jest.fn();
+    const onReview = jest.fn();
+    await renderIt(six, jest.fn(), { onAnswerAll, onReview });
+    expect(screen.getByTestId('pill-group')).toHaveTextContent(/6 pills to confirm/);
+    expect(screen.queryByTestId('pill-notice-a')).toBeNull();
+    await fireEvent.press(screen.getByTestId('pill-review'));
+    expect(onReview).toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('pill-all-taken'));
+    expect(onAnswerAll).toHaveBeenCalledWith(['a', 'b', 'c', 'd', 'e', 'f']);
+  });
+
+  test('the group card closes for now without writing anything', async () => {
+    const onAnswerAll = jest.fn();
+    await renderIt(six, jest.fn(), { onAnswerAll });
+    await fireEvent.press(screen.getByTestId('pill-group-hide'));
+    expect(screen.queryByTestId('pill-group')).toBeNull();
+    expect(onAnswerAll).not.toHaveBeenCalled();
+  });
+
+  test('three or fewer stay as separate cards, and no group without the all-taken handler', async () => {
+    await renderIt([dose({}), dose({ uuid: 'd2' }), dose({ uuid: 'd3' })], jest.fn(), {
+      onAnswerAll: jest.fn(),
+    });
+    expect(screen.queryByTestId('pill-group')).toBeNull();
+    expect(screen.getByTestId('pill-notice-d3')).toBeTruthy();
   });
 });

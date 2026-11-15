@@ -21,7 +21,6 @@ import type { Priority, Routine } from '@/features/planner/repo';
 import { SmartBar, SmartReport, type SmartNote } from '@/features/planner/SmartBar';
 import { smartEvent, smartParse } from '@/features/planner/smart';
 import { PrioritiesCard, RoutineBar, routineBlocks } from '@/features/planner/DayExtras';
-import Svg, { Circle, Path } from 'react-native-svg';
 
 import { addDays, isoWeekday } from '@/features/habits/logic';
 import { SearchSheet } from '@/features/planner/SearchSheet';
@@ -29,6 +28,7 @@ import { QuickAddSheet } from '@/features/planner/QuickAddSheet';
 import type { Habit, HabitLog } from '@/features/habits/logic';
 import type { Project } from '@/features/projects/logic';
 import { PillNotices } from '@/features/planner/PillNotices';
+import { LineIcon, ToolButton } from '@/features/planner/PlannerIcons';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
   BandEvent,
@@ -207,9 +207,10 @@ export default function PlannerScreen() {
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={() => step(delta)}
-      style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+      hitSlop={6}
+      style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center' }}
     >
-      <Text style={{ color: pt.ink2, fontSize: 26 }}>{delta < 0 ? '‹' : '›'}</Text>
+      <LineIcon name={delta < 0 ? 'left' : 'right'} color={pt.ink2} size={20} />
     </Pressable>
   );
 
@@ -238,6 +239,8 @@ export default function PlannerScreen() {
             <Text
               testID="day-title"
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.62}
               style={{
                 color: pt.ink,
                 fontSize: 24,
@@ -271,39 +274,30 @@ export default function PlannerScreen() {
               {weekNo}
             </Text>
           </Pressable>
-          <Pressable
-            hitSlop={2}
+          <ToolButton
+            pt={pt}
             testID="planner-search"
-            accessibilityRole="button"
-            accessibilityLabel={t('planner.cerca')}
+            label={t('planner.cerca')}
             onPress={() => setSearching(true)}
-            style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Circle cx={10.5} cy={10.5} r={6.5} stroke={pt.ink2} strokeWidth={2} />
-              <Path d="M15.5 15.5L20 20" stroke={pt.ink2} strokeWidth={2} strokeLinecap="round" />
-            </Svg>
-          </Pressable>
-          <Pressable
-            hitSlop={2}
+            <LineIcon name="search" color={pt.ink2} />
+          </ToolButton>
+          <ToolButton
+            pt={pt}
             testID="planner-manage"
-            accessibilityRole="button"
-            accessibilityLabel={`${t('planner.calendari')} · ${t('planner.categorie')}`}
+            label={`${t('planner.calendari')} · ${t('planner.categorie')}`}
             onPress={() => router.push('/planner-manage')}
-            style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: pt.ink2, fontSize: 20 }}>☰</Text>
-          </Pressable>
-          <Pressable
-            hitSlop={2}
+            <LineIcon name="filter" color={pt.ink2} />
+          </ToolButton>
+          <ToolButton
+            pt={pt}
             testID="planner-settings"
-            accessibilityRole="button"
-            accessibilityLabel={t('planner.impostazioni')}
+            label={t('planner.impostazioni')}
             onPress={() => router.push('/planner-settings')}
-            style={{ width: 40, height: 44, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: pt.ink2, fontSize: 20 }}>⚙</Text>
-          </Pressable>
+            <LineIcon name="gear" color={pt.ink2} />
+          </ToolButton>
         </View>
         {plannerSettings.show_affirmations ? (
           <Text
@@ -635,6 +629,11 @@ export default function PlannerScreen() {
             pillsRepo?.setStatus(uuid, status);
             changed();
           }}
+          onAnswerAll={(uuids) => {
+            pillsRepo?.markAll(uuids, 'on_time');
+            changed();
+          }}
+          onReview={() => router.navigate('/pills')}
         />
       ) : null}
 

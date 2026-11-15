@@ -30,6 +30,7 @@ import {
   type BuyCategory,
 } from '@/features/buy/logic';
 import type { Task } from '@/features/tasks/repo';
+import { TodoTabs } from '@/features/tasks/TodoTabs';
 import { cardShadow } from '@/ui/kit';
 import { MicButton } from '@/ui/MicButton';
 import { SyncBadge } from '@/ui/SyncBadge';
@@ -316,7 +317,9 @@ export default function BuyScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 150 }}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
+        <TodoTabs current="buy" bt={bt} />
         <View
           style={[
             styles.addBar,

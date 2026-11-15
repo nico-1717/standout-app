@@ -25,6 +25,7 @@ import {
   sansOf,
   type When,
 } from '@/features/tasks/TodoParts';
+import { TodoTabs } from '@/features/tasks/TodoTabs';
 import { TaskProjectSheet } from '@/features/tasks/ProjectSheet';
 import { TodoRow, type RowActions } from '@/features/tasks/TodoRow';
 import { cleanMinutes, humanDay, type UnderstoodPiece } from '@/features/tasks/todoLogic';
@@ -311,6 +312,7 @@ export default function TodoScreen() {
       )}
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
           paddingTop: selecting ? 0 : insets.top + 12,
           paddingHorizontal: selecting ? 0 : 16,
@@ -322,6 +324,7 @@ export default function TodoScreen() {
             <SyncBadge />
           </View>
         )}
+        {!selecting && <TodoTabs current="todo" bt={td} />}
         <View
           style={[
             styles.sheet,

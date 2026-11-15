@@ -1,137 +1,20 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ColorValue } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { PomodoroBar } from '@/features/pomodoro/PomodoroBar';
+import { TAB_COLOR, TabIcon, type TabIconKind } from '@/ui/TabIcon';
 
-/** Icone provvisorie disegnate con forme semplici; le definitive arrivano con la rifinitura (fase 4). */
-function Icon({
-  kind,
-  color,
-}: {
-  kind: 'home' | 'planner' | 'todo' | 'habits' | 'buy' | 'pills' | 'settings';
-  color: string;
-}) {
-  if (kind === 'home') {
-    // una casetta: tetto e porta
-    return (
-      <View style={{ width: 24, height: 24, justifyContent: 'flex-end' }}>
-        <View style={{ height: 14, borderRadius: 4, borderWidth: 2, borderColor: color }} />
-        <View
-          style={{
-            position: 'absolute',
-            top: 1,
-            left: 5,
-            width: 14,
-            height: 14,
-            borderTopWidth: 2,
-            borderLeftWidth: 2,
-            borderColor: color,
-            transform: [{ rotate: '45deg' }],
-          }}
-        />
-      </View>
-    );
-  }
-  if (kind === 'planner') {
-    // un foglio d'agenda: cornice con la riga in alto
-    return (
-      <View style={{ width: 24, height: 24, justifyContent: 'flex-end' }}>
-        <View style={{ height: 20, borderRadius: 5, borderWidth: 2, borderColor: color }}>
-          <View style={{ height: 2.5, marginTop: 4, backgroundColor: color }} />
-        </View>
-      </View>
-    );
-  }
-  if (kind === 'todo') {
-    return (
-      <View
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          borderWidth: 2,
-          borderColor: color,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-      </View>
-    );
-  }
-  if (kind === 'habits') {
-    return (
-      <View
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          borderWidth: 3,
-          borderColor: color,
-          borderTopColor: 'transparent',
-          transform: [{ rotate: '-35deg' }],
-        }}
-      />
-    );
-  }
-  if (kind === 'buy') {
-    return (
-      <View style={{ width: 24, height: 24, justifyContent: 'flex-end' }}>
-        <View style={{ height: 17, borderRadius: 5, borderWidth: 2, borderColor: color }} />
-        <View
-          style={{
-            position: 'absolute',
-            top: 1,
-            left: 7,
-            width: 10,
-            height: 9,
-            borderRadius: 5,
-            borderWidth: 2,
-            borderColor: color,
-          }}
-        />
-      </View>
-    );
-  }
-  if (kind === 'pills') {
-    // una capsula inclinata
-    return (
-      <View
-        style={{
-          width: 24,
-          height: 24,
-          alignItems: 'center',
-          justifyContent: 'center',
-          transform: [{ rotate: '-45deg' }],
-        }}
-      >
-        <View
-          style={{
-            width: 11,
-            height: 22,
-            borderRadius: 6,
-            borderWidth: 2,
-            borderColor: color,
-            overflow: 'hidden',
-          }}
-        >
-          <View style={{ flex: 1, backgroundColor: color, opacity: 0.45 }} />
-        </View>
-      </View>
-    );
-  }
-  return (
-    <View style={{ width: 24, height: 24, justifyContent: 'center', gap: 5 }}>
-      {[0, 1, 2].map((i) => (
-        <View
-          key={i}
-          style={{ height: 2.5, borderRadius: 2, backgroundColor: color, width: i === 1 ? 16 : 24 }}
-        />
-      ))}
-    </View>
-  );
+/** Le opzioni di una scheda: titolo, icona a linea come sul sito e il colore della sezione quando è aperta. */
+function tabLook(kind: TabIconKind, title: string, fallback: string) {
+  return {
+    title,
+    tabBarActiveTintColor: TAB_COLOR[kind] ?? fallback,
+    tabBarIcon: ({ color, focused }: { color: ColorValue; focused: boolean }) => (
+      <TabIcon kind={kind} color={String(color)} active={focused} />
+    ),
+  };
 }
 
 export default function TabsLayout() {
@@ -181,29 +64,25 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: t('sidebar.home'),
-          tabBarIcon: ({ color }) => <Icon kind="home" color={String(color)} />,
+          ...tabLook('home', t('sidebar.home'), th.brand),
         }}
       />
       <Tabs.Screen
         name="planner"
         options={{
-          title: t('sidebar.planner'),
-          tabBarIcon: ({ color }) => <Icon kind="planner" color={String(color)} />,
+          ...tabLook('planner', t('sidebar.planner'), th.brand),
         }}
       />
       <Tabs.Screen
         name="index"
         options={{
-          title: t('planner.to_do'),
-          tabBarIcon: ({ color }) => <Icon kind="todo" color={String(color)} />,
+          ...tabLook('todo', t('planner.to_do'), th.brand),
         }}
       />
       <Tabs.Screen
         name="habits"
         options={{
-          title: t('abitudini.titolo'),
-          tabBarIcon: ({ color }) => <Icon kind="habits" color={String(color)} />,
+          ...tabLook('habits', t('abitudini.titolo'), th.brand),
         }}
       />
       <Tabs.Screen
@@ -211,8 +90,7 @@ export default function TabsLayout() {
         options={{
           // la lista della spesa si apre da «Altro» e dalla Home: la barra resta a cinque
           href: null,
-          title: t('planner.to_buy'),
-          tabBarIcon: ({ color }) => <Icon kind="buy" color={String(color)} />,
+          ...tabLook('buy', t('planner.to_buy'), th.brand),
         }}
       />
       <Tabs.Screen
@@ -220,15 +98,13 @@ export default function TabsLayout() {
         options={{
           // la scheda si apre da «Altro» (impostazioni) e dalla Home: la barra resta a cinque
           href: null,
-          title: t('todo.tipo_pills'),
-          tabBarIcon: ({ color }) => <Icon kind="pills" color={String(color)} />,
+          ...tabLook('pills', t('todo.tipo_pills'), th.brand),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: t('progetti.altro'),
-          tabBarIcon: ({ color }) => <Icon kind="settings" color={String(color)} />,
+          ...tabLook('more', t('progetti.altro'), th.brand),
         }}
       />
     </Tabs>

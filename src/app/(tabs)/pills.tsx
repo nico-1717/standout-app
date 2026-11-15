@@ -32,6 +32,7 @@ import {
 import type { DoseView } from '@/features/pills/repo';
 import { localToday } from '@/features/tasks/groups';
 import { TodoIcon, sansOf } from '@/features/tasks/TodoParts';
+import { TodoTabs } from '@/features/tasks/TodoTabs';
 import { todoTheme } from '@/features/tasks/todoTheme';
 import { cardShadow } from '@/ui/kit';
 import { SyncBadge } from '@/ui/SyncBadge';
@@ -239,6 +240,7 @@ export default function PillsScreen() {
     <View style={{ flex: 1, backgroundColor: td.page }}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
           paddingTop: insets.top + 12,
           paddingHorizontal: 16,
@@ -248,6 +250,7 @@ export default function PillsScreen() {
         <View style={styles.top}>
           <SyncBadge />
         </View>
+        <TodoTabs current="pills" bt={td} />
         <View
           style={[
             styles.sheet,

@@ -16,6 +16,112 @@ function shortDay(t: (k: string) => string, iso: string): string {
     .toLowerCase();
 }
 
+/** Da quanti avvisi in su se ne fa uno solo: sei schede una sull'altra coprivano metà giornata. */
+const GROUP_FROM = 4;
+
+/** Un solo avviso per tutte le pastiglie in sospeso: «6 da confermare — le hai prese?». */
+function PillGroup({
+  doses,
+  pt,
+  bottom,
+  onAll,
+  onReview,
+  onClose,
+}: {
+  doses: DoseView[];
+  pt: PlannerTheme;
+  bottom: number;
+  onAll: () => void;
+  onReview?: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const color = pt.accent;
+  return (
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: 14, right: 90, bottom }}>
+      <View
+        testID="pill-group"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingVertical: 8,
+          paddingLeft: 8,
+          paddingRight: 10,
+          borderRadius: 22,
+          backgroundColor: pt.card,
+          borderWidth: 1,
+          borderColor: color + '66',
+          boxShadow: pt.dark ? 'none' : '0 6px 18px rgba(60,50,40,0.14)',
+        }}
+      >
+        <Pressable
+          testID="pill-all-taken"
+          accessibilityRole="button"
+          accessibilityLabel={t('planner.pillole_tutte_prese')}
+          hitSlop={8}
+          onPress={() => {
+            haptic.success();
+            onAll();
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            backgroundColor: color + '29',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+            <Path d="M4 12.5l5.2 5.2L20 6.6" stroke={color} strokeWidth={3} strokeLinecap="round" />
+          </Svg>
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: pt.ink, fontSize: 13, fontWeight: '600', fontFamily: pt.sans }}>
+            {t('planner.pillole_da_confermare', { n: doses.length })}
+          </Text>
+          <Text style={{ color: pt.ink2, fontSize: 12, fontFamily: pt.sans }}>
+            {t('planner.pillole_hai_preso')}
+            {' · '}
+            {t('planner.pillole_tutte_prese')}
+          </Text>
+        </View>
+        {onReview ? (
+          <Pressable testID="pill-review" accessibilityRole="button" hitSlop={8} onPress={onReview}>
+            <Text
+              style={{
+                color: pt.ink3,
+                fontSize: 11,
+                textDecorationLine: 'underline',
+                fontFamily: pt.sans,
+              }}
+            >
+              {t('planner.pillole_rivedi')}
+            </Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          testID="pill-group-hide"
+          accessibilityRole="button"
+          accessibilityLabel={t('planner.chiudi_per_ora')}
+          hitSlop={10}
+          onPress={onClose}
+        >
+          <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M6 6l12 12M18 6L6 18"
+              stroke={pt.ink3}
+              strokeWidth={2.4}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 /**
  * Gli avvisi in basso nel planner (renderAvvisi): «Hai preso X alle 09:00?» per le pastiglie la cui ora è
  * passata. La spunta e «Saltato» scrivono la presa (risulta anche nella pagina pastiglie), la x chiude solo per ora.
@@ -26,6 +132,8 @@ export function PillNotices({
   pt,
   bottom,
   onAnswer,
+  onAnswerAll,
+  onReview,
 }: {
   doses: DoseView[];
   today: string;
@@ -33,12 +141,28 @@ export function PillNotices({
   /** distanza dal fondo: gli avvisi stanno all'altezza del tasto + */
   bottom: number;
   onAnswer: (uuid: string, status: 'taken' | 'skipped') => void;
+  /** «Tutte prese»: scrive le prese all'ora prevista. Senza, gli avvisi restano sempre uno per uno. */
+  onAnswerAll?: (uuids: string[]) => void;
+  /** «Rivedi»: apre la pagina delle pastiglie, dove si risponde dose per dose. */
+  onReview?: () => void;
 }) {
   const { t } = useTranslation();
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
   const shown = doses.filter((d) => !closed.has(d.uuid));
   if (!shown.length) return null;
   const close = (ids: string[]) => setClosed((c) => new Set([...c, ...ids]));
+  if (onAnswerAll && shown.length >= GROUP_FROM) {
+    return (
+      <PillGroup
+        doses={shown}
+        pt={pt}
+        bottom={bottom}
+        onAll={() => onAnswerAll(shown.map((d) => d.uuid))}
+        onReview={onReview}
+        onClose={() => close(shown.map((d) => d.uuid))}
+      />
+    );
+  }
   return (
     <View
       pointerEvents="box-none"

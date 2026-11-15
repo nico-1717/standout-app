@@ -4,8 +4,25 @@ import Svg, { Path } from 'react-native-svg';
 
 import type { HabitsTheme } from './habitsTheme';
 
-const THRESHOLD = 74;
+/** Quanto si deve trascinare perché scatti (prima 74: troppo, il dito si stancava). */
+const THRESHOLD = 52;
+/** Uno scatto veloce basta anche se è corto: dalla metà della soglia, con una certa velocità (punti per ms). */
+const FLICK_MIN = 26;
+const FLICK_SPEED = 0.35;
 const TRASH_PATH = 'M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3';
+
+/** Il movimento è uno scorrimento di riga (e non quello della pagina)? Più orizzontale che verticale. */
+export function isRowSwipe(dx: number, dy: number): boolean {
+  return Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy) * 1.15;
+}
+
+/** Al rilascio: scatta l'azione? Serve la distanza intera, oppure uno scatto veloce nella stessa direzione. */
+export function swipeFires(dx: number, vx: number): boolean {
+  if (Math.abs(dx) >= THRESHOLD) return true;
+  return (
+    Math.abs(dx) >= FLICK_MIN && Math.abs(vx) >= FLICK_SPEED && Math.sign(vx) === Math.sign(dx)
+  );
+}
 
 interface SwipeProps {
   allowRight: boolean;
@@ -27,9 +44,7 @@ class SwipeGesture {
     this.props = props;
     this.responder = PanResponder.create({
       onMoveShouldSetPanResponder: (_e, g) =>
-        Math.abs(g.dx) > 10 &&
-        Math.abs(g.dx) > Math.abs(g.dy) * 1.5 &&
-        (g.dx > 0 ? this.props.allowRight : this.props.allowLeft),
+        isRowSwipe(g.dx, g.dy) && (g.dx > 0 ? this.props.allowRight : this.props.allowLeft),
       onPanResponderMove: (_e, g) => {
         const ok = g.dx > 0 ? this.props.allowRight : this.props.allowLeft;
         const dx = ok ? g.dx : 0;
@@ -48,8 +63,9 @@ class SwipeGesture {
       onPanResponderRelease: (_e, g) => {
         this.buzzed = false;
         Animated.spring(this.x, { toValue: 0, useNativeDriver: true, bounciness: 8 }).start();
-        if (g.dx >= THRESHOLD && this.props.allowRight) this.props.onSwipe(1);
-        else if (g.dx <= -THRESHOLD && this.props.allowLeft) this.props.onSwipe(-1);
+        if (!swipeFires(g.dx, g.vx)) return;
+        if (g.dx > 0 && this.props.allowRight) this.props.onSwipe(1);
+        else if (g.dx < 0 && this.props.allowLeft) this.props.onSwipe(-1);
       },
       onPanResponderTerminate: () => {
         this.buzzed = false;
@@ -65,7 +81,7 @@ class SwipeGesture {
 
 /**
  * Lo scorrimento laterale di una riga (come .hb-row-behind del sito): verso destra «Fatto» (o «Ci sono cascato»),
- * verso sinistra «Annulla». Oltre 74 punti, al rilascio, scatta l'azione; se in quella direzione non c'è nulla
+ * verso sinistra «Annulla». Oltre 52 punti (o con uno scatto veloce, già da 26), al rilascio, scatta l'azione; se in quella direzione non c'è nulla
  * da fare la riga resta ferma. Un movimento più verticale che orizzontale è lo scorrimento della pagina e non conta.
  */
 export function SwipeRow(p: {
