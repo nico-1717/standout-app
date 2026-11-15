@@ -14,6 +14,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { mix } from '@/features/buy/buyTheme';
+import { PjIcon } from '@/features/projects/PjIcons';
 
 import type { TaskGroup } from './groups';
 import { cleanMinutes, type UnderstoodPiece } from './todoLogic';
@@ -70,6 +71,13 @@ export function AddBar(p: {
   onSubmit: () => void;
   onFocus?: () => void;
   pieces: UnderstoodPiece[];
+  /** gli identificativi di prova; di solito quelli della pagina Attività */
+  inputID?: string;
+  addID?: string;
+  /** il microfono accanto al «+» (come sul sito); senza, non c'è */
+  mic?: { active: boolean; onPress: () => void };
+  /** il «+» sbiadito finché non c'è niente da aggiungere (come la scheda del progetto sul sito) */
+  fadeEmpty?: boolean;
 }) {
   const { td } = p;
   const { t } = useTranslation();
@@ -87,7 +95,7 @@ export function AddBar(p: {
         ]}
       >
         <TextInput
-          testID="todo-input"
+          testID={p.inputID ?? 'todo-input'}
           value={p.value}
           onChangeText={p.onChange}
           onSubmitEditing={p.onSubmit}
@@ -102,14 +110,31 @@ export function AddBar(p: {
           placeholderTextColor={td.ink3}
           style={[styles.addInput, { color: td.ink }, sansOf(td)]}
         />
+        {p.mic ? (
+          <Pressable
+            testID={(p.inputID ?? 'todo-input') + '-mic'}
+            accessibilityRole="button"
+            accessibilityState={{ selected: p.mic.active }}
+            accessibilityLabel={t('todo.tn_detta')}
+            onPress={p.mic.onPress}
+            hitSlop={6}
+            style={{ padding: 6 }}
+          >
+            <PjIcon name="mic" color={p.mic.active ? td.accent : td.ink3} size={19} width={1.9} />
+          </Pressable>
+        ) : null}
         <Pressable
-          testID="todo-add"
+          testID={p.addID ?? 'todo-add'}
           accessibilityRole="button"
           accessibilityLabel={t('comune.aggiungi')}
           onPress={p.onSubmit}
           style={({ pressed }) => [
             styles.go,
-            { backgroundColor: td.accent, transform: [{ scale: pressed ? 0.9 : 1 }] },
+            {
+              backgroundColor: td.accent,
+              opacity: p.fadeEmpty && !p.value.trim() ? 0.55 : 1,
+              transform: [{ scale: pressed ? 0.9 : 1 }],
+            },
           ]}
         >
           <TodoIcon name="plus" color={td.onAccent} size={19} width={2.4} />

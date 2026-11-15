@@ -73,27 +73,27 @@ export default function SettingsScreen() {
           </Card>
         </Pressable>
         <Pressable
-          testID="open-diary"
-          accessibilityRole="button"
-          onPress={() => router.push('/diary')}
-        >
-          <Card index={1} style={{ padding: 16 }}>
-            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-              {t('diario.titolo')}
-            </Text>
-            <Text style={{ color: th.brand, marginTop: 8 }}>{t('diario.apri_il_diario')} ›</Text>
-          </Card>
-        </Pressable>
-        <Pressable
           testID="open-projects"
           accessibilityRole="button"
           onPress={() => router.push('/projects')}
         >
-          <Card index={2} style={{ padding: 16 }}>
+          <Card index={1} style={{ padding: 16 }}>
             <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
               {t('progetti.progetti')}
             </Text>
             <Text style={{ color: th.brand, marginTop: 8 }}>{t('planner.apri')} ›</Text>
+          </Card>
+        </Pressable>
+        <Pressable
+          testID="open-diary"
+          accessibilityRole="button"
+          onPress={() => router.push('/diary')}
+        >
+          <Card index={2} style={{ padding: 16 }}>
+            <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
+              {t('diario.titolo')}
+            </Text>
+            <Text style={{ color: th.brand, marginTop: 8 }}>{t('diario.apri_il_diario')} ›</Text>
           </Card>
         </Pressable>
         <Pressable

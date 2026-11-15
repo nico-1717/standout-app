@@ -107,6 +107,8 @@ export interface TreeOptions {
   order: 'manuale' | 'alfabetico' | 'recenti' | 'scadenza';
   /** i rami chiusi: i loro figli non si elencano */
   collapsed: ReadonlySet<string>;
+  /** da quale progetto partire (i suoi figli sono a profondità 0); mancante = dalla radice */
+  root?: string | null;
 }
 
 /** L'albero come righe in fila, secondo le opzioni della pagina «Progetti». */
@@ -143,7 +145,7 @@ export function flatten(all: Project[], o: TreeOptions): TreeRow[] {
       if (!o.collapsed.has(p.uuid)) walk(p.uuid, depth + 1);
     }
   };
-  walk(null, 0);
+  walk(o.root ?? null, 0);
   return out;
 }
 

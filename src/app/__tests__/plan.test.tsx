@@ -11,7 +11,7 @@ import { ProjectOptionsStore } from '@/features/projects/options';
 import { ProjectsRepo } from '@/features/projects/repo';
 
 import PlanScreen from '../plan';
-import ProjectScreen from '../project';
+import ProjectScreen from '../projects';
 
 const TODAY = new Date(2030, 2, 4, 10, 0, 0); // lunedì 4 marzo 2030
 
@@ -37,6 +37,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     version: mockVersion,
     changed: mockChanged,
     pomodoroSettings: { last_pomodoro_duration_min: 25 },
+    authState: { status: 'signedIn', user: { username: 'nico' } },
   }),
 }));
 
@@ -160,7 +161,7 @@ describe('plan screen', () => {
     await fireEvent.press(screen.getByTestId('plan-tab-line'));
     expect(screen.queryByTestId('tl-empty')).toBeNull();
     await fireEvent.press(screen.getByTestId(`tl-bar-${a}-1`));
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/project', params: { id: a } });
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/projects', params: { id: a } });
   });
 
   test('Calendar: pick a project, tap days to highlight them, undo, and look at a day', async () => {
@@ -211,6 +212,7 @@ describe('project Plan card', () => {
     const a = projects.create({ name: 'Fisica' })!;
     mockParams = { id: a };
     const view = await render(tree(<ProjectScreen />));
+    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
     expect(screen.getByTestId('plan-card-empty')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('plan-card-edit'));
     expect(screen.getByTestId('goal-sheet')).toBeTruthy();
@@ -221,16 +223,15 @@ describe('project Plan card', () => {
     expect(screen.getByTestId('plan-card-summary')).toBeTruthy();
   });
 
-  test('the calendar button opens the plan page scoped to the project', async () => {
+  test('the calendar button switches to the project calendar tab', async () => {
     const { projects } = setup();
     const a = projects.create({ name: 'Fisica' })!;
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
+    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
     await fireEvent.press(screen.getByTestId('plan-card-calendar'));
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/plan',
-      params: { project: a, tab: 'cal' },
-    });
+    expect(screen.queryByTestId('plan-card-calendar')).toBeNull();
+    expect(screen.getByTestId('cal-title')).toBeTruthy();
   });
 
   test('a project with sub-projects splits its time among them', async () => {
@@ -242,6 +243,7 @@ describe('project Plan card', () => {
     plan.resplit(a, 240);
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
+    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
     expect(screen.getByTestId('plan-card-split')).toBeTruthy();
     expect((plan.goals().get(k1)?.minutes ?? 0) + (plan.goals().get(k2)?.minutes ?? 0)).toBe(240);
   });
@@ -252,6 +254,7 @@ describe('project Plan card', () => {
     plan.saveGoal(a, { kind: 'daily', minutes: 10 });
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
+    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
     await fireEvent.press(screen.getByTestId('plan-card-focus'));
     await fireEvent.press(screen.getByTestId('daily-start'));
     expect(mockPush).toHaveBeenCalledWith({
@@ -270,6 +273,8 @@ describe('project linked deck', () => {
     flashcards.linkDeck(b, deck);
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
+    await fireEvent.press(screen.getByTestId('proj-menu'));
+    await fireEvent.press(screen.getByTestId('proj-menu-deck'));
     expect(screen.getByTestId('proj-deck-name')).toHaveTextContent('No subject linked');
     await fireEvent.press(screen.getByTestId('proj-deck-link'));
     await fireEvent.press(screen.getByText('Physics'));

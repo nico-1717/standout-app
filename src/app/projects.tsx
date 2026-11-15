@@ -1,82 +1,62 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
-import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
-import { dayOfMonth, monthOf } from '@/features/planner/dates';
-import { human } from '@/features/pomodoro/logic';
-import { flatten, type TreeRow } from '@/features/projects/logic';
-import { type ProjectOptions } from '@/features/projects/options';
+import { useTheme } from '@/core/theme/ThemeProvider';
+import { PlanPanel } from '@/features/plan/PlanPanel';
+import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
+import { PjIcon } from '@/features/projects/PjIcons';
+import { ProjectsHeader, Seg } from '@/features/projects/PjParts';
+import { ProjectHero } from '@/features/projects/ProjectHero';
+import { SWATCHES, ProjectMenu } from '@/features/projects/ProjectMenu';
+import { DatesSheet, OptionsModal } from '@/features/projects/ProjectSheets';
+import { ProjectsAll } from '@/features/projects/ProjectsAll';
+import { SubProjects } from '@/features/projects/SubProjects';
+import { ancestors, byId, childrenOf, flatten, subtreeIds } from '@/features/projects/logic';
+import type { ProjectOptions } from '@/features/projects/options';
 import type { StatusSnapshot } from '@/features/projects/repo';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 
-const ORDERS: ProjectOptions['ordine'][] = ['manuale', 'alfabetico', 'recenti', 'scadenza'];
-const ORDER_KEY = {
-  manuale: 'progetti.opz_manuale',
-  alfabetico: 'progetti.opz_alfabetico',
-  recenti: 'progetti.opz_recenti',
-  scadenza: 'progetti.opz_scadenza',
-} as const;
+type AllTab = 'list' | 'cal';
+type ProjectTab = 'list' | 'cal' | 'plan';
 
-function StatusDot({
-  status,
-  color,
-  th,
-  onPress,
-  testID,
-}: {
-  status: string;
-  color: string;
-  th: Theme;
-  onPress: () => void;
-  testID: string;
-}) {
-  const done = status === 'completed';
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: done }}
-      hitSlop={10}
-      onPress={onPress}
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: color,
-        borderStyle: status === 'planned' ? 'dashed' : 'solid',
-        backgroundColor: done ? color : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {done ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text> : null}
-      {status === 'planned' ? (
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: th.text3 }} />
-      ) : null}
-    </Pressable>
-  );
-}
-
-/** I progetti ad albero (progetti.php): stato, preferiti, scadenze, tempo di lavoro, sotto-progetti da aprire e chiudere. */
+/**
+ * Progetti (progetti.php): in alto «Tutti» e i progetti principali come schede. «Tutti» mostra l'elenco (preferiti e
+ * progetti con la barra di avanzamento) o il calendario del Piano; un progetto mostra la sua scheda grande e sotto
+ * Elenco (i sotto-progetti), Calendario e Piano. I tre puntini aprono colore, date, nota, attività, spostamento, eliminazione.
+ */
 export default function ProjectsScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, pomodoroSettings } = useApp();
+  const params = useLocalSearchParams<{ id?: string; view?: string; pp?: string }>();
 
-  const [draft, setDraft] = useState('');
-  const [addingUnder, setAddingUnder] = useState<string | null>(null);
-  const [subDraft, setSubDraft] = useState('');
+  const [sel, setSel] = useState<string | null>(typeof params.id === 'string' ? params.id : null);
+  const [allTab, setAllTab] = useState<AllTab>(params.view === 'cal' ? 'cal' : 'list');
+  const [projectTab, setProjectTab] = useState<ProjectTab>(
+    params.pp === 'plan' ? 'plan' : params.pp === 'cal' ? 'cal' : 'list',
+  );
+  const [menu, setMenu] = useState<null | 'menu' | 'due' | 'note'>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [showDates, setShowDates] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
   const [collapsedState, setCollapsedState] = useState<Set<string> | null>(null);
   // lo stato di prima dei figli, per tornare indietro quando si toglie «completato»
   const snapshots = useRef(new Map<string, StatusSnapshot[]>());
+
+  // un collegamento da un'altra pagina («apri questo progetto») cambia la scheda aperta
+  const [seenId, setSeenId] = useState(params.id);
+  if (params.id !== seenId) {
+    setSeenId(params.id);
+    if (typeof params.id === 'string') {
+      setSel(params.id);
+      setProjectTab(params.pp === 'plan' ? 'plan' : params.pp === 'cal' ? 'cal' : 'list');
+    }
+  }
 
   const data = useMemo(() => {
     void version;
@@ -84,13 +64,19 @@ export default function ProjectsScreen() {
     return {
       all: services.projects.all(),
       opts: services.projectOptions.read(),
-      worked: services.projects.worked(),
       totals: services.projects.totals(),
+      worked: services.projects.worked(),
       savedBranches: services.projectOptions.collapsed(),
+      subView: services.projectOptions.subView(),
     };
   }, [services, version]);
   if (!services || !data) return null;
   const { all, opts, totals } = data;
+  const repo = services.projects;
+
+  const me = sel ? (all.find((p) => p.uuid === sel) ?? null) : null;
+  const crumbs = me ? ancestors(byId(all), me.uuid) : [];
+  const rootOfMe = me ? (crumbs[0]?.uuid ?? me.uuid) : null;
 
   const parents = new Set(
     all.filter((p) => all.some((c) => c.parent_uuid === p.uuid)).map((p) => p.uuid),
@@ -101,12 +87,12 @@ export default function ProjectsScreen() {
     setCollapsedState(next);
     if (opts.ricorda_rami) services.projectOptions.saveCollapsed(next);
   };
-  const rows = flatten(all, {
+  const treeOpts = {
     showCompleted: opts.completati,
     onlyWorked: opts.solo_attivi ? data.worked : null,
     order: opts.ordine,
-    collapsed,
-  });
+  };
+  const roots = flatten(all, { ...treeOpts, collapsed: parents });
   const favorites = all.filter(
     (p) => p.is_favorite && (opts.completati || p.status !== 'completed'),
   );
@@ -115,8 +101,8 @@ export default function ProjectsScreen() {
     services.projectOptions.write(patch);
     changed();
   };
-  const add = (parent: string | null, name: string, position: 'first' | 'last' = 'first') => {
-    const id = services.projects.create({ name, parent, position });
+  const create = (name: string, parent: string | null) => {
+    const id = repo.create({ name, parent, position: 'last' });
     if (!id) return false;
     // un sotto-progetto nuovo si deve vedere: il ramo si apre
     if (parent && collapsed.has(parent)) {
@@ -128,324 +114,198 @@ export default function ProjectsScreen() {
     return true;
   };
   const cycle = (uuid: string) => {
-    const r = services.projects.cycleStatus(uuid, snapshots.current.get(uuid));
+    const r = repo.cycleStatus(uuid, snapshots.current.get(uuid));
     if (r) {
       if (r.status === 'completed') snapshots.current.set(uuid, r.snapshot);
       else snapshots.current.delete(uuid);
     }
     changed();
   };
-  const shortDate = (d: string) =>
-    `${dayOfMonth(d)} ${t(`planner.mese_${monthOf(d)}`).toLowerCase()}`;
-
-  const tags = (r: TreeRow) => {
-    const p = r.project;
-    const out: string[] = [];
-    if (r.total) out.push(t('progetti.n_di_m_fatti', { n: r.done, m: r.total }));
-    if (p.due_date) out.push(t('progetti.meta_scadenza', { d: shortDate(p.due_date) }));
-    else if (p.target_date) out.push(t('progetti.meta_obiettivo', { d: shortDate(p.target_date) }));
-    const secs = totals.get(p.uuid);
-    if (secs) out.push(t('progetti.tempo_concentrazione', { t: human(secs) }));
-    return out.join(' · ');
+  const open = (uuid: string) => {
+    setSel(uuid);
+    setProjectTab('list');
   };
+  const startPomodoro = (uuid: string) =>
+    router.push({ pathname: '/pomodoro', params: { project: uuid } });
+
+  const lang = i18n.language || 'it';
+  const showTags = opts.mostra_tag;
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
-      <Header
-        top={insets.top}
-        title={t('progetti.titolo_pagina')}
-        right={
-          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
-            <Pressable
-              testID="proj-plan"
-              accessibilityRole="button"
-              accessibilityLabel={t('progetti.piano_titolo')}
-              onPress={() => router.push('/plan')}
-            >
-              <Text style={{ color: th.brand, fontSize: 18 }}>🗓</Text>
-            </Pressable>
-            <Pressable
-              testID="proj-options"
-              accessibilityRole="button"
-              accessibilityLabel={t('progetti.impostazioni')}
-              onPress={() => setShowOptions(!showOptions)}
-            >
-              <Text style={{ color: th.brand, fontSize: 18 }}>⚙︎</Text>
-            </Pressable>
-            <Pressable
-              testID="proj-close"
-              accessibilityRole="button"
-              accessibilityLabel={t('comune.chiudi')}
-              onPress={() => router.back()}
-            >
-              <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
-            </Pressable>
-          </View>
-        }
+      <ProjectsHeader
+        roots={roots.map((r) => r.project)}
+        current={rootOfMe}
+        onPick={(uuid) => {
+          setSel(uuid);
+          setProjectTab('list');
+        }}
+        onDates={() => setShowDates(true)}
+        onOptions={() => setShowOptions(true)}
       />
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 14 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 90, gap: 14 }}
         keyboardShouldPersistTaps="handled"
       >
-        {showOptions ? (
-          <Card style={{ padding: 16, gap: 12 }}>
-            <SectionLabel>{t('progetti.opz_ordine')}</SectionLabel>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {ORDERS.map((o) => (
-                <Pressable
-                  key={o}
-                  testID={`opt-order-${o}`}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: opts.ordine === o }}
-                  onPress={() => setOpt({ ordine: o })}
-                  style={{
-                    paddingVertical: 8,
-                    paddingHorizontal: 14,
-                    borderRadius: 999,
-                    backgroundColor: opts.ordine === o ? th.brand : th.surface2,
-                  }}
-                >
-                  <Text style={{ color: opts.ordine === o ? '#fff' : th.text, fontWeight: '600' }}>
-                    {t(ORDER_KEY[o])}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            {(
-              [
-                ['completati', 'opz_completati', 'opz_completati_sub'],
-                ['mostra_tag', 'opz_tag', 'opz_tag_sub'],
-                ['ricorda_rami', 'opz_rami', 'opz_rami_sub'],
-                ['solo_attivi', 'opz_attivi', 'opz_attivi_sub'],
-              ] as const
-            ).map(([key, label, sub]) => (
-              <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: th.text, fontWeight: '600' }}>
-                    {t(`progetti.${label}`)}
-                  </Text>
-                  <Text style={{ color: th.text2, fontSize: 12 }}>{t(`progetti.${sub}`)}</Text>
-                </View>
-                <Switch
-                  testID={`opt-${key}`}
-                  value={opts[key]}
-                  onValueChange={(v) => setOpt({ [key]: v })}
-                  trackColor={{ true: th.brand }}
-                />
-              </View>
-            ))}
-            <View style={{ flexDirection: 'row', gap: 16 }}>
-              <TextButton
-                testID="proj-expand"
-                label={t('progetti.apri_tutto')}
-                onPress={() => setCollapsed(new Set())}
-              />
-              <TextButton
-                testID="proj-collapse"
-                label={t('progetti.chiudi_tutto')}
-                onPress={() => setCollapsed(new Set(parents))}
-              />
-            </View>
-          </Card>
-        ) : null}
-
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput
-            testID="proj-new"
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={t('progetti.nome_nuovo_progetto')}
-            placeholderTextColor={th.text3}
-            returnKeyType="done"
-            onSubmitEditing={() => add(null, draft) && setDraft('')}
-            style={{
-              flex: 1,
-              backgroundColor: th.surface,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: th.hairline,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              color: th.text,
-              fontSize: 16,
-            }}
-          />
-          <View style={{ width: 96 }}>
-            <PrimaryButton
-              testID="proj-new-add"
-              label={t('progetti.aggiungi')}
-              disabled={!draft.trim()}
-              onPress={() => add(null, draft) && setDraft('')}
+        {!me ? (
+          <>
+            <Seg<AllTab>
+              testID="proj-all-tab"
+              value={allTab}
+              onChange={setAllTab}
+              items={[
+                { id: 'list', label: t('progetti.elenco') },
+                { id: 'cal', label: t('piano.v_calendario') },
+              ]}
             />
-          </View>
-        </View>
-
-        {favorites.length ? (
-          <View style={{ gap: 6 }}>
-            <SectionLabel>{t('progetti.preferiti')}</SectionLabel>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {favorites.map((p) => (
-                <Pressable
-                  key={p.uuid}
-                  testID={`proj-fav-${p.uuid}`}
-                  accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/project', params: { id: p.uuid } })}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    paddingVertical: 8,
-                    paddingHorizontal: 14,
-                    borderRadius: 999,
-                    backgroundColor: th.surface,
-                    borderWidth: 1,
-                    borderColor: th.hairline,
-                  }}
-                >
-                  <View
-                    style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: p.color }}
-                  />
-                  <Text style={{ color: th.text }}>{p.name}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
-        {all.length === 0 ? (
-          <View style={{ padding: 28, alignItems: 'center', gap: 6 }}>
-            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-              {t('progetti.nessun_progetto_ancora')}
-            </Text>
-            <Text style={{ color: th.text2, textAlign: 'center' }}>
-              {t('progetti.crea_il_tuo_primo_progetto')}
-            </Text>
-          </View>
+            {allTab === 'list' ? (
+              <ProjectsAll
+                roots={roots}
+                favorites={favorites}
+                totals={totals}
+                showTags={showTags}
+                onOpen={open}
+                onCreate={(name) => create(name, null)}
+              />
+            ) : (
+              <PlanPanel
+                scope={null}
+                timeOpen={timeOpen}
+                onTimeOpen={() => setTimeOpen(true)}
+                onTimeClose={() => setTimeOpen(false)}
+              />
+            )}
+          </>
         ) : (
-          <Card>
-            {rows.map((r, i) => {
-              const p = r.project;
-              const closed = collapsed.has(p.uuid);
-              const tag = opts.mostra_tag ? tags(r) : '';
-              return (
-                <View key={p.uuid}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      paddingVertical: 12,
-                      paddingRight: 12,
-                      paddingLeft: 12 + r.depth * 20,
-                      borderTopWidth: i ? 0.5 : 0,
-                      borderTopColor: th.hairline,
-                    }}
-                  >
-                    <Pressable
-                      testID={`proj-toggle-${p.uuid}`}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('progetti.apri_chiudi_sotto')}
-                      disabled={!r.hasChildren}
-                      hitSlop={8}
-                      onPress={() => {
-                        const n = new Set(collapsed);
-                        if (n.has(p.uuid)) n.delete(p.uuid);
-                        else n.add(p.uuid);
-                        setCollapsed(n);
-                      }}
-                      style={{ width: 18, alignItems: 'center' }}
-                    >
-                      <Text style={{ color: th.text3, fontSize: 12 }}>
-                        {r.hasChildren ? (closed ? '▶' : '▼') : ''}
-                      </Text>
-                    </Pressable>
-                    <StatusDot
-                      testID={`proj-status-${p.uuid}`}
-                      status={p.status}
-                      color={p.color}
-                      th={th}
-                      onPress={() => cycle(p.uuid)}
-                    />
-                    <Pressable
-                      testID={`proj-row-${p.uuid}`}
-                      accessibilityRole="button"
-                      onPress={() => router.push({ pathname: '/project', params: { id: p.uuid } })}
-                      style={{ flex: 1 }}
-                    >
-                      <Text
-                        style={{
-                          color: p.status === 'completed' ? th.text2 : th.text,
-                          fontSize: 16,
-                          fontWeight: '600',
-                          textDecorationLine: p.status === 'completed' ? 'line-through' : 'none',
-                        }}
-                        numberOfLines={2}
-                      >
-                        {p.name}
-                      </Text>
-                      {tag ? (
-                        <Text style={{ color: th.text2, fontSize: 12, marginTop: 2 }}>{tag}</Text>
-                      ) : null}
-                    </Pressable>
-                    {p.is_favorite ? <Text style={{ color: th.orange }}>★</Text> : null}
-                    <Pressable
-                      testID={`proj-add-${p.uuid}`}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('progetti.aggiungi_sotto_progetto_rapido')}
-                      hitSlop={8}
-                      onPress={() => {
-                        setAddingUnder(addingUnder === p.uuid ? null : p.uuid);
-                        setSubDraft('');
-                      }}
-                    >
-                      <Text style={{ color: th.brand, fontSize: 22 }}>+</Text>
-                    </Pressable>
-                  </View>
-                  {addingUnder === p.uuid ? (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        gap: 8,
-                        paddingHorizontal: 12,
-                        paddingLeft: 52 + r.depth * 20,
-                        paddingBottom: 12,
-                      }}
-                    >
-                      <TextInput
-                        testID="proj-sub-input"
-                        autoFocus
-                        value={subDraft}
-                        onChangeText={setSubDraft}
-                        placeholder={t('progetti.nome_nuovo_sotto')}
-                        placeholderTextColor={th.text3}
-                        returnKeyType="done"
-                        onSubmitEditing={() => {
-                          if (add(p.uuid, subDraft)) {
-                            setSubDraft('');
-                            setAddingUnder(null);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          backgroundColor: th.surface2,
-                          borderRadius: 10,
-                          paddingHorizontal: 12,
-                          paddingVertical: 9,
-                          color: th.text,
-                        }}
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })}
-          </Card>
+          <>
+            {crumbs.length ? (
+              <Pressable
+                testID="proj-crumb"
+                accessibilityRole="button"
+                onPress={() => open(crumbs[crumbs.length - 1]!.uuid)}
+                hitSlop={6}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: -4 }}
+              >
+                <PjIcon name="back" color={th.text2} size={16} width={2.2} />
+                <Text numberOfLines={1} style={{ color: th.text2, fontSize: 14, flex: 1 }}>
+                  {crumbs.map((c) => c.name).join(' › ')}
+                </Text>
+              </Pressable>
+            ) : null}
+            <ProjectHero
+              me={me}
+              done={childrenOf(all, me.uuid).filter((k) => k.status === 'completed').length}
+              total={childrenOf(all, me.uuid).length}
+              secs={totals.get(me.uuid) ?? 0}
+              tasks={services.tasks ?? null}
+              version={version}
+              onCycle={() => cycle(me.uuid)}
+              onRename={(name) => {
+                repo.update(me.uuid, { name });
+                changed();
+              }}
+              onFocus={() => startPomodoro(me.uuid)}
+              onHistory={() =>
+                router.push({ pathname: '/pomodoro-history', params: { project: me.uuid } })
+              }
+              onMenu={() => setMenu('menu')}
+              onDates={() => setMenu('due')}
+              onNote={() => setMenu('note')}
+              changed={changed}
+            />
+            <Seg<ProjectTab>
+              testID="proj-tab"
+              compact
+              value={projectTab}
+              onChange={setProjectTab}
+              items={[
+                { id: 'list', label: t('progetti.elenco') },
+                { id: 'cal', label: t('piano.v_calendario') },
+                { id: 'plan', label: t('piano.v_piano') },
+              ]}
+            />
+            {projectTab === 'list' ? (
+              <SubProjects
+                repo={repo}
+                all={all}
+                parent={me}
+                rows={flatten(all, { ...treeOpts, collapsed, root: me.uuid })}
+                collapsed={collapsed}
+                onToggleBranch={(uuid) => {
+                  const n = new Set(collapsed);
+                  if (n.has(uuid)) n.delete(uuid);
+                  else n.add(uuid);
+                  setCollapsed(n);
+                }}
+                swatches={SWATCHES}
+                onOpen={(k) => open(k.uuid)}
+                onStart={(k) => startPomodoro(k.uuid)}
+                onCycle={cycle}
+                onAdd={(name) => create(name, me.uuid)}
+                changed={changed}
+                totals={totals}
+                view={data.subView}
+                onView={(v) => {
+                  services.projectOptions.setSubView(v);
+                  changed();
+                }}
+                showTags={showTags}
+              />
+            ) : null}
+            {projectTab === 'cal' ? (
+              <PlanPanel
+                scope={me.uuid}
+                initialSel={me.uuid}
+                timeOpen={timeOpen}
+                onTimeOpen={() => setTimeOpen(true)}
+                onTimeClose={() => setTimeOpen(false)}
+              />
+            ) : null}
+            {projectTab === 'plan' && services.plan ? (
+              <ProjectPlanCard
+                repo={services.plan}
+                projects={all}
+                project={me.uuid}
+                lang={lang}
+                pomodoroMinutes={pomodoroSettings.last_pomodoro_duration_min}
+                changed={changed}
+                onCalendar={() => setProjectTab('cal')}
+                onPomodoro={(min, auto) =>
+                  router.push({
+                    pathname: '/pomodoro',
+                    params: {
+                      project: me.uuid,
+                      min: String(min),
+                      ...(auto ? { auto: '1' } : {}),
+                    },
+                  })
+                }
+              />
+            ) : null}
+          </>
         )}
       </ScrollView>
+
+      {me && menu ? (
+        <ProjectMenu
+          me={me}
+          all={all}
+          crumbs={crumbs}
+          sessions={repo.sessionCount(subtreeIds(all, me.uuid))}
+          initial={menu === 'due' ? 'due' : menu === 'note' ? 'note' : undefined}
+          onClose={() => setMenu(null)}
+          onDeleted={() => {
+            setMenu(null);
+            setSel(me.parent_uuid);
+          }}
+        />
+      ) : null}
+      {showOptions ? (
+        <OptionsModal opts={opts} onChange={setOpt} onClose={() => setShowOptions(false)} />
+      ) : null}
+      {showDates ? (
+        <DatesSheet all={all} onOpen={open} onClose={() => setShowDates(false)} />
+      ) : null}
     </View>
   );
 }

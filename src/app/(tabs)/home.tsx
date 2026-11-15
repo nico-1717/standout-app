@@ -212,7 +212,7 @@ export default function HomeScreen() {
           <ProjectsWidget
             td={td}
             rows={projectRows}
-            onOpen={(uuid) => router.push({ pathname: '/project', params: { id: uuid } })}
+            onOpen={(uuid) => router.push({ pathname: '/projects', params: { id: uuid } })}
           />
         </WidgetBox>
       );

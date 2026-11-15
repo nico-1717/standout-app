@@ -249,7 +249,7 @@ describe('Home', () => {
     await renderIt();
     expect(screen.queryByText('Other')).toBeNull();
     await fireEvent.press(screen.getByTestId(`home-project-${a}`));
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/project', params: { id: a } });
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/projects', params: { id: a } });
   });
 
   test('trivia is hidden until tapped; the answer then shows', async () => {
