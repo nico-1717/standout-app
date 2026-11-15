@@ -89,6 +89,7 @@ export function EventBlock(
     snap: number;
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
+    now?: number | null;
     onMove?: (ev: EventView, startMin: number) => void;
     onDragActive?: (active: boolean) => void;
   },
@@ -121,7 +122,8 @@ export function EventBlock(
       style={{
         position: 'absolute',
         zIndex: dragging ? 20 : 0,
-        opacity: dragging ? 0.92 : 1,
+        // un evento già finito (oggi) si fa più leggero, come `.pl-is-past` del sito
+        opacity: dragging ? 0.92 : p.now != null && block.top + block.height < p.now ? 0.52 : 1,
         top: top * ppm,
         left: p.gutter + colW * block.col,
         width: colW - 3,
@@ -143,8 +145,9 @@ export function EventBlock(
           left: 0,
           top: 0,
           bottom: 0,
-          width: 2.5,
-          backgroundColor: mix(cal ?? color, '#FFFFFF', 0.82),
+          width: 3,
+          backgroundColor:
+            pt.style === 'standard' ? (cal ?? color) : mix(cal ?? color, '#FFFFFF', 0.82),
         }}
       />
       <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
@@ -162,10 +165,10 @@ export function EventBlock(
           style={{
             flex: 1,
             color: ev.done ? pt.ink2 : pt.ink,
-            fontSize: height < 28 ? 11 : 12.5,
+            fontSize: height < 28 ? 11 : 13,
             lineHeight: height < 28 ? 13 : 16,
             fontFamily: pt.sans,
-            fontWeight: ev.importance === 'highest' ? '600' : '400',
+            fontWeight: pt.style === 'standard' || ev.importance === 'highest' ? '600' : '400',
             textDecorationLine: ev.done ? 'line-through' : 'none',
           }}
         >
@@ -176,13 +179,14 @@ export function EventBlock(
         <Text
           style={{
             color: pt.ink2,
-            fontSize: 9.5,
-            letterSpacing: 0.4,
+            fontSize: 10.5,
+            fontWeight: '500',
+            letterSpacing: 0.42,
             marginTop: 1,
             fontFamily: pt.sans,
           }}
         >
-          {dragging ? `${timeOf(top)}–${timeOf(top + block.height)}` : `${ev.start}–${ev.end}`}
+          {dragging ? `${timeOf(top)} – ${timeOf(top + block.height)}` : `${ev.start} – ${ev.end}`}
         </Text>
       ) : null}
     </Pressable>
@@ -272,7 +276,8 @@ export function DayGrid(
 ) {
   const { pt } = p;
   const ppm = pxPerMinute(p.zoom);
-  const gutter = 48;
+  // 48px di ore, poi la riga verticale e la colonna del giorno (come `--gutter-w` del sito)
+  const gutter = 58;
   const blocks = layoutDay(p.events);
   const slotMin = p.zoom === 'm30' || p.zoom === 'm15' || p.zoom === 'm5' ? 30 : 60;
   const tap = (e: GestureResponderEvent) => {
@@ -287,6 +292,17 @@ export function DayGrid(
         onPress={tap}
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       >
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: gutter - 1,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            backgroundColor: pt.hair,
+          }}
+        />
         {HOURS.map((h) => (
           <View
             key={h}
@@ -297,12 +313,12 @@ export function DayGrid(
               style={{
                 position: 'absolute',
                 left: 0,
-                width: gutter - 8,
+                width: 41,
                 textAlign: 'right',
-                top: -7,
-                color: pt.ink3,
-                fontSize: 10,
-                letterSpacing: 0.6,
+                top: -8,
+                color: pt.ink,
+                fontSize: 11.5,
+                fontWeight: '600',
                 fontFamily: pt.sans,
               }}
             >
@@ -310,15 +326,32 @@ export function DayGrid(
             </Text>
             <View style={{ marginLeft: gutter, height: 1, backgroundColor: pt.hair }} />
             {slotMin === 30 ? (
-              <View
-                style={{
-                  marginLeft: gutter,
-                  marginTop: 30 * ppm - 1,
-                  height: 1,
-                  backgroundColor: pt.hair,
-                  opacity: 0.5,
-                }}
-              />
+              <>
+                <Text
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    width: 41,
+                    textAlign: 'right',
+                    top: 30 * ppm - 8,
+                    color: pt.ink2,
+                    fontSize: 11.5,
+                    fontWeight: '500',
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {String(h).padStart(2, '0')}:30
+                </Text>
+                <View
+                  style={{
+                    marginLeft: gutter,
+                    marginTop: 30 * ppm - 1,
+                    height: 1,
+                    backgroundColor: pt.hair,
+                    opacity: 0.6,
+                  }}
+                />
+              </>
             ) : null}
           </View>
         ))}
@@ -331,7 +364,7 @@ export function DayGrid(
           ppm={ppm}
           gutter={gutter}
           snap={snapMinutes(p.zoom)}
-          width={p.width - gutter - 6}
+          width={p.width - gutter - 8}
           onOpen={p.onOpen}
           onToggle={p.onToggle}
           onMove={p.onMove}

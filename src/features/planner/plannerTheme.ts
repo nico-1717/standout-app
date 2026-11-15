@@ -1,5 +1,5 @@
 import type { Theme } from '@/core/theme/ThemeProvider';
-import { buyTheme, mix, type UiStyle } from '@/features/buy/buyTheme';
+import { mix, type UiStyle } from '@/features/buy/buyTheme';
 
 /** Le dodici tinte del planner (.pl-palette-* di planner_base.css): accento, fondo morbido, fondo leggero, inchiostro. */
 export const PALETTES = {
@@ -43,6 +43,14 @@ export interface PlannerTheme {
   accentInk: string;
   onAccent: string;
   neutralEv: string;
+  /** la barra in alto, le pillole e le caselle come le disegna il sito (planner_*.css) */
+  bar: string;
+  pill: string;
+  pillRing: string;
+  field: string;
+  fieldRing: string;
+  tileRed: string;
+  prioRing: string;
   /** altezza di una fascia di 30 minuti e pixel per minuto */
   sans: string | undefined;
   serif: string | undefined;
@@ -83,30 +91,51 @@ export function plannerTheme(
       accentInk: night ? accent : accentInk,
       onAccent: night ? '#14120F' : '#FFFDFA',
       neutralEv: night ? '#3B352C' : '#E4DDD3',
+      bar: night ? mix(th.bg, '#000000', 0.9) : 'rgba(251,249,246,.9)',
+      pill: night ? th.surface : '#FFFDFA',
+      pillRing: a(0.2),
+      field: night ? '#1A1713' : '#F5F1EA',
+      fieldRing: a(0.14),
+      tileRed: '#E5534B',
+      prioRing: '#C98F8F',
       sans: 'Jost_400Regular',
       serif: 'Fraunces_400Regular',
       serifLight: 'Fraunces_400Regular',
     };
   }
-  const bt = buyTheme(style, th);
+  // «Glass» sul sito: il planner ha i grigi di iOS (non il blu notte del resto del sito)
   const dark = th.scheme === 'dark';
+  const brand = th.brand;
+  const rgb = [1, 3, 5].map((i) => parseInt(brand.slice(i, i + 2), 16)).join(',');
+  const known = brand === '#0A84FF' || brand === '#007AFF';
   return {
     style,
     dark,
-    page: th.bg,
-    paper2: th.bg,
-    card: th.surface,
-    ink: bt.ink,
-    ink2: bt.ink2,
-    ink3: bt.ink3,
-    hair: bt.hair,
+    page: dark ? '#000000' : '#F2F2F7',
+    paper2: dark ? '#000000' : '#F2F2F7',
+    card: dark ? '#1C1C1E' : '#FFFFFF',
+    ink: dark ? '#F5F5F7' : '#1C1C1E',
+    ink2: dark ? 'rgba(235,235,245,.92)' : 'rgba(44,44,48,.92)',
+    ink3: dark ? 'rgba(235,235,245,.73)' : 'rgba(44,44,48,.73)',
+    hair: dark ? 'rgba(120,120,128,.4)' : 'rgba(60,60,67,.16)',
     hair2: dark ? 'rgba(235,235,245,.18)' : 'rgba(60,60,67,.16)',
-    accent: th.brand,
-    accentSoft: th.brandSoft,
-    accentWash: th.brandSoft,
-    accentInk: th.brand,
+    accent: brand,
+    accentSoft: `rgba(${rgb},${dark ? 0.24 : 0.14})`,
+    accentWash: `rgba(${rgb},${dark ? 0.13 : 0.07})`,
+    accentInk: known
+      ? dark
+        ? '#64A8FF'
+        : '#0062CC'
+      : mix(brand, dark ? '#FFFFFF' : '#000000', 0.7),
     onAccent: '#FFFFFF',
-    neutralEv: dark ? '#3A3A3C' : '#E4E4E9',
+    neutralEv: '#E4DDD3',
+    bar: dark ? 'rgba(22,22,24,.94)' : 'rgba(249,249,251,.94)',
+    pill: dark ? '#1C1C1E' : '#FFFFFF',
+    pillRing: dark ? 'rgba(235,235,245,.36)' : 'rgba(44,44,48,.36)',
+    field: dark ? '#2C2C2E' : '#E9E9EE',
+    fieldRing: dark ? 'rgba(235,235,245,.22)' : 'rgba(44,44,48,.22)',
+    tileRed: '#E5534B',
+    prioRing: '#C98F8F',
     sans: undefined,
     serif: undefined,
     serifLight: undefined,
@@ -124,6 +153,7 @@ export function eventColor(
 
 /** Lo sfondo di un blocco: il colore mescolato alla carta, più forte per gli importanti. */
 export function blockBackground(pt: PlannerTheme, ev: string, importance: string): string {
-  const share = importance === 'highest' ? 0.68 : importance === 'high' ? 0.52 : 0.3;
+  const base = pt.style === 'standard' ? 0.26 : 0.3;
+  const share = importance === 'highest' ? 0.68 : importance === 'high' ? 0.52 : base;
   return mix(ev, pt.card.startsWith('#') ? pt.card : '#FFFDFA', share);
 }

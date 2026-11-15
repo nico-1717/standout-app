@@ -6,7 +6,7 @@ import { migrate } from '@/core/db/migrations';
 import i18n from '@/core/i18n';
 import { upsertRow } from '@/core/sync/rows';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
-import { mondayOf } from '@/features/planner/dates';
+import { addDaysIso, mondayOf } from '@/features/planner/dates';
 import { weekPhraseId } from '@/features/planner/phrases';
 import { PlannerRepo } from '@/features/planner/repo';
 import { localToday } from '@/features/tasks/groups';
@@ -20,8 +20,10 @@ const mockChanged = jest.fn(() => {
   mockVersion += 1;
 });
 
+const mockPush = jest.fn();
+const mockUpdateSettings = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, back: jest.fn() }),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -31,6 +33,7 @@ jest.mock('@/core/app/AppProvider', () => ({
     services: mockServices,
     version: mockVersion,
     changed: mockChanged,
+    updatePlannerSettings: mockUpdateSettings,
     uiStyle: mockStyle,
     authState: { status: 'signedIn', user: { id: 7 } },
     plannerSettings: {
@@ -64,6 +67,15 @@ function setup() {
   mockServices = { db, planner: repo };
   return repo;
 }
+const pickView = async (v: 'day' | 'week' | 'month') => {
+  await fireEvent.press(screen.getByTestId('planner-view'));
+  await fireEvent.press(screen.getByTestId(`mode-${v}`));
+};
+/** Apre il calendarietto e va a un giorno (`planner-mini` → `mini-<data>`). */
+const goTo = async (iso: string) => {
+  await fireEvent.press(screen.getByTestId('planner-mini'));
+  await fireEvent.press(screen.getByTestId(`mini-${iso}`));
+};
 const renderIt = () =>
   render(
     <ThemeProvider>
@@ -91,7 +103,7 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     setup();
     await renderIt();
     expect(screen.getByTestId('day-empty')).toBeTruthy();
-    expect(screen.getByTestId(`strip-${TODAY}`)).toBeTruthy();
+    expect(screen.getByTestId('day-title')).toHaveTextContent(String(Number(TODAY.slice(8))));
   });
 
   test("shows the week's affirmation on top and the motivational quote at the bottom", async () => {
@@ -214,50 +226,94 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(repo.row(master)!.title).toBe('Gym');
   });
 
-  test('the arrows and the week strip move between days', async () => {
+  test('the month calendar moves between days and the date tile comes back to today', async () => {
     setup();
     await renderIt();
-    await fireEvent.press(screen.getByTestId('day-next'));
-    expect(screen.getByTestId('day-today')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('day-today'));
-    expect(screen.queryByTestId('day-today')).toBeNull();
+    const other = addDaysIso(TODAY, 1);
+    await goTo(other);
+    expect(screen.queryByTestId('month-popup')).toBeNull();
+    expect(screen.getByTestId('day-title')).toHaveTextContent(String(Number(other.slice(8))));
+    await fireEvent.press(screen.getByTestId('planner-today'));
+    expect(screen.getByTestId('day-title')).toHaveTextContent(String(Number(TODAY.slice(8))));
   });
   test('week and month views list the events and open the day on tap', async () => {
     const repo = setup();
     repo.create({ title: 'Dentist', date: TODAY, start: '15:00', end: '16:00' });
     await renderIt();
-    await fireEvent.press(screen.getByTestId('mode-week'));
+    await pickView('week');
     expect(screen.getByTestId('week-view')).toBeTruthy();
     expect(screen.getByText('Dentist')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('mode-month'));
+    await pickView('month');
     expect(screen.getByTestId('month-view')).toBeTruthy();
     expect(screen.getByText('Dentist')).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`month-day-${TODAY}`));
     expect(screen.getByTestId('day-scroll')).toBeTruthy();
   });
 
-  test('the arrows move by a week in week view', async () => {
+  test('picking a day of another week in week view shows that week', async () => {
     setup();
     await renderIt();
-    await fireEvent.press(screen.getByTestId('mode-week'));
-    await fireEvent.press(screen.getByTestId('day-next'));
+    await pickView('week');
+    const week = Array.from({ length: 7 }, (_, i) => addDaysIso(mondayOf(TODAY), i));
+    await fireEvent.press(screen.getByTestId('planner-mini'));
+    const cell = screen
+      .getAllByTestId(/^mini-\d{4}-/)
+      .find((c) => !week.includes(String(c.props.testID).slice(5)))!;
+    await fireEvent.press(cell);
     expect(screen.getByTestId('week-view')).toBeTruthy();
     expect(screen.queryByTestId(`week-day-${TODAY}`)).toBeNull();
   });
+
   test('priorities: add one, tick it, and it stays after a refresh', async () => {
     const repo = setup();
     await renderIt();
+    await fireEvent.press(screen.getByTestId('priority-add'));
     await fireEvent.press(screen.getByTestId('priority-empty'));
     await fireEvent.changeText(screen.getByTestId('priority-new'), 'Study maths');
     await fireEvent(screen.getByTestId('priority-new'), 'submitEditing');
     expect(repo.priorities(TODAY).map((p) => p.content)).toEqual(['Study maths']);
+    await fireEvent.press(screen.getByTestId('priority-close'));
     await screen.rerender(
       <ThemeProvider>
         <PlannerScreen />
       </ThemeProvider>,
     );
+    expect(screen.getByTestId('priority-1')).toHaveTextContent('Study maths');
     await fireEvent.press(screen.getByTestId('priority-box-1'));
     expect(repo.priorities(TODAY)[0]!.is_done).toBe(1);
+  });
+
+  test('the side buttons open routines and categories, the arrow hides them, the avatar opens the account', async () => {
+    setup();
+    mockPush.mockClear();
+    mockUpdateSettings.mockClear();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('fab-routine'));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/planner-routines',
+      params: { date: TODAY },
+    });
+    await fireEvent.press(screen.getByTestId('fab-category'));
+    expect(mockPush).toHaveBeenLastCalledWith('/planner-manage');
+    await fireEvent.press(screen.getByTestId('planner-avatar'));
+    expect(mockPush).toHaveBeenLastCalledWith('/account');
+    await fireEvent.press(screen.getByTestId('fab-toggle'));
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ fabs_open: false });
+  });
+
+  test('earlier or later: moves the events of the day by the chosen minutes', async () => {
+    const repo = setup();
+    const tomorrow = addDaysIso(TODAY, 1);
+    const id = repo.create({ title: 'Lab', date: tomorrow, start: '15:00', end: '16:00' });
+    await renderIt();
+    await goTo(tomorrow);
+    await fireEvent.press(screen.getByTestId('fab-shift'));
+    await fireEvent.press(screen.getByTestId('shift-early'));
+    await fireEvent.press(screen.getByTestId('shift-min-15'));
+    await fireEvent.press(screen.getByTestId('shift-save'));
+    const ev = repo.eventsInRange(tomorrow, tomorrow).find((e) => e.uuid === id)!;
+    expect([ev.start, ev.end]).toEqual(['14:45', '15:45']);
+    expect(screen.queryByTestId('shift-sheet')).toBeNull();
   });
 
   test('a closed routine is one bar; opening it shows its steps; deleting asks first', async () => {

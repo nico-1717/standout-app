@@ -2,53 +2,89 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { dictationLang } from '@/core/speech/dictation';
+import { useDictation } from '@/core/speech/useDictation';
+
+import { LineIcon } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
 import type { SmartParsed } from './smart';
 
-/** La barra intelligente: si scrive «domani pranzo 15» e nasce l'evento. */
+/** La barra intelligente (.pl-smart): si scrive (o si detta) «domani pranzo 15» e nasce l'evento. */
 export function SmartBar(p: { pt: PlannerTheme; onSubmit: (text: string) => boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { pt } = p;
   const [text, setText] = useState('');
-  const go = () => {
-    if (!text.trim()) return;
+  const go = (value: string) => {
+    if (!value.trim()) return;
     // se la frase non basta per un titolo, il testo resta lì per correggerlo
-    if (p.onSubmit(text)) setText('');
+    if (p.onSubmit(value)) setText('');
+  };
+  // il microfono: la frase detta riempie la barra e, finita, diventa l'evento
+  const mic = useDictation({
+    lang: dictationLang(i18n.language),
+    once: true,
+    onInterim: setText,
+    onFinal: setText,
+    onStop: (heard) => go(heard),
+  });
+  const round = {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   };
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        marginHorizontal: 12,
-        marginBottom: 8,
-        paddingLeft: 14,
-        borderRadius: 999,
+        marginTop: 6,
+        paddingLeft: 11,
+        paddingRight: 4,
+        paddingVertical: 3,
+        gap: 6,
+        borderRadius: 14,
         backgroundColor: pt.card,
         borderWidth: 0.5,
-        borderColor: pt.hair,
+        borderColor: pt.fieldRing,
       }}
     >
       <TextInput
         testID="smart-input"
         value={text}
         onChangeText={setText}
-        onSubmitEditing={go}
+        onSubmitEditing={() => go(text)}
         returnKeyType="done"
         maxLength={200}
         placeholder={t('planner.domani_pranzo_15')}
         placeholderTextColor={pt.ink3}
-        style={{ flex: 1, paddingVertical: 9, color: pt.ink, fontSize: 15, fontFamily: pt.sans }}
+        style={{
+          flex: 1,
+          paddingVertical: 7,
+          color: pt.ink,
+          fontSize: 14,
+          fontFamily: pt.sans,
+          fontStyle: text ? 'normal' : 'italic',
+        }}
       />
       <Pressable
-        hitSlop={10}
+        testID="smart-mic"
+        accessibilityRole="button"
+        accessibilityLabel={t('planner.dettalo_invece_di_scriverlo')}
+        onPress={() => (mic.active ? mic.stop() : mic.start())}
+        style={{ ...round, backgroundColor: mic.active ? pt.accentSoft : pt.field }}
+      >
+        <LineIcon name="mic" color={mic.active ? pt.accentInk : pt.ink2} size={15} />
+      </Pressable>
+      <Pressable
         testID="smart-go"
         accessibilityRole="button"
         accessibilityLabel={t('planner.crea')}
-        onPress={go}
-        style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+        onPress={() => go(text)}
+        style={{ ...round, backgroundColor: pt.accentSoft }}
       >
-        <Text style={{ color: pt.accentInk, fontSize: 20 }}>→</Text>
+        <LineIcon name="arrow" color={pt.accentInk} size={15} />
       </Pressable>
     </View>
   );
