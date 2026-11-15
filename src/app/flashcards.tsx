@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -24,13 +25,14 @@ import {
   type DeckScope,
 } from '@/features/flashcards/logic';
 import { localToday } from '@/features/tasks/groups';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton, bigNumber } from '@/ui/kit';
-import { LearnedCard } from '@/features/flashcards/LearnedCard';
+import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { HoIcon, hoTheme } from '@/features/home/HomeKit';
 
 /** Le categorie delle flashcard di studio ad albero (fc_decks.php): materie, sottocategorie, archivio, ricerca. */
 export default function FlashcardsScreen() {
   const th = useTheme();
-  const { t, i18n } = useTranslation();
+  const ho = hoTheme(th);
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { services, version, changed } = useApp();
@@ -60,7 +62,6 @@ export default function FlashcardsScreen() {
   const { decks, counts, stats } = data;
 
   const today = localToday();
-  const deckIds = new Set(decks.map((d) => d.uuid));
   const scopes = scopeCounts(decks);
   const rows = flattenDecks(decks, scope, collapsed);
   const found = query.trim() ? searchDecks(decks, query) : null;
@@ -337,137 +338,90 @@ export default function FlashcardsScreen() {
     );
   };
 
-  const langCourses = services.languages.courses();
-  const langWords = [...services.languages.courseStats().values()].reduce((a, s) => a + s.words, 0);
   const resume = services?.games.unfinished() ?? null;
-  const goal = services.study.goal();
-  const todayPlayed = services.fcStats.activity().daily.get(today)?.played ?? 0;
-  const knownCards = decks
-    .filter((d) => !d.parent_uuid || !deckIds.has(d.parent_uuid))
-    .reduce((n, d) => n + (stats.get(d.uuid)?.known ?? 0), 0);
-  const vocabKnown = langCourses.length
-    ? langCourses.reduce((sum, c) => {
-        const vs = services.languages.games(c.uuid).deckStats();
-        const top = services.languages
-          .decks(c.uuid)
-          .filter((d) => !d.parent_uuid)
-          .reduce((n, d) => n + (vs.get(d.uuid)?.known ?? 0), 0);
-        return sum + top;
-      }, 0)
-    : null;
   const withKids = new Set(
     decks.filter((d) => decks.some((c) => c.parent_uuid === d.uuid)).map((d) => d.uuid),
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
-      <Header
-        top={insets.top}
-        title={t('fc.cfc_titolo')}
-        right={
+      <View
+        style={{
+          paddingTop: insets.top + 10,
+          paddingBottom: 12,
+          paddingHorizontal: 16,
+          backgroundColor: th.headerGlass,
+          borderBottomWidth: 0.5,
+          borderBottomColor: th.hairline,
+          gap: 12,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Pressable
             testID="fc-close"
             accessibilityRole="button"
-            accessibilityLabel={t('comune.chiudi')}
+            accessibilityLabel={t('comune.indietro')}
             onPress={() => router.back()}
+            hitSlop={8}
+            style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
+            <HoIcon name="back" color={ho.blue} size={26} sw={2.4} />
           </Pressable>
-        }
-      />
+          <View style={{ flex: 1 }}>
+            <Text
+              accessibilityRole="header"
+              numberOfLines={1}
+              style={{ color: ho.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}
+            >
+              {t('vocab.cat_categorie')}
+            </Text>
+            <Text numberOfLines={1} style={{ color: ho.text2, fontSize: 15, marginTop: 1 }}>
+              {t('fc.cfc_conteggio', { categorie: decks.length, carte: totalCards })}
+            </Text>
+          </View>
+          <Pressable
+            testID="fc-play"
+            accessibilityRole="button"
+            accessibilityLabel={t('fc.cg_gioca')}
+            onPress={() => router.push('/fc-setup')}
+            style={{ width: 46, height: 46, borderRadius: 23, overflow: 'hidden' }}
+          >
+            <LinearGradient
+              colors={[ho.blue, ho.indigo]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <HoIcon name="play" color="#FFFFFF" size={20} sw={2.2} />
+            </LinearGradient>
+          </Pressable>
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: ho.surface2,
+            borderRadius: 14,
+            paddingHorizontal: 14,
+          }}
+        >
+          <HoIcon name="search" color={ho.text3} size={20} />
+          <TextInput
+            testID="fc-search"
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t('vocab.cat_cerca')}
+            placeholderTextColor={ho.text3}
+            autoCorrect={false}
+            style={{ flex: 1, paddingVertical: 12, color: ho.text, fontSize: 17 }}
+          />
+        </View>
+      </View>
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 14 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          testID="fc-summary"
-          accessibilityRole="button"
-          onPress={() => router.push('/fc-stats')}
-        >
-          <Card style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
-                {t('fc.obiettivo_di_oggi').toUpperCase()}
-              </Text>
-              <Text testID="fc-goal" style={[{ color: th.text }, bigNumber(th, 20)]}>
-                {todayPlayed} / {goal}
-              </Text>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: th.surface2 }}>
-                <View
-                  style={{
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: todayPlayed >= goal ? th.green : th.brand,
-                    width: `${Math.min(100, (todayPlayed / goal) * 100)}%`,
-                  }}
-                />
-              </View>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text testID="fc-known" style={[{ color: th.text }, bigNumber(th, 20)]}>
-                {knownCards}
-              </Text>
-              <Text style={{ color: th.text2, fontSize: 11 }}>{t('fc.carte_imparate')}</Text>
-            </View>
-          </Card>
-        </Pressable>
-
-        <LearnedCard
-          db={services.db}
-          today={today}
-          lang={i18n.language}
-          study={knownCards}
-          vocab={vocabKnown}
-        />
-
-        <Pressable
-          testID="fc-languages"
-          accessibilityRole="button"
-          onPress={() => router.push('/languages')}
-        >
-          <Card style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <Text style={{ fontSize: 28 }}>🌍</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>
-                {t('fchub.lingue')}
-              </Text>
-              <Text testID="fc-languages-sub" style={{ color: th.text2, fontSize: 13 }}>
-                {langCourses.length
-                  ? t(
-                      langCourses.length === 1 ? 'fchub.n_lingua_parole' : 'fchub.n_lingue_parole',
-                      {
-                        n: langCourses.length,
-                        parole: langWords,
-                      },
-                    )
-                  : t('fchub.lingue_sub_vuoto')}
-              </Text>
-            </View>
-            <Text style={{ color: th.text3, fontSize: 18 }}>›</Text>
-          </Card>
-        </Pressable>
-
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <PrimaryButton
-              testID="fc-play"
-              label={t('fc.cg_gioca')}
-              onPress={() => router.push('/fc-setup')}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <TextButton
-              testID="fc-history"
-              label={t('fc.js_storico')}
-              onPress={() => router.push('/fc-history')}
-            />
-          </View>
-        </View>
-        <TextButton
-          testID="fc-stats"
-          label={t('fc.statistiche')}
-          onPress={() => router.push('/fc-stats')}
-        />
         {resume ? (
           <Pressable
             testID="fc-resume"
@@ -486,54 +440,6 @@ export default function FlashcardsScreen() {
             </Text>
           </Pressable>
         ) : null}
-
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput
-            testID="fc-new"
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={t('fc.app_nuova_materia')}
-            placeholderTextColor={th.text3}
-            returnKeyType="done"
-            onSubmitEditing={() => add(null, draft) && setDraft('')}
-            style={{
-              flex: 1,
-              backgroundColor: th.surface,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: th.hairline,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              color: th.text,
-              fontSize: 16,
-            }}
-          />
-          <View style={{ width: 96 }}>
-            <PrimaryButton
-              testID="fc-new-add"
-              label={t('vocab.cat_aggiungi')}
-              disabled={!draft.trim()}
-              onPress={() => add(null, draft) && setDraft('')}
-            />
-          </View>
-        </View>
-
-        <TextInput
-          testID="fc-search"
-          value={query}
-          onChangeText={setQuery}
-          placeholder={t('fc.app_nessuna_ricerca')}
-          placeholderTextColor={th.text3}
-          autoCorrect={false}
-          style={{
-            backgroundColor: th.surface2,
-            borderRadius: 12,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            color: th.text,
-            fontSize: 16,
-          }}
-        />
 
         {found ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -557,39 +463,102 @@ export default function FlashcardsScreen() {
         ) : null}
 
         {!found ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            {(['active', 'archived'] as const).map((s) => (
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <View
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                backgroundColor: ho.surface2,
+                borderRadius: 14,
+                padding: 3,
+              }}
+            >
+              {(['active', 'archived'] as const).map((s) => (
+                <Pressable
+                  key={s}
+                  testID={`fc-scope-${s}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: scope === s }}
+                  onPress={() => setScope(s)}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    paddingVertical: 9,
+                    borderRadius: 11,
+                    backgroundColor: scope === s ? ho.bg : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: scope === s ? ho.text : ho.text2,
+                      fontSize: 15,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {s === 'active' ? t('fc.cfc_attive') : t('fc.cfc_archiviate')}
+                  </Text>
+                  <View
+                    style={{
+                      minWidth: 22,
+                      paddingHorizontal: 6,
+                      paddingVertical: 1,
+                      borderRadius: 999,
+                      alignItems: 'center',
+                      backgroundColor: scope === s ? ho.blueSoft : ho.hair,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: scope === s ? ho.blueInk : ho.text2,
+                        fontSize: 13,
+                        fontWeight: '700',
+                      }}
+                    >
+                      {scopes[s]}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+            {withKids.size ? (
               <Pressable
-                key={s}
-                testID={`fc-scope-${s}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: scope === s }}
-                onPress={() => setScope(s)}
+                testID="fc-collapse"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  collapsed.size ? t('vocab.cat_espandi') : t('fc.cfc_comprimi_tutto')
+                }
+                onPress={() => setCollapsed(collapsed.size ? new Set() : new Set(withKids))}
                 style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 14,
-                  borderRadius: 999,
-                  backgroundColor: scope === s ? th.brand : th.surface2,
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  backgroundColor: ho.surface2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: scope === s ? '#fff' : th.text, fontWeight: '600' }}>
-                  {s === 'active' ? t('fc.cfc_attive') : t('fc.cfc_archiviate')} {scopes[s]}
-                </Text>
+                <HoIcon name="updown" color={ho.text2} size={19} />
               </Pressable>
-            ))}
-            <View style={{ flex: 1 }} />
-            <TextButton
-              testID="fc-select"
-              label={selecting ? t('fc.cfc_fine') : t('fc.cfc_seleziona')}
-              onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
-            />
-            {withKids.size ? (
-              <TextButton
-                testID="fc-collapse"
-                label={collapsed.size ? t('vocab.cat_espandi') : t('fc.cfc_comprimi_tutto')}
-                onPress={() => setCollapsed(collapsed.size ? new Set() : new Set(withKids))}
-              />
             ) : null}
+            <Pressable
+              testID="fc-select"
+              accessibilityRole="button"
+              accessibilityLabel={selecting ? t('fc.cfc_fine') : t('fc.cfc_seleziona')}
+              onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: selecting ? ho.blueSoft : ho.surface2,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <HoIcon name="checksq" color={selecting ? ho.blueInk : ho.text2} size={19} />
+            </Pressable>
           </View>
         ) : null}
 
@@ -812,26 +781,69 @@ export default function FlashcardsScreen() {
             ))}
           </Card>
         ) : (
-          <View style={{ padding: 28, alignItems: 'center', gap: 6 }}>
-            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-              {scope === 'active' ? t('fc.cfc_nessuna_txt') : t('fc.cfc_archivio_vuoto')}
+          <View style={{ paddingTop: 36, paddingBottom: 12, alignItems: 'center', gap: 10 }}>
+            <View
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 22,
+                backgroundColor: ho.blueSoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 6,
+              }}
+            >
+              <HoIcon name="folder" color={ho.blue} size={30} />
+            </View>
+            <Text style={{ color: ho.text, fontWeight: '800', fontSize: 22, letterSpacing: -0.4 }}>
+              {scope === 'active' ? t('vocab.cat_nessuna') : t('fc.cfc_archivio_vuoto')}
             </Text>
-            {scope === 'archived' ? (
-              <Text style={{ color: th.text2, textAlign: 'center' }}>
-                {t('fc.cfc_archivio_vuoto_txt')}
-              </Text>
-            ) : null}
+            <Text style={{ color: ho.text2, textAlign: 'center', fontSize: 15, lineHeight: 21 }}>
+              {scope === 'active' ? t('fc.cfc_nessuna_txt') : t('fc.cfc_archivio_vuoto_txt')}
+            </Text>
           </View>
         )}
 
-        {decks.length ? (
-          <View style={{ gap: 4 }}>
-            <SectionLabel>{t('fc.cfc_carte')}</SectionLabel>
-            <Text style={{ color: th.text2, fontSize: 13 }}>
-              {t('fc.cfc_conteggio', { categorie: decks.length, carte: totalCards })}
-            </Text>
-          </View>
-        ) : null}
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <TextInput
+            testID="fc-new"
+            value={draft}
+            onChangeText={setDraft}
+            placeholder={t('fc.app_nuova_materia')}
+            placeholderTextColor={ho.text3}
+            returnKeyType="done"
+            onSubmitEditing={() => add(null, draft) && setDraft('')}
+            style={{
+              flex: 1,
+              backgroundColor: ho.surface,
+              borderRadius: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 13,
+              color: ho.text,
+              fontSize: 17,
+            }}
+          />
+          <Pressable
+            testID="fc-new-add"
+            accessibilityRole="button"
+            accessibilityLabel={t('vocab.cat_aggiungi')}
+            accessibilityState={{ disabled: !draft.trim() }}
+            disabled={!draft.trim()}
+            onPress={() => add(null, draft) && setDraft('')}
+            style={{
+              width: 50,
+              height: 50,
+              borderRadius: 25,
+              backgroundColor: ho.blue,
+              opacity: draft.trim() ? 1 : 0.45,
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: `0 6px 16px ${ho.blueSoft}`,
+            }}
+          >
+            <HoIcon name="plus" color="#FFFFFF" size={24} sw={2.4} />
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );

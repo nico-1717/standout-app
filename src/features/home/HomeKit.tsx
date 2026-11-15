@@ -137,6 +137,10 @@ const IC: Record<string, string> = {
   undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>',
   bars: '<path d="M3 20h18M6 20V10M10 20V5M14 20v-8M18 20V8"/>',
   back: '<path d="M14.5 6l-6 6 6 6"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  updown: '<path d="M7 10l5-5 5 5M7 14l5 5 5-5"/>',
+  checksq:
+    '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
 };
 export type HoIconName = keyof typeof IC;
 
