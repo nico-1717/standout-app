@@ -118,7 +118,9 @@ describe('Pomodoro screen', () => {
     const { pomodoro, projects } = setup();
     const proj = projects.create({ name: 'Maths' })!;
     const view = await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-dial'));
     await fireEvent.press(screen.getByTestId('dur-pomodoro-50'));
+    await fireEvent.press(screen.getByTestId('dur-confirm'));
     await fireEvent.press(screen.getByTestId('pick-project'));
     await fireEvent.press(screen.getByTestId(`project-pick-${proj}`));
     await fireEvent.press(screen.getByTestId('pomodoro-start'));
@@ -358,14 +360,31 @@ describe('Pomodoro screen', () => {
 
   test('saves a custom duration and deletes it again', async () => {
     const { pomodoro } = setup();
-    await renderIt();
+    const { rerender } = await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-dial'));
     await fireEvent.press(screen.getByTestId('dur-add-pomodoro'));
     await fireEvent.changeText(screen.getByTestId('dur-input'), '40');
     await fireEvent.press(screen.getByTestId('dur-save'));
     expect(pomodoro.presets('pomodoro')).toEqual([25, 40, 50]);
-    await fireEvent.press(screen.getByTestId('dur-manage'));
+    await rerender(
+      <ThemeProvider>
+        <PomodoroScreen />
+      </ThemeProvider>,
+    );
     await fireEvent.press(screen.getByTestId('dur-del-pomodoro-40'));
     expect(pomodoro.presets('pomodoro')).toEqual([25, 50]);
+  });
+
+  test('the project sheet searches, and creates a project on the fly and links it', async () => {
+    const { projects } = setup();
+    projects.create({ name: 'Maths' });
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('pick-project'));
+    await fireEvent.changeText(screen.getByTestId('project-search'), 'zzz');
+    await fireEvent.press(screen.getByTestId('project-create-from-search'));
+    const made = projects.all().find((x) => x.name === 'zzz');
+    expect(made).toBeTruthy();
+    expect(mockChanged).toHaveBeenCalled();
   });
 
   test('the header button switches between ring and hourglass and keeps the choice', async () => {

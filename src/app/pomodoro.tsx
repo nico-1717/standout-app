@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -20,52 +21,16 @@ import {
 import type { PresetKind } from '@/features/pomodoro/repo';
 import { BreakScene } from '@/features/pomodoro/BreakScene';
 import { Hourglass } from '@/features/pomodoro/Hourglass';
+import { Dial } from '@/features/pomodoro/Dial';
+import { DurationSheet } from '@/features/pomodoro/DurationSheet';
 import { RoundButton } from '@/features/pomodoro/RoundButton';
+import { NEUTRAL_ACCENT, withAlpha } from '@/features/pomodoro/colors';
 import { breakTipIndex } from '@/features/pomodoro/breakTips';
 import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
-import { ProjectPicker } from '@/features/projects/ProjectPicker';
+import { ProjectSheet } from '@/features/projects/ProjectSheet';
 import { Avatar } from '@/ui/Avatar';
-import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
-
-const GREY = '#8E8E93';
-
-function Ring({
-  size,
-  pct,
-  color,
-  track,
-  stroke = 11,
-}: {
-  size: number;
-  pct: number;
-  color: string;
-  track: string;
-  stroke?: number;
-}) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const p = Math.max(0, Math.min(1, pct));
-  return (
-    <Svg width={size} height={size}>
-      <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
-      {p > 0 && (
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={`${c} ${c}`}
-          strokeDashoffset={c * (1 - p)}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      )}
-    </Svg>
-  );
-}
+import { Card, PrimaryButton, TextButton } from '@/ui/kit';
 
 /** Parte da solo una volta (dal Piano: «ogni giorno» → Avvia il timer). */
 function AutoStart({ go }: { go: () => void }) {
@@ -84,6 +49,7 @@ export default function PomodoroScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { services, version, changed, pomodoroSettings, updatePomodoroSettings, authState } =
     useApp();
   const userName = authState.status === 'signedIn' ? authState.user.username : '';
@@ -108,9 +74,7 @@ export default function PomodoroScreen() {
     typeof projectParam === 'string' ? projectParam : null,
   );
   const [picking, setPicking] = useState(false);
-  const [adding, setAdding] = useState<PresetKind | null>(null);
-  const [addText, setAddText] = useState('');
-  const [managing, setManaging] = useState(false);
+  const [durOpen, setDurOpen] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [short, setShort] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -157,8 +121,12 @@ export default function PomodoroScreen() {
 
   if (!services || !data) return null;
   const { active, done, notice } = data;
+  const brkLeft = brk
+    ? brk.planned_duration_min * 60 - Math.floor((nowMs - stampMs(brk.start_time)) / 1000)
+    : 0;
+  const brkOver = !!brk && brkLeft <= 0;
   const nameOf = (id: string | null) => data.projects.find((p) => p.uuid === id)?.name ?? null;
-  const colorOf = (id: string | null) => data.projects.find((p) => p.uuid === id)?.color ?? GREY;
+  const colorOf = (id: string | null) => data.projects.find((p) => p.uuid === id)?.color ?? null;
 
   const alarmText = (title: string) => ({
     channel: t('pomodoro.timer'),
@@ -243,18 +211,6 @@ export default function PomodoroScreen() {
     changed();
   };
 
-  const addPreset = () => {
-    if (!adding) return;
-    const m = parseInt(addText, 10);
-    if (Number.isFinite(m) && m >= 1 && m <= 600) {
-      services.pomodoro.savePreset(adding, m);
-      if (adding === 'pomodoro') setMinutes(m);
-      else setBreakMin(m);
-      changed();
-    }
-    setAdding(null);
-    setAddText('');
-  };
   const removePreset = (kind: PresetKind, m: number) => {
     services.pomodoro.removePreset(kind, m);
     if (kind === 'pomodoro' && minutes === m) {
@@ -270,576 +226,333 @@ export default function PomodoroScreen() {
 
   /* ---------------- pezzi ---------------- */
 
-  const Pill = ({
-    label,
-    on,
-    onPress,
-    testID,
-    onLong,
-  }: {
-    label: string;
-    on: boolean;
-    onPress: () => void;
-    testID?: string;
-    onLong?: () => void;
-  }) => (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityState={{ selected: on }}
-      onPress={onPress}
-      onLongPress={onLong}
-      style={{
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-        backgroundColor: on ? th.brand : th.surface2,
-        boxShadow: on ? undefined : `inset 0 0 0 0.5px ${th.hairline}`,
-      }}
-    >
-      <Text style={{ color: on ? '#fff' : th.text, fontWeight: '600' }}>{label}</Text>
-    </Pressable>
-  );
-
-  const durations = (kind: PresetKind, list: number[], value: number, set: (m: number) => void) => {
-    const builtin: readonly number[] = kind === 'pomodoro' ? [25, 50] : [5, 10];
-    return (
-      <View style={{ gap: 10 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-          {list.map((m) => (
-            <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Pill
-                testID={`dur-${kind}-${m}`}
-                label={`${m} min`}
-                on={value === m}
-                onPress={() => set(m)}
-              />
-              {managing && !builtin.includes(m) ? (
-                <Pressable
-                  testID={`dur-del-${kind}-${m}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('comune.chiudi')}
-                  onPress={() => removePreset(kind, m)}
-                  hitSlop={8}
-                >
-                  <Text style={{ color: th.red, fontSize: 18 }}>✕</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ))}
-          <Pill
-            testID={`dur-add-${kind}`}
-            label="+"
-            on={false}
-            onPress={() => {
-              setAdding(kind);
-              setAddText('');
-            }}
-          />
-        </View>
-        {adding === kind ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <TextInput
-              testID="dur-input"
-              value={addText}
-              onChangeText={setAddText}
-              keyboardType="number-pad"
-              placeholder="min"
-              placeholderTextColor={th.text3}
-              autoFocus
-              style={{
-                flex: 1,
-                backgroundColor: th.surface,
-                borderColor: th.hairline2,
-                borderWidth: 1,
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                color: th.text,
-              }}
-            />
-            <TextButton
-              testID="dur-save"
-              label={t('pomodoro.aggiungi_durata')}
-              onPress={addPreset}
-            />
-          </View>
-        ) : null}
-      </View>
-    );
-  };
-
-  const projectLine = (id: string | null) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colorOf(id) }} />
-      <Text style={{ color: th.text2 }}>
-        {nameOf(id) ?? t('pomodoro.nessun_progetto_collegato')}
-      </Text>
-    </View>
-  );
-
+  const dark = th.scheme === 'dark';
   const glassView = pomodoroSettings.last_display_style === 'clessidra';
   const toggleView = () =>
     updatePomodoroSettings({ last_display_style: glassView ? 'cerchio' : 'clessidra' });
 
-  const big = (
-    text: string,
-    pct: number,
-    color: string,
-    sub?: string,
-    opts: {
-      running?: boolean;
-      flip?: boolean;
-      rest?: boolean;
-      chip?: string;
-      onChip?: () => void;
-      chipTestID?: string;
-    } = {},
-  ) => {
-    const label = (
-      <>
+  const state: 'idle' | 'run' | 'pause' | 'break' | 'done' = active
+    ? active.status === 'pausa'
+      ? 'pause'
+      : 'run'
+    : brk
+      ? 'break'
+      : done
+        ? 'done'
+        : 'idle';
+  const shownProject = active ? active.project_uuid : done && !brk ? done.project_uuid : project;
+  const projectColor = colorOf(shownProject);
+  const accent = state === 'break' ? th.teal : (projectColor ?? NEUTRAL_ACCENT[th.scheme]);
+  const lineage = (() => {
+    const own = data.projects.find((p) => p.uuid === shownProject);
+    if (!own) return '';
+    const names: string[] = [];
+    let cur = data.projects.find((p) => p.uuid === own.parent_uuid);
+    let guard = 0;
+    while (cur && guard++ < 12) {
+      names.unshift(cur.name);
+      const up: string | null = cur.parent_uuid;
+      cur = data.projects.find((p) => p.uuid === up);
+    }
+    return names.join(' › ');
+  })();
+
+  const dial = Math.min(Math.round(width * 0.78), 300);
+
+  /** il quadrante: cerchio o clessidra, con il tempo e (se c'è) la pastiglia sotto */
+  const face = (o: {
+    time: string;
+    fraction: number;
+    timeColor?: string;
+    sub?: string;
+    glow: boolean;
+    spark: boolean;
+    flip?: boolean;
+    onPress?: () => void;
+  }) =>
+    glassView ? (
+      <Pressable
+        testID="pomodoro-dial"
+        disabled={!o.onPress}
+        onPress={o.onPress}
+        style={{ alignItems: 'center', gap: 10, marginVertical: 6 }}
+      >
+        <Hourglass
+          fraction={o.fraction}
+          running={state === 'run' || state === 'break'}
+          flip={!!o.flip}
+          color={accent}
+          glass={th.text3}
+        />
         <Text
           testID="pomodoro-clock"
           style={{
-            color: th.text,
-            fontSize: 64,
-            lineHeight: 70,
-            fontWeight: '800',
-            letterSpacing: -2.5,
+            color: o.timeColor ?? th.text,
+            fontSize: 54,
+            lineHeight: 58,
+            fontWeight: '700',
+            letterSpacing: -1.6,
             fontVariant: ['tabular-nums'],
           }}
         >
-          {text}
+          {o.time}
         </Text>
-        {opts.chip ? (
-          <Pressable
-            testID={opts.chipTestID}
-            accessibilityRole={opts.onChip ? 'button' : undefined}
-            disabled={!opts.onChip}
-            onPress={opts.onChip}
+        {o.sub ? (
+          <View
             style={{
-              marginTop: 6,
-              paddingHorizontal: 11,
               paddingVertical: 4,
+              paddingHorizontal: 11,
               borderRadius: 999,
               backgroundColor: th.surface2,
               boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
             }}
           >
-            <Text
-              style={{
-                color: th.text2,
-                fontSize: 13,
-                fontWeight: '700',
-                fontVariant: ['tabular-nums'],
-              }}
-            >
-              {opts.chip}
-            </Text>
-          </Pressable>
+            <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>{o.sub}</Text>
+          </View>
         ) : null}
-      </>
+      </Pressable>
+    ) : (
+      <Dial
+        size={dial}
+        fraction={o.fraction}
+        accent={accent}
+        time={o.time}
+        timeColor={o.timeColor}
+        sub={o.sub}
+        glow={o.glow}
+        spark={o.spark}
+        onPress={o.onPress}
+      />
     );
-    const kicker = sub ? (
-      <Text
-        style={{
-          color: th.text2,
-          fontSize: 13,
-          fontWeight: '700',
-          letterSpacing: 1.3,
-          textTransform: 'uppercase',
-          textAlign: 'center',
-        }}
-      >
-        {sub}
-      </Text>
-    ) : null;
-    if (glassView) {
-      return (
-        <View style={{ alignItems: 'center', marginVertical: 8, gap: 10 }}>
-          {kicker}
-          <Hourglass
-            fraction={opts.rest ? 1 : pct}
-            running={!!opts.running}
-            flip={!!opts.flip}
-            color={color}
-            glass={th.text3}
-          />
-          <View style={{ alignItems: 'center' }}>{label}</View>
-        </View>
-      );
-    }
-    return (
-      <View style={{ alignItems: 'center', marginVertical: 8, gap: 18 }}>
-        {kicker}
-        <View style={{ width: 280, height: 280, alignItems: 'center', justifyContent: 'center' }}>
-          <View
-            style={{
-              position: 'absolute',
-              width: 244,
-              height: 244,
-              borderRadius: 122,
-              backgroundColor: th.surface,
-              boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
-            }}
-          />
-          <Ring size={280} stroke={10} pct={pct} color={color} track={th.hairline} />
-          <View style={{ position: 'absolute', alignItems: 'center' }}>{label}</View>
-        </View>
-      </View>
-    );
-  };
+
+  const statusLabel =
+    state === 'run'
+      ? active?.mode === 1
+        ? t('pomodoro.cronometro_in_corso')
+        : t('pomodoro.concentrazione')
+      : state === 'pause'
+        ? t('pomodoro.sessione_in_pausa')
+        : state === 'break'
+          ? brkOver
+            ? t('pomodoro.pausa_finita')
+            : t('pomodoro.pausa_in_corso')
+          : state === 'done'
+            ? t('pomodoro.completato')
+            : t('pomodoro.pronto');
 
   /* ---------------- le viste ---------------- */
 
-  let body: React.ReactNode;
+  let clockText = clock(minutes * 60);
+  let fraction = 0;
+  let timeColor: string | undefined;
+  let sub: string | undefined;
+  let glow = false;
+  let spark = false;
+  let flip = false;
 
   if (active) {
-    const s = active;
-    const paused = s.status === 'pausa';
-    const secs = elapsedSeconds(s, nowMs);
-    const left = remainingSeconds(s, nowMs);
-    const accent = nameOf(s.project_uuid) ? colorOf(s.project_uuid) : GREY;
-    body = (
-      <View style={{ gap: 14 }}>
-        {big(
-          left !== null ? clock(left) : clock(secs),
-          left !== null && s.planned_duration_min
-            ? 1 - Math.max(0, left) / (s.planned_duration_min * 60)
-            : (secs % 3600) / 3600,
-          accent,
-          paused
-            ? t('pomodoro.sessione_in_pausa')
-            : s.mode === 1
-              ? t('pomodoro.cronometro_in_corso')
-              : t('pomodoro.concentrazione'),
-          { running: !paused, flip: secs < 3 },
-        )}
-        <View style={{ alignItems: 'center' }}>{projectLine(s.project_uuid)}</View>
-        {stopping ? (
-          <Card style={{ padding: 16, gap: 10 }}>
-            {short ? (
-              <>
-                <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-                  {t('pomodoro.molto_breve')}
-                </Text>
-                <Text style={{ color: th.text2 }}>{t('pomodoro.molto_breve_testo')}</Text>
-                <PrimaryButton
-                  testID="short-save"
-                  label={t('pomodoro.si_salva')}
-                  onPress={() => stopNow(s, false, true)}
-                />
-                <TextButton
-                  testID="short-discard"
-                  danger
-                  label={t('pomodoro.scarta')}
-                  onPress={() => discard(s)}
-                />
-                <TextButton label={t('pomodoro.scelta_continua')} onPress={closeStop} />
-              </>
-            ) : discarding ? (
-              <>
-                <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-                  {t('pomodoro.scarta_titolo')}
-                </Text>
-                <Text style={{ color: th.text2 }}>{t('pomodoro.scarta_testo')}</Text>
-                <PrimaryButton
-                  testID="discard-yes"
-                  danger
-                  label={t('pomodoro.scarta_si')}
-                  onPress={() => discard(s)}
-                />
-                <TextButton label={t('pomodoro.scelta_continua')} onPress={closeStop} />
-              </>
-            ) : (
-              <>
-                <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-                  {t('pomodoro.scelta_stop_titolo')}
-                </Text>
-                <Text style={{ color: th.text2 }}>{t('pomodoro.scelta_stop_testo')}</Text>
-                <PrimaryButton
-                  testID="stop-break"
-                  label={`${t('pomodoro.scelta_pausa')} · ${breakMin} min`}
-                  onPress={() => stopNow(s, true)}
-                />
-                <TextButton
-                  testID="stop-end"
-                  label={t('pomodoro.scelta_chiudi')}
-                  onPress={() => stopNow(s, false)}
-                />
-                <TextButton
-                  testID="stop-keep"
-                  label={t('pomodoro.scelta_continua')}
-                  onPress={closeStop}
-                />
-                <TextButton
-                  testID="stop-discard"
-                  danger
-                  label={t('pomodoro.scelta_scarta')}
-                  onPress={() => setDiscarding(true)}
-                />
-              </>
-            )}
-          </Card>
-        ) : (
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
-            {paused ? (
-              <RoundButton
-                kind="play"
-                testID="pomodoro-resume"
-                label={t('pomodoro.riprendi')}
-                onPress={() => resume(s)}
-                large
-              />
-            ) : (
-              <RoundButton
-                kind="pause"
-                testID="pomodoro-pause"
-                label={t('pomodoro.pausa')}
-                onPress={() => pause(s)}
-                large
-              />
-            )}
-            <RoundButton
-              kind="stop"
-              testID="pomodoro-stop"
-              label={t('pomodoro.stop')}
-              onPress={() => setStopping(true)}
-              large
-            />
-          </View>
-        )}
-        <View style={{ alignItems: 'center', gap: 10 }}>
-          <Pressable
-            accessibilityRole="button"
-            testID="change-project"
-            onPress={() => setPicking(!picking)}
-            style={[
-              styles.pill,
-              { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
-            ]}
-          >
-            <Text style={{ color: th.brand, fontWeight: '700' }}>
-              {t('pomodoro.collega_progetto')} ›
-            </Text>
-          </Pressable>
-          {picking ? (
-            <View style={{ alignSelf: 'stretch' }}>
-              <ProjectPicker
-                projects={data.projects}
-                value={s.project_uuid}
-                onPick={(id) => {
-                  services.pomodoro.setProject(s.uuid, id);
-                  setPicking(false);
-                  changed();
-                }}
-              />
-            </View>
-          ) : null}
-        </View>
-      </View>
-    );
+    const secs = elapsedSeconds(active, nowMs);
+    const left = remainingSeconds(active, nowMs);
+    clockText = left !== null ? clock(left) : clock(secs);
+    fraction =
+      left !== null && active.planned_duration_min
+        ? 1 - Math.max(0, left) / (active.planned_duration_min * 60)
+        : (secs % 3600) / 3600;
+    glow = true;
+    spark = state === 'run';
+    flip = secs < 3;
   } else if (brk) {
-    const total = brk.planned_duration_min * 60;
-    const left = total - Math.floor((nowMs - stampMs(brk.start_time)) / 1000);
-    const over = left <= 0;
-    const tip = t(`pomodoro.pausa_consiglio_${breakTipIndex(brk.start_time)}`);
-    body = (
-      <View style={{ gap: 14 }}>
-        <View style={{ alignItems: 'center' }}>
-          <BreakScene color={th.text} accent={th.teal} />
-        </View>
-        {big(
-          clock(Math.max(0, left)),
-          over ? 1 : 1 - left / total,
-          th.teal,
-          over ? t('pomodoro.pausa_finita') : t('pomodoro.pausa_in_corso'),
-          { running: !over },
-        )}
-        {!over ? (
-          <Text testID="break-tip" style={{ color: th.text2, textAlign: 'center' }}>
-            {tip}
-          </Text>
-        ) : null}
-        {over ? (
-          <Text style={{ color: th.text2, textAlign: 'center' }}>
-            {t('pomodoro.torna_al_lavoro')}
-          </Text>
-        ) : null}
-        <PrimaryButton
-          testID="break-end"
-          label={over ? t('pomodoro.pronto_altro') : t('pomodoro.interrompi')}
-          onPress={endBreak}
-        />
-      </View>
-    );
+    clockText = clock(Math.max(0, brkLeft));
+    fraction = brkOver ? 1 : 1 - brkLeft / (brk.planned_duration_min * 60);
+    timeColor = th.teal;
+    glow = true;
+    spark = !brkOver;
   } else if (done) {
-    body = (
-      <View style={{ gap: 14 }}>
-        {big(
-          clock(done.duration_seconds ?? 0),
-          1,
-          colorOf(done.project_uuid),
-          t('pomodoro.concluso'),
-          {
-            rest: true,
-            // il tempo in più, come sul sito: conta da quando il pomodoro è finito; toccarlo lo aggiunge alla sessione
-            chip: `+ ${clock(done.end_time ? Math.max(0, (nowMs - stampMs(done.end_time)) / 1000) : 0)}`,
-            chipTestID: 'done-overtime',
-            onChip: () => {
-              services.pomodoro.extend(done.uuid);
-              changed();
-            },
-          },
-        )}
-        <View style={{ alignItems: 'center', gap: 4 }}>
-          <Text style={{ color: th.text, fontWeight: '700' }}>{t('pomodoro.ottimo_lavoro')}</Text>
-          {nameOf(done.project_uuid) ? (
-            <Text style={{ color: th.text2 }}>
-              {t('pomodoro.hai_completato', { progetto: nameOf(done.project_uuid) })}
-            </Text>
-          ) : null}
-        </View>
-        <Card style={{ padding: 16, gap: 10 }}>
-          <SectionLabel>{t('pomodoro.pausa')}</SectionLabel>
-          {durations('pausa', data.breaks, breakMin, setBreakMin)}
-          <PrimaryButton
-            testID="done-break"
-            label={`${t('pomodoro.scelta_pausa')} · ${breakMin} min`}
-            onPress={() => {
-              services.pomodoro.archive(done.uuid);
-              changed();
-              startBreak(breakMin);
-            }}
-          />
-        </Card>
-        <TextButton
-          testID="done-extend"
-          label={t('pomodoro.scelta_continua')}
-          onPress={() => {
-            services.pomodoro.extend(done.uuid);
-            changed();
-          }}
-        />
-        <TextButton
-          testID="done-close"
-          label={t('pomodoro.scelta_chiudi')}
-          onPress={() => {
-            services.pomodoro.archive(done.uuid);
-            changed();
-          }}
-        />
-      </View>
-    );
+    clockText = clock(done.duration_seconds ?? 0);
+    fraction = 1;
+    timeColor = th.text3;
+    glow = true;
+    spark = true;
   } else {
-    body = (
-      <View style={{ gap: 14 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignSelf: 'center',
-            gap: 4,
-            padding: 3,
-            borderRadius: 14,
-            backgroundColor: th.surface2,
-            boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
-          }}
-        >
-          {([0, 1] as const).map((m) => (
-            <Pressable
-              key={m}
-              testID={`mode-${m}`}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: mode === m }}
-              onPress={() => setMode(m)}
-              style={{
-                minWidth: 112,
-                alignItems: 'center',
-                paddingVertical: 8,
-                paddingHorizontal: 14,
-                borderRadius: 11,
-                backgroundColor: mode === m ? th.surface : 'transparent',
-                boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,.18)' : undefined,
-              }}
-            >
-              <Text
-                style={{ color: mode === m ? th.text : th.text2, fontWeight: '700', fontSize: 15 }}
-              >
-                {m === 0 ? t('pomodoro.timer') : t('pomodoro.cronometro')}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <View style={{ alignItems: 'center', gap: 10 }}>
-          <Pressable
-            accessibilityRole="button"
-            testID="pick-project"
-            onPress={() => setPicking(!picking)}
-            style={[
-              styles.pill,
-              { backgroundColor: th.surface2, boxShadow: `inset 0 0 0 0.5px ${th.hairline}` },
-            ]}
-          >
-            {projectLine(project)}
-          </Pressable>
-          {picking ? (
-            <View style={{ alignSelf: 'stretch' }}>
-              <ProjectPicker
-                projects={data.projects}
-                value={project}
-                onPick={(id) => {
-                  setProject(id);
-                  setPicking(false);
-                }}
-              />
-            </View>
-          ) : null}
-        </View>
-        {big(mode === 0 ? clock(minutes * 60) : '00:00', 0, th.brand, t('pomodoro.pronto'), {
-          rest: true,
-          chip: mode === 0 ? t('pomodoro.pausa_di', { minuti: breakMin }) : undefined,
-        })}
-        {mode === 0 ? (
-          <View style={{ gap: 8, alignItems: 'center' }}>
-            {durations('pomodoro', data.pomos, minutes, setMinutes)}
-            <Pressable
-              testID="dur-manage"
-              accessibilityRole="button"
-              onPress={() => setManaging(!managing)}
-              hitSlop={8}
-            >
-              <Text style={{ color: th.brand, fontWeight: '600', fontSize: 13.5 }}>
-                {t('pomodoro.gestisci')}
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-        <View style={{ alignItems: 'center', marginTop: 4 }}>
-          <RoundButton
-            kind="play"
-            testID="pomodoro-start"
-            label={t('pomodoro.start')}
-            onPress={start}
-            large
-          />
-        </View>
-      </View>
-    );
+    clockText = mode === 0 ? clock(minutes * 60) : '00:00';
+    sub = mode === 0 ? t('pomodoro.pausa_di', { minuti: breakMin }) : undefined;
   }
+
+  const dialPress = state === 'idle' && mode === 0 ? () => setDurOpen(true) : undefined;
+  const tasksTime = clockText;
+
+  const stopCard =
+    active && stopping ? (
+      <Card style={{ padding: 16, gap: 10 }}>
+        {short ? (
+          <>
+            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+              {t('pomodoro.molto_breve')}
+            </Text>
+            <Text style={{ color: th.text2 }}>{t('pomodoro.molto_breve_testo')}</Text>
+            <PrimaryButton
+              testID="short-save"
+              label={t('pomodoro.si_salva')}
+              onPress={() => stopNow(active, false, true)}
+            />
+            <TextButton
+              testID="short-discard"
+              danger
+              label={t('pomodoro.scarta')}
+              onPress={() => discard(active)}
+            />
+            <TextButton label={t('pomodoro.scelta_continua')} onPress={closeStop} />
+          </>
+        ) : discarding ? (
+          <>
+            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+              {t('pomodoro.scarta_titolo')}
+            </Text>
+            <Text style={{ color: th.text2 }}>{t('pomodoro.scarta_testo')}</Text>
+            <PrimaryButton
+              testID="discard-yes"
+              danger
+              label={t('pomodoro.scarta_si')}
+              onPress={() => discard(active)}
+            />
+            <TextButton label={t('pomodoro.scelta_continua')} onPress={closeStop} />
+          </>
+        ) : (
+          <>
+            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+              {t('pomodoro.scelta_stop_titolo')}
+            </Text>
+            <Text style={{ color: th.text2 }}>{t('pomodoro.scelta_stop_testo')}</Text>
+            <PrimaryButton
+              testID="stop-break"
+              label={`${t('pomodoro.scelta_pausa')} · ${breakMin} min`}
+              onPress={() => stopNow(active, true)}
+            />
+            <TextButton
+              testID="stop-end"
+              label={t('pomodoro.scelta_chiudi')}
+              onPress={() => stopNow(active, false)}
+            />
+            <TextButton
+              testID="stop-keep"
+              label={t('pomodoro.scelta_continua')}
+              onPress={closeStop}
+            />
+            <TextButton
+              testID="stop-discard"
+              danger
+              label={t('pomodoro.scelta_scarta')}
+              onPress={() => setDiscarding(true)}
+            />
+          </>
+        )}
+      </Card>
+    ) : null;
+
+  const buttons = active ? (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
+      {state === 'pause' ? (
+        <RoundButton
+          kind="play"
+          testID="pomodoro-resume"
+          label={t('pomodoro.riprendi')}
+          onPress={() => resume(active)}
+          accent={accent}
+        />
+      ) : (
+        <RoundButton
+          kind="pause"
+          testID="pomodoro-pause"
+          label={t('pomodoro.pausa')}
+          onPress={() => pause(active)}
+        />
+      )}
+      <RoundButton
+        kind="stop"
+        testID="pomodoro-stop"
+        label={t('pomodoro.stop')}
+        onPress={() => setStopping(true)}
+      />
+    </View>
+  ) : brk ? (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
+      <RoundButton
+        kind="stop"
+        testID="break-end"
+        label={brkOver ? t('pomodoro.pronto_altro') : t('pomodoro.interrompi')}
+        onPress={endBreak}
+      />
+      <RoundButton
+        kind="play"
+        testID="break-new"
+        label={t('pomodoro.start')}
+        onPress={() => {
+          endBreak();
+          void start();
+        }}
+        accent={NEUTRAL_ACCENT[th.scheme]}
+      />
+    </View>
+  ) : done ? (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
+      <RoundButton
+        kind="check"
+        testID="done-close"
+        label={t('pomodoro.scelta_chiudi')}
+        onPress={() => {
+          services.pomodoro.archive(done.uuid);
+          changed();
+        }}
+      />
+      <RoundButton
+        kind="cup"
+        testID="done-break"
+        label={`${t('pomodoro.scelta_pausa')} · ${breakMin} min`}
+        accent={th.teal}
+        onPress={() => {
+          services.pomodoro.archive(done.uuid);
+          changed();
+          startBreak(breakMin);
+        }}
+      />
+    </View>
+  ) : (
+    <View style={{ alignItems: 'center' }}>
+      <RoundButton
+        kind="play"
+        testID="pomodoro-start"
+        label={t('pomodoro.start')}
+        onPress={start}
+        large
+        accent={accent}
+      />
+    </View>
+  );
+
+  const idle = state === 'idle';
+  const modeShown = active ? active.mode : mode;
+  const wash = dark ? 0.16 : 0.22;
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       {autoParam === '1' && fromPlan && !active && !brk ? (
         <AutoStart go={() => void start()} />
       ) : null}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(accent, wash), withAlpha(accent, 0)]}
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '60%' }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(accent, 0), withAlpha(accent, wash / 2)]}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '40%' }}
+      />
       <View
         style={{
           paddingTop: insets.top + 10,
           paddingBottom: 10,
           paddingHorizontal: 16,
-          backgroundColor: th.headerGlass,
-          borderBottomWidth: 0.5,
-          borderBottomColor: th.hairline,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
@@ -893,45 +606,147 @@ export default function PomodoroScreen() {
           testID="pomodoro-avatar"
         />
       </View>
-      <Pressable
-        testID="pomodoro-view"
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={t('pomodoro.cambia_vista')}
-        accessibilityState={{ selected: glassView }}
-        onPress={toggleView}
-        style={{
-          position: 'absolute',
-          left: 16,
-          top: insets.top + 62,
-          zIndex: 5,
-          width: 38,
-          height: 38,
-          borderRadius: 19,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: th.surface2,
-          boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
-        }}
-      >
-        <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M6 2h12M6 22h12M6 2v3.3c0 .6.24 1.2.66 1.6L12 12l5.34-5.1c.42-.4.66-1 .66-1.6V2M18 22v-3.3c0-.6-.24-1.2-.66-1.6L12 12l-5.34 5.1c-.42.4-.66 1-.66 1.6V22"
-            stroke={glassView ? th.brand : th.text2}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-      </Pressable>
+
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32, gap: 14 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingTop: 6,
+          paddingBottom: insets.bottom + 90,
+          gap: 14,
+        }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={{ width: '100%', flexDirection: 'row', alignItems: 'flex-start' }}>
+          <Pressable
+            testID="pomodoro-view"
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('pomodoro.cambia_vista')}
+            accessibilityState={{ selected: glassView }}
+            onPress={toggleView}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: th.surface2,
+              boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+            }}
+          >
+            <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M6 2h12M6 22h12M6 2v3.3c0 .6.24 1.2.66 1.6L12 12l5.34-5.1c.42-.4.66-1 .66-1.6V2M18 22v-3.3c0-.6-.24-1.2-.66-1.6L12 12l-5.34 5.1c-.42.4-.66 1-.66 1.6V22"
+                stroke={glassView ? accent : th.text2}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </Pressable>
+          <View style={{ flex: 1, alignItems: 'center', gap: 12, marginRight: 38 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 2,
+                padding: 3,
+                borderRadius: 15,
+                backgroundColor: th.surface2,
+                boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+                opacity: idle ? 1 : 0.4,
+              }}
+            >
+              {([0, 1] as const).map((m) => (
+                <Pressable
+                  key={m}
+                  testID={`mode-${m}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: modeShown === m, disabled: !idle }}
+                  disabled={!idle}
+                  onPress={() => setMode(m)}
+                  style={{
+                    minWidth: 104,
+                    alignItems: 'center',
+                    paddingVertical: 9,
+                    paddingHorizontal: 16,
+                    borderRadius: 12,
+                    backgroundColor: modeShown === m ? accent : 'transparent',
+                    boxShadow:
+                      modeShown === m ? `0 4px 12px -4px ${withAlpha(accent, 0.7)}` : undefined,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: modeShown === m ? '#fff' : th.text2,
+                      fontWeight: '700',
+                      fontSize: 14,
+                    }}
+                  >
+                    {m === 0 ? t('pomodoro.timer') : t('pomodoro.cronometro')}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              testID={active ? 'change-project' : 'pick-project'}
+              onPress={() => setPicking(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 9,
+                maxWidth: '100%',
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 999,
+                backgroundColor: projectColor ?? th.surface2,
+                boxShadow: projectColor
+                  ? `0 6px 16px -8px ${withAlpha(projectColor, 0.9)}`
+                  : `inset 0 0 0 0.5px ${th.hairline}`,
+              }}
+            >
+              {projectColor ? null : (
+                <View
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: 5,
+                    backgroundColor: th.text3,
+                  }}
+                />
+              )}
+              <View style={{ flexShrink: 1, alignItems: projectColor ? 'center' : 'flex-start' }}>
+                <Text
+                  numberOfLines={1}
+                  testID="pomodoro-project-name"
+                  style={{
+                    color: projectColor ? '#fff' : th.text2,
+                    fontWeight: projectColor ? '800' : '600',
+                    fontSize: 14.5,
+                  }}
+                >
+                  {nameOf(shownProject) ?? t('pomodoro.nessun_progetto_collegato')}
+                </Text>
+                {projectColor && lineage ? (
+                  <Text
+                    numberOfLines={1}
+                    style={{ color: 'rgba(255,255,255,.78)', fontSize: 10.5, fontWeight: '600' }}
+                  >
+                    {lineage}
+                  </Text>
+                ) : null}
+              </View>
+            </Pressable>
+          </View>
+        </View>
+
         {notice && !active ? (
           <Pressable
             testID="pomodoro-notice"
             accessibilityRole="button"
+            style={{ alignSelf: 'stretch' }}
             onPress={() => {
               services.pomodoro.dismissNotice(notice.uuid);
               changed();
@@ -947,20 +762,145 @@ export default function PomodoroScreen() {
             </Card>
           </Pressable>
         ) : null}
-        {body}
-        {services.tasks ? (
-          <TasksNote
-            repo={services.tasks}
-            project={active ? active.project_uuid : done ? done.project_uuid : project}
-            created={noteTasks}
-            onCreated={(uuid) => setNoteTasks((cur) => [...cur, uuid])}
-            onReset={() => setNoteTasks([])}
-            version={version}
-            changed={changed}
-            finished={!active && done ? done.uuid : null}
-          />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          {idle ? null : (
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
+          )}
+          <Text
+            testID="pomodoro-status"
+            style={{
+              color: th.text2,
+              fontSize: 12,
+              fontWeight: '700',
+              letterSpacing: 1.3,
+              textTransform: 'uppercase',
+            }}
+          >
+            {statusLabel}
+          </Text>
+        </View>
+
+        {face({
+          time: clockText,
+          fraction,
+          timeColor,
+          sub,
+          glow,
+          spark,
+          flip,
+          onPress: dialPress,
+        })}
+
+        {done && !active && !brk ? (
+          <Pressable
+            testID="done-overtime"
+            accessibilityRole="button"
+            onPress={() => {
+              services.pomodoro.extend(done.uuid);
+              changed();
+            }}
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 7,
+              borderRadius: 999,
+              backgroundColor: th.surface2,
+              boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
+            }}
+          >
+            <Text
+              style={{
+                color: th.text2,
+                fontSize: 14,
+                fontWeight: '700',
+                fontVariant: ['tabular-nums'],
+              }}
+            >
+              {`+ ${clock(done.end_time ? Math.max(0, (nowMs - stampMs(done.end_time)) / 1000) : 0)}`}
+            </Text>
+          </Pressable>
         ) : null}
+
+        {brk ? (
+          <View style={{ alignItems: 'center', gap: 8 }}>
+            <BreakScene color={th.text} accent={th.teal} />
+            {!brkOver ? (
+              <Text testID="break-tip" style={{ color: th.text2, textAlign: 'center' }}>
+                {t(`pomodoro.pausa_consiglio_${breakTipIndex(brk.start_time)}`)}
+              </Text>
+            ) : (
+              <Text style={{ color: th.text2, textAlign: 'center' }}>
+                {t('pomodoro.torna_al_lavoro')}
+              </Text>
+            )}
+          </View>
+        ) : null}
+
+        {stopCard ?? buttons}
       </ScrollView>
+
+      {services.tasks ? (
+        <TasksNote
+          repo={services.tasks}
+          project={shownProject}
+          created={noteTasks}
+          onCreated={(uuid) => setNoteTasks((cur) => [...cur, uuid])}
+          onReset={() => setNoteTasks([])}
+          version={version}
+          changed={changed}
+          finished={!active && done ? done.uuid : null}
+          time={tasksTime}
+          fraction={fraction}
+          accent={accent}
+          bottom={insets.bottom + 16}
+        />
+      ) : null}
+
+      <ProjectSheet
+        visible={picking}
+        projects={data.projects}
+        value={shownProject}
+        onClose={() => setPicking(false)}
+        onPick={(id) => {
+          if (active) services.pomodoro.setProject(active.uuid, id);
+          else setProject(id);
+          setPicking(false);
+          changed();
+        }}
+        onCreate={(name) => {
+          const id = services.projects.create({ name });
+          if (id) changed();
+          return id;
+        }}
+      />
+
+      {durOpen ? (
+        <DurationSheet
+          visible
+          accent={accent}
+          teal={th.teal}
+          pomos={data.pomos}
+          breaks={data.breaks}
+          pomoValue={minutes}
+          breakValue={breakMin}
+          showPomodoro={mode === 0}
+          onClose={() => setDurOpen(false)}
+          onConfirm={(pomo, pausa) => {
+            setMinutes(pomo);
+            setBreakMin(pausa);
+            updatePomodoroSettings({
+              last_pomodoro_duration_min: pomo,
+              last_break_duration_min: pausa,
+            });
+            setDurOpen(false);
+          }}
+          onSave={(kind, m) => {
+            services.pomodoro.savePreset(kind, m);
+            changed();
+          }}
+          onRemove={removePreset}
+        />
+      ) : null}
     </View>
   );
 }

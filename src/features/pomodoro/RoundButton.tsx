@@ -1,26 +1,40 @@
-import { Pressable } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Pressable, View } from 'react-native';
+import Svg, { Path, Rect } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
-/** I tasti tondi del sito (.pomo-btn-icon): un simbolo, nessuna parola (la parola sta nell'etichetta per il lettore di schermo). */
+import { withAlpha } from './colors';
+
+export type RoundKind = 'play' | 'pause' | 'stop' | 'check' | 'cup';
+
+/**
+ * I tasti tondi del sito (.pomo-btn-icon): un simbolo, nessuna parola (la parola sta nell'etichetta per il lettore di
+ * schermo). «play» e «cup» si tingono dell'accento (colore del progetto, o la pausa in teal); «stop» e «check» sono rossi.
+ */
 export function RoundButton({
   kind,
   testID,
   label,
   onPress,
   large = false,
+  accent,
 }: {
-  kind: 'play' | 'pause' | 'stop';
+  kind: RoundKind;
   testID: string;
   label: string;
   onPress: () => void;
   large?: boolean;
+  /** il colore del tasto «pieno» (play, tazza); senza, il colore del tema */
+  accent?: string;
 }) {
   const th = useTheme();
-  const size = large ? 76 : 62;
-  const fill = kind === 'play' ? th.brand : kind === 'stop' ? th.redSoft : th.surface2;
-  const ink = kind === 'play' ? '#FFFFFF' : kind === 'stop' ? th.red : th.text;
+  const size = large ? 76 : 60;
+  const color = accent ?? th.brand;
+  const filled = kind === 'play' || kind === 'cup';
+  const fill = filled ? color : kind === 'stop' || kind === 'check' ? th.redSoft : th.surface2;
+  const ink = filled ? '#FFFFFF' : kind === 'stop' || kind === 'check' ? th.red : th.text;
+  const icon = large ? 32 : 26;
   return (
     <Pressable
       testID={testID}
@@ -33,23 +47,70 @@ export function RoundButton({
         borderRadius: size / 2,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
         backgroundColor: fill,
-        boxShadow:
-          kind === 'play' ? `0 12px 26px -12px ${th.brand}` : `inset 0 0 0 0.5px ${th.hairline}`,
+        boxShadow: filled
+          ? `inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(0,0,0,.16), 0 ${large ? 12 : 10}px ${large ? 28 : 24}px -10px ${withAlpha(color, 0.9)}`
+          : kind === 'pause'
+            ? `inset 0 0 0 0.5px ${th.hairline}`
+            : `inset 0 0 0 0.5px ${withAlpha(th.red, 0.22)}`,
         transform: [{ scale: pressed ? 0.94 : 1 }],
       })}
     >
-      <Svg width={large ? 30 : 24} height={large ? 30 : 24} viewBox="0 0 24 24">
+      {kind === 'play' && large ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -size * 0.5,
+            left: size * 0.12,
+            width: size * 0.3,
+            height: size * 2,
+            transform: [{ rotate: '20deg' }],
+          }}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,.34)', 'rgba(255,255,255,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1 }}
+          />
+        </View>
+      ) : null}
+      <Svg width={icon} height={icon} viewBox="0 0 24 24">
         {kind === 'play' ? (
           <Path
             d="M8.4 5.2a1 1 0 0 1 1.53-.85l8.2 5.15a1 1 0 0 1 0 1.7l-8.2 5.15a1 1 0 0 1-1.53-.85z"
             fill={ink}
-            transform="translate(-0.6 1)"
+            transform="translate(-1.2 1)"
           />
         ) : kind === 'pause' ? (
-          <Path d="M8 5v14M16 5v14" stroke={ink} strokeWidth={3.2} strokeLinecap="round" />
+          <>
+            <Rect x={6.5} y={5} width={4} height={14} rx={1.6} fill={ink} />
+            <Rect x={13.5} y={5} width={4} height={14} rx={1.6} fill={ink} />
+          </>
+        ) : kind === 'check' ? (
+          <Path
+            d="M5 12.5l4.5 4.5L19 7.5"
+            stroke={ink}
+            strokeWidth={2.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        ) : kind === 'cup' ? (
+          <>
+            <Path
+              d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 10.5h2.2a2.4 2.4 0 0 1 0 4.8H16M8 2.5v2.6M12 2.5v2.6"
+              stroke={ink}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </>
         ) : (
-          <Path d="M7 7h10v10H7z" fill={ink} stroke={ink} strokeWidth={2} strokeLinejoin="round" />
+          <Rect x={6} y={6} width={12} height={12} rx={2.4} fill={ink} />
         )}
       </Svg>
     </Pressable>
