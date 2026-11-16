@@ -131,7 +131,8 @@ export default function PomodoroScreen() {
   }, [services, version]);
 
   const brk = pomodoroSettings.current_break;
-  const live = !!data?.active || !!brk;
+  /* anche a pomodoro finito il tempo scorre: è il «tempo in più» che il sito conta sotto il quadrante */
+  const live = !!data?.active || !!brk || !!data?.done;
 
   const onTick = useCallback(
     (nowMs: number) => {
@@ -386,7 +387,14 @@ export default function PomodoroScreen() {
     pct: number,
     color: string,
     sub?: string,
-    opts: { running?: boolean; flip?: boolean; rest?: boolean; chip?: string } = {},
+    opts: {
+      running?: boolean;
+      flip?: boolean;
+      rest?: boolean;
+      chip?: string;
+      onChip?: () => void;
+      chipTestID?: string;
+    } = {},
   ) => {
     const label = (
       <>
@@ -404,7 +412,11 @@ export default function PomodoroScreen() {
           {text}
         </Text>
         {opts.chip ? (
-          <View
+          <Pressable
+            testID={opts.chipTestID}
+            accessibilityRole={opts.onChip ? 'button' : undefined}
+            disabled={!opts.onChip}
+            onPress={opts.onChip}
             style={{
               marginTop: 6,
               paddingHorizontal: 11,
@@ -414,8 +426,17 @@ export default function PomodoroScreen() {
               boxShadow: `inset 0 0 0 0.5px ${th.hairline}`,
             }}
           >
-            <Text style={{ color: th.text2, fontSize: 13, fontWeight: '700' }}>{opts.chip}</Text>
-          </View>
+            <Text
+              style={{
+                color: th.text2,
+                fontSize: 13,
+                fontWeight: '700',
+                fontVariant: ['tabular-nums'],
+              }}
+            >
+              {opts.chip}
+            </Text>
+          </Pressable>
         ) : null}
       </>
     );
@@ -660,7 +681,16 @@ export default function PomodoroScreen() {
           1,
           colorOf(done.project_uuid),
           t('pomodoro.concluso'),
-          { rest: true },
+          {
+            rest: true,
+            // il tempo in più, come sul sito: conta da quando il pomodoro è finito; toccarlo lo aggiunge alla sessione
+            chip: `+ ${clock(done.end_time ? Math.max(0, (nowMs - stampMs(done.end_time)) / 1000) : 0)}`,
+            chipTestID: 'done-overtime',
+            onChip: () => {
+              services.pomodoro.extend(done.uuid);
+              changed();
+            },
+          },
         )}
         <View style={{ alignItems: 'center', gap: 4 }}>
           <Text style={{ color: th.text, fontWeight: '700' }}>{t('pomodoro.ottimo_lavoro')}</Text>

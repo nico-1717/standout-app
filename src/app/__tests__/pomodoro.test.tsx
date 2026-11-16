@@ -85,6 +85,26 @@ describe('Pomodoro screen', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ last_mode: 0, last_pomodoro_duration_min: 10 });
   });
 
+  test('a finished pomodoro shows the extra time counting up, and tapping it adds it to the session', async () => {
+    const { db, pomodoro } = setup();
+    const id = pomodoro.start({ mode: 0, plannedMin: 25 })!;
+    // iniziato 30 minuti fa: il tempo previsto è finito da 5 minuti
+    db.run('UPDATE pomodoro_sessions SET start_time = ? WHERE uuid = ?', [
+      stamp(new Date(Date.now() - 30 * 60 * 1000)),
+      id,
+    ]);
+    expect(pomodoro.complete(id)).toBe(true);
+    await renderIt();
+    const chip = screen.getByTestId('done-overtime');
+    expect(chip).toHaveTextContent(/^\+ 0[45]:\d\d$/);
+    const before = pomodoro.lastCompleted()!.duration_seconds ?? 0;
+    expect(before).toBe(25 * 60);
+    fireEvent.press(chip);
+    const after = pomodoro.lastCompleted()!.duration_seconds ?? 0;
+    expect(after).toBeGreaterThanOrEqual(before + 4 * 60);
+    expect(mockChanged).toHaveBeenCalled();
+  });
+
   test('coming from the Plan with only min, the length is set but nothing starts', async () => {
     const { pomodoro, projects } = setup();
     const a = projects.create({ name: 'Analisi' })!;
