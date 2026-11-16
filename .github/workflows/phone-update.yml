@@ -2,8 +2,8 @@ name: Phone update
 # Runs by itself after CI passes on main (and by hand: Actions > "Phone update" > Run workflow).
 #  1. Sends the new app code to the phones over the air (EAS Update): it arrives the next time the app is opened.
 #  2. If something NATIVE changed (a new library, a new permission, the Expo version) an over-the-air update cannot
-#     carry it: then it also starts a new iOS build and sends it to TestFlight. At most one automatic build every
-#     6 hours, so a mistake can never burn through the build quota.
+#     carry it: then it also starts a new iOS build and sends it to TestFlight. At most one automatic build per day, and none at all when it cannot tell which build is installed,
+#     so a mistake can never burn through the build quota.
 # Needs one repository secret: EXPO_TOKEN (Expo > Account settings > Access tokens).
 on:
   workflow_run:
@@ -51,21 +51,29 @@ jobs:
           CURRENT="$(npx expo-updates runtimeversion:resolve --platform ios | jq -r .runtimeVersion)"
           echo "Runtime of this code: $CURRENT"
           eas build:list --platform ios --build-profile production --limit 15 --json --non-interactive > builds.json
-          LAST="$(jq -r '[.[] | select((.status|ascii_upcase) as $s | ["FINISHED","IN_QUEUE","IN_PROGRESS","NEW"] | index($s))][0].runtimeVersion // ""' builds.json)"
+          echo "Newest build (for the log):"
+          jq -c '.[0] | {status, runtimeVersion, createdAt, appBuildVersion}' builds.json || true
+          # The runtime of the newest build that exists and has not failed.
+          LAST="$(jq -r '[.[] | select((.status|ascii_upcase) as $s | ["FINISHED","IN_QUEUE","IN_PROGRESS","NEW"] | index($s)) | select((.runtimeVersion // "") != "")][0].runtimeVersion // ""' builds.json)"
           echo "Runtime of the latest build: ${LAST:-none}"
-          # Only builds that already contain the update system count (older ones have no runtime version).
-          RECENT="$(jq -r --arg since "$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ)" '[.[] | select(.createdAt > $since and (.runtimeVersion // "") != "")] | length' builds.json)"
-          echo "Builds with the update system in the last 6 hours: $RECENT"
-          if [ "$CURRENT" = "$LAST" ]; then
+          # Any build (with or without a runtime) started in the last 24 hours: never start another one on top of it.
+          RECENT="$(jq -r --arg since "$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)" '[.[] | select(.createdAt > $since and ((.status|ascii_upcase) as $s | ["FINISHED","IN_QUEUE","IN_PROGRESS","NEW"] | index($s)))] | length' builds.json)"
+          echo "Builds in the last 24 hours: $RECENT"
+          if [ -z "$LAST" ]; then
+            # Not knowing what is installed is NOT a reason to build (that burned the whole free quota once).
+            echo "need=wait" >> "$GITHUB_OUTPUT"
+            echo "::warning::Cannot tell the runtime of the latest build: no automatic build. Start one by hand if the native part really changed."
+          elif [ "$CURRENT" = "$LAST" ]; then
             echo "need=no" >> "$GITHUB_OUTPUT"
             echo "Same native part: the over-the-air update is enough."
           elif [ "$RECENT" != "0" ]; then
             echo "need=wait" >> "$GITHUB_OUTPUT"
-            echo "::warning::The native part changed but a build was already started in the last 6 hours: not starting another one."
+            echo "::warning::The native part changed but a build was already started in the last 24 hours: not starting another one."
           else
             echo "need=yes" >> "$GITHUB_OUTPUT"
             echo "The native part changed: starting a new build."
           fi
       - name: New build to TestFlight
         if: steps.native.outputs.need == 'yes'
+        continue-on-error: true
         run: eas build --platform ios --profile production --non-interactive --no-wait --auto-submit
