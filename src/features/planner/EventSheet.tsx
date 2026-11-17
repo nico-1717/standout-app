@@ -207,6 +207,8 @@ export function EventSheet(p: {
   categories: Category[];
   /** i progetti a cui si può collegare l'evento */
   projects?: Project[];
+  /** crea un progetto al volo dal selettore (restituisce il suo uuid) */
+  onCreateProject?: (name: string) => string | null;
   target: SheetTarget;
   onClose: () => void;
   /** dopo una modifica: la schermata rilegge */
@@ -1123,6 +1125,7 @@ export function EventSheet(p: {
         <ProjectSheet
           pt={pt}
           projects={projects}
+          onCreate={p.onCreateProject}
           value={f.project}
           onClose={() => setSubSheet(null)}
           onPick={(uuid) => {

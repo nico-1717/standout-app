@@ -14,6 +14,7 @@ export function TaskProjectSheet({
   value,
   onPick,
   onClose,
+  onCreate,
 }: {
   visible: boolean;
   projects: Project[];
@@ -21,6 +22,8 @@ export function TaskProjectSheet({
   /** null = nessun progetto */
   onPick: (uuid: string | null) => void;
   onClose: () => void;
+  /** crea un progetto al volo (il «Nuovo progetto» del selettore del sito) */
+  onCreate?: (name: string) => string | null;
 }) {
   const app = useTheme();
   const { t } = useTranslation();
@@ -33,7 +36,7 @@ export function TaskProjectSheet({
       onClose={onClose}
       testID="task-project-sheet"
     >
-      <ProjectPicker projects={projects} value={value} onPick={onPick} />
+      <ProjectPicker projects={projects} value={value} onPick={onPick} onCreate={onCreate} />
     </Sheet>
   );
 }

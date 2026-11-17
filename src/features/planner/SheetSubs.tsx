@@ -51,12 +51,15 @@ export function ProjectSheet({
   value,
   onPick,
   onClose,
+  onCreate,
 }: {
   pt: PlannerTheme;
   projects: Project[];
   value: string | null;
   onPick: (uuid: string | null) => void;
   onClose: () => void;
+  /** crea un progetto al volo (il «Nuovo progetto» del selettore del sito) */
+  onCreate?: (name: string) => string | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -74,7 +77,7 @@ export function ProjectSheet({
       }
     >
       <View style={{ paddingHorizontal: 14, paddingBottom: 20 }}>
-        <ProjectPicker projects={projects} value={value} onPick={onPick} />
+        <ProjectPicker projects={projects} value={value} onPick={onPick} onCreate={onCreate} />
       </View>
     </SheetPanel>
   );

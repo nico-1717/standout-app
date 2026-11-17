@@ -787,6 +787,11 @@ export default function PlannerScreen() {
           calendars={calendars}
           categories={categories}
           projects={sheetProjects}
+          onCreateProject={(name) => {
+            const id = services?.projects.create({ name }) ?? null;
+            if (id) changed();
+            return id;
+          }}
           target={sheet.target}
           onClose={() => setSheet(null)}
           onChanged={changed}

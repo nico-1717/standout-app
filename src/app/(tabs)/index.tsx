@@ -460,6 +460,11 @@ export default function TodoScreen() {
       <TaskProjectSheet
         visible={projectFor !== null || projectBulk}
         projects={projects}
+        onCreate={(name) => {
+          const id = services?.projects.create({ name }) ?? null;
+          if (id) changed();
+          return id;
+        }}
         value={projectFor ? (byUuid.get(projectFor)?.project_uuid ?? null) : null}
         onClose={() => {
           setProjectFor(null);
