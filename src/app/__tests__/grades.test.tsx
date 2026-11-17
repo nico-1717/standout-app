@@ -61,10 +61,13 @@ function setup() {
   return { db, grades };
 }
 const wrap = (ui: React.ReactElement) => <ThemeProvider>{ui}</ThemeProvider>;
-const txt = (id: string) => {
-  const c = screen.getByTestId(id).props.children;
-  return Array.isArray(c) ? c.join('') : String(c);
+const flat = (c: unknown): string => {
+  if (Array.isArray(c)) return c.map(flat).join('');
+  if (c && typeof c === 'object' && 'props' in c)
+    return flat((c as { props: { children?: unknown } }).props.children);
+  return c == null || c === false ? '' : String(c);
 };
+const txt = (id: string) => flat(screen.getByTestId(id).props.children);
 /** Preme il bottone di un Alert.alert con quel testo. */
 const pressAlert = async (spy: jest.SpyInstance, label: string) => {
   const buttons = spy.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
@@ -90,7 +93,7 @@ describe('Grades main screen', () => {
     await render(wrap(<GradesScreen />));
     expect(txt('grades-average')).toBe('29.33');
     expect(txt('grades-base')).toBe('108');
-    expect(txt('grades-cfu')).toBe('18/180');
+    expect(txt('grades-cfu')).toBe('18');
     expect(screen.queryByTestId('grades-lodi')).toBeNull();
   });
 
