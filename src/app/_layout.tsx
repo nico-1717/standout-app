@@ -19,6 +19,12 @@ import { AppProvider, useApp } from '@/core/app/AppProvider';
 import { AppLock } from '@/core/lock/AppLock';
 import { useAutoUpdate } from '@/core/updates/autoUpdate';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
+import { ScreenError } from '@/ui/ScreenError';
+
+/** Se una schermata si rompe, l'app resta aperta e dice l'errore (invece di chiudersi). */
+export function ErrorBoundary(p: { error: Error; retry: () => unknown }) {
+  return <ScreenError error={p.error} retry={p.retry} />;
+}
 
 /** Chi vede quale schermata: fuori → login; dentro ma senza testi accettati → terms; poi le schede. */
 function Shell() {

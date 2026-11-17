@@ -11,7 +11,7 @@ import { TasksRepo } from '@/features/tasks/repo';
 import { upsertRow } from '@/core/sync/rows';
 import { stamp } from '@/features/pomodoro/logic';
 
-import PomodoroScreen from '../(tabs)/pomodoro';
+import PomodoroScreen, { ErrorBoundary as PomodoroBoundary } from '../(tabs)/pomodoro';
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -74,6 +74,11 @@ describe('Pomodoro screen', () => {
     jest.useFakeTimers({ doNotFake: ['Date'] });
   });
   afterEach(() => jest.useRealTimers());
+
+  test('the Pomodoro route shows its own error screen instead of closing the app', async () => {
+    await render(<PomodoroBoundary error={new Error('x')} retry={() => undefined} />);
+    expect(screen.getByTestId('screen-error')).toBeTruthy();
+  });
 
   test('coming from the Plan with min and auto, a timer of that length starts by itself, once', async () => {
     const { pomodoro, projects } = setup();

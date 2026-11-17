@@ -82,7 +82,7 @@ export function TasksNote(p: {
   const ink = dark ? '#EAE6DE' : '#262523';
   const soft = dark ? '#9A958C' : '#8A8177';
   const shown = open || asking;
-  const pct = Math.max(0, Math.min(1, p.fraction));
+  const pct = Number.isFinite(p.fraction) ? Math.max(0, Math.min(1, p.fraction)) : 0;
 
   return (
     <>

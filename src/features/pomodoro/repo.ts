@@ -18,6 +18,24 @@ import {
 const COLS =
   'uuid, mode, start_time, end_time, status, resume_time, duration_seconds, planned_duration_min, project_uuid, is_manual';
 
+const num = (v: unknown, dflt: number): number => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : dflt;
+};
+
+/** Una riga arrivata dal server (il sito scrive NULL, stringhe, zeri) resa sicura: mai un NaN che arrivi a uno schermo. */
+function clean(r: Session | undefined): Session | null {
+  if (!r) return null;
+  const planned = r.planned_duration_min === null ? null : num(r.planned_duration_min, 0);
+  return {
+    ...r,
+    mode: num(r.mode, 0) === 1 ? 1 : 0,
+    duration_seconds: Math.max(0, num(r.duration_seconds, 0)),
+    planned_duration_min: planned !== null && planned > 0 ? planned : null,
+    is_manual: num(r.is_manual, 0),
+  };
+}
+
 export type PresetKind = 'pomodoro' | 'pausa';
 
 /** I filtri dello storico: progetto (uuid, 'none' = senza), un gruppo di progetti, periodo, durata minima, ordine. */
@@ -72,26 +90,27 @@ export class PomodoroRepo {
   /* ---------------- lettura ---------------- */
 
   get(uuid: string): Session | null {
-    return (
-      this.db.all<Session>(`SELECT ${COLS} FROM pomodoro_sessions WHERE uuid = ?`, [uuid])[0] ??
-      null
+    return clean(
+      this.db.all<Session>(`SELECT ${COLS} FROM pomodoro_sessions WHERE uuid = ?`, [uuid])[0],
     );
   }
 
   /** La sessione aperta (la più recente se per errore ce ne fossero due). */
   active(): Session | null {
-    return (
+    return clean(
       this.db.all<Session>(
         `SELECT ${COLS} FROM pomodoro_sessions WHERE end_time IS NULL ORDER BY start_time DESC LIMIT 1`,
-      )[0] ?? null
+      )[0],
     );
   }
 
   /** L'ultima sessione, se è finita da sola («completato»): è quella che si può estendere o archiviare. */
   lastCompleted(): Session | null {
-    const last = this.db.all<Session>(
-      `SELECT ${COLS} FROM pomodoro_sessions ORDER BY start_time DESC, uuid DESC LIMIT 1`,
-    )[0];
+    const last = clean(
+      this.db.all<Session>(
+        `SELECT ${COLS} FROM pomodoro_sessions ORDER BY start_time DESC, uuid DESC LIMIT 1`,
+      )[0],
+    );
     return last && last.status === 'completato' ? last : null;
   }
 

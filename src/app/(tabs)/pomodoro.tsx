@@ -32,6 +32,7 @@ import { useTicker } from '@/features/pomodoro/useTicker';
 import { ProjectSheet } from '@/features/projects/ProjectSheet';
 import { Avatar } from '@/ui/Avatar';
 import { Card, titleStyle } from '@/ui/kit';
+import { ScreenError } from '@/ui/ScreenError';
 
 /** Parte da solo una volta (dal Piano: «ogni giorno» → Avvia il timer). */
 function AutoStart({ go }: { go: () => void }) {
@@ -45,6 +46,11 @@ function AutoStart({ go }: { go: () => void }) {
 }
 
 /** Il Pomodoro: timer a tempo o cronometro, pausa, progetto, e la pausa dopo lo studio (pomodoro.php). */
+/** Se la pagina si rompe, mostra l'errore invece di chiudere l'app. */
+export function ErrorBoundary(p: { error: Error; retry: () => unknown }) {
+  return <ScreenError error={p.error} retry={p.retry} />;
+}
+
 export default function PomodoroScreen() {
   const th = useTheme();
   const { t } = useTranslation();
@@ -400,6 +406,8 @@ export default function PomodoroScreen() {
     clockText = mode === 0 ? clock(minutes * 60) : '00:00';
     sub = mode === 0 ? t('pomodoro.pausa_di', { minuti: breakMin }) : undefined;
   }
+
+  fraction = Number.isFinite(fraction) ? Math.max(0, Math.min(1, fraction)) : 0;
 
   const dialPress = state === 'idle' && mode === 0 ? () => setDurOpen(true) : undefined;
   const tasksTime = clockText;

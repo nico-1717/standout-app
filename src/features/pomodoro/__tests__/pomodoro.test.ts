@@ -1,6 +1,7 @@
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
 import { nextBatch } from '@/core/sync/outbox';
+import { upsertRow } from '@/core/sync/rows';
 import { pomodoroPresetUuid } from '@/core/sync/uuid5';
 
 import {
@@ -468,5 +469,30 @@ describe('history', () => {
     // oggi vuoto: la serie parte da ieri
     expect(repo.insights('2030-03-02').streak).toBe(3);
     expect(repo.insights('2030-03-05').streak).toBe(0);
+  });
+});
+describe('rows written by the website', () => {
+  test('NULLs, strings and zeros never reach the screen as NaN', () => {
+    const db = memoryDb();
+    migrate(db);
+    upsertRow(db, 'pomodoro_sessions', {
+      uuid: 'w',
+      mode: '1',
+      start_time: '2026-11-17 21:30:00',
+      end_time: null,
+      status: null,
+      resume_time: null,
+      duration_seconds: null,
+      planned_duration_min: '0',
+      project_uuid: null,
+      is_manual: null,
+    } as never);
+    const s = new PomodoroRepo(db, 1).active()!;
+    expect(s).toMatchObject({
+      mode: 1,
+      planned_duration_min: null,
+      duration_seconds: 0,
+      is_manual: 0,
+    });
   });
 });
