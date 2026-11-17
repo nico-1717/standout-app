@@ -15,4 +15,5 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
       - run: eas build:list --platform ios --limit 12 --json --non-interactive | jq -r '.[]|[.createdAt,.status,.buildProfile,(.error.message // "")]|@tsv'
