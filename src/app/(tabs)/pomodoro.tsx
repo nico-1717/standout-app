@@ -121,9 +121,11 @@ export default function PomodoroScreen() {
 
   if (!services || !data) return null;
   const { active, done, notice } = data;
-  const brkLeft = brk
+  const brkRaw = brk
     ? brk.planned_duration_min * 60 - Math.floor((nowMs - stampMs(brk.start_time)) / 1000)
     : 0;
+  // una pausa con l'ora illeggibile conta come già finita, non come un numero non valido
+  const brkLeft = Number.isFinite(brkRaw) ? brkRaw : 0;
   const brkOver = !!brk && brkLeft <= 0;
   const nameOf = (id: string | null) => data.projects.find((p) => p.uuid === id)?.name ?? null;
   const colorOf = (id: string | null) => data.projects.find((p) => p.uuid === id)?.color ?? null;

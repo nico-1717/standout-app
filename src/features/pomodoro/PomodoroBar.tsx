@@ -50,7 +50,8 @@ export function PomodoroBar() {
         ? 1 - Math.max(0, left) / (active.planned_duration_min * 60)
         : (elapsedSeconds(active, now) % 3600) / 3600;
   } else if (brk) {
-    const left = brk.planned_duration_min * 60 - Math.floor((now - stampMs(brk.start_time)) / 1000);
+    const raw = brk.planned_duration_min * 60 - Math.floor((now - stampMs(brk.start_time)) / 1000);
+    const left = Number.isFinite(raw) ? raw : 0;
     text = clock(Math.max(0, left));
     label = left <= 0 ? t('pomodoro.pausa_finita') : t('pomodoro.pausa_in_corso');
     dot = th.teal;
@@ -85,7 +86,7 @@ export function PomodoroBar() {
           left: 0,
           bottom: 0,
           height: 2.5,
-          width: `${(Math.max(0, Math.min(1, fraction)) * 100).toFixed(2)}%`,
+          width: `${((Number.isFinite(fraction) ? Math.max(0, Math.min(1, fraction)) : 0) * 100).toFixed(2)}%`,
           backgroundColor: dot,
           borderTopRightRadius: 2,
           borderBottomRightRadius: 2,

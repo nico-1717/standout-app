@@ -345,6 +345,17 @@ describe('Pomodoro screen', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ current_break: null });
   });
 
+  test('a break with an unreadable start time counts as over and never shows a NaN', async () => {
+    setup();
+    mockSettings = {
+      ...DEFAULT_POMODORO_SETTINGS,
+      current_break: { start_time: 'oggi', planned_duration_min: 5, project_uuid: null },
+    };
+    await renderIt();
+    expect(screen.getByTestId('pomodoro-clock').props.children).toBe('00:00');
+    expect(screen.getByTestId('pomodoro-status').props.children).not.toMatch(/NaN/);
+  });
+
   test('a break shows the drawing and one short tip; when it is over the tip goes away', async () => {
     setup();
     mockSettings = {

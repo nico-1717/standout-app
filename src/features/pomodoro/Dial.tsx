@@ -29,7 +29,8 @@ export function Dial(p: {
 }) {
   const th = useTheme();
   const S = p.size;
-  const pct = Math.max(0, Math.min(1, p.fraction));
+  // mai un NaN verso il disegno nativo: un numero non valido farebbe cadere l'app
+  const pct = Number.isFinite(p.fraction) ? Math.max(0, Math.min(1, p.fraction)) : 0;
   const faceInset = S * 0.095;
   const face = S - faceInset * 2;
   const angle = pct * 360 - 90;

@@ -123,7 +123,7 @@ export function Hourglass({
   testID?: string;
 }) {
   const still = useReducedMotion();
-  const clamped = Math.max(0, Math.min(1, fraction));
+  const clamped = Number.isFinite(fraction) ? Math.max(0, Math.min(1, fraction)) : 0;
   /** quanta sabbia c'è ancora sopra (1 = piena) */
   const fill = useSharedValue(flip && !still ? 0 : 1 - clamped);
   const flowing = useSharedValue(running ? 1 : 0);
