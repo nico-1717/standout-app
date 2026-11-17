@@ -1,18 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
-import { PjIcon } from './PjIcons';
-
-/** Larghezza di ogni tasto (.swipe-btn del sito: 72). */
+/** Larghezza di ogni tasto (.swipe-btn del sito: 72 nei Progetti, 76 nei Voti). */
 const BTN = 72;
-export const SWIPE_WIDTH = BTN * 3;
-const BLUE = '#007AFF';
-const PURPLE = '#AF52DE';
 
 interface Cfg {
+  /** quanto si scopre: la somma dei tasti */
+  width: number;
   open: boolean;
   disabled: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,16 +33,16 @@ class SwipeOpen {
       onMoveShouldSetPanResponder: (_e, g) =>
         !this.cfg.disabled && Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy) * 1.15,
       onPanResponderGrant: () => {
-        this.base = this.cfg.open ? SWIPE_WIDTH : 0;
+        this.base = this.cfg.open ? this.cfg.width : 0;
         this.x.stopAnimation();
       },
       onPanResponderMove: (_e, g) => {
         const raw = this.base + g.dx;
-        this.x.setValue(raw < 0 ? raw * 0.15 : Math.min(raw, SWIPE_WIDTH));
+        this.x.setValue(raw < 0 ? raw * 0.15 : Math.min(raw, this.cfg.width));
       },
       onPanResponderRelease: (_e, g) => {
-        const raw = Math.max(0, Math.min(this.base + g.dx, SWIPE_WIDTH));
-        const openIt = raw > SWIPE_WIDTH * 0.45;
+        const raw = Math.max(0, Math.min(this.base + g.dx, this.cfg.width));
+        const openIt = raw > this.cfg.width * 0.45;
         this.settle(openIt);
         if (openIt !== this.cfg.open) this.cfg.onOpenChange(openIt);
       },
@@ -56,7 +52,7 @@ class SwipeOpen {
 
   settle(open: boolean) {
     Animated.spring(this.x, {
-      toValue: open ? SWIPE_WIDTH : 0,
+      toValue: open ? this.cfg.width : 0,
       useNativeDriver: true,
       bounciness: 0,
     }).start();
@@ -67,9 +63,20 @@ class SwipeOpen {
   }
 }
 
+/** Un tasto nascosto dietro la riga. */
+export interface SwipeAction {
+  /** va nel testID: `swipe-<key>-<id>` */
+  key: string;
+  color: string;
+  label: string;
+  icon: ReactNode;
+  run: () => void;
+}
+
 /**
- * Una riga di progetto con i tre tasti nascosti dietro: «Aggiungi dentro», «Sposta» ed «Elimina». Aperta o chiusa lo decide
- * chi la usa (`open`), così se ne apre una sola alla volta; un tocco sulla riga aperta la richiude e basta.
+ * Una riga con i tasti nascosti dietro (progetti.php e voti.php: «swipe-actions»): trascinandola verso destra si
+ * scoprono a sinistra. Aperta o chiusa lo decide chi la usa (`open`), così se ne apre una sola alla volta; un tocco sulla
+ * riga aperta la richiude e basta.
  */
 export function ActionSwipe(p: {
   id: string;
@@ -77,15 +84,22 @@ export function ActionSwipe(p: {
   /** nascosti mentre si seleziona o si trascina una riga */
   disabled?: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: () => void;
-  onMove: () => void;
-  onDelete: () => void;
+  actions: SwipeAction[];
+  /** larghezza di ogni tasto (default 72) */
+  buttonWidth?: number;
+  /** il fondo della riga, che copre i tasti a riposo (default: la superficie) */
+  background?: string;
   children: ReactNode;
 }) {
   const th = useTheme();
-  const { t } = useTranslation();
   const [x] = useState(() => new Animated.Value(0));
-  const cfg: Cfg = { open: p.open, disabled: !!p.disabled, onOpenChange: p.onOpenChange };
+  const btnW = p.buttonWidth ?? BTN;
+  const cfg: Cfg = {
+    width: btnW * p.actions.length,
+    open: p.open,
+    disabled: !!p.disabled,
+    onOpenChange: p.onOpenChange,
+  };
   const [gesture] = useState(() => new SwipeOpen(x, cfg));
   useEffect(() => {
     gesture.update(cfg);
@@ -96,32 +110,27 @@ export function ActionSwipe(p: {
   }, [gesture, p.open, p.disabled]);
 
   const visible = p.open && !p.disabled;
-  const btn = (
-    key: 'add' | 'move' | 'delete',
-    color: string,
-    icon: 'plus' | 'folder' | 'trash',
-    label: string,
-    run: () => void,
-  ) => (
+  const btn = (a: SwipeAction) => (
     <Pressable
-      testID={`swipe-${key}-${p.id}`}
+      key={a.key}
+      testID={`swipe-${a.key}-${p.id}`}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={a.label}
       onPress={() => {
         p.onOpenChange(false);
-        run();
+        a.run();
       }}
       style={{
-        width: BTN,
+        width: btnW,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 3,
-        backgroundColor: color,
+        backgroundColor: a.color,
       }}
     >
-      <PjIcon name={icon} color="#fff" size={19} width={2.1} />
+      {a.icon}
       <Text numberOfLines={1} style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
-        {label}
+        {a.label}
       </Text>
     </Pressable>
   );
@@ -132,13 +141,11 @@ export function ActionSwipe(p: {
         pointerEvents={visible ? 'auto' : 'none'}
         style={[StyleSheet.absoluteFill, { flexDirection: 'row' }]}
       >
-        {btn('add', BLUE, 'plus', t('progetti.aggiungi_dentro'), p.onAdd)}
-        {btn('move', PURPLE, 'folder', t('progetti.sposta'), p.onMove)}
-        {btn('delete', th.red, 'trash', t('comune.elimina'), p.onDelete)}
+        {p.actions.map(btn)}
       </View>
       <Animated.View
         testID={`swipe-pan-${p.id}`}
-        style={{ backgroundColor: th.surface, transform: [{ translateX: x }] }}
+        style={{ backgroundColor: p.background ?? th.surface, transform: [{ translateX: x }] }}
         {...gesture.responder.panHandlers}
       >
         {p.children}

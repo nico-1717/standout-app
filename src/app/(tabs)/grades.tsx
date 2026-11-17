@@ -43,7 +43,17 @@ import {
 } from '@/features/grades/logic';
 import { CostPane } from '@/features/grades/CostPane';
 import { buildCosts, forecast, type Costs } from '@/features/grades/cost';
-import { Ring, Stepper, TrendChart, accentOf, fmt2, trimNum } from '@/features/grades/parts';
+import { ReorderBlocks } from '@/features/grades/ReorderBlocks';
+import {
+  Ring,
+  Stepper,
+  TrashIcon,
+  TrendChart,
+  accentOf,
+  fmt2,
+  trimNum,
+} from '@/features/grades/parts';
+import { ActionSwipe } from '@/ui/ActionSwipe';
 import { StatsBody } from '@/features/grades/Stats';
 import {
   AccentGrad,
@@ -110,6 +120,7 @@ function ExamRow({
   picked,
   onPress,
   onLongPress,
+  grip,
 }: {
   exam: Exam;
   d: GradeData;
@@ -122,6 +133,8 @@ function ExamRow({
   picked: boolean;
   onPress: () => void;
   onLongPress: () => void;
+  /** la maniglia di riordino (solo fuori dai gruppi e quando non si seleziona) */
+  grip?: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const th = tone.th;
@@ -144,6 +157,7 @@ function ExamRow({
         borderRadius: picked ? 12 : 0,
       }}
     >
+      {selecting ? null : grip}
       {selecting ? (
         <View
           style={{
@@ -231,6 +245,7 @@ export default function GradesScreen() {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [editTarget, setEditTarget] = useState(false);
+  const [swiped, setSwiped] = useState<string | null>(null);
 
   const d: GradeData | null = useMemo(() => {
     void version;
@@ -296,7 +311,7 @@ export default function GradesScreen() {
       : dt.toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const examRow = (e: Exam, first: boolean, inGroup: boolean) => {
+  const examRow = (e: Exam, first: boolean, inGroup: boolean, grip?: React.ReactNode) => {
     const g = e.group_uuid ? findGroup(d, e.group_uuid) : null;
     const meta: string[] = [`${trimNum(e.cfu)} CFU`];
     if (e.study_year) meta.push(`· ${t('voti.anno_n', { n: e.study_year })}`);
@@ -310,7 +325,7 @@ export default function GradesScreen() {
     }
     if (e.status === 'todo' && e.predicted_grade != null)
       meta.push(`${e.predicted_honors ? '30L' : e.predicted_grade} ${t('voti.previsto_par')}`);
-    return (
+    const row = (
       <ExamRow
         key={e.uuid}
         exam={e}
@@ -324,7 +339,31 @@ export default function GradesScreen() {
         picked={picked.has(e.uuid)}
         onPress={() => openExam(e)}
         onLongPress={() => startSelect(e)}
+        grip={grip}
       />
+    );
+    // «Da sostenere»: trascinata verso destra la riga scopre il cestino (voti.php, `bindSwipe`)
+    if (tab !== 'todo' || selecting) return row;
+    return (
+      <ActionSwipe
+        key={e.uuid}
+        id={e.uuid}
+        open={swiped === e.uuid}
+        onOpenChange={(on) => setSwiped(on ? e.uuid : null)}
+        buttonWidth={76}
+        background={inGroup ? th.surface2 : th.surface}
+        actions={[
+          {
+            key: 'delete',
+            color: th.red,
+            label: t('voti.elimina'),
+            icon: <TrashIcon />,
+            run: () => confirmDeleteOne(e),
+          },
+        ]}
+      >
+        {row}
+      </ActionSwipe>
     );
   };
 
@@ -332,11 +371,20 @@ export default function GradesScreen() {
   const listFor = (mode: 'done' | 'todo') => {
     const items = mode === 'done' ? d.exams.filter((e) => e.status === 'done') : todoVisible(d);
     const seen = new Set<string>();
-    const out: React.ReactNode[] = [];
+    type Block = {
+      id: string;
+      uuids: string[];
+      render: (grip: React.ReactNode, first: boolean) => React.ReactNode;
+    };
+    const blocks: Block[] = [];
     for (const e of items) {
       const g = e.group_uuid ? findGroup(d, e.group_uuid) : null;
       if (!g) {
-        out.push(examRow(e, out.length === 0, false));
+        blocks.push({
+          id: e.uuid,
+          uuids: [e.uuid],
+          render: (grip, first) => examRow(e, first, false, grip),
+        });
         continue;
       }
       if (seen.has(g.uuid)) continue;
@@ -349,76 +397,100 @@ export default function GradesScreen() {
       const quotaLabel = split
         ? t('voti.cfu_totali_breve', { cfu: trimNum(groupTotalCfu(d, g.uuid)) })
         : `${trimNum(q?.done ?? groupDoneCfu(d, g.uuid))}${q && q.pred > 0 ? `+${trimNum(q.pred)}` : ''}/${trimNum(g.cfu)} CFU`;
-      out.push(
-        <View
-          key={`g-${g.uuid}`}
-          style={{
-            paddingTop: 10,
-            paddingHorizontal: 4,
-            paddingBottom: 12,
-            borderTopWidth: out.length === 0 ? 0 : 1,
-            borderTopColor: th.hairline,
-          }}
-        >
+      blocks.push({
+        id: `g-${g.uuid}`,
+        uuids: members.map((m) => m.uuid),
+        render: (grip, first) => (
           <View
             style={{
-              backgroundColor: th.surface2,
-              borderRadius: 14,
-              paddingVertical: 4,
-              paddingHorizontal: 10,
-              overflow: 'hidden',
+              paddingTop: 10,
+              paddingHorizontal: 4,
+              paddingBottom: 12,
+              borderTopWidth: first ? 0 : 1,
+              borderTopColor: th.hairline,
             }}
           >
-            <Pressable
-              testID={`grade-group-${g.uuid}`}
-              accessibilityRole="button"
-              onPress={() =>
-                selecting
-                  ? members.forEach((m) => togglePick(m.uuid))
-                  : router.push({ pathname: '/grade-group', params: { id: g.uuid } })
-              }
+            <View
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                paddingVertical: 9,
-                paddingHorizontal: 2,
+                backgroundColor: th.surface2,
+                borderRadius: 14,
+                paddingVertical: 4,
+                paddingHorizontal: 10,
+                overflow: 'hidden',
               }}
             >
-              <Text
-                numberOfLines={1}
-                style={{ flex: 1, color: th.text, fontWeight: '800', fontSize: 13.8 }}
-              >
-                {g.name}
-              </Text>
-              <View
-                style={{
-                  paddingVertical: 2,
-                  paddingHorizontal: 8,
-                  borderRadius: 999,
-                  backgroundColor: split ? rgba(tone.accent, 0.16) : th.purpleSoft,
-                }}
-              >
-                <Text
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {selecting ? null : grip}
+                <Pressable
+                  testID={`grade-group-${g.uuid}`}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    selecting
+                      ? members.forEach((m) => togglePick(m.uuid))
+                      : router.push({ pathname: '/grade-group', params: { id: g.uuid } })
+                  }
                   style={{
-                    color: split ? tone.accent : th.purple,
-                    fontWeight: '800',
-                    fontSize: 10.2,
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingVertical: 9,
+                    paddingHorizontal: 2,
                   }}
                 >
-                  {split ? t('voti.suddiviso') : t('voti.a_scelta_maiusc')}
-                </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{ flex: 1, color: th.text, fontWeight: '800', fontSize: 13.8 }}
+                  >
+                    {g.name}
+                  </Text>
+                  <View
+                    style={{
+                      paddingVertical: 2,
+                      paddingHorizontal: 8,
+                      borderRadius: 999,
+                      backgroundColor: split ? rgba(tone.accent, 0.16) : th.purpleSoft,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: split ? tone.accent : th.purple,
+                        fontWeight: '800',
+                        fontSize: 10.2,
+                      }}
+                    >
+                      {split ? t('voti.suddiviso') : t('voti.a_scelta_maiusc')}
+                    </Text>
+                  </View>
+                  <Text style={{ color: th.text2, fontSize: 10.9, fontWeight: '700' }}>
+                    {quotaLabel}
+                  </Text>
+                </Pressable>
               </View>
-              <Text style={{ color: th.text2, fontSize: 10.9, fontWeight: '700' }}>
-                {quotaLabel}
-              </Text>
-            </Pressable>
-            {members.map((m, i) => examRow(m, i === 0, true))}
+              {members.map((m, i) => examRow(m, i === 0, true))}
+            </View>
           </View>
-        </View>,
-      );
+        ),
+      });
     }
-    return out;
+    const byId = new Map(blocks.map((b) => [b.id, b]));
+    return (
+      <ReorderBlocks
+        blocks={blocks.map((b) => ({ id: b.id, uuids: b.uuids }))}
+        gripColor={th.text3}
+        renderBlock={(b, grip) => {
+          const first = blocks[0]?.id === b.id;
+          return byId.get(b.id)?.render(grip, first) ?? null;
+        }}
+        onReorder={(order, moved) => {
+          services.grades.reorderList(
+            order.flatMap((x) => x.uuids),
+            moved.uuids,
+          );
+          refresh();
+        }}
+      />
+    );
   };
 
   /* --- simulatore --- */
@@ -480,6 +552,19 @@ export default function GradesScreen() {
       d.exams.filter((e) => picked.has(e.uuid) && e.group_uuid).map((e) => e.group_uuid as string),
     ),
   ];
+  const confirmDeleteOne = (e: Exam) => {
+    Alert.alert(t('voti.eliminare_esame_nome', { nome: e.name }), '', [
+      { text: t('voti.annulla'), style: 'cancel' },
+      {
+        text: t('voti.elimina'),
+        style: 'destructive',
+        onPress: () => {
+          services.grades.removeExams([e.uuid]);
+          refresh();
+        },
+      },
+    ]);
+  };
   const confirmDelete = () => {
     const n = picked.size;
     if (!n) return;

@@ -162,6 +162,113 @@ describe('Grades main screen', () => {
     expect(grades.exam(todo)!.predicted_grade).toBeNull();
   });
 
+  test('«To take» rows have a drag handle; dragging one down moves it to the bottom', async () => {
+    const { grades } = setup();
+    const a = grades.addExam({ name: 'A', cfu: 6, status: 'todo' });
+    const b = grades.addExam({ name: 'B', cfu: 6, status: 'todo' });
+    const c = grades.addExam({ name: 'C', cfu: 6, status: 'todo' });
+    await render(wrap(<GradesScreen />));
+    await fireEvent.press(screen.getByTestId('grades-tab-todo'));
+    const grip = screen.getByTestId(`grip-${a}`).props as Record<string, (e: never) => unknown>;
+    const touch = (y: number, active = true) => {
+      const t = { pageX: 10, pageY: y, identifier: 0, timestamp: y, locationX: 0, locationY: 0 };
+      return {
+        nativeEvent: { touches: active ? [t] : [], changedTouches: [t], pageX: 10, pageY: y },
+        touchHistory: {
+          touchBank: [
+            {
+              touchActive: active,
+              startPageX: 10,
+              startPageY: 0,
+              startTimeStamp: 1,
+              currentPageX: 10,
+              currentPageY: y,
+              currentTimeStamp: y,
+              previousPageX: 10,
+              previousPageY: 0,
+              previousTimeStamp: 1,
+            },
+          ],
+          numberActiveTouches: active ? 1 : 0,
+          indexOfSingleActiveTouch: active ? 0 : -1,
+          mostRecentTimeStamp: y,
+        },
+      } as never;
+    };
+    await act(async () => {
+      grip.onResponderGrant!(touch(0));
+      grip.onResponderMove!(touch(500));
+      grip.onResponderRelease!(touch(500, false));
+    });
+    expect(grades.exams().map((e) => e.uuid)).toEqual([b, c, a]);
+  });
+
+  test('«To take» rows hide a delete button that asks first; «Passed» rows do not swipe', async () => {
+    const { grades } = setup();
+    grades.addExam({ name: 'Done one', cfu: 6, status: 'done', grade: 28 });
+    const todo = grades.addExam({ name: 'Todo one', cfu: 6, status: 'todo' });
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    await render(wrap(<GradesScreen />));
+    expect(screen.queryByTestId(/^swipe-delete-/)).toBeNull();
+    await fireEvent.press(screen.getByTestId('grades-tab-todo'));
+    // drag the row 150 points to the right (the capture handler is the one that updates the gesture)
+    const pan = screen.getByTestId(`swipe-pan-${todo}`).props as Record<
+      string,
+      (e: never) => unknown
+    >;
+    let prev = 100;
+    let clock = 1;
+    const at = (x: number, active = true) => {
+      clock += 1;
+      const t = {
+        pageX: x,
+        pageY: 30,
+        identifier: 0,
+        timestamp: clock,
+        locationX: 0,
+        locationY: 0,
+      };
+      const before = prev;
+      prev = x;
+      return {
+        nativeEvent: { touches: active ? [t] : [], changedTouches: [t], pageX: x, pageY: 30 },
+        touchHistory: {
+          touchBank: [
+            {
+              touchActive: active,
+              startPageX: 100,
+              startPageY: 30,
+              startTimeStamp: 1,
+              currentPageX: x,
+              currentPageY: 30,
+              currentTimeStamp: clock,
+              previousPageX: before,
+              previousPageY: 30,
+              previousTimeStamp: 1,
+            },
+          ],
+          numberActiveTouches: active ? 1 : 0,
+          indexOfSingleActiveTouch: active ? 0 : -1,
+          mostRecentTimeStamp: clock,
+        },
+      } as never;
+    };
+    await act(async () => {
+      pan.onMoveShouldSetResponderCapture!(at(100));
+      const end = at(250);
+      pan.onMoveShouldSetResponderCapture!(end);
+      expect(pan.onMoveShouldSetResponder!(end)).toBe(true);
+      prev = 100;
+      pan.onResponderGrant!(at(100));
+      pan.onResponderMove!(at(250));
+      pan.onResponderRelease!(at(250, false));
+    });
+    await fireEvent.press(screen.getByTestId(`swipe-delete-${todo}`));
+    await pressAlert(alert, 'Delete');
+    expect(grades.exam(todo)).toBeNull();
+    alert.mockRestore();
+  });
+
   test('«Cost» says what finished exams cost and estimates the ones still to take', async () => {
     const { db, grades } = setup();
     const done = grades.addExam({ name: 'Analisi', cfu: 6, status: 'done', grade: 30 });

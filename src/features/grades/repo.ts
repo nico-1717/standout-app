@@ -1,4 +1,4 @@
-import { generateKeyBetween } from 'fractional-indexing';
+import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
 import { uuidv7 } from 'uuidv7';
 
 import type { SqlDb } from '@/core/db/sqldb';
@@ -311,6 +311,32 @@ export class GradesRepo {
       id ? (all.find((x) => x.uuid === id)?.sort_key ?? null) : null;
     const k = generateKeyBetween(key(before), key(after));
     this.db.transaction(() => this.change('university_exams', uuid, { sort_key: k }));
+  }
+
+  /**
+   * Il riordino a mano nell'elenco (voti.php, `reorder_exams`): `flat` sono gli esami come si vedono, nell'ordine nuovo, e
+   * `moved` quelli del blocco spostato (uno solo, o le parti di un gruppo). Si riscrivono solo le chiavi del blocco, fra
+   * il più grande di chi lo precede e il più piccolo di chi lo segue; se le chiavi si intrecciano (le parti di un gruppo
+   * sparse nell'elenco) si riscrive tutto l'elenco in ordine.
+   */
+  reorderList(flat: string[], moved: string[]): void {
+    const keys = new Map(this.exams().map((x) => [x.uuid, x.sort_key]));
+    const at = flat.indexOf(moved[0] ?? '');
+    if (at < 0) return;
+    const before = flat.slice(0, at).map((id) => keys.get(id) ?? '');
+    const after = flat.slice(at + moved.length).map((id) => keys.get(id) ?? '');
+    const lo = before.length ? before.reduce((a, b) => (a > b ? a : b)) : null;
+    const hi = after.length ? after.reduce((a, b) => (a < b ? a : b)) : null;
+    const clean = lo === null || hi === null || lo < hi;
+    const targets = clean ? moved : flat;
+    const fresh = clean
+      ? generateNKeysBetween(lo, hi, moved.length)
+      : generateNKeysBetween(null, null, flat.length);
+    this.db.transaction(() => {
+      targets.forEach((id, i) => {
+        this.change('university_exams', id, { sort_key: fresh[i] });
+      });
+    });
   }
 
   /* ---------------- gruppi ---------------- */

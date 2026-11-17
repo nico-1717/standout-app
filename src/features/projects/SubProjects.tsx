@@ -7,8 +7,9 @@ import { human } from '@/features/pomodoro/logic';
 import { localToday } from '@/features/tasks/groups';
 import { PrimaryButton, TextButton } from '@/ui/kit';
 
-import { ActionSwipe } from './ActionSwipe';
+import { ActionSwipe } from '@/ui/ActionSwipe';
 import { AddInput } from './AddInput';
+import { projectSwipeActions } from './swipeActions';
 import { DragItem } from './DragItem';
 import { PjIcon, StatusRing } from './PjIcons';
 import { Lab, ListCard, RowLine } from './PjParts';
@@ -304,9 +305,13 @@ export function SubProjects(p: {
                       open={swiped === k.uuid}
                       disabled={selecting || drag.ui.active !== null}
                       onOpenChange={(on) => setSwiped(on ? k.uuid : null)}
-                      onAdd={() => addInside(k.uuid)}
-                      onMove={() => setRowAction({ kind: 'move', id: k.uuid })}
-                      onDelete={() => setRowAction({ kind: 'delete', id: k.uuid })}
+                      actions={projectSwipeActions({
+                        t,
+                        red: th.red,
+                        onAdd: () => addInside(k.uuid),
+                        onMove: () => setRowAction({ kind: 'move', id: k.uuid }),
+                        onDelete: () => setRowAction({ kind: 'delete', id: k.uuid }),
+                      })}
                     >
                       <View
                         style={{

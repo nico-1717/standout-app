@@ -7,8 +7,9 @@ import { human } from '@/features/pomodoro/logic';
 import { titleStyle } from '@/ui/kit';
 import { localToday } from '@/features/tasks/groups';
 
-import { ActionSwipe } from './ActionSwipe';
+import { ActionSwipe } from '@/ui/ActionSwipe';
 import { AddInput } from './AddInput';
+import { projectSwipeActions } from './swipeActions';
 import { PjIcon } from './PjIcons';
 import { Lab, ListCard, RowLine } from './PjParts';
 import type { Project, TreeRow } from './logic';
@@ -159,12 +160,16 @@ export function ProjectsAll({
                 id={p.uuid}
                 open={swiped === p.uuid}
                 onOpenChange={(on) => setSwiped(on ? p.uuid : null)}
-                onAdd={() => {
-                  setInner('');
-                  setAddingTo(p.uuid);
-                }}
-                onMove={() => setRowAction({ kind: 'move', id: p.uuid })}
-                onDelete={() => setRowAction({ kind: 'delete', id: p.uuid })}
+                actions={projectSwipeActions({
+                  t,
+                  red: th.red,
+                  onAdd: () => {
+                    setInner('');
+                    setAddingTo(p.uuid);
+                  },
+                  onMove: () => setRowAction({ kind: 'move', id: p.uuid }),
+                  onDelete: () => setRowAction({ kind: 'delete', id: p.uuid }),
+                })}
               >
                 <Pressable
                   testID={`proj-row-${p.uuid}`}
