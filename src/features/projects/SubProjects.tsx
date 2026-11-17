@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -7,6 +7,7 @@ import { human } from '@/features/pomodoro/logic';
 import { localToday } from '@/features/tasks/groups';
 import { PrimaryButton, TextButton } from '@/ui/kit';
 
+import { DragItem } from './DragItem';
 import { PjIcon, StatusRing } from './PjIcons';
 import { Lab, ListCard, RowLine } from './PjParts';
 import { ProjectPicker } from './ProjectPicker';
@@ -14,6 +15,8 @@ import type { SubView } from './options';
 import { subtreeIds, type Project, type TreeRow } from './logic';
 import { dateLabel, shortDate } from './pjFormat';
 import type { ProjectsRepo } from './repo';
+import { GRAB_MS, type DropPlan } from './dragLogic';
+import { useRowDrag } from './useRowDrag';
 
 type Panel = 'color' | 'parent' | 'delete' | null;
 
@@ -42,6 +45,8 @@ export function SubProjects(p: {
   view?: SubView;
   onView?: (view: SubView) => void;
   showTags: boolean;
+  /** l'ordine scelto è «manuale»: solo allora una riga si può spostare fra i fratelli */
+  canReorder?: boolean;
 }) {
   const th = useTheme();
   const { t } = useTranslation();
@@ -55,6 +60,60 @@ export function SubProjects(p: {
   const [draft, setDraft] = useState('');
   const grid = (p.view ?? 'list') === 'grid' && !selecting;
   const accent = p.parent.color;
+
+  // tenere premuta una riga e trascinarla: fra i fratelli cambia posto, sopra un progetto ci entra
+  const parentOf = useMemo(() => new Map(p.all.map((x) => [x.uuid, x.parent_uuid])), [p.all]);
+  const [notice, setNotice] = useState<{ text: string; undo: () => void } | null>(null);
+  const dropped = (id: string, plan: DropPlan) => {
+    const me = p.all.find((x) => x.uuid === id);
+    if (!me) return;
+    if (plan.kind === 'nest') {
+      const was = me.parent_uuid;
+      if (!p.repo.move(id, plan.id)) return;
+      const dest = plan.name ?? p.all.find((x) => x.uuid === plan.id)?.name ?? '';
+      const text =
+        plan.id === p.parent.uuid
+          ? t('progetti.spostato_primo_livello', { nome: me.name })
+          : t('progetti.spostato_dentro', { nome: me.name, dove: dest });
+      const note = {
+        text,
+        undo: () => {
+          p.repo.move(id, was);
+          setNotice(null);
+          p.changed();
+        },
+      };
+      setNotice(note);
+      setTimeout(() => setNotice((cur) => (cur === note ? null : cur)), 6000);
+      p.changed();
+      return;
+    }
+    if (plan.kind === 'slot') {
+      const all = p.rows.filter((r) => r.project.parent_uuid === me.parent_uuid);
+      const sibs = all.filter((r) => r.project.uuid !== id).map((r) => r.project.uuid);
+      if (plan.index === all.findIndex((r) => r.project.uuid === id)) return;
+      p.repo.reorder(id, sibs[plan.index - 1] ?? null, sibs[plan.index] ?? null);
+      p.changed();
+    }
+  };
+  const drag = useRowDrag({
+    rows: p.rows.map((r) => ({ id: r.project.uuid, parent: r.project.parent_uuid })),
+    parentOf,
+    canReorder: p.canReorder ?? true,
+    onDrop: dropped,
+  });
+  const nestName =
+    drag.ui.plan.kind === 'nest'
+      ? (drag.ui.plan.name ??
+        p.all.find((x) => x.uuid === (drag.ui.plan as { id: string }).id)?.name ??
+        '')
+      : null;
+  const caption =
+    drag.ui.plan.kind !== 'nest'
+      ? null
+      : drag.ui.plan.id === p.parent.uuid
+        ? t('progetti.drop_primo_livello')
+        : t('progetti.drop_dentro', { nome: nestName ?? '' });
 
   const stop = () => {
     setSelecting(false);
@@ -90,58 +149,60 @@ export function SubProjects(p: {
 
   return (
     <View>
-      <Lab
-        right={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            {kids.length ? (
-              <Pressable
-                testID="sub-select-toggle"
-                accessibilityRole="button"
-                accessibilityLabel={
-                  selecting ? t('comune.annulla') : t('progetti.seleziona_sotto_progetti')
-                }
-                accessibilityState={{ selected: selecting }}
-                onPress={() => (selecting ? stop() : setSelecting(true))}
-                hitSlop={4}
-                style={labTool(selecting ? accent : null)}
-              >
-                <PjIcon name="select" color={selecting ? accent : th.text3} size={17} />
-              </Pressable>
-            ) : null}
-            {p.onView && kids.length && !selecting ? (
-              <Pressable
-                testID="sub-view-toggle"
-                accessibilityRole="button"
-                accessibilityLabel={
-                  grid ? t('progetti.mostra_elenco') : t('progetti.mostra_griglia')
-                }
-                onPress={() => p.onView?.(grid ? 'list' : 'grid')}
-                hitSlop={4}
-                style={labTool(grid ? accent : null)}
-              >
-                <PjIcon name={grid ? 'list' : 'grid'} color={th.text3} size={17} />
-              </Pressable>
-            ) : null}
-            {kids.length ? (
-              <Text
-                style={{
-                  color: th.text2,
-                  fontSize: 12.5,
-                  fontWeight: '600',
-                  minWidth: 34,
-                  textAlign: 'right',
-                  marginLeft: 8,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {doneKids} / {kids.length}
-              </Text>
-            ) : null}
-          </View>
-        }
-      >
-        {t('progetti.sotto_progetti')}
-      </Lab>
+      <View ref={(v) => drag.attachZone(p.parent.uuid, p.parent.name)(v)} collapsable={false}>
+        <Lab
+          right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              {kids.length ? (
+                <Pressable
+                  testID="sub-select-toggle"
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    selecting ? t('comune.annulla') : t('progetti.seleziona_sotto_progetti')
+                  }
+                  accessibilityState={{ selected: selecting }}
+                  onPress={() => (selecting ? stop() : setSelecting(true))}
+                  hitSlop={4}
+                  style={labTool(selecting ? accent : null)}
+                >
+                  <PjIcon name="select" color={selecting ? accent : th.text3} size={17} />
+                </Pressable>
+              ) : null}
+              {p.onView && kids.length && !selecting ? (
+                <Pressable
+                  testID="sub-view-toggle"
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    grid ? t('progetti.mostra_elenco') : t('progetti.mostra_griglia')
+                  }
+                  onPress={() => p.onView?.(grid ? 'list' : 'grid')}
+                  hitSlop={4}
+                  style={labTool(grid ? accent : null)}
+                >
+                  <PjIcon name={grid ? 'list' : 'grid'} color={th.text3} size={17} />
+                </Pressable>
+              ) : null}
+              {kids.length ? (
+                <Text
+                  style={{
+                    color: th.text2,
+                    fontSize: 12.5,
+                    fontWeight: '600',
+                    minWidth: 34,
+                    textAlign: 'right',
+                    marginLeft: 8,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {doneKids} / {kids.length}
+                </Text>
+              ) : null}
+            </View>
+          }
+        >
+          {t('progetti.sotto_progetti')}
+        </Lab>
+      </View>
 
       {grid ? (
         <View testID="sub-grid" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -182,139 +243,156 @@ export function SubProjects(p: {
           ) : null}
         </View>
       ) : (
-        <ListCard>
-          {p.rows.map((r, i) => {
-            const k = r.project;
-            const on = picked.includes(k.uuid);
-            const closed = p.collapsed.has(k.uuid);
-            const doneRow = k.status === 'completed';
-            const secs = p.totals?.get(k.uuid) ?? 0;
-            const meta = p.showTags
-              ? [
-                  r.total ? t('progetti.n_di_m', { n: r.done, m: r.total }) : '',
-                  dateLabel(k, t, today),
-                  secs ? t('progetti.tempo_concentrazione', { t: human(secs) }) : '',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : '';
-            return (
-              <View key={k.uuid}>
-                {i ? <RowLine inset={74 + r.depth * 22} /> : null}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    minHeight: 54,
-                    paddingVertical: 8,
-                    paddingRight: 8,
-                    paddingLeft: r.depth * 22,
-                  }}
+        <ListCard style={drag.ui.active ? { overflow: 'visible' } : undefined}>
+          <View
+            testID="sub-rows"
+            ref={(v) => drag.attach(v)}
+            collapsable={false}
+            {...drag.panHandlers}
+          >
+            {p.rows.map((r, i) => {
+              const k = r.project;
+              const on = picked.includes(k.uuid);
+              const closed = p.collapsed.has(k.uuid);
+              const doneRow = k.status === 'completed';
+              const secs = p.totals?.get(k.uuid) ?? 0;
+              const meta = p.showTags
+                ? [
+                    r.total ? t('progetti.n_di_m', { n: r.done, m: r.total }) : '',
+                    dateLabel(k, t, today),
+                    secs ? t('progetti.tempo_concentrazione', { t: human(secs) }) : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : '';
+              return (
+                <DragItem
+                  key={k.uuid}
+                  id={k.uuid}
+                  drag={drag}
+                  caption={drag.ui.active === k.uuid ? caption : null}
                 >
-                  <View style={{ width: 40, alignItems: 'center' }}>
-                    {selecting ? null : r.hasChildren ? (
-                      <Pressable
-                        testID={`proj-toggle-${k.uuid}`}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('progetti.apri_chiudi_sotto')}
-                        accessibilityState={{ expanded: !closed }}
-                        hitSlop={8}
-                        onPress={() => p.onToggleBranch(k.uuid)}
-                        style={{ padding: 6 }}
-                      >
-                        <View style={{ transform: [{ rotate: closed ? '0deg' : '90deg' }] }}>
-                          <PjIcon name="chevron" color={th.text3} size={15} />
-                        </View>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                  {selecting ? (
-                    <Pressable
-                      testID={`kid-${k.uuid}`}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: on }}
-                      onPress={() => toggle(k.uuid)}
-                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-                    >
-                      <View
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 12,
-                          borderWidth: 2,
-                          borderColor: k.color,
-                          backgroundColor: on ? k.color : 'transparent',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {on ? (
-                          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text>
-                        ) : null}
-                      </View>
-                      <Text
-                        numberOfLines={1}
-                        style={{ color: th.text, fontSize: 16, fontWeight: '500', flex: 1 }}
-                      >
-                        {k.name}
-                      </Text>
-                    </Pressable>
-                  ) : (
-                    <>
-                      <Pressable
-                        testID={`proj-status-${k.uuid}`}
-                        accessibilityRole="checkbox"
-                        accessibilityLabel={t('progetti.cambia_stato')}
-                        accessibilityState={{ checked: doneRow }}
-                        hitSlop={8}
-                        onPress={() => p.onCycle(k.uuid)}
-                      >
-                        <StatusRing status={k.status} color={k.color} size={24} />
-                      </Pressable>
+                  {i ? <RowLine inset={74 + r.depth * 22} /> : null}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      minHeight: 54,
+                      paddingVertical: 8,
+                      paddingRight: 8,
+                      paddingLeft: r.depth * 22,
+                    }}
+                  >
+                    <View style={{ width: 40, alignItems: 'center' }}>
+                      {selecting ? null : r.hasChildren ? (
+                        <Pressable
+                          testID={`proj-toggle-${k.uuid}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('progetti.apri_chiudi_sotto')}
+                          accessibilityState={{ expanded: !closed }}
+                          hitSlop={8}
+                          onPress={() => p.onToggleBranch(k.uuid)}
+                          style={{ padding: 6 }}
+                        >
+                          <View style={{ transform: [{ rotate: closed ? '0deg' : '90deg' }] }}>
+                            <PjIcon name="chevron" color={th.text3} size={15} />
+                          </View>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    {selecting ? (
                       <Pressable
                         testID={`kid-${k.uuid}`}
-                        accessibilityRole="button"
-                        onPress={() => p.onOpen(k)}
-                        style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: on }}
+                        onPress={() => toggle(k.uuid)}
+                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
                       >
-                        <Text
-                          numberOfLines={2}
+                        <View
                           style={{
-                            color: doneRow ? th.text3 : th.text,
-                            fontSize: 16,
-                            fontWeight: '500',
-                            textDecorationLine: doneRow ? 'line-through' : 'none',
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            borderWidth: 2,
+                            borderColor: k.color,
+                            backgroundColor: on ? k.color : 'transparent',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
+                        >
+                          {on ? (
+                            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
+                              ✓
+                            </Text>
+                          ) : null}
+                        </View>
+                        <Text
+                          numberOfLines={1}
+                          style={{ color: th.text, fontSize: 16, fontWeight: '500', flex: 1 }}
                         >
                           {k.name}
                         </Text>
-                        {meta ? (
-                          <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
-                            {meta}
+                      </Pressable>
+                    ) : (
+                      <>
+                        <Pressable
+                          testID={`proj-status-${k.uuid}`}
+                          accessibilityRole="checkbox"
+                          accessibilityLabel={t('progetti.cambia_stato')}
+                          accessibilityState={{ checked: doneRow }}
+                          hitSlop={8}
+                          onPress={() => p.onCycle(k.uuid)}
+                        >
+                          <StatusRing status={k.status} color={k.color} size={24} />
+                        </Pressable>
+                        <Pressable
+                          testID={`kid-${k.uuid}`}
+                          accessibilityRole="button"
+                          onPress={() => p.onOpen(k)}
+                          delayLongPress={GRAB_MS}
+                          onLongPress={() => drag.grab(k.uuid)}
+                          onPressOut={drag.release}
+                          style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
+                        >
+                          <Text
+                            numberOfLines={2}
+                            style={{
+                              color: doneRow ? th.text3 : th.text,
+                              fontSize: 16,
+                              fontWeight: '500',
+                              textDecorationLine: doneRow ? 'line-through' : 'none',
+                            }}
+                          >
+                            {k.name}
                           </Text>
-                        ) : null}
-                      </Pressable>
-                      <Pressable
-                        testID={`proj-start-${k.uuid}`}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('progetti.concentrati')}
-                        hitSlop={6}
-                        onPress={() => p.onStart(k)}
-                        style={{
-                          width: 34,
-                          height: 32,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <PjIcon name="timer" color={th.text3} size={19} />
-                      </Pressable>
-                    </>
-                  )}
-                </View>
-              </View>
-            );
-          })}
+                          {meta ? (
+                            <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
+                              {meta}
+                            </Text>
+                          ) : null}
+                        </Pressable>
+                        <Pressable
+                          testID={`proj-start-${k.uuid}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('progetti.concentrati')}
+                          hitSlop={6}
+                          onPress={() => p.onStart(k)}
+                          style={{
+                            width: 34,
+                            height: 32,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <PjIcon name="timer" color={th.text3} size={19} />
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                </DragItem>
+              );
+            })}
+          </View>
           {p.rows.length ? <RowLine inset={0} /> : null}
           {adding ? (
             <AddInput
@@ -350,6 +428,29 @@ export function SubProjects(p: {
           )}
         </ListCard>
       )}
+
+      {notice ? (
+        <View
+          testID="sub-notice"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 10,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            borderRadius: 14,
+            backgroundColor: th.surface2,
+          }}
+        >
+          <Text style={{ color: th.text, fontSize: 14, flex: 1 }}>{notice.text}</Text>
+          <TextButton
+            testID="sub-notice-undo"
+            label={t('progetti.nota_annulla')}
+            onPress={notice.undo}
+          />
+        </View>
+      ) : null}
 
       {selecting ? (
         <View style={{ gap: 10, marginTop: 12 }}>

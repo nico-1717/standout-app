@@ -553,3 +553,154 @@ describe('Projects › sub-projects', () => {
     expect(projects.sessionCount([k3])).toBe(0);
   });
 });
+
+/* ---- tenere premuta una riga e trascinarla (come sul sito) ---- */
+let clock = 1;
+const touch = (y: number, active = true) => {
+  clock += 1;
+  const t = { pageX: 100, pageY: y, identifier: 0, timestamp: clock, locationX: 0, locationY: 0 };
+  return {
+    nativeEvent: { touches: active ? [t] : [], changedTouches: [t], pageX: 100, pageY: y },
+    touchHistory: {
+      touchBank: [
+        {
+          touchActive: active,
+          startPageX: 100,
+          startPageY: 30,
+          startTimeStamp: 1,
+          currentPageX: 100,
+          currentPageY: y,
+          currentTimeStamp: clock,
+          previousPageX: 100,
+          previousPageY: y,
+          previousTimeStamp: clock - 1,
+        },
+      ],
+      numberActiveTouches: active ? 1 : 0,
+      indexOfSingleActiveTouch: active ? 0 : -1,
+      mostRecentTimeStamp: clock,
+    },
+  } as never;
+};
+type Handlers = Record<string, (e: never) => unknown>;
+const rows = () => screen.getByTestId('sub-rows').props as Handlers;
+/** Ogni riga alta 60, una sotto l'altra, come le misurerebbe il telefono. */
+const layOut = async (ids: string[]) => {
+  for (const [i, id] of ids.entries())
+    await fireEvent(screen.getByTestId(`drag-item-${id}`), 'layout', {
+      nativeEvent: { layout: { x: 0, y: i * 60, width: 300, height: 60 } },
+    });
+};
+/** Premere a lungo la riga `id` e portare il dito fino a `y`, poi lasciare. */
+const dragTo = async (id: string, from: number, to: number, hold = 0) => {
+  await fireEvent(screen.getByTestId(`kid-${id}`), 'longPress');
+  await act(async () => {
+    expect(rows().onMoveShouldSetResponderCapture!(touch(from + 5))).toBe(true);
+    rows().onResponderGrant!(touch(from));
+    rows().onResponderMove!(touch(to));
+  });
+  if (hold) await act(async () => void jest.advanceTimersByTime(hold));
+  await act(async () => {
+    rows().onResponderRelease!(touch(to, false));
+  });
+};
+
+describe('Projects › dragging a row', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const kids = () => {
+    const s = setup();
+    const a = s.projects.create({ name: 'Alpha' })!;
+    const k1 = s.projects.create({ name: 'Kid 1', parent: a, position: 'last' })!;
+    const k2 = s.projects.create({ name: 'Kid 2', parent: a, position: 'last' })!;
+    const k3 = s.projects.create({ name: 'Kid 3', parent: a, position: 'last' })!;
+    mockParams = { id: a };
+    return { ...s, a, k1, k2, k3 };
+  };
+  const order = (projects: ProjectsRepo, parent: string) =>
+    projects
+      .all()
+      .filter((p) => p.parent_uuid === parent)
+      .sort((x, y) => (x.sort_key < y.sort_key ? -1 : 1))
+      .map((p) => p.name);
+
+  test('holding a row, it lifts; moving it past the others puts it in the new place', async () => {
+    const { projects, a, k1, k2, k3 } = kids();
+    await renderPage();
+    await layOut([k1, k2, k3]);
+    await fireEvent(screen.getByTestId(`kid-${k1}`), 'longPress');
+    expect(screen.getByTestId(`drag-item-${k1}`).props.style).toBeTruthy();
+    await act(async () => {
+      rows().onResponderGrant!(touch(30));
+      rows().onResponderMove!(touch(175));
+    });
+    await act(async () => {
+      rows().onResponderRelease!(touch(175, false));
+    });
+    expect(order(projects, a)).toEqual(['Kid 2', 'Kid 3', 'Kid 1']);
+    expect(mockChanged).toHaveBeenCalled();
+  });
+
+  test('a long press that does not move changes nothing', async () => {
+    const { projects, a, k1, k2, k3 } = kids();
+    await renderPage();
+    await layOut([k1, k2, k3]);
+    await fireEvent(screen.getByTestId(`kid-${k1}`), 'longPress');
+    await fireEvent(screen.getByTestId(`kid-${k1}`), 'pressOut');
+    await act(async () => void jest.advanceTimersByTime(5));
+    expect(order(projects, a)).toEqual(['Kid 1', 'Kid 2', 'Kid 3']);
+  });
+
+  test('dropped on the middle of a sibling (held a moment) it goes inside, with an Undo', async () => {
+    const { projects, a, k1, k2, k3 } = kids();
+    const view = await renderPage();
+    await layOut([k1, k2, k3]);
+    await dragTo(k1, 30, 90, 300);
+    expect(projects.get(k1)?.parent_uuid).toBe(k2);
+    await redraw(view);
+    expect(screen.getByTestId('sub-notice')).toHaveTextContent(/“Kid 1” moved into “Kid 2”/);
+    await fireEvent.press(screen.getByTestId('sub-notice-undo'));
+    expect(projects.get(k1)?.parent_uuid).toBe(a);
+  });
+
+  test('without the hold, the middle of a sibling does not nest', async () => {
+    const { projects, a, k1, k2, k3 } = kids();
+    await renderPage();
+    await layOut([k1, k2, k3]);
+    await dragTo(k1, 30, 90, 50);
+    expect(projects.get(k1)?.parent_uuid).toBe(a);
+  });
+
+  test('over a project of another branch it goes inside at once', async () => {
+    const { projects, k1, k2, k3 } = kids();
+    const g1 = projects.create({ name: 'Grand 1', parent: k1, position: 'last' })!;
+    const view = await renderPage();
+    await fireEvent.press(screen.getByTestId(`proj-toggle-${k1}`));
+    await redraw(view);
+    await layOut([k1, g1, k2, k3]);
+    await dragTo(k3, 150, 90);
+    expect(projects.get(k3)?.parent_uuid).toBe(g1);
+  });
+
+  test('a project cannot go inside itself', async () => {
+    const { projects, a, k1, k2, k3 } = kids();
+    const g1 = projects.create({ name: 'Grand 1', parent: k1, position: 'last' })!;
+    const view = await renderPage();
+    await fireEvent.press(screen.getByTestId(`proj-toggle-${k1}`));
+    await redraw(view);
+    await layOut([k1, g1, k2, k3]);
+    await dragTo(k1, 30, 90);
+    expect(projects.get(k1)?.parent_uuid).toBe(a);
+    expect(projects.get(g1)?.parent_uuid).toBe(k1);
+  });
+
+  test('with a sorted order a row is not reordered by hand', async () => {
+    const { db, projects, a, k1, k2, k3 } = kids();
+    new ProjectOptionsStore(db).write({ ordine: 'alfabetico' });
+    await renderPage();
+    await layOut([k1, k2, k3]);
+    await dragTo(k1, 30, 175);
+    expect(order(projects, a)).toEqual(['Kid 1', 'Kid 2', 'Kid 3']);
+  });
+});
