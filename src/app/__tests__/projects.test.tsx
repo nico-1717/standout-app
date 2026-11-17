@@ -841,3 +841,19 @@ describe('Projects › swiping a row', () => {
     expect(s.projects.all().find((x) => x.name === 'First kid')?.parent_uuid).toBe(a);
   });
 });
+
+describe('Projects › breadcrumbs', () => {
+  test('each project that contains this one is its own tap target', async () => {
+    const { projects } = setup();
+    const a = projects.create({ name: 'Alpha' })!;
+    const b = projects.create({ name: 'Beta', parent: a, position: 'last' })!;
+    const c = projects.create({ name: 'Gamma', parent: b, position: 'last' })!;
+    mockParams = { id: c };
+    const view = await renderPage();
+    expect(screen.getByTestId(`proj-crumb-${a}`)).toBeTruthy();
+    expect(screen.getByTestId('proj-crumb')).toHaveTextContent('Beta');
+    await fireEvent.press(screen.getByTestId(`proj-crumb-${a}`));
+    await redraw(view);
+    expect(nameShown()).toBe('Alpha');
+  });
+});

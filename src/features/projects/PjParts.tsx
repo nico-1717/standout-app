@@ -8,6 +8,7 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
 import { haptic } from '@/ui/motion';
 
+import { useDropZone } from './DropZones';
 import { PjIcon } from './PjIcons';
 import type { Project } from './logic';
 
@@ -288,6 +289,7 @@ export function ProjectsHeader({
             dot={p.color}
             on={current === p.uuid}
             onPress={() => onPick(p.uuid)}
+            drop={{ id: p.uuid, name: p.name }}
           />
         ))}
       </ScrollView>
@@ -301,16 +303,28 @@ function Chip({
   on,
   onPress,
   testID,
+  drop,
 }: {
   label: string;
   dot?: string;
   on: boolean;
   onPress: () => void;
   testID: string;
+  /** una riga trascinata qui dentro finisce in questo progetto (`.hdr-root-pill` del sito) */
+  drop?: { id: string; name: string };
 }) {
   const th = useTheme();
+  const { lit: hot, attach } = useDropZone(
+    `pill:${drop?.id ?? ''}`,
+    drop?.id ?? '',
+    drop?.name ?? '',
+    true,
+  );
+  const lit = !!drop && hot;
   return (
     <Pressable
+      ref={drop ? attach : undefined}
+      collapsable={false}
       testID={testID}
       accessibilityRole="tab"
       accessibilityState={{ selected: on }}
@@ -325,8 +339,9 @@ function Chip({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 7,
-        backgroundColor: on ? th.surface : 'transparent',
-        boxShadow: on ? '0 1px 4px rgba(0,0,0,.10)' : undefined,
+        backgroundColor: on || lit ? th.surface : 'transparent',
+        boxShadow: on || lit ? '0 1px 4px rgba(0,0,0,.10)' : undefined,
+        transform: lit ? [{ scale: 1.06 }] : undefined,
       }}
     >
       {dot ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot }} /> : null}
@@ -335,6 +350,71 @@ function Chip({
         style={{ color: on ? th.text : th.text2, fontSize: 14.5, fontWeight: on ? '700' : '500' }}
       >
         {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Le briciole del progetto aperto (.pr-crumbs): i progetti che lo contengono, dal più esterno, ognuno un tocco per
+ * salirci e un posto dove lasciare una riga trascinata («Dentro “X”»).
+ */
+export function Crumbs({ crumbs, onOpen }: { crumbs: Project[]; onOpen: (uuid: string) => void }) {
+  const th = useTheme();
+  return (
+    <View
+      style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: -4 }}
+    >
+      {crumbs.map((c, i) => (
+        <View key={c.uuid} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Crumb
+            project={c}
+            testID={i === crumbs.length - 1 ? 'proj-crumb' : `proj-crumb-${c.uuid}`}
+            onPress={() => onOpen(c.uuid)}
+          />
+          <Text style={{ color: th.text3, fontSize: 12 }}>›</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Crumb({
+  project,
+  testID,
+  onPress,
+}: {
+  project: Project;
+  testID: string;
+  onPress: () => void;
+}) {
+  const th = useTheme();
+  const { lit, attach } = useDropZone(`crumb:${project.uuid}`, project.uuid, project.name, false);
+  return (
+    <Pressable
+      ref={attach}
+      collapsable={false}
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      hitSlop={6}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 5,
+        paddingHorizontal: 8,
+        borderRadius: 9,
+        backgroundColor: lit ? th.surface2 : 'transparent',
+        transform: lit ? [{ scale: 1.06 }] : undefined,
+      }}
+    >
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: project.color }} />
+      <Text
+        numberOfLines={1}
+        style={{ color: lit ? th.text : th.text2, fontSize: 13, fontWeight: '700' }}
+      >
+        {project.name}
       </Text>
     </Pressable>
   );

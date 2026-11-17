@@ -19,6 +19,7 @@ import {
   type OutsideBox,
   type RowBox,
 } from './dragLogic';
+import { useDropZones, type DropZones } from './DropZones';
 import { useScrollBridge, type ScrollBridge } from './ScrollBridge';
 
 /** Cosa serve sapere di ogni riga visibile. */
@@ -91,6 +92,8 @@ class RowDragGesture {
   private scroll0 = 0;
   private y0 = 0;
   private fingerY = 0;
+  private fingerX = 0;
+  private page: DropZones | null = null;
   private containerTop = 0;
   private geom = new Map<string, { y: number; h: number }>();
   private zones = new Map<string, Zone>();
@@ -130,9 +133,10 @@ class RowDragGesture {
     });
   }
 
-  update(cfg: DragConfig, bridge: ScrollBridge) {
+  update(cfg: DragConfig, bridge: ScrollBridge, page: DropZones) {
     this.cfg = cfg;
     this.bridge = bridge;
+    this.page = page;
   }
 
   layout(id: string, e: LayoutChangeEvent) {
@@ -179,6 +183,20 @@ class RowDragGesture {
         this.zoneBoxes.push({ id, name: z.name, top: y + off, height: h });
       });
     }
+    // le briciole e le pastiglie della pagina: in riga, e quelle dell'intestazione ferme sullo schermo
+    for (const z of this.page?.list() ?? []) {
+      z.view.measureInWindow?.((x, y, w, h) => {
+        this.zoneBoxes.push({
+          id: z.id,
+          name: z.name,
+          top: z.fixed ? y : y + off,
+          height: h,
+          left: x,
+          width: w,
+          fixed: z.fixed,
+        });
+      });
+    }
   }
 
   /** I fratelli della riga in mano, ognuno con lo spazio che occupa insieme ai suoi discendenti visibili. */
@@ -204,6 +222,7 @@ class RowDragGesture {
   private move(g: PanResponderGestureState) {
     if (!this.armed) return;
     this.fingerY = g.moveY;
+    this.fingerX = g.moveX;
     this.step();
     // vicino al bordo dello schermo la pagina scorre da sola, piano vicino alla soglia e veloce sull'orlo
     const h = Dimensions.get('window').height;
@@ -256,6 +275,8 @@ class RowDragGesture {
       parent,
       blocked,
       y: fingerContent,
+      x: this.fingerX,
+      screenY: this.fingerY,
       canReorder: this.cfg.canReorder,
     };
     let next = planDrop(input);
@@ -304,6 +325,7 @@ class RowDragGesture {
       if (owner === id) carried.add(r.id);
       else if (owner) shifts.set(r.id, byBlock.get(owner) ?? 0);
     }
+    this.page?.light(this.plan.kind === 'nest' ? this.plan.id : null);
     this.setUi({ active: id, plan: this.plan, shifts, carried });
   }
 
@@ -319,6 +341,7 @@ class RowDragGesture {
     this.lift.set(0);
     this.plan = NONE;
     this.setUi(IDLE);
+    this.page?.light(null);
     this.bridge.lock(false);
     if (id && drop && plan.kind !== 'none') this.cfg.onDrop(id, plan);
   }
@@ -343,11 +366,12 @@ export interface RowDrag {
 /** Trascinare una riga dell'elenco dei progetti (come sul sito: tocco lungo, poi la riga segue il dito). */
 export function useRowDrag(cfg: DragConfig): RowDrag {
   const bridge = useScrollBridge();
+  const page = useDropZones();
   const [ui, setUi] = useState<DragUi>(IDLE);
   const [lift] = useState(() => new LiftStore());
   const [g] = useState(() => new RowDragGesture(cfg, bridge, lift, setUi));
   useEffect(() => {
-    g.update(cfg, bridge);
+    g.update(cfg, bridge, page);
   });
   return {
     ui,

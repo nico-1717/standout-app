@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
+import { ScrollView, View, type ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -8,8 +8,8 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { PlanPanel } from '@/features/plan/PlanPanel';
 import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
-import { PjIcon } from '@/features/projects/PjIcons';
-import { ProjectsHeader, Seg } from '@/features/projects/PjParts';
+import { Crumbs, ProjectsHeader, Seg } from '@/features/projects/PjParts';
+import { DropZones, DropZonesContext } from '@/features/projects/DropZones';
 import { ProjectHero } from '@/features/projects/ProjectHero';
 import { SWATCHES, ProjectMenu } from '@/features/projects/ProjectMenu';
 import { DatesSheet, OptionsModal } from '@/features/projects/ProjectSheets';
@@ -52,6 +52,8 @@ export default function ProjectsScreen() {
   const scroller = useRef<ScrollViewInstance>(null);
   const scrolled = useRef(0);
   const [held, setHeld] = useState(false);
+  // i posti dove si può lasciare una riga trascinata: briciole e pastiglie dei progetti principali
+  const [zones] = useState(() => new DropZones());
   const bridge = useMemo<ScrollBridge>(
     () => ({
       offset: () => scrolled.current,
@@ -145,192 +147,181 @@ export default function ProjectsScreen() {
   const showTags = opts.mostra_tag;
 
   return (
-    <View style={{ flex: 1, backgroundColor: th.bg }}>
-      <ProjectsHeader
-        roots={roots.map((r) => r.project)}
-        current={rootOfMe}
-        onPick={(uuid) => {
-          setSel(uuid);
-          setProjectTab('list');
-        }}
-        onDates={() => setShowDates(true)}
-        onOptions={() => setShowOptions(true)}
-      />
-      <ScrollBridgeContext.Provider value={bridge}>
-        <ScrollView
-          ref={scroller}
-          scrollEnabled={!held}
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            scrolled.current = e.nativeEvent.contentOffset.y;
+    <DropZonesContext.Provider value={zones}>
+      <View style={{ flex: 1, backgroundColor: th.bg }}>
+        <ProjectsHeader
+          roots={roots.map((r) => r.project)}
+          current={rootOfMe}
+          onPick={(uuid) => {
+            setSel(uuid);
+            setProjectTab('list');
           }}
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 90, gap: 14 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {!me ? (
-            <>
-              <Seg<AllTab>
-                testID="proj-all-tab"
-                value={allTab}
-                onChange={setAllTab}
-                items={[
-                  { id: 'list', label: t('progetti.elenco') },
-                  { id: 'cal', label: t('piano.v_calendario') },
-                ]}
-              />
-              {allTab === 'list' ? (
-                <ProjectsAll
-                  repo={repo}
-                  all={all}
-                  changed={changed}
-                  roots={roots}
-                  favorites={favorites}
-                  totals={totals}
-                  showTags={showTags}
-                  onOpen={open}
-                  onCreate={(name, parent) => create(name, parent ?? null)}
+          onDates={() => setShowDates(true)}
+          onOptions={() => setShowOptions(true)}
+        />
+        <ScrollBridgeContext.Provider value={bridge}>
+          <ScrollView
+            ref={scroller}
+            scrollEnabled={!held}
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              scrolled.current = e.nativeEvent.contentOffset.y;
+            }}
+            contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 90, gap: 14 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {!me ? (
+              <>
+                <Seg<AllTab>
+                  testID="proj-all-tab"
+                  value={allTab}
+                  onChange={setAllTab}
+                  items={[
+                    { id: 'list', label: t('progetti.elenco') },
+                    { id: 'cal', label: t('piano.v_calendario') },
+                  ]}
                 />
-              ) : (
-                <PlanPanel
-                  scope={null}
-                  timeOpen={timeOpen}
-                  onTimeOpen={() => setTimeOpen(true)}
-                  onTimeClose={() => setTimeOpen(false)}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {crumbs.length ? (
-                <Pressable
-                  testID="proj-crumb"
-                  accessibilityRole="button"
-                  onPress={() => open(crumbs[crumbs.length - 1]!.uuid)}
-                  hitSlop={6}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: -4 }}
-                >
-                  <PjIcon name="back" color={th.text2} size={16} width={2.2} />
-                  <Text numberOfLines={1} style={{ color: th.text2, fontSize: 14, flex: 1 }}>
-                    {crumbs.map((c) => c.name).join(' › ')}
-                  </Text>
-                </Pressable>
-              ) : null}
-              <ProjectHero
-                me={me}
-                done={childrenOf(all, me.uuid).filter((k) => k.status === 'completed').length}
-                total={childrenOf(all, me.uuid).length}
-                secs={totals.get(me.uuid) ?? 0}
-                tasks={services.tasks ?? null}
-                version={version}
-                onCycle={() => cycle(me.uuid)}
-                onRename={(name) => {
-                  repo.update(me.uuid, { name });
-                  changed();
-                }}
-                onFocus={() => startPomodoro(me.uuid)}
-                onHistory={() =>
-                  router.push({ pathname: '/pomodoro-history', params: { project: me.uuid } })
-                }
-                onMenu={() => setMenu('menu')}
-                onDates={() => setMenu('due')}
-                onNote={() => setMenu('note')}
-                changed={changed}
-              />
-              <Seg<ProjectTab>
-                testID="proj-tab"
-                compact
-                value={projectTab}
-                onChange={setProjectTab}
-                items={[
-                  { id: 'list', label: t('progetti.elenco') },
-                  { id: 'cal', label: t('piano.v_calendario') },
-                  { id: 'plan', label: t('piano.v_piano') },
-                ]}
-              />
-              {projectTab === 'list' ? (
-                <SubProjects
-                  repo={repo}
-                  all={all}
-                  parent={me}
-                  rows={flatten(all, { ...treeOpts, collapsed, root: me.uuid })}
-                  collapsed={collapsed}
-                  onToggleBranch={(uuid) => {
-                    const n = new Set(collapsed);
-                    if (n.has(uuid)) n.delete(uuid);
-                    else n.add(uuid);
-                    setCollapsed(n);
-                  }}
-                  swatches={SWATCHES}
-                  onOpen={(k) => open(k.uuid)}
-                  onStart={(k) => startPomodoro(k.uuid)}
-                  onCycle={cycle}
-                  onAdd={(name, parent) => create(name, parent ?? me.uuid)}
-                  changed={changed}
-                  totals={totals}
-                  view={data.subView}
-                  onView={(v) => {
-                    services.projectOptions.setSubView(v);
+                {allTab === 'list' ? (
+                  <ProjectsAll
+                    repo={repo}
+                    all={all}
+                    changed={changed}
+                    roots={roots}
+                    favorites={favorites}
+                    totals={totals}
+                    showTags={showTags}
+                    onOpen={open}
+                    onCreate={(name, parent) => create(name, parent ?? null)}
+                  />
+                ) : (
+                  <PlanPanel
+                    scope={null}
+                    timeOpen={timeOpen}
+                    onTimeOpen={() => setTimeOpen(true)}
+                    onTimeClose={() => setTimeOpen(false)}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                {crumbs.length ? <Crumbs crumbs={crumbs} onOpen={open} /> : null}
+                <ProjectHero
+                  me={me}
+                  done={childrenOf(all, me.uuid).filter((k) => k.status === 'completed').length}
+                  total={childrenOf(all, me.uuid).length}
+                  secs={totals.get(me.uuid) ?? 0}
+                  tasks={services.tasks ?? null}
+                  version={version}
+                  onCycle={() => cycle(me.uuid)}
+                  onRename={(name) => {
+                    repo.update(me.uuid, { name });
                     changed();
                   }}
-                  showTags={showTags}
-                  canReorder={opts.ordine === 'manuale'}
-                />
-              ) : null}
-              {projectTab === 'cal' ? (
-                <PlanPanel
-                  scope={me.uuid}
-                  initialSel={me.uuid}
-                  timeOpen={timeOpen}
-                  onTimeOpen={() => setTimeOpen(true)}
-                  onTimeClose={() => setTimeOpen(false)}
-                />
-              ) : null}
-              {projectTab === 'plan' && services.plan ? (
-                <ProjectPlanCard
-                  repo={services.plan}
-                  projects={all}
-                  project={me.uuid}
-                  lang={lang}
-                  pomodoroMinutes={pomodoroSettings.last_pomodoro_duration_min}
-                  changed={changed}
-                  onCalendar={() => setProjectTab('cal')}
-                  onPomodoro={(min, auto) =>
-                    router.push({
-                      pathname: '/pomodoro',
-                      params: {
-                        project: me.uuid,
-                        min: String(min),
-                        ...(auto ? { auto: '1' } : {}),
-                      },
-                    })
+                  onFocus={() => startPomodoro(me.uuid)}
+                  onHistory={() =>
+                    router.push({ pathname: '/pomodoro-history', params: { project: me.uuid } })
                   }
+                  onMenu={() => setMenu('menu')}
+                  onDates={() => setMenu('due')}
+                  onNote={() => setMenu('note')}
+                  changed={changed}
                 />
-              ) : null}
-            </>
-          )}
-        </ScrollView>
-      </ScrollBridgeContext.Provider>
+                <Seg<ProjectTab>
+                  testID="proj-tab"
+                  compact
+                  value={projectTab}
+                  onChange={setProjectTab}
+                  items={[
+                    { id: 'list', label: t('progetti.elenco') },
+                    { id: 'cal', label: t('piano.v_calendario') },
+                    { id: 'plan', label: t('piano.v_piano') },
+                  ]}
+                />
+                {projectTab === 'list' ? (
+                  <SubProjects
+                    repo={repo}
+                    all={all}
+                    parent={me}
+                    rows={flatten(all, { ...treeOpts, collapsed, root: me.uuid })}
+                    collapsed={collapsed}
+                    onToggleBranch={(uuid) => {
+                      const n = new Set(collapsed);
+                      if (n.has(uuid)) n.delete(uuid);
+                      else n.add(uuid);
+                      setCollapsed(n);
+                    }}
+                    swatches={SWATCHES}
+                    onOpen={(k) => open(k.uuid)}
+                    onStart={(k) => startPomodoro(k.uuid)}
+                    onCycle={cycle}
+                    onAdd={(name, parent) => create(name, parent ?? me.uuid)}
+                    changed={changed}
+                    totals={totals}
+                    view={data.subView}
+                    onView={(v) => {
+                      services.projectOptions.setSubView(v);
+                      changed();
+                    }}
+                    showTags={showTags}
+                    canReorder={opts.ordine === 'manuale'}
+                  />
+                ) : null}
+                {projectTab === 'cal' ? (
+                  <PlanPanel
+                    scope={me.uuid}
+                    initialSel={me.uuid}
+                    timeOpen={timeOpen}
+                    onTimeOpen={() => setTimeOpen(true)}
+                    onTimeClose={() => setTimeOpen(false)}
+                  />
+                ) : null}
+                {projectTab === 'plan' && services.plan ? (
+                  <ProjectPlanCard
+                    repo={services.plan}
+                    projects={all}
+                    project={me.uuid}
+                    lang={lang}
+                    pomodoroMinutes={pomodoroSettings.last_pomodoro_duration_min}
+                    changed={changed}
+                    onCalendar={() => setProjectTab('cal')}
+                    onPomodoro={(min, auto) =>
+                      router.push({
+                        pathname: '/pomodoro',
+                        params: {
+                          project: me.uuid,
+                          min: String(min),
+                          ...(auto ? { auto: '1' } : {}),
+                        },
+                      })
+                    }
+                  />
+                ) : null}
+              </>
+            )}
+          </ScrollView>
+        </ScrollBridgeContext.Provider>
 
-      {me && menu ? (
-        <ProjectMenu
-          me={me}
-          all={all}
-          crumbs={crumbs}
-          sessions={repo.sessionCount(subtreeIds(all, me.uuid))}
-          initial={menu === 'due' ? 'due' : menu === 'note' ? 'note' : undefined}
-          onClose={() => setMenu(null)}
-          onDeleted={() => {
-            setMenu(null);
-            setSel(me.parent_uuid);
-          }}
-        />
-      ) : null}
-      {showOptions ? (
-        <OptionsModal opts={opts} onChange={setOpt} onClose={() => setShowOptions(false)} />
-      ) : null}
-      {showDates ? (
-        <DatesSheet all={all} onOpen={open} onClose={() => setShowDates(false)} />
-      ) : null}
-    </View>
+        {me && menu ? (
+          <ProjectMenu
+            me={me}
+            all={all}
+            crumbs={crumbs}
+            sessions={repo.sessionCount(subtreeIds(all, me.uuid))}
+            initial={menu === 'due' ? 'due' : menu === 'note' ? 'note' : undefined}
+            onClose={() => setMenu(null)}
+            onDeleted={() => {
+              setMenu(null);
+              setSel(me.parent_uuid);
+            }}
+          />
+        ) : null}
+        {showOptions ? (
+          <OptionsModal opts={opts} onChange={setOpt} onClose={() => setShowOptions(false)} />
+        ) : null}
+        {showDates ? (
+          <DatesSheet all={all} onOpen={open} onClose={() => setShowDates(false)} />
+        ) : null}
+      </View>
+    </DropZonesContext.Provider>
   );
 }

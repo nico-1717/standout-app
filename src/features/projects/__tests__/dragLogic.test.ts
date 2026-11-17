@@ -100,3 +100,41 @@ test('ownerAt finds the sibling a deep row belongs to', () => {
   expect(ownerAt('B2', parentOf, 'B')).toBe('B1');
   expect(ownerAt('A', parentOf, 'B')).toBeNull();
 });
+
+describe('planDrop › places in a row (breadcrumbs, top pills)', () => {
+  const crumb = { id: 'X', name: 'Crumb X', top: -200, height: 30, left: 10, width: 80 };
+  const pill = { id: 'P', name: 'Pill P', top: 40, height: 34, left: 200, width: 90, fixed: true };
+
+  test('the finger must be inside the box across as well as down', () => {
+    const outside = [{ ...crumb, top: 100 }];
+    expect(planDrop(base({ outside, y: 110, x: 40 }))).toEqual({
+      kind: 'nest',
+      id: 'X',
+      name: 'Crumb X',
+      held: false,
+    });
+    // same height, but beside the crumb: it is the list that counts
+    expect(planDrop(base({ outside, y: 110, x: 150 })).kind).not.toBe('nest');
+  });
+
+  test('a fixed place (the header) is judged on the screen height, not the scrolled page', () => {
+    const outside = [pill];
+    // the page is scrolled by 500: content y is far from the pill, the screen y is on it
+    expect(planDrop(base({ outside, y: 540, screenY: 55, x: 230 }))).toEqual({
+      kind: 'nest',
+      id: 'P',
+      name: 'Pill P',
+      held: false,
+    });
+    expect(planDrop(base({ outside, y: 55, screenY: 400, x: 230 })).kind).not.toBe('nest');
+  });
+
+  test('the project the row already sits in, or one inside the row, is not a place', () => {
+    expect(planDrop(base({ outside: [{ ...pill, id: 'A' }], screenY: 55, x: 230 }))).toEqual({
+      kind: 'none',
+    });
+    expect(
+      planDrop(base({ outside: [pill], blocked: new Set(['A', 'P']), screenY: 55, x: 230 })),
+    ).toEqual({ kind: 'none' });
+  });
+});

@@ -18,6 +18,11 @@ export interface OutsideBox {
   name: string;
   top: number;
   height: number;
+  /** solo per i posti in riga (le briciole, le pastiglie): anche il dito deve stare fra `left` e `left + width` */
+  left?: number;
+  width?: number;
+  /** sta fermo mentre la pagina scorre: `top` è sullo schermo, non sul contenuto */
+  fixed?: boolean;
 }
 
 export type DropPlan =
@@ -47,6 +52,9 @@ export interface PlanInput {
   blocked: ReadonlySet<string>;
   /** dove sta il dito, nelle coordinate del contenuto */
   y: number;
+  /** dove sta il dito sullo schermo (per i posti che non scorrono) */
+  x?: number;
+  screenY?: number;
   /** il riordino è consentito (ordine «manuale»)? */
   canReorder: boolean;
 }
@@ -55,7 +63,12 @@ export interface PlanInput {
 export function planDrop(p: PlanInput): DropPlan {
   // fuori dall'elenco (etichetta, briciole): dentro, subito, se non ci è già
   for (const o of p.outside) {
-    if (p.y >= o.top && p.y <= o.top + o.height) {
+    const y = o.fixed ? (p.screenY ?? p.y) : p.y;
+    const across =
+      o.left === undefined || o.width === undefined || p.x === undefined
+        ? true
+        : p.x >= o.left && p.x <= o.left + o.width;
+    if (across && y >= o.top && y <= o.top + o.height) {
       if (o.id === p.parent || p.blocked.has(o.id)) return { kind: 'none' };
       return { kind: 'nest', id: o.id, name: o.name, held: false };
     }
