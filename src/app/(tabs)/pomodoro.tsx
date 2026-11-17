@@ -20,6 +20,7 @@ import {
 } from '@/features/pomodoro/logic';
 import type { PresetKind } from '@/features/pomodoro/repo';
 import { BreakScene } from '@/features/pomodoro/BreakScene';
+import { ChoiceSheet, useToast } from '@/features/pomodoro/ChoiceSheet';
 import { Hourglass } from '@/features/pomodoro/Hourglass';
 import { Dial } from '@/features/pomodoro/Dial';
 import { DurationSheet } from '@/features/pomodoro/DurationSheet';
@@ -30,7 +31,7 @@ import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
 import { ProjectSheet } from '@/features/projects/ProjectSheet';
 import { Avatar } from '@/ui/Avatar';
-import { Card, PrimaryButton, TextButton, titleStyle } from '@/ui/kit';
+import { Card, titleStyle } from '@/ui/kit';
 
 /** Parte da solo una volta (dal Piano: «ogni giorno» → Avvia il timer). */
 function AutoStart({ go }: { go: () => void }) {
@@ -49,6 +50,7 @@ export default function PomodoroScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const toast = useToast(insets.bottom + 110);
   const { width } = useWindowDimensions();
   const { services, version, changed, pomodoroSettings, updatePomodoroSettings, authState } =
     useApp();
@@ -75,9 +77,10 @@ export default function PomodoroScreen() {
   );
   const [picking, setPicking] = useState(false);
   const [durOpen, setDurOpen] = useState(false);
-  const [stopping, setStopping] = useState(false);
-  const [short, setShort] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
+  /** il popup aperto: la scelta dello stop, la conferma dello scarto, la domanda sulla sessione brevissima, «tempo aggiunto» */
+  const [popup, setPopup] = useState<null | 'stop' | 'discard' | 'short' | 'extend'>(null);
+  /** cosa si fa dopo aver chiuso la sessione: la pausa o niente */
+  const [thenBreak, setThenBreak] = useState(false);
   const [noteTasks, setNoteTasks] = useState<string[]>([]);
 
   const data = useMemo(() => {
@@ -189,29 +192,46 @@ export default function PomodoroScreen() {
     updatePomodoroSettings({ current_break: null });
     void cancelAlarm();
   };
-  const closeStop = () => {
-    setStopping(false);
-    setShort(false);
-    setDiscarding(false);
+  const closePopup = () => {
+    setPopup(null);
+    setThenBreak(false);
   };
-  /** Ferma il timer a mano; `thenBreak` = subito dopo parte la pausa. Sotto i 5 minuti si chiede se tenere la sessione. */
-  const stopNow = (s: Session, thenBreak: boolean, skipShortCheck = false) => {
-    if (!skipShortCheck && elapsedSeconds(s, Date.now()) < 300) {
-      setShort(true);
+  /** Chiude la sessione (salvata, o scartata se `drop`) e dice com'è andata; `poi` = subito la pausa (doInterrompi). */
+  const finishSession = (s: Session, drop: boolean, poi: boolean) => {
+    services.pomodoro.stop(s.uuid, drop);
+    void cancelAlarm();
+    closePopup();
+    changed();
+    toast.show(t(drop ? 'pomodoro.sessione_scartata' : 'pomodoro.sessione_salvata'));
+    if (poi) startBreak(breakMin);
+  };
+  /** «Interrompi»: sotto il minuto si butta senza chiedere; altrimenti si sceglie cosa farne (onInterrompiClick). */
+  const askStop = (s: Session) => {
+    if (elapsedSeconds(s, Date.now()) < 60) {
+      finishSession(s, true, false);
       return;
     }
-    services.pomodoro.stop(s.uuid);
-    void cancelAlarm();
-    closeStop();
-    changed();
-    if (thenBreak) startBreak(breakMin);
+    setPopup('stop');
   };
-  const discard = (s: Session) => {
-    services.pomodoro.stop(s.uuid, true);
-    void cancelAlarm();
-    closeStop();
-    changed();
+  const onStopChoice = (s: Session, key: string | null) => {
+    if (!key) {
+      closePopup();
+      return;
+    }
+    if (key === 'discard') {
+      setPopup('discard');
+      return;
+    }
+    const poi = key === 'break';
+    // la domanda «è durata pochissimo, la salvo?» viene dopo: riguarda cosa farne, non se fermarsi
+    if (elapsedSeconds(s, Date.now()) < 300) {
+      setThenBreak(poi);
+      setPopup('short');
+      return;
+    }
+    finishSession(s, false, poi);
   };
+  const discard = (s: Session) => finishSession(s, true, false);
 
   const removePreset = (kind: PresetKind, m: number) => {
     services.pomodoro.removePreset(kind, m);
@@ -384,73 +404,90 @@ export default function PomodoroScreen() {
   const dialPress = state === 'idle' && mode === 0 ? () => setDurOpen(true) : undefined;
   const tasksTime = clockText;
 
-  const stopCard =
-    active && stopping ? (
-      <Card style={{ padding: 16, gap: 10 }}>
-        {short ? (
-          <>
-            <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
-              {t('pomodoro.molto_breve')}
-            </Text>
-            <Text style={{ color: th.text2 }}>{t('pomodoro.molto_breve_testo')}</Text>
-            <PrimaryButton
-              testID="short-save"
-              label={t('pomodoro.si_salva')}
-              onPress={() => stopNow(active, false, true)}
-            />
-            <TextButton
-              testID="short-discard"
-              danger
-              label={t('pomodoro.scarta')}
-              onPress={() => discard(active)}
-            />
-            <TextButton label={t('pomodoro.scelta_continua')} onPress={closeStop} />
-          </>
-        ) : discarding ? (
-          <>
-            <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
-              {t('pomodoro.scarta_titolo')}
-            </Text>
-            <Text style={{ color: th.text2 }}>{t('pomodoro.scarta_testo')}</Text>
-            <PrimaryButton
-              testID="discard-yes"
-              danger
-              label={t('pomodoro.scarta_si')}
-              onPress={() => discard(active)}
-            />
-            <TextButton label={t('pomodoro.scelta_continua')} onPress={closeStop} />
-          </>
-        ) : (
-          <>
-            <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
-              {t('pomodoro.scelta_stop_titolo')}
-            </Text>
-            <Text style={{ color: th.text2 }}>{t('pomodoro.scelta_stop_testo')}</Text>
-            <PrimaryButton
-              testID="stop-break"
-              label={`${t('pomodoro.scelta_pausa')} · ${breakMin} min`}
-              onPress={() => stopNow(active, true)}
-            />
-            <TextButton
-              testID="stop-end"
-              label={t('pomodoro.scelta_chiudi')}
-              onPress={() => stopNow(active, false)}
-            />
-            <TextButton
-              testID="stop-keep"
-              label={t('pomodoro.scelta_continua')}
-              onPress={closeStop}
-            />
-            <TextButton
-              testID="stop-discard"
-              danger
-              label={t('pomodoro.scelta_scarta')}
-              onPress={() => setDiscarding(true)}
-            />
-          </>
-        )}
-      </Card>
-    ) : null;
+  /* i popup (showChoice del sito): la scelta dello stop, lo scarto, la sessione brevissima, il tempo aggiunto */
+  const closeDone = (d: Session) => {
+    services.pomodoro.archive(d.uuid);
+    changed();
+  };
+  const popupEl = (() => {
+    if (popup === 'stop' && active)
+      return (
+        <ChoiceSheet
+          testID="stop-choice"
+          accent={accent}
+          title={t('pomodoro.scelta_stop_titolo')}
+          text={t('pomodoro.scelta_stop_testo')}
+          options={[
+            {
+              key: 'break',
+              label: `${t('pomodoro.scelta_pausa')} · ${breakMin} min`,
+              icon: 'pause',
+              primary: true,
+            },
+            { key: 'end', label: t('pomodoro.scelta_chiudi'), icon: 'stop' },
+            { key: 'discard', label: t('pomodoro.scelta_scarta'), icon: 'trash' },
+          ]}
+          onChoose={(k) => onStopChoice(active, k)}
+        />
+      );
+    if (popup === 'discard' && active)
+      return (
+        <ChoiceSheet
+          testID="discard-choice"
+          accent={accent}
+          title={t('pomodoro.scarta_titolo')}
+          text={t('pomodoro.scarta_testo')}
+          options={[
+            { key: 'cancel', label: t('comune.annulla'), icon: 'back', primary: true },
+            { key: 'yes', label: t('pomodoro.scarta_si'), icon: 'trash' },
+          ]}
+          onChoose={(k) => (k === 'yes' ? discard(active) : closePopup())}
+        />
+      );
+    if (popup === 'short' && active)
+      return (
+        <ChoiceSheet
+          testID="short-choice"
+          accent={accent}
+          title={t('pomodoro.molto_breve')}
+          text={t('pomodoro.molto_breve_testo')}
+          options={[
+            { key: 'save', label: t('pomodoro.si_salva'), icon: 'stop', primary: true },
+            { key: 'discard', label: t('pomodoro.scarta'), icon: 'trash' },
+          ]}
+          onChoose={(k) => {
+            if (!k) closePopup();
+            else finishSession(active, k === 'discard', thenBreak);
+          }}
+        />
+      );
+    if (popup === 'extend' && done)
+      return (
+        <ChoiceSheet
+          testID="extend-choice"
+          accent={accent}
+          title={t('pomodoro.scelta_tempo_titolo')}
+          text={t('pomodoro.scelta_tempo_testo')}
+          options={[
+            { key: 'continue', label: t('pomodoro.scelta_continua'), icon: 'play', primary: true },
+            {
+              key: 'break',
+              label: `${t('pomodoro.scelta_pausa')} · ${breakMin} min`,
+              icon: 'pause',
+            },
+            { key: 'end', label: t('pomodoro.scelta_chiudi'), icon: 'stop' },
+          ]}
+          onChoose={(k) => {
+            closePopup();
+            if (k === 'break') {
+              closeDone(done);
+              startBreak(breakMin);
+            } else if (k === 'end') closeDone(done);
+          }}
+        />
+      );
+    return null;
+  })();
 
   const buttons = active ? (
     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
@@ -474,7 +511,7 @@ export default function PomodoroScreen() {
         kind="stop"
         testID="pomodoro-stop"
         label={t('pomodoro.stop')}
-        onPress={() => setStopping(true)}
+        onPress={() => askStop(active)}
       />
     </View>
   ) : brk ? (
@@ -799,6 +836,7 @@ export default function PomodoroScreen() {
             onPress={() => {
               services.pomodoro.extend(done.uuid);
               changed();
+              setPopup('extend');
             }}
             style={{
               paddingHorizontal: 16,
@@ -836,7 +874,7 @@ export default function PomodoroScreen() {
           </View>
         ) : null}
 
-        {stopCard ?? buttons}
+        {buttons}
       </ScrollView>
 
       {services.tasks ? (
@@ -873,6 +911,9 @@ export default function PomodoroScreen() {
           return id;
         }}
       />
+
+      {popupEl}
+      {toast.node}
 
       {durOpen ? (
         <DurationSheet

@@ -1,18 +1,30 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { dayOfMonth, monthOf, weekdayOf } from '@/features/planner/dates';
+import { TrashIcon } from '@/features/grades/parts';
+import { ChoiceSheet } from '@/features/pomodoro/ChoiceSheet';
+import {
+  buildCsv,
+  buildXlsx,
+  exportRows,
+  exportStem,
+  exportTitle,
+} from '@/features/pomodoro/exportFile';
 import { human, type Session } from '@/features/pomodoro/logic';
 import type { HistoryFilter } from '@/features/pomodoro/repo';
 import { ProjectPicker } from '@/features/projects/ProjectPicker';
 import { subtreeIds } from '@/features/projects/logic';
 import { localToday } from '@/features/tasks/groups';
+import { ActionSwipe } from '@/ui/ActionSwipe';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
 import { Text } from '@/ui/CappedText';
@@ -60,6 +72,9 @@ export default function PomodoroHistory() {
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [bulkPick, setBulkPick] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [swiped, setSwiped] = useState<string | null>(null);
+  const [rowDelete, setRowDelete] = useState<string | null>(null);
 
   const filter: HistoryFilter = useMemo(() => {
     void version;
@@ -150,6 +165,40 @@ export default function PomodoroHistory() {
     changed();
   };
 
+  /** «Esporta»: tutto lo storico in un file (.xlsx come il sito, o .csv) da salvare o condividere. */
+  async function exportFile(format: 'xlsx' | 'csv') {
+    setExporting(false);
+    try {
+      const rows = exportRows(services!.db);
+      if (!rows.length) {
+        Alert.alert(t('pomodoro.ph_esporta'), t('pomodoro.storico_nessuna'));
+        return;
+      }
+      const title = exportTitle(rows);
+      const file = new File(Paths.cache, `${exportStem()}.${format}`);
+      file.create({ overwrite: true });
+      if (format === 'xlsx') file.write(buildXlsx(rows, title));
+      else file.write(buildCsv(rows, title));
+      try {
+        await Sharing.shareAsync(file.uri, {
+          mimeType:
+            format === 'xlsx'
+              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              : 'text/csv',
+        });
+      } finally {
+        // la copia nella cache non serve più dopo «Condividi»
+        try {
+          if (file.exists) file.delete();
+        } catch {
+          /* già sparita */
+        }
+      }
+    } catch {
+      Alert.alert(t('pomodoro.ph_esporta'), t('app.scarica_errore'));
+    }
+  }
+
   const toggle = (id: string) =>
     setSelected((cur) => {
       const n = new Set(cur);
@@ -231,6 +280,14 @@ export default function PomodoroHistory() {
               onPress={() => router.push('/pomodoro-import')}
             >
               <Text style={{ color: th.brand, fontSize: 17 }}>⇩</Text>
+            </Pressable>
+            <Pressable
+              testID="hist-export"
+              accessibilityRole="button"
+              accessibilityLabel={t('pomodoro.ph_esporta')}
+              onPress={() => setExporting(true)}
+            >
+              <Text style={{ color: th.brand, fontSize: 17 }}>⇧</Text>
             </Pressable>
             <Pressable
               testID="hist-add"
@@ -751,6 +808,28 @@ export default function PomodoroHistory() {
           </Card>
         ) : null}
 
+        {scope ? (
+          <Pressable
+            testID="hist-go"
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/pomodoro', params: { project: scope } })}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              minHeight: 48,
+              borderRadius: 16,
+              backgroundColor: colorOf(scope),
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            })}
+          >
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
+              ▶ {t('pomodoro.avvia_su_questo')}
+            </Text>
+          </Pressable>
+        ) : null}
+
         {groups.length === 0 ? (
           <Text style={{ color: th.text2, textAlign: 'center', padding: 24 }}>
             {t('pomodoro.storico_nessuna')}
@@ -771,7 +850,7 @@ export default function PomodoroHistory() {
               <Card>
                 {g.rows.map((s, i) => {
                   const on = selected.has(s.uuid);
-                  return (
+                  const rowEl = (
                     <Pressable
                       key={s.uuid}
                       testID={`hist-row-${s.uuid}`}
@@ -818,6 +897,45 @@ export default function PomodoroHistory() {
                       </Text>
                     </Pressable>
                   );
+                  // trascinata verso destra la riga scopre «Modifica» ed «Elimina» (come sul sito); non mentre si seleziona o si corregge
+                  if (selecting || draft) return rowEl;
+                  return (
+                    <ActionSwipe
+                      key={s.uuid}
+                      id={s.uuid}
+                      open={swiped === s.uuid}
+                      onOpenChange={(o) => setSwiped(o ? s.uuid : null)}
+                      actions={[
+                        {
+                          key: 'edit',
+                          color: th.brand,
+                          label: t('comune.modifica'),
+                          icon: (
+                            <Svg width={18} height={18} viewBox="0 0 24 24">
+                              <Path
+                                d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+                                stroke="#fff"
+                                strokeWidth={2.1}
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </Svg>
+                          ),
+                          run: () => open(s),
+                        },
+                        {
+                          key: 'delete',
+                          color: th.red,
+                          label: t('comune.elimina'),
+                          icon: <TrashIcon size={18} />,
+                          run: () => setRowDelete(s.uuid),
+                        },
+                      ]}
+                    >
+                      {rowEl}
+                    </ActionSwipe>
+                  );
                 })}
               </Card>
             </View>
@@ -831,6 +949,38 @@ export default function PomodoroHistory() {
           />
         ) : null}
       </ScrollView>
+      {exporting ? (
+        <ChoiceSheet
+          testID="export-choice"
+          accent={th.brand}
+          title={t('pomodoro.ph_esporta')}
+          text={t('import.formati')}
+          options={[
+            { key: 'xlsx', label: 'Excel (.xlsx)', icon: 'down', primary: true },
+            { key: 'csv', label: 'CSV (.csv)', icon: 'down' },
+          ]}
+          onChoose={(k) => (k === 'xlsx' || k === 'csv' ? void exportFile(k) : setExporting(false))}
+        />
+      ) : null}
+      {rowDelete ? (
+        <ChoiceSheet
+          testID="row-delete-choice"
+          accent={th.brand}
+          title={t('pomodoro.scarta_titolo')}
+          text={t('pomodoro.scarta_testo')}
+          options={[
+            { key: 'cancel', label: t('comune.annulla'), icon: 'back', primary: true },
+            { key: 'yes', label: t('pomodoro.scarta_si'), icon: 'trash' },
+          ]}
+          onChoose={(k) => {
+            if (k === 'yes') {
+              services.pomodoro.removeMany([rowDelete]);
+              changed();
+            }
+            setRowDelete(null);
+          }}
+        />
+      ) : null}
     </View>
   );
 }

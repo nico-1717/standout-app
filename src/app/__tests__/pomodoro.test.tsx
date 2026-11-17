@@ -180,36 +180,16 @@ describe('Pomodoro screen', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ last_mode: 1 });
   });
 
-  test('stopping a very short session asks first: save keeps it, discard removes it', async () => {
-    const { pomodoro } = setup();
-    const id = pomodoro.start({ mode: 1 })!;
-    const view = await renderIt();
-    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
-    await fireEvent.press(screen.getByTestId('stop-end'));
-    expect(screen.getByTestId('short-save')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('short-save'));
-    expect(pomodoro.get(id)).toMatchObject({ status: 'interrotto' });
-
-    const id2 = pomodoro.start({ mode: 1 })!;
-    mockVersion += 1;
-    await view.rerender(
-      <ThemeProvider>
-        <PomodoroScreen />
-      </ThemeProvider>,
-    );
-    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
-    await fireEvent.press(screen.getByTestId('stop-end'));
-    await fireEvent.press(screen.getByTestId('short-discard'));
-    expect(pomodoro.get(id2)).toBeNull();
-  });
-
-  test('a long session stops straight into a break', async () => {
-    const { db, pomodoro } = setup();
-    const startedAt = stamp(new Date(Date.now() - 30 * 60000));
+  const openSession = (
+    db: ReturnType<typeof setup>['db'],
+    uuid: string,
+    minutesAgo: number,
+    extra: Record<string, unknown> = {},
+  ) =>
     upsertRow(db, 'pomodoro_sessions', {
-      uuid: 's1',
+      uuid,
       mode: 1,
-      start_time: startedAt,
+      start_time: stamp(new Date(Date.now() - minutesAgo * 60000)),
       end_time: null,
       status: null,
       resume_time: null,
@@ -218,12 +198,104 @@ describe('Pomodoro screen', () => {
       project_uuid: null,
       is_manual: 0,
       updated_at: null,
+      ...extra,
     });
+
+  test('stopping under a minute throws the session away at once, with a toast', async () => {
+    const { pomodoro } = setup();
+    const id = pomodoro.start({ mode: 1 })!;
     await renderIt();
     await fireEvent.press(screen.getByTestId('pomodoro-stop'));
-    await fireEvent.press(screen.getByTestId('stop-break'));
+    expect(screen.queryByTestId('stop-choice')).toBeNull();
+    expect(pomodoro.get(id)).toBeNull();
+    expect(screen.getByTestId('pomodoro-toast')).toHaveTextContent(/discarded/i);
+  });
+
+  test('the stop choice is a popup: tapping outside keeps the timer running', async () => {
+    const { db, pomodoro } = setup();
+    openSession(db, 's1', 30);
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    expect(screen.getByTestId('stop-choice')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('stop-choice-veil'));
+    expect(screen.queryByTestId('stop-choice')).toBeNull();
+    expect(pomodoro.get('s1')!.end_time).toBeNull();
+  });
+
+  test('a session under five minutes asks "save it?" after the choice: save keeps it, discard removes it', async () => {
+    const { db, pomodoro } = setup();
+    openSession(db, 's1', 2);
+    const view = await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    await fireEvent.press(screen.getByTestId('stop-choice-end'));
+    expect(screen.getByTestId('short-choice')).toBeTruthy();
+    expect(pomodoro.get('s1')!.end_time).toBeNull(); // ancora aperta finché non si decide
+    await fireEvent.press(screen.getByTestId('short-choice-save'));
+    expect(pomodoro.get('s1')).toMatchObject({ status: 'interrotto' });
+    expect(screen.getByTestId('pomodoro-toast')).toHaveTextContent(/saved/i);
+
+    openSession(db, 's2', 2);
+    mockVersion += 1;
+    await view.rerender(
+      <ThemeProvider>
+        <PomodoroScreen />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    await fireEvent.press(screen.getByTestId('stop-choice-end'));
+    await fireEvent.press(screen.getByTestId('short-choice-discard'));
+    expect(pomodoro.get('s2')).toBeNull();
+  });
+
+  test('discarding asks once more; cancel goes back to the running timer', async () => {
+    const { db, pomodoro } = setup();
+    openSession(db, 's1', 30);
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    await fireEvent.press(screen.getByTestId('stop-choice-discard'));
+    expect(screen.getByTestId('discard-choice')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('discard-choice-cancel'));
+    expect(pomodoro.get('s1')!.end_time).toBeNull();
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    await fireEvent.press(screen.getByTestId('stop-choice-discard'));
+    await fireEvent.press(screen.getByTestId('discard-choice-yes'));
+    expect(pomodoro.get('s1')).toBeNull();
+    expect(screen.getByTestId('pomodoro-toast')).toHaveTextContent(/discarded/i);
+  });
+
+  test('a long session stops straight into a break', async () => {
+    const { db, pomodoro } = setup();
+    openSession(db, 's1', 30);
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    await fireEvent.press(screen.getByTestId('stop-choice-break'));
     expect(pomodoro.get('s1')).toMatchObject({ status: 'interrotto' });
     expect(mockSettings.current_break).toMatchObject({ planned_duration_min: 5 });
+  });
+
+  test('adding extra time asks what now: keep going, take a break, or end', async () => {
+    const { db, pomodoro } = setup();
+    const done = {
+      mode: 0,
+      start_time: '2030-01-01 10:00:00',
+      end_time: '2030-01-01 10:25:00',
+      status: 'completato',
+      duration_seconds: 1500,
+      planned_duration_min: 25,
+    };
+    upsertRow(db, 'pomodoro_sessions', {
+      uuid: 's3',
+      resume_time: null,
+      project_uuid: null,
+      is_manual: 0,
+      updated_at: null,
+      ...done,
+    });
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('done-overtime'));
+    expect(screen.getByTestId('extend-choice')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('extend-choice-end'));
+    expect(pomodoro.get('s3')!.status).toBe('archiviato');
   });
 
   test('a finished pomodoro offers a break, more time, or to close it', async () => {

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as Sharing from 'expo-sharing';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -15,6 +16,26 @@ let mockVersion = 0;
 const mockChanged = jest.fn(() => {
   mockVersion += 1;
 });
+
+const mockWritten: { name: string; data: unknown }[] = [];
+jest.mock('expo-file-system', () => ({
+  Paths: { cache: 'cache' },
+  File: class {
+    uri: string;
+    name: string;
+    constructor(_dir: unknown, name: string) {
+      this.name = name;
+      this.uri = `file:///cache/${name}`;
+    }
+    exists = true;
+    create() {}
+    write(data: unknown) {
+      mockWritten.push({ name: this.name, data });
+    }
+    delete() {}
+  },
+}));
+jest.mock('expo-sharing', () => ({ shareAsync: jest.fn(async () => undefined) }));
 
 let mockParams: Record<string, string> = {};
 const mockPush = jest.fn();
@@ -45,6 +66,53 @@ const renderIt = () =>
       <PomodoroHistory />
     </ThemeProvider>,
   );
+
+type Handlers = Record<string, (e: never) => unknown>;
+let clock = 1;
+let lastX = 100;
+const touchX = (x: number, active = true) => {
+  clock += 1;
+  const before = lastX;
+  lastX = x;
+  const t = { pageX: x, pageY: 30, identifier: 0, timestamp: clock, locationX: 0, locationY: 0 };
+  return {
+    nativeEvent: { touches: active ? [t] : [], changedTouches: [t], pageX: x, pageY: 30 },
+    touchHistory: {
+      touchBank: [
+        {
+          touchActive: active,
+          startPageX: 100,
+          startPageY: 30,
+          startTimeStamp: 1,
+          currentPageX: x,
+          currentPageY: 30,
+          currentTimeStamp: clock,
+          previousPageX: before,
+          previousPageY: 30,
+          previousTimeStamp: clock - 1,
+        },
+      ],
+      numberActiveTouches: active ? 1 : 0,
+      indexOfSingleActiveTouch: active ? 0 : -1,
+      mostRecentTimeStamp: clock,
+    },
+  } as never;
+};
+/** Trascina la riga verso destra come un dito (il gesto è lo stesso di projects.test), poi tocca il tasto scoperto. */
+const pressSwipe = async (key: string, id: string) => {
+  const h = screen.getByTestId(`swipe-pan-${id}`).props as Handlers;
+  lastX = 100;
+  await act(async () => {
+    h.onMoveShouldSetResponderCapture!(touchX(100));
+    const end = touchX(300);
+    h.onMoveShouldSetResponderCapture!(end);
+    h.onMoveShouldSetResponder!(end);
+    h.onResponderGrant!(touchX(100));
+    h.onResponderMove!(touchX(300));
+    h.onResponderRelease!(touchX(300, false));
+  });
+  await fireEvent.press(screen.getByTestId(`swipe-${key}-${id}`));
+};
 
 describe('Pomodoro history', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -204,5 +272,59 @@ describe('Pomodoro history', () => {
     expect(screen.getByTestId('hist-more')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('hist-more'));
     expect(screen.queryByTestId('hist-more')).toBeNull();
+  });
+
+  test('swiping a row shows Edit and Delete; Delete asks once and then removes the session', async () => {
+    const { pomodoro } = setup();
+    const today = localToday();
+    const id = pomodoro.addManual({ day: today, from: '09:00', to: '09:30' })!;
+    await renderIt();
+    expect(screen.getByTestId(`swipe-edit-${id}`)).toBeTruthy();
+    await pressSwipe('delete', id);
+    expect(screen.getByTestId('row-delete-choice')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('row-delete-choice-cancel'));
+    expect(pomodoro.get(id)).not.toBeNull();
+    await pressSwipe('delete', id);
+    await fireEvent.press(screen.getByTestId('row-delete-choice-yes'));
+    expect(pomodoro.get(id)).toBeNull();
+  });
+
+  test('the Edit swipe button opens the correction panel on that row', async () => {
+    const { pomodoro } = setup();
+    const id = pomodoro.addManual({ day: localToday(), from: '09:00', to: '09:30' })!;
+    await renderIt();
+    await pressSwipe('edit', id);
+    expect(screen.getByTestId('draft-save')).toBeTruthy();
+  });
+
+  test('opened from a project, a button starts a pomodoro on it', async () => {
+    const { projects } = setup();
+    const a = projects.create({ name: 'Physics' })!;
+    mockParams = { project: a };
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hist-go'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/pomodoro', params: { project: a } });
+  });
+
+  test('without a project there is no start button', async () => {
+    setup();
+    await renderIt();
+    expect(screen.queryByTestId('hist-go')).toBeNull();
+  });
+
+  test('Export asks for the format and shares an .xlsx or .csv of the whole history', async () => {
+    const { pomodoro } = setup();
+    pomodoro.addManual({ day: localToday(), from: '09:00', to: '09:30' });
+    mockWritten.length = 0;
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('hist-export'));
+    await fireEvent.press(screen.getByTestId('export-choice-xlsx'));
+    await waitFor(() => expect(Sharing.shareAsync).toHaveBeenCalledTimes(1));
+    expect(mockWritten[0]!.name).toMatch(/^Pomodoro_record_\d{8}\.xlsx$/);
+    await fireEvent.press(screen.getByTestId('hist-export'));
+    await fireEvent.press(screen.getByTestId('export-choice-csv'));
+    await waitFor(() => expect(Sharing.shareAsync).toHaveBeenCalledTimes(2));
+    expect(mockWritten[1]!.name).toMatch(/\.csv$/);
+    expect(String(mockWritten[1]!.data)).toContain('Date,StartTime,EndTime,Type,Title');
   });
 });
