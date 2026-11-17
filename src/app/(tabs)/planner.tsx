@@ -34,14 +34,22 @@ import type { Habit, HabitLog } from '@/features/habits/logic';
 import type { Project } from '@/features/projects/logic';
 import { PillNotices } from '@/features/planner/PillNotices';
 import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
-import { BandEvent, DayGrid, dayTitle, useNowMinutes } from '@/features/planner/PlannerParts';
+import {
+  AgendaList,
+  BandEvent,
+  DayGrid,
+  dayTitle,
+  useNowMinutes,
+} from '@/features/planner/PlannerParts';
 import { minutesOf } from '@/features/planner/model';
 import { weekPhraseId } from '@/features/planner/phrases';
 import { MonthScene } from '@/features/planner/ambient/MonthScene';
 import { ambientOpacity } from '@/features/planner/ambient/scene';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthAgenda, MonthView, WeekGrid, monthGrid } from '@/features/planner/Views';
-import { isBand, pxPerMinute } from '@/features/planner/layout';
+import { isBand } from '@/features/planner/layout';
+import { usePinchZoom } from '@/features/planner/usePinchZoom';
+import { ZoomDial } from '@/features/planner/ZoomDial';
 
 /** Il planner: vista giorno (con le ore), settimana (un elenco per giorno) e mese (una griglia). */
 export default function PlannerScreen() {
@@ -87,6 +95,27 @@ export default function PlannerScreen() {
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   const scroller = useRef<ScrollViewInstance>(null);
   const zoom = plannerSettings.zoom;
+  // la giornata scorre dentro `day-scroll`: dove sta (in cima alla finestra e quanto è scesa) e dove comincia la
+  // griglia nel contenuto, per tenere fermo l'orario sotto le dita mentre si pizzica
+  const scrollY = useRef(0);
+  const viewTop = useRef(0);
+  const viewH = useRef(0);
+  const gridTop = useRef(0);
+  const pinch = usePinchZoom(zoom, {
+    anchorAt: (pageY, ppm) => {
+      const y = pageY - viewTop.current;
+      const min = ppm ? (scrollY.current - gridTop.current + y) / ppm : 0;
+      return { min: Math.max(0, Math.min(1439, min)), y };
+    },
+    restore: (a, ppm) => {
+      const max = Math.max(0, gridTop.current + 1440 * ppm - viewH.current);
+      const y = Math.max(0, Math.min(max, gridTop.current + a.min * ppm - a.y));
+      scroller.current?.scrollTo({ y, animated: false });
+    },
+    save: (z) => updatePlannerSettings?.({ zoom: z }),
+  });
+  const { ppm, step, pinching } = pinch;
+  const agendaView = step === 'agenda';
 
   const repo = services?.planner ?? null;
   const weekStart = useMemo(() => mondayOf(date), [date]);
@@ -173,7 +202,7 @@ export default function PlannerScreen() {
       date === today
         ? Math.max(0, d.getHours() * 60 + d.getMinutes() - 60)
         : plannerSettings.day_start_hour * 60;
-    scroller.current?.scrollTo({ y: startMin * pxPerMinute(zoom), animated: false });
+    scroller.current?.scrollTo({ y: startMin * ppm, animated: false });
     // solo quando cambia il giorno mostrato
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
@@ -403,96 +432,126 @@ export default function PlannerScreen() {
             }}
           />
         ) : (
-          <ScrollView
-            ref={scroller}
-            testID="day-scroll"
-            scrollEnabled={!dragging}
-            contentContainerStyle={{ paddingBottom: 120 }}
-          >
-            {blocks.length ? (
-              <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
-                {blocks.map((b) => (
-                  <RoutineBar
-                    key={b.group}
-                    pt={pt}
-                    block={b}
-                    onToggle={(x) => {
-                      repo.setRoutineCollapsed(x.group, !x.collapsed);
-                      changed();
-                    }}
-                    onDelete={() =>
-                      Alert.alert(
-                        t('planner.elimino_tutta_la_routine'),
-                        t('planner.tutti_i_passaggi_di_questo'),
-                        [
-                          { text: t('comune.annulla'), style: 'cancel' },
-                          {
-                            text: t('planner.elimina'),
-                            style: 'destructive',
-                            onPress: () => {
-                              repo.removeRoutineBlock(b.group);
-                              changed();
+          <View style={{ flex: 1 }} {...pinch.panHandlers}>
+            <ScrollView
+              ref={scroller}
+              testID="day-scroll"
+              scrollEnabled={!dragging && !pinching}
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                scrollY.current = e.nativeEvent.contentOffset.y;
+              }}
+              onLayout={(e) => {
+                viewH.current = e.nativeEvent.layout.height;
+                scroller.current?.measureInWindow?.((_x, y) => {
+                  viewTop.current = y;
+                });
+              }}
+              contentContainerStyle={{ paddingBottom: 120 }}
+            >
+              {blocks.length ? (
+                <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
+                  {blocks.map((b) => (
+                    <RoutineBar
+                      key={b.group}
+                      pt={pt}
+                      block={b}
+                      onToggle={(x) => {
+                        repo.setRoutineCollapsed(x.group, !x.collapsed);
+                        changed();
+                      }}
+                      onDelete={() =>
+                        Alert.alert(
+                          t('planner.elimino_tutta_la_routine'),
+                          t('planner.tutti_i_passaggi_di_questo'),
+                          [
+                            { text: t('comune.annulla'), style: 'cancel' },
+                            {
+                              text: t('planner.elimina'),
+                              style: 'destructive',
+                              onPress: () => {
+                                repo.removeRoutineBlock(b.group);
+                                changed();
+                              },
                             },
-                          },
-                        ],
-                      )
-                    }
-                  />
-                ))}
-              </View>
-            ) : null}
-            {bands.length ? (
-              <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
-                {bands.map((e) => (
-                  <BandEvent
-                    key={e.uid}
+                          ],
+                        )
+                      }
+                    />
+                  ))}
+                </View>
+              ) : null}
+              {bands.length && !agendaView ? (
+                <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
+                  {bands.map((e) => (
+                    <BandEvent
+                      key={e.uid}
+                      pt={pt}
+                      categories={categories}
+                      calendars={calendars}
+                      ev={e}
+                      day={date}
+                      onOpen={open}
+                      onToggle={toggle}
+                    />
+                  ))}
+                </View>
+              ) : null}
+              {agendaView ? (
+                <AgendaList
+                  pt={pt}
+                  categories={categories}
+                  calendars={calendars}
+                  day={date}
+                  events={shown}
+                  onOpen={open}
+                  onToggle={toggle}
+                />
+              ) : (
+                <View onLayout={(e) => (gridTop.current = e.nativeEvent.layout.y)}>
+                  <DayGrid
                     pt={pt}
                     categories={categories}
                     calendars={calendars}
-                    ev={e}
                     day={date}
+                    events={grid}
+                    zoom={step}
+                    ppm={ppm}
+                    width={width}
+                    now={now}
                     onOpen={open}
                     onToggle={toggle}
+                    onMove={moveEvent}
+                    onDragActive={setDragging}
+                    onEmptyTap={(minutes) => {
+                      const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+                      const m = String(minutes % 60).padStart(2, '0');
+                      setSheet({
+                        key: Date.now(),
+                        target: { mode: 'new', date, start: `${h}:${m}` },
+                      });
+                    }}
                   />
-                ))}
-              </View>
-            ) : null}
-            <DayGrid
-              pt={pt}
-              categories={categories}
-              calendars={calendars}
-              day={date}
-              events={grid}
-              zoom={zoom}
-              width={width}
-              now={now}
-              onOpen={open}
-              onToggle={toggle}
-              onMove={moveEvent}
-              onDragActive={setDragging}
-              onEmptyTap={(minutes) => {
-                const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-                const m = String(minutes % 60).padStart(2, '0');
-                setSheet({ key: Date.now(), target: { mode: 'new', date, start: `${h}:${m}` } });
-              }}
-            />
-            {!events.length ? (
-              <Text
-                testID="day-empty"
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  top: 160,
-                  alignSelf: 'center',
-                  color: pt.ink3,
-                  fontSize: 14,
-                  fontFamily: pt.sans,
-                }}
-              >
-                {t('planner.questo_giorno_e_vuoto')}
-              </Text>
-            ) : null}
-          </ScrollView>
+                </View>
+              )}
+              {!events.length && !agendaView ? (
+                <Text
+                  testID="day-empty"
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: 160,
+                    alignSelf: 'center',
+                    color: pt.ink3,
+                    fontSize: 14,
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {t('planner.questo_giorno_e_vuoto')}
+                </Text>
+              ) : null}
+            </ScrollView>
+          </View>
         )}
       </View>
 
@@ -516,6 +575,27 @@ export default function PlannerScreen() {
         >
           {quote}
         </Text>
+      ) : null}
+
+      {mode === 'day' && (pinching || agendaView) ? (
+        <ZoomDial
+          pt={pt}
+          step={step}
+          top={barTop + 6}
+          right={56}
+          onPick={(z) =>
+            pinch.choose(z, {
+              min: Math.max(
+                0,
+                Math.min(
+                  1439,
+                  ppm ? (scrollY.current - gridTop.current + viewH.current / 2) / ppm : 540,
+                ),
+              ),
+              y: viewH.current / 2,
+            })
+          }
+        />
       ) : null}
 
       {mode === 'day' ? (
@@ -684,7 +764,7 @@ export default function PlannerScreen() {
             const [hh, mm] = start.split(':').map(Number);
             const startMin = Math.max(0, hh! * 60 + mm! - 60);
             setTimeout(
-              () => scroller.current?.scrollTo({ y: startMin * pxPerMinute(zoom), animated: true }),
+              () => scroller.current?.scrollTo({ y: startMin * ppm, animated: true }),
               320,
             );
           }

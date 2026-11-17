@@ -6,7 +6,15 @@ import { mix } from '@/features/buy/buyTheme';
 
 import { dayOfMonth, monthOf, weekdayOf } from './dates';
 import type { EventView } from './events';
-import { dropMinute, layoutDay, pxPerMinute, snapMinutes, type Block, type Zoom } from './layout';
+import {
+  ZOOMS,
+  dropMinute,
+  layoutDay,
+  majorEvery,
+  snapMinutes,
+  type Block,
+  type Zoom,
+} from './layout';
 import { minutesOf, timeOf } from './model';
 import { blockBackground, eventColor, longHex, type PlannerTheme } from './plannerTheme';
 import type { Category, Calendar } from './repo';
@@ -257,14 +265,22 @@ export function BandEvent(
   );
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const slotStarts = (slotMin: number) =>
+  Array.from({ length: Math.ceil(1440 / slotMin) }, (_, i) => i * slotMin);
+const hhmm = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
-/** La griglia di un giorno: ore a sinistra, righe, blocchi, riga dell'ora corrente. */
+/**
+ * La griglia di un giorno: gli orari del passo scelto a sinistra, le righe, i blocchi, la riga dell'ora corrente.
+ * `ppm` è la densità (pixel per minuto) e segue le dita mentre si pizzica; `zoom` è il passo che ne risulta
+ * (3 h, 1 h, 30', 15', 5'): come `renderGutter` del sito, ogni passo scrive i suoi orari.
+ */
 export function DayGrid(
   p: Look & {
     day: string;
     events: EventView[];
-    zoom: Zoom;
+    zoom: Exclude<Zoom, 'agenda'>;
+    ppm: number;
     width: number;
     now: number | null;
     onOpen: (ev: EventView) => void;
@@ -274,15 +290,16 @@ export function DayGrid(
     onDragActive?: (active: boolean) => void;
   },
 ) {
-  const { pt } = p;
-  const ppm = pxPerMinute(p.zoom);
+  const { pt, ppm } = p;
   // 48px di ore, poi la riga verticale e la colonna del giorno (come `--gutter-w` del sito)
   const gutter = 58;
   const blocks = layoutDay(p.events);
-  const slotMin = p.zoom === 'm30' || p.zoom === 'm15' || p.zoom === 'm5' ? 30 : 60;
+  const slotMin = ZOOMS[p.zoom].slotMin;
+  const every = majorEvery(p.zoom);
+  const tapSlot = Math.min(slotMin, 60);
   const tap = (e: GestureResponderEvent) => {
     const m = e.nativeEvent.locationY / ppm;
-    p.onEmptyTap(Math.max(0, Math.min(1410, Math.floor(m / slotMin) * slotMin)));
+    p.onEmptyTap(Math.max(0, Math.min(1440 - tapSlot, Math.floor(m / tapSlot) * tapSlot)));
   };
   return (
     <View style={{ height: 1440 * ppm, width: p.width }}>
@@ -303,58 +320,39 @@ export function DayGrid(
             backgroundColor: pt.hair,
           }}
         />
-        {HOURS.map((h) => (
-          <View
-            key={h}
-            pointerEvents="none"
-            style={{ position: 'absolute', top: h * 60 * ppm, left: 0, right: 0 }}
-          >
-            <Text
-              style={{
-                position: 'absolute',
-                left: 0,
-                width: 41,
-                textAlign: 'right',
-                top: -8,
-                color: pt.ink,
-                fontSize: 11.5,
-                fontWeight: '600',
-                fontFamily: pt.sans,
-              }}
+        {slotStarts(slotMin).map((m, i) => {
+          const major = i % every === 0;
+          return (
+            <View
+              key={m}
+              pointerEvents="none"
+              style={{ position: 'absolute', top: m * ppm, left: 0, right: 0 }}
             >
-              {String(h).padStart(2, '0')}:00
-            </Text>
-            <View style={{ marginLeft: gutter, height: 1, backgroundColor: pt.hair }} />
-            {slotMin === 30 ? (
-              <>
-                <Text
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    width: 41,
-                    textAlign: 'right',
-                    top: 30 * ppm - 8,
-                    color: pt.ink2,
-                    fontSize: 11.5,
-                    fontWeight: '500',
-                    fontFamily: pt.sans,
-                  }}
-                >
-                  {String(h).padStart(2, '0')}:30
-                </Text>
-                <View
-                  style={{
-                    marginLeft: gutter,
-                    marginTop: 30 * ppm - 1,
-                    height: 1,
-                    backgroundColor: pt.hair,
-                    opacity: 0.6,
-                  }}
-                />
-              </>
-            ) : null}
-          </View>
-        ))}
+              <Text
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  width: 41,
+                  textAlign: 'right',
+                  top: -8,
+                  color: major ? pt.ink : pt.ink2,
+                  fontSize: 11.5,
+                  fontWeight: major ? '600' : '500',
+                  fontFamily: pt.sans,
+                }}
+              >
+                {hhmm(m)}
+              </Text>
+              <View
+                style={{
+                  marginLeft: gutter,
+                  height: 1,
+                  backgroundColor: major ? pt.hair2 : pt.hair,
+                }}
+              />
+            </View>
+          );
+        })}
       </Pressable>
       {blocks.map((b) => (
         <EventBlock
@@ -396,6 +394,127 @@ export function DayGrid(
             }}
           />
         </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * La vista a lista («solo eventi»): la giornata diventa un elenco di carte, una sotto l'altra, tutto il giorno
+ * compreso (`.pl-agenda` del sito: spazio 7, carte alte almeno 40).
+ */
+export function AgendaList(
+  p: Look & {
+    day: string;
+    events: EventView[];
+    onOpen: (ev: EventView) => void;
+    onToggle: (ev: EventView) => void;
+  },
+) {
+  const { t } = useTranslation();
+  const { pt } = p;
+  const sorted = [...p.events].sort((a, b) => {
+    const A = a.allDay || a.multiday ? -1 : minutesOf(a.start);
+    const B = b.allDay || b.multiday ? -1 : minutesOf(b.start);
+    return A - B;
+  });
+  return (
+    <View
+      testID="agenda-list"
+      style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10, gap: 7, minHeight: 360 }}
+    >
+      {sorted.map((ev) => {
+        const color = eventColor(pt, ev, catOf(p, ev));
+        const cal = calColor(p, ev);
+        const showBox = ev.type === 'task' || !!ev.habitUuid;
+        const timed = !(ev.allDay || ev.multiday);
+        return (
+          <Pressable
+            key={ev.uid}
+            testID={`ev-${ev.uid}`}
+            accessibilityRole="button"
+            onPress={() => p.onOpen(ev)}
+            style={{
+              minHeight: 40,
+              paddingVertical: 9,
+              paddingHorizontal: 11,
+              borderRadius: 12,
+              overflow: 'hidden',
+              backgroundColor: blockBackground(pt, color, ev.importance),
+              borderWidth: cal ? 1.6 : 0.5,
+              borderColor: cal
+                ? mix(cal, blockBackground(pt, color, ev.importance), 0.45)
+                : mix(color, pt.card.startsWith('#') ? pt.card : '#FFFDFA', 0.55),
+            }}
+          >
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 3,
+                backgroundColor:
+                  pt.style === 'standard' ? (cal ?? color) : mix(cal ?? color, '#FFFFFF', 0.82),
+              }}
+            />
+            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+              {showBox ? (
+                <CheckBox
+                  testID={`box-${ev.uid}`}
+                  color={color}
+                  done={ev.done}
+                  pt={pt}
+                  onPress={() => p.onToggle(ev)}
+                />
+              ) : null}
+              <Text
+                numberOfLines={3}
+                style={{
+                  flex: 1,
+                  color: ev.done ? pt.ink2 : pt.ink,
+                  fontSize: 13,
+                  lineHeight: 16,
+                  fontFamily: pt.sans,
+                  fontWeight:
+                    pt.style === 'standard' || ev.importance === 'highest' ? '600' : '400',
+                  textDecorationLine: ev.done ? 'line-through' : 'none',
+                }}
+              >
+                {ev.title}
+              </Text>
+            </View>
+            {timed ? (
+              <Text
+                style={{
+                  color: pt.ink2,
+                  fontSize: 10.5,
+                  fontWeight: '500',
+                  letterSpacing: 0.42,
+                  marginTop: 1,
+                  fontFamily: pt.sans,
+                }}
+              >
+                {ev.start} – {ev.end}
+              </Text>
+            ) : null}
+          </Pressable>
+        );
+      })}
+      {!sorted.length ? (
+        <Text
+          testID="agenda-empty"
+          style={{
+            color: pt.ink3,
+            fontSize: 14,
+            fontFamily: pt.serif,
+            fontStyle: 'italic',
+            textAlign: 'center',
+            paddingTop: 60,
+          }}
+        >
+          {t('planner.nessun_evento_in_programma')}
+        </Text>
       ) : null}
     </View>
   );

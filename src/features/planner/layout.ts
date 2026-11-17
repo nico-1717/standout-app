@@ -1,18 +1,42 @@
 import type { EventView } from './events';
 import { minutesOf } from './model';
 
-/** Pixel per minuto a ogni zoom: la fascia «30 min» è alta 44px (--slot-h del sito). */
+/**
+ * Gli scatti del sito (`ZOOM` in 01_stato_e_server.js): `slot` è il passo in minuti, `h` quanti pixel è alta la
+ * fascia a densità naturale (quella che si ottiene premendo il tastino invece di pizzicare). `agenda` = lista.
+ */
 export const ZOOMS = {
-  agenda: { slotMin: 60, slotPx: 56 },
-  h3: { slotMin: 180, slotPx: 44 },
-  h1: { slotMin: 60, slotPx: 44 },
+  agenda: { slotMin: 0, slotPx: 0 },
+  h3: { slotMin: 180, slotPx: 54 },
+  h1: { slotMin: 60, slotPx: 46 },
   m30: { slotMin: 30, slotPx: 44 },
-  m15: { slotMin: 15, slotPx: 44 },
-  m5: { slotMin: 5, slotPx: 44 },
+  m15: { slotMin: 15, slotPx: 38 },
+  m5: { slotMin: 5, slotPx: 26 },
 } as const;
 export type Zoom = keyof typeof ZOOMS;
 
-export const pxPerMinute = (z: Zoom) => ZOOMS[z].slotPx / ZOOMS[z].slotMin;
+/** Densità naturale di uno scatto: pixel per minuto (0 per la lista). */
+export const pxPerMinute = (z: Zoom) => (ZOOMS[z].slotMin ? ZOOMS[z].slotPx / ZOOMS[z].slotMin : 0);
+
+/** Il fondo è la densità dello scatto da tre ore; il tetto è un'ora alta 400 px (come PXM_MIN/PXM_MAX del sito). */
+export const PXM_MIN = 54 / 180;
+export const PXM_MAX = 400 / 60;
+
+/**
+ * Il passo più fitto che a questa densità resta leggibile: la soglia di ogni scatto è la SUA altezza naturale
+ * (`scattoPer` del sito). Allargando le dita compaiono da sé gli orari di mezzo.
+ */
+export function stepFor(pxm: number): Exclude<Zoom, 'agenda'> {
+  const order = ['m5', 'm15', 'm30', 'h1'] as const;
+  for (const z of order) if (ZOOMS[z].slotMin * pxm >= ZOOMS[z].slotPx) return z;
+  return 'h3';
+}
+
+/** Quanti passi ci sono fra due etichette «maggiori» (quelle in grassetto): 1 ora → ogni riga, 30' → ogni 2… */
+export const majorEvery = (z: Zoom) => {
+  const m = ZOOMS[z].slotMin;
+  return m >= 60 ? 1 : m === 30 ? 2 : m === 15 ? 4 : 12;
+};
 
 /** Un blocco da disegnare nella colonna di un giorno. */
 export interface Block {

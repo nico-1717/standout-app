@@ -16,6 +16,7 @@ import PlannerScreen from '../(tabs)/planner';
 let mockStyle: 'standard' | 'paper' = 'standard';
 let mockServices: unknown;
 let mockVersion = 0;
+let mockZoom = 'm30';
 const mockChanged = jest.fn(() => {
   mockVersion += 1;
 });
@@ -40,6 +41,7 @@ jest.mock('@/core/app/AppProvider', () => ({
       ...jest.requireActual('@/features/planner/settings').DEFAULT_PLANNER_SETTINGS,
       first_week_start: null,
       first_week_number: 1,
+      zoom: mockZoom,
     },
   }),
 }));
@@ -87,6 +89,8 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
   beforeEach(() => {
     mockStyle = style;
     mockVersion = 0;
+    mockZoom = 'm30';
+    mockUpdateSettings.mockClear();
     mockChanged.mockClear();
     jest.restoreAllMocks();
   });
@@ -404,5 +408,44 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(repo.rows()).toHaveLength(0);
     expect(screen.getByTestId('smart-unclear')).toBeTruthy();
     expect(screen.getByTestId('smart-input').props.value).toBe('domani alle 15');
+  });
+
+  test('each snap writes its own times; the dial is hidden in the hour views', async () => {
+    setup();
+    mockZoom = 'h1';
+    await renderIt();
+    expect(screen.getByText('05:00')).toBeTruthy();
+    expect(screen.queryByText('05:30')).toBeNull();
+    expect(screen.queryByTestId('zoom-dial')).toBeNull();
+  });
+
+  test('a finer snap adds the times in between', async () => {
+    setup();
+    mockZoom = 'm15';
+    await renderIt();
+    expect(screen.getByText('05:15')).toBeTruthy();
+    expect(screen.getByText('05:45')).toBeTruthy();
+  });
+
+  test('list view: the day is a list (all-day included), the dial stays in view and picks a snap', async () => {
+    const repo = setup();
+    repo.create({ title: 'Dentist', date: TODAY, start: '15:00', end: '16:00' });
+    repo.create({ title: 'Holiday', date: TODAY, allDay: true });
+    mockZoom = 'agenda';
+    await renderIt();
+    expect(screen.getByTestId('agenda-list')).toBeTruthy();
+    expect(screen.getByText('Dentist')).toBeTruthy();
+    expect(screen.getByText('Holiday')).toBeTruthy();
+    expect(screen.queryByTestId('grid-empty')).toBeNull();
+    expect(screen.getByTestId('zoom-dial')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('zoom-m15'));
+    expect(mockUpdateSettings).toHaveBeenLastCalledWith({ zoom: 'm15' });
+  });
+
+  test('an empty day in list view says nothing is scheduled', async () => {
+    setup();
+    mockZoom = 'agenda';
+    await renderIt();
+    expect(screen.getByTestId('agenda-empty')).toBeTruthy();
   });
 });
