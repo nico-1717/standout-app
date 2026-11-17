@@ -88,16 +88,17 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="buy"
         options={{
-          // la lista della spesa si apre da «Altro» e dalla Home: la barra resta a cinque
-          href: null,
+          // la lista della spesa si apre da «Altro», dalla Home e dalle schede di To do: la barra resta a cinque.
+          // NON usare `href: null` (= `hidden`): in questa versione di Expo Router chi ci naviga viene rimandato alla Home.
+          tabBarButton: () => null,
           ...tabLook('buy', t('planner.to_buy'), th.brand),
         }}
       />
       <Tabs.Screen
         name="pills"
         options={{
-          // la scheda si apre da «Altro» (impostazioni) e dalla Home: la barra resta a cinque
-          href: null,
+          // si apre da «Altro», dalla Home e dalle schede di To do: la barra resta a cinque (vedi sopra: niente `href: null`)
+          tabBarButton: () => null,
           ...tabLook('pills', t('todo.tipo_pills'), th.brand),
         }}
       />
