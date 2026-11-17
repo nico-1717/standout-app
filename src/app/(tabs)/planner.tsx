@@ -93,6 +93,12 @@ export default function PlannerScreen() {
     projects: Project[];
   } | null>(null);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
+  // i progetti a cui si può collegare un evento: letti una volta per foglio aperto
+  const sheetKey = sheet?.key;
+  const sheetProjects = useMemo(
+    () => (sheetKey === undefined ? [] : (services?.projects?.all() ?? [])),
+    [sheetKey, services],
+  );
   const scroller = useRef<ScrollViewInstance>(null);
   const zoom = plannerSettings.zoom;
   // la giornata scorre dentro `day-scroll`: dove sta (in cima alla finestra e quanto è scesa) e dove comincia la
@@ -780,6 +786,7 @@ export default function PlannerScreen() {
           lang={i18n.language}
           calendars={calendars}
           categories={categories}
+          projects={sheetProjects}
           target={sheet.target}
           onClose={() => setSheet(null)}
           onChanged={changed}

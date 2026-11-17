@@ -74,18 +74,19 @@ describe('Event sheet: guests and saved places', () => {
     await wrap(<PlannerScreen />);
     await fireEvent.press(screen.getByTestId('planner-add'));
     await fireEvent.changeText(screen.getByTestId('sheet-title'), 'Lunch');
+    await fireEvent.press(screen.getByTestId('guest-book'));
     await fireEvent.press(screen.getByTestId(`guest-pick-${anna}`));
     expect(screen.queryByTestId(`guest-pick-${anna}`)).toBeNull();
     expect(screen.getByTestId('guest-anna@example.com')).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('guest-input'), 'nope');
-    await fireEvent.press(screen.getByTestId('guest-add'));
+    await fireEvent(screen.getByTestId('guest-input'), 'submitEditing');
     expect(screen.getByTestId('guest-error')).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId('guest-input'), 'Bob@Example.com');
-    await fireEvent.press(screen.getByTestId('guest-add'));
+    await fireEvent(screen.getByTestId('guest-input'), 'submitEditing');
     expect(screen.queryByTestId('guest-error')).toBeNull();
-    await fireEvent.press(screen.getByTestId('guest-add')); // vuoto: niente
+    await fireEvent(screen.getByTestId('guest-input'), 'submitEditing'); // vuoto: errore, niente di aggiunto
     await fireEvent.changeText(screen.getByTestId('guest-input'), 'zed@example.com');
-    await fireEvent.press(screen.getByTestId('guest-add'));
+    await fireEvent(screen.getByTestId('guest-input'), 'submitEditing');
     await fireEvent.press(screen.getByTestId('guest-zed@example.com')); // si toglie
     await fireEvent.press(screen.getByTestId('sheet-save'));
     const ev = planner.rows().find((r) => r.title === 'Lunch')!;
@@ -119,6 +120,7 @@ describe('Event sheet: guests and saved places', () => {
     await wrap(<PlannerScreen />);
     await fireEvent.press(screen.getByTestId('planner-add'));
     await fireEvent.changeText(screen.getByTestId('sheet-title'), 'Palestra con Luca');
+    await fireEvent.press(screen.getByTestId('loc-book'));
     await fireEvent.press(screen.getByTestId(`place-pick-${gym}`));
     expect(screen.getByTestId('sheet-location').props.value).toBe('Via Roma 1');
     await fireEvent.press(screen.getByTestId('sheet-save'));

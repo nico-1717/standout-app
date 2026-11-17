@@ -296,6 +296,8 @@ export class PlannerRepo {
       if (row.rrule) row.series_uuid = uuid;
       const patch: Record<string, WireValue> = {};
       for (const f of WRITABLE) patch[f] = wire(f, row[f]);
+      // il progetto viaggia solo quando c'è (come per l'abitudine): una riga senza progetto non lo nomina
+      if (row.project_uuid) patch.project_uuid = row.project_uuid;
       this.writeNew(row, patch);
     });
     return uuid;
@@ -335,6 +337,7 @@ export class PlannerRepo {
           original_date: view.occDate,
         };
         for (const f of WRITABLE) patch[f] = wire(f, row[f]);
+        if (row.project_uuid) patch.project_uuid = row.project_uuid;
         this.writeNew(row, patch);
         return uuid;
       }
@@ -349,7 +352,7 @@ export class PlannerRepo {
       );
       const patch: Record<string, WireValue> = {};
       const set: Record<string, WireValue> = { updated_at: now };
-      for (const f of [...WRITABLE, 'rrule'] as const) {
+      for (const f of [...WRITABLE, 'rrule', 'project_uuid'] as const) {
         const next = norm[f];
         if (next !== target[f]) {
           set[f] = wire(f, next);

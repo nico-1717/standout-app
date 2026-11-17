@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { cleanEmail, GUESTS_MAX, type Contact, type GuestInput, type Place } from './book';
-import type { PlannerTheme } from './plannerTheme';
+import { Text } from '@/ui/CappedText';
 
-/* I pezzi della scheda evento che usano la rubrica e i luoghi salvati. Non scrivono niente: cambiano la lista in
-   mano alla scheda, che la salva insieme all'evento. */
+import { cleanEmail, GUESTS_MAX, type GuestInput } from './book';
+import type { PlannerTheme } from './plannerTheme';
+import { fieldBox, IconBtn, SheetGlyph, Tag } from './sheetUi';
+
+/* I pezzi della scheda evento che usano la rubrica. Non scrivono niente: cambiano la lista in mano alla scheda,
+   che la salva insieme all'evento. */
 
 export interface PickedPlace {
   name: string | null;
@@ -15,94 +18,72 @@ export interface PickedPlace {
   ref: string | null;
 }
 
-function Chip({
-  pt,
-  label,
-  onPress,
-  active,
-  testID,
-  hint,
-}: {
-  pt: PlannerTheme;
-  label: string;
-  onPress: () => void;
-  active?: boolean;
-  testID: string;
-  hint?: string;
-}) {
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={hint ? `${label}, ${hint}` : label}
-      onPress={onPress}
-      style={{
-        paddingVertical: 7,
-        paddingHorizontal: 12,
-        borderRadius: 999,
-        backgroundColor: active ? pt.accent : pt.paper2,
-        borderWidth: 0.5,
-        borderColor: pt.hair2,
-        marginRight: 6,
-        marginBottom: 6,
-      }}
-    >
-      <Text style={{ color: active ? pt.onAccent : pt.ink, fontSize: 13, fontFamily: pt.sans }}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
+/** Il celeste degli invitati (`#CFDDEA`, come sul sito). */
+const GUEST_TINT = '#CFDDEA';
+/** Le code degli indirizzi più comuni, come sul sito: compaiono mentre si scrive e completano l'indirizzo. */
+export const MAIL_DOMAINS = [
+  '@gmail.com',
+  '@icloud.com',
+  '@outlook.it',
+  '@libero.it',
+  '@hotmail.it',
+  '@yahoo.it',
+  '@virgilio.it',
+];
 
-/** Gli invitati: quelli scelti (si tolgono toccando), un campo per scrivere un indirizzo, la rubrica per sceglierne. */
+/**
+ * Gli invitati, come sul sito: le pillole di chi è invitato (si tolgono toccando), un campo per scrivere un indirizzo
+ * (Invio lo aggiunge), il pulsante della rubrica e, mentre si scrive, le code degli indirizzi più comuni.
+ */
 export function GuestsField({
   pt,
-  contacts,
+  nameOf,
   guests,
   onChange,
+  onOpenBook,
 }: {
   pt: PlannerTheme;
-  contacts: Contact[];
+  /** il nome da mostrare per un invitato (quello scelto dalla rubrica, o l'indirizzo) */
+  nameOf: (g: GuestInput) => string;
   guests: GuestInput[];
   onChange: (next: GuestInput[]) => void;
+  onOpenBook: () => void;
 }) {
   const { t } = useTranslation();
   const [text, setText] = useState('');
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const has = (email: string) => guests.some((g) => g.email === email);
-  const full = guests.length >= GUESTS_MAX;
 
-  const add = (g: GuestInput) => {
-    const mail = cleanEmail(g.email);
+  const add = () => {
+    const mail = cleanEmail(text);
     if (!mail) return setError(t('planner.app_email_non_valida'));
-    if (has(mail)) return setText('');
-    if (full) return setError(t('planner.app_max_invitati'));
-    onChange([...guests, { ...g, email: mail }]);
+    if (guests.some((g) => g.email === mail)) return setText('');
+    if (guests.length >= GUESTS_MAX) return setError(t('planner.app_max_invitati'));
+    onChange([...guests, { email: mail }]);
     setText('');
     setError(null);
   };
-  const nameOf = (g: GuestInput) =>
-    g.name || contacts.find((c) => c.email === g.email)?.name || g.email;
-  const pickable = contacts.filter((c) => !has(c.email));
 
   return (
     <View testID="guests-field">
       {guests.length ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {guests.map((g) => (
-            <Chip
+            <Tag
               key={g.email}
               pt={pt}
-              active
+              on
+              dot={false}
+              color={GUEST_TINT}
               testID={`guest-${g.email}`}
-              label={`${nameOf(g)}  ×`}
-              hint={t('planner.togli_2')}
+              label={nameOf(g)}
+              trailing={<SheetGlyph name="close" color={pt.ink2} size={11} stroke={2.4} />}
               onPress={() => onChange(guests.filter((x) => x.email !== g.email))}
             />
           ))}
         </View>
       ) : null}
-      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', gap: 9, alignItems: 'center', marginTop: 8 }}>
         <TextInput
           testID="guest-input"
           value={text}
@@ -110,39 +91,35 @@ export function GuestsField({
             setText(v);
             setError(null);
           }}
-          onSubmitEditing={() => add({ email: text })}
+          onSubmitEditing={add}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder={t('planner.ph_email')}
           placeholderTextColor={pt.ink3}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="done"
-          style={{
-            flex: 1,
-            backgroundColor: pt.paper2,
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            color: pt.ink,
-            fontSize: 15,
-            fontFamily: pt.sans,
-          }}
+          style={[
+            fieldBox(pt),
+            {
+              flex: 1,
+              paddingHorizontal: 13,
+              paddingVertical: 12,
+              color: pt.ink,
+              fontSize: 15,
+              fontFamily: pt.sans,
+            },
+          ]}
         />
-        <Pressable
-          testID="guest-add"
-          accessibilityRole="button"
-          onPress={() => add({ email: text })}
-          style={{
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            borderRadius: 12,
-            backgroundColor: pt.paper2,
-          }}
+        <IconBtn
+          pt={pt}
+          testID="guest-book"
+          label={t('planner.apri_la_rubrica')}
+          onPress={onOpenBook}
         >
-          <Text style={{ color: pt.accentInk, fontFamily: pt.sans, fontSize: 14 }}>
-            {t('planner.aggiungi_2')}
-          </Text>
-        </Pressable>
+          <SheetGlyph name="book" color={pt.ink2} />
+        </IconBtn>
       </View>
       {error ? (
         <Text
@@ -153,55 +130,24 @@ export function GuestsField({
           {error}
         </Text>
       ) : null}
-      {pickable.length ? (
-        <View style={{ marginTop: 10 }}>
-          <Text style={{ color: pt.ink3, fontSize: 11, marginBottom: 6, fontFamily: pt.sans }}>
-            {t('planner.rubrica')}
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {pickable.map((c) => (
-              <Chip
-                key={c.uuid}
-                pt={pt}
-                testID={`guest-pick-${c.uuid}`}
-                label={c.name}
-                onPress={() => add({ email: c.email, name: c.name, contactUuid: c.uuid })}
-              />
-            ))}
-          </View>
+      {focused ? (
+        <View
+          testID="guest-domains"
+          style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 }}
+        >
+          {MAIL_DOMAINS.map((d) => (
+            <Tag
+              key={d}
+              pt={pt}
+              on={false}
+              dot={false}
+              testID={`guest-domain-${d}`}
+              label={d}
+              onPress={() => setText((cur) => `${cur.split('@')[0] ?? ''}${d}`)}
+            />
+          ))}
         </View>
       ) : null}
-    </View>
-  );
-}
-
-/** I luoghi salvati come scelte rapide: si tocca per riempire il luogo. Quello che il titolo nomina è evidenziato. */
-export function PlacesField({
-  pt,
-  places,
-  suggested,
-  chosenName,
-  onPick,
-}: {
-  pt: PlannerTheme;
-  places: Place[];
-  suggested: string | null;
-  chosenName: string | null;
-  onPick: (p: Place) => void;
-}) {
-  if (!places.length) return null;
-  return (
-    <View testID="places-field" style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
-      {places.map((p) => (
-        <Chip
-          key={p.uuid}
-          pt={pt}
-          testID={`place-pick-${p.uuid}`}
-          label={p.label}
-          active={p.uuid === suggested || (chosenName !== null && p.label === chosenName)}
-          onPress={() => onPick(p)}
-        />
-      ))}
     </View>
   );
 }

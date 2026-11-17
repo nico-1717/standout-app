@@ -1,24 +1,25 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Modal,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
-  Switch,
-  Text,
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { GuestsField, PlacesField, type PickedPlace } from './BookParts';
-import { PlaceHits, PlaceStatus, usePlaceSearch, type PlacesApi } from './PlaceSearch';
+import { Text } from '@/ui/CappedText';
+import type { Project } from '@/features/projects/logic';
+
+import { GuestsField, type PickedPlace } from './BookParts';
+import { mapsUrl, PlaceHits, PlaceStatus, usePlaceSearch, type PlacesApi } from './PlaceSearch';
+import { ContactsSheet, ProjectSheet, SavedPlacesSheet } from './SheetSubs';
 import type { PlaceHit } from '@/core/account/accountApi';
-import type { BookRepo, GuestInput, Place } from './book';
+import type { BookRepo, Contact, GuestInput, Place } from './book';
 import type { EventView } from './events';
 import {
   addDaysIso,
@@ -31,9 +32,38 @@ import {
 } from './model';
 import { longHex, type PlannerTheme } from './plannerTheme';
 import type { Calendar, Category, PlannerRepo } from './repo';
+import {
+  Field,
+  fieldBox,
+  IconBtn,
+  LockBtn,
+  RowSB,
+  SelectField,
+  SheetGlyph,
+  SheetPanel,
+  Seg,
+  Swatch,
+  Tag,
+  Toggle,
+  TxtBtn,
+} from './sheetUi';
 
 export type SheetTarget =
   { mode: 'new'; date: string; start?: string } | { mode: 'edit'; view: EventView };
+
+type Importance = 'normal' | 'high' | 'highest';
+type Lock = 'auto' | 'chiuso' | 'aperto';
+
+/** I colori fissi del selettore «Colore» (il primo, quello della categoria, si aggiunge davanti). */
+export const SWATCHES = [
+  '#C7DED6',
+  '#F0D3D6',
+  '#D8D3E8',
+  '#F3E4C0',
+  '#CFDDEA',
+  '#E8D5C7',
+  '#DCE7C8',
+];
 
 const dateOf = (s: string) => new Date(`${s}T12:00:00`);
 const isoOf = (d: Date) =>
@@ -46,64 +76,10 @@ const clockOf = (s: string) => {
 };
 const hhmmOf = (d: Date) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const dayDiff = (a: string, b: string) =>
+  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
-function Label({ pt, children }: { pt: PlannerTheme; children: ReactNode }) {
-  return (
-    <Text
-      style={{
-        color: pt.ink3,
-        fontSize: 10,
-        letterSpacing: 1.6,
-        textTransform: 'uppercase',
-        marginBottom: 6,
-        marginTop: 16,
-        fontFamily: pt.sans,
-      }}
-    >
-      {children}
-    </Text>
-  );
-}
-
-function Chip({
-  pt,
-  label,
-  active,
-  onPress,
-  color,
-  testID,
-}: {
-  pt: PlannerTheme;
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  color?: string;
-  testID?: string;
-}) {
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="radio"
-      accessibilityState={{ selected: active }}
-      onPress={onPress}
-      style={{
-        paddingVertical: 7,
-        paddingHorizontal: 12,
-        borderRadius: 999,
-        backgroundColor: active ? (color ?? pt.accent) : pt.paper2,
-        borderWidth: 0.5,
-        borderColor: pt.hair2,
-        marginRight: 6,
-        marginBottom: 6,
-      }}
-    >
-      <Text style={{ color: active ? pt.onAccent : pt.ink, fontSize: 13, fontFamily: pt.sans }}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
+/** `.pl-pick`: data o ora. Su iPhone il selettore compatto di sistema; altrove un tocco apre quello del telefono. */
 function Pick({
   pt,
   kind,
@@ -112,6 +88,8 @@ function Pick({
   clearable,
   placeholder,
   testID,
+  dim,
+  width,
 }: {
   pt: PlannerTheme;
   kind: 'date' | 'time';
@@ -120,23 +98,26 @@ function Pick({
   clearable?: boolean;
   placeholder?: string;
   testID: string;
+  /** sbiadita (la fine nello stesso giorno dell'inizio) */
+  dim?: boolean;
+  width?: number;
 }) {
   const { t } = useTranslation();
   const isDate = kind === 'date';
   const current = value ? (isDate ? dateOf(value) : clockOf(value)) : null;
   const from = (d: Date) => (isDate ? isoOf(d) : hhmmOf(d));
+  const native = current && Platform.OS === 'ios';
   return (
     <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: pt.paper2,
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        minHeight: 40,
-      }}
+      style={[
+        native
+          ? { flexDirection: 'row', alignItems: 'center' }
+          : [fieldBox(pt), { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }],
+        { minHeight: 38, width },
+        dim ? { opacity: 0.42 } : null,
+      ]}
     >
-      {current && Platform.OS === 'ios' ? (
+      {native ? (
         <DateTimePicker
           testID={testID}
           value={current}
@@ -159,9 +140,16 @@ function Pick({
               onValueChange: (_, d) => d && onChange(from(d)),
             });
           }}
-          style={{ paddingVertical: 8 }}
+          style={{ paddingVertical: 8, justifyContent: 'center', flexGrow: 1 }}
         >
-          <Text style={{ color: current ? pt.ink : pt.ink3, fontSize: 14, fontFamily: pt.sans }}>
+          <Text
+            style={{
+              color: current ? pt.ink : pt.ink3,
+              fontSize: 14,
+              fontFamily: pt.sans,
+              textAlign: width ? 'center' : 'left',
+            }}
+          >
             {value || placeholder || '—'}
           </Text>
         </Pressable>
@@ -188,7 +176,7 @@ const REPEATS: { id: Repeat; key: string }[] = [
   { id: 'weekly', key: 'planner.ogni_settimana' },
   { id: 'monthly', key: 'planner.ogni_mese' },
   { id: 'yearly', key: 'planner.ogni_anno' },
-  { id: 'custom', key: 'planner.personalizzata' },
+  { id: 'custom', key: 'planner.personalizzato' },
 ];
 const UNITS: { id: Unit; key: string }[] = [
   { id: 'day', key: 'planner.u_giorni' },
@@ -204,17 +192,12 @@ const NOTIFIES: { id: Notify; key: string }[] = [
   { id: 'd1', key: 'planner.un_giorno_prima' },
   { id: 'custom', key: 'planner.personalizzata' },
 ];
-const IMPORTANCE: { id: 'normal' | 'high' | 'highest'; key: string }[] = [
-  { id: 'normal', key: 'planner.normale' },
-  { id: 'high', key: 'planner.importante' },
-  { id: 'highest', key: 'planner.importantissimo' },
-];
 
-/** Il foglio per creare o cambiare un evento: titolo, quando, dove, calendario, categoria, ripetizione, avviso. */
+/** Il foglio per creare o cambiare un evento: ricalcato sul popup del sito (09_popup_evento.js + planner_fogli.css). */
 export function EventSheet(p: {
   pt: PlannerTheme;
   repo: PlannerRepo;
-  /** la rubrica e i luoghi salvati; senza, la scheda non mostra invitati né scelte rapide */
+  /** la rubrica e i luoghi salvati; senza, la scheda non mostra invitati né luoghi salvati */
   book?: BookRepo;
   /** la ricerca dei posti sul sito (solo online); senza, il luogo resta un testo libero */
   places?: PlacesApi;
@@ -222,6 +205,8 @@ export function EventSheet(p: {
   lang?: string;
   calendars: Calendar[];
   categories: Category[];
+  /** i progetti a cui si può collegare l'evento */
+  projects?: Project[];
   target: SheetTarget;
   onClose: () => void;
   /** dopo una modifica: la schermata rilegge */
@@ -229,9 +214,9 @@ export function EventSheet(p: {
 }) {
   const { pt, target } = p;
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const view = target.mode === 'edit' ? target.view : null;
   const fresh = target.mode === 'new' ? target : null;
+  const projects = p.projects ?? [];
 
   const [f, setF] = useState(() => {
     if (view) {
@@ -240,12 +225,14 @@ export function EventSheet(p: {
         type: view.type as 'event' | 'task',
         allDay: view.allDay,
         date: view.date,
-        endDate: view.multiday ? view.endDate : '',
+        endDate: view.multiday ? view.endDate : view.date,
         start: view.start,
         end: view.end,
         calendar: view.calendarUuid,
         category: view.categoryUuid,
-        importance: view.importance as 'normal' | 'high' | 'highest',
+        project: view.projectUuid,
+        color: view.color,
+        importance: view.importance as Importance,
         repeat: view.repeat as Repeat,
         interval: view.repeatInterval,
         unit: view.repeatUnit as Unit,
@@ -254,6 +241,7 @@ export function EventSheet(p: {
         notifyMin: view.notifyMin,
         location: view.location,
         notes: view.notes,
+        lock: 'auto' as Lock,
       };
     }
     const start = fresh?.start ?? '09:00';
@@ -262,12 +250,14 @@ export function EventSheet(p: {
       type: 'event' as 'event' | 'task',
       allDay: false,
       date: fresh?.date ?? '',
-      endDate: '',
+      endDate: fresh?.date ?? '',
       start,
       end: timeOf(Math.min(1439, minutesOf(start) + 60)),
       calendar: null as string | null,
       category: null as string | null,
-      importance: 'normal' as 'normal' | 'high' | 'highest',
+      project: null as string | null,
+      color: null as string | null,
+      importance: 'normal' as Importance,
       repeat: 'none' as Repeat,
       interval: 1,
       unit: 'week' as Unit,
@@ -276,9 +266,17 @@ export function EventSheet(p: {
       notifyMin: 60,
       location: '',
       notes: '',
+      lock: 'auto' as Lock,
     };
   });
-  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
+  // toccando fuori: se si è scritto qualcosa vale «salva», altrimenti «annulla» (come sul sito)
+  const [dirty, setDirty] = useState(false);
+  const edit = (fn: (s: typeof f) => typeof f) => {
+    setDirty(true);
+    setF(fn);
+  };
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => edit((s) => ({ ...s, [k]: v }));
+
   const book = p.book ?? null;
   // gli invitati di una ripetizione sono quelli della serie; una modifica «solo questa volta» li porta nell'eccezione
   const ownerUuid = view ? (view.isOccurrence ? view.masterUuid : view.uuid) : null;
@@ -289,11 +287,11 @@ export function EventSheet(p: {
           .map((g) => ({ email: g.email, name: g.name, contactUuid: g.contact_uuid }))
       : [],
   );
-  const [contacts] = useState(() => book?.contacts() ?? []);
-  const [places] = useState(() => book?.places() ?? []);
-  // il luogo scelto dalle scelte rapide; 'keep' = non toccato (resta quello che l'evento ha già)
+  const [contacts, setContacts] = useState<Contact[]>(() => book?.contacts() ?? []);
+  const [places, setPlaces] = useState<Place[]>(() => book?.places() ?? []);
+  const [subSheet, setSubSheet] = useState<'project' | 'places' | 'contacts' | null>(null);
+  // il luogo scelto; 'keep' = non toccato (resta quello che l'evento ha già)
   const [place, setPlace] = useState<PickedPlace | null | 'keep'>('keep');
-  const suggested = book && !view?.location ? (book.suggestPlace(f.title)?.uuid ?? null) : null;
   const search = usePlaceSearch(p.places, p.lang ?? 'en');
   // le coordinate del posto appena scelto stanno arrivando: il riferimento atteso (una risposta vecchia non comanda)
   const [waiting, setWaiting] = useState(false);
@@ -336,7 +334,7 @@ export function EventSheet(p: {
   const pickPlace = (pl: Place) => {
     search.close();
     forget();
-    set('location', pl.address || pl.label);
+    set('location', pl.address || pl.place_name || pl.label);
     setPlace({
       name: pl.place_name ?? pl.label,
       lat: pl.place_lat,
@@ -353,17 +351,29 @@ export function EventSheet(p: {
       : place;
   const inSeries = !!view && (view.isOccurrence || view.isException || view.repeat !== 'none');
 
+  const project = f.project ? (projects.find((x) => x.uuid === f.project) ?? null) : null;
+  const projectColor = project?.color ? longHex(project.color, pt.neutralEv) : null;
+  const category = f.category ? (p.categories.find((c) => c.uuid === f.category) ?? null) : null;
+  const baseColor = category
+    ? longHex(category.color, pt.neutralEv)
+    : (projectColor ?? pt.neutralEv);
+  // il colore del foglio: quello scelto, della categoria, del progetto, o il neutro
+  const tint = f.color ? longHex(f.color, pt.neutralEv) : baseColor;
+
   const input = (): EventInput => ({
     title: f.title,
     type: f.type,
     allDay: f.allDay,
     date: f.date,
-    endDate: f.endDate || null,
+    endDate: f.endDate > f.date ? f.endDate : null,
     start: f.start,
     end: f.end,
     calendarUuid: f.calendar,
     categoryUuid: f.category,
+    projectUuid: f.project,
+    color: f.color,
     importance: f.importance,
+    durationLocked: f.lock === 'chiuso',
     repeat: f.repeat,
     repeatInterval: f.interval,
     repeatUnit: f.unit,
@@ -448,388 +458,723 @@ export function EventSheet(p: {
       ]);
       return;
     }
-    Alert.alert(t('planner.elimino_questo_evento'), undefined, [
-      { text: t('comune.annulla'), style: 'cancel' },
-      {
-        text: t('planner.elimina'),
-        style: 'destructive',
-        onPress: () => {
-          p.repo.remove(view, 'one');
-          finish();
+    Alert.alert(
+      t('planner.elimino_questo_evento'),
+      f.title ? t('planner.titolo_rimosso', { titolo: f.title }) : t('planner.sara_rimosso'),
+      [
+        { text: t('comune.annulla'), style: 'cancel' },
+        {
+          text: t('planner.elimina'),
+          style: 'destructive',
+          onPress: () => {
+            p.repo.remove(view, 'one');
+            finish();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
-  const inputStyle = {
-    backgroundColor: pt.paper2,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  const onBackdrop = () => {
+    if (dirty && (f.title.trim() || f.category || f.project || f.notes)) save();
+    else p.onClose();
+  };
+
+  // --- date e orari: le stesse regole del sito (spostare inizio / fine / durata con i tre stati del lucchetto) ---
+  const setDate = (v: string) =>
+    edit((s) => {
+      const days = dayDiff(s.date, s.endDate);
+      return { ...s, date: v, endDate: days > 0 ? addDaysIso(v, days) : v };
+    });
+  const setEndDate = (v: string) => edit((s) => ({ ...s, endDate: !v || v < s.date ? s.date : v }));
+  const setStart = (v: string) =>
+    edit((s) => {
+      const dur = Math.max(5, minutesOf(s.end) - minutesOf(s.start));
+      let end = s.end;
+      if (s.lock !== 'aperto') end = timeOf(minutesOf(v) + dur);
+      else if (minutesOf(end) <= minutesOf(v)) end = timeOf(minutesOf(v) + 5);
+      return { ...s, start: v, end };
+    });
+  const setEnd = (v: string) =>
+    edit((s) => {
+      if (s.lock === 'chiuso') {
+        const dur = Math.max(5, minutesOf(s.end) - minutesOf(s.start));
+        let fine = Math.min(1439, minutesOf(v));
+        let inizio = fine - dur;
+        if (inizio < 0) {
+          inizio = 0;
+          fine = Math.min(1439, dur);
+        }
+        return { ...s, start: timeOf(inizio), end: timeOf(fine) };
+      }
+      const end = minutesOf(v) <= minutesOf(s.start) ? timeOf(minutesOf(s.start) + 5) : v;
+      return { ...s, end };
+    });
+  const setDuration = (v: string) => {
+    const mins = minutesOf(v);
+    if (!mins) return;
+    edit((s) => ({ ...s, end: timeOf(minutesOf(s.start) + mins) }));
+  };
+  const setAllDay = (on: boolean) =>
+    edit((s) => {
+      if (on || (s.start && s.start !== '00:00') || s.end !== '23:59') return { ...s, allDay: on };
+      const start = fresh?.start ?? '09:00';
+      return { ...s, allDay: on, start, end: timeOf(minutesOf(start) + 60) };
+    });
+  const nextLock = (l: Lock): Lock =>
+    l === 'auto' ? 'chiuso' : l === 'chiuso' ? 'aperto' : 'auto';
+  const lockLabel =
+    f.lock === 'chiuso'
+      ? t('planner.durata_bloccata_spostando_un_orario')
+      : f.lock === 'aperto'
+        ? t('planner.durata_libera_spostando_un_orario')
+        : t('planner.spostando_linizio_la_durata_resta');
+  const duration = timeOf(minutesOf(f.end) - minutesOf(f.start));
+
+  const inputText = {
     color: pt.ink,
     fontSize: 15,
     fontFamily: pt.sans,
   } as const;
+  const fieldInput = {
+    ...fieldBox(pt),
+    ...inputText,
+    paddingHorizontal: 13,
+    paddingVertical: 12,
+  } as const;
+
+  const openMap = () => {
+    const s = shownPlace;
+    const url =
+      s && s.lat !== null && s.lon !== null
+        ? mapsUrl(s.lat, s.lon, s.name, Platform.OS)
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            f.location.trim() || t('planner.vicino_a_me'),
+          )}`;
+    void Linking.openURL(url);
+  };
+
+  const tag = (
+    key: string,
+    label: string,
+    color: string,
+    on: boolean,
+    onPress: () => void,
+    testID: string,
+  ) => (
+    <Tag key={key} pt={pt} testID={testID} label={label} color={color} on={on} onPress={onPress} />
+  );
+
+  const calChoices = p.calendars
+    .filter((c) => c.role !== 'study' || f.calendar === c.uuid)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const activeCal = f.calendar ?? p.calendars.find((c) => c.is_default)?.uuid ?? '';
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={p.onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1, backgroundColor: pt.card }}
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
-            paddingTop: 16,
-            paddingBottom: 8,
-          }}
-        >
-          <Pressable
-            testID="sheet-cancel"
-            accessibilityRole="button"
-            onPress={p.onClose}
-            hitSlop={10}
-          >
-            <Text style={{ color: pt.ink2, fontSize: 15, fontFamily: pt.sans }}>
-              {t('comune.annulla')}
-            </Text>
-          </Pressable>
-          <Text style={{ color: pt.ink, fontSize: 22, fontFamily: pt.serif }}>
-            {view ? t('planner.modifica') : t('planner.nuovo_evento')}
-          </Text>
-          <Pressable testID="sheet-save" accessibilityRole="button" onPress={save} hitSlop={10}>
+    <>
+      <SheetPanel
+        pt={pt}
+        tint={tint}
+        onBackdrop={onBackdrop}
+        onClose={p.onClose}
+        head={
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TxtBtn
+                pt={pt}
+                testID="sheet-cancel"
+                label={t('comune.annulla')}
+                onPress={p.onClose}
+              />
+              {view ? (
+                <Pressable
+                  testID="sheet-trash"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('planner.elimina_evento')}
+                  onPress={remove}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#F3DCDC',
+                  }}
+                >
+                  <SheetGlyph name="trash" color="#8E5A5A" />
+                </Pressable>
+              ) : null}
+            </View>
             <Text
-              style={{ color: pt.accentInk, fontSize: 15, fontWeight: '600', fontFamily: pt.sans }}
+              style={{
+                color: pt.ink3,
+                fontSize: 10,
+                fontWeight: '500',
+                letterSpacing: 1.8,
+                textTransform: 'uppercase',
+                fontFamily: pt.sans,
+              }}
             >
-              {t('planner.salva')}
+              {view ? t('planner.modifica') : t('planner.nuovo_evento')}
             </Text>
-          </Pressable>
-        </View>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 + insets.bottom }}
+            <TxtBtn pt={pt} strong testID="sheet-save" label={t('comune.salva')} onPress={save} />
+          </>
+        }
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
-          <TextInput
-            testID="sheet-title"
-            value={f.title}
-            onChangeText={(v) => set('title', v)}
-            placeholder={t('planner.titolo_dell_evento')}
-            placeholderTextColor={pt.ink3}
-            style={[inputStyle, { fontSize: 18, marginTop: 8 }]}
-          />
-
-          <View style={{ flexDirection: 'row', marginTop: 12 }}>
-            <Chip
-              pt={pt}
-              testID="type-event"
-              label={t('planner.evento')}
-              active={f.type === 'event'}
-              onPress={() => set('type', 'event')}
-            />
-            <Chip
-              pt={pt}
-              testID="type-task"
-              label={t('planner.task')}
-              active={f.type === 'task'}
-              onPress={() => set('type', 'task')}
-            />
-          </View>
-
-          <Label pt={pt}>{t('planner.quando')}</Label>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 10,
-            }}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 40 }}
           >
-            <Text style={{ color: pt.ink, fontSize: 15, fontFamily: pt.sans }}>
-              {t('planner.tutto_il_giorno')}
-            </Text>
-            <Switch
-              testID="sheet-allday"
-              value={f.allDay}
-              onValueChange={(v) => set('allDay', v)}
-              trackColor={{ true: pt.accent }}
-            />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Pick
-              pt={pt}
-              kind="date"
-              testID="sheet-date"
-              value={f.date}
-              onChange={(v) =>
-                v &&
-                setF((s) => ({
-                  ...s,
-                  date: v,
-                  endDate: s.endDate && s.endDate < v ? v : s.endDate,
-                }))
-              }
-            />
-            {!f.allDay ? (
-              <Pick
-                pt={pt}
-                kind="time"
-                testID="sheet-start"
-                value={f.start}
-                onChange={(v) =>
-                  v &&
-                  setF((s) => ({
-                    ...s,
-                    start: v,
-                    end: s.endDate
-                      ? s.end
-                      : timeOf(
-                          minutesOf(v) +
-                            (minutesOf(s.end) - minutesOf(s.start) > 0
-                              ? minutesOf(s.end) - minutesOf(s.start)
-                              : 60),
-                        ),
-                  }))
-                }
-              />
-            ) : null}
-            {!f.allDay ? (
-              <Pick
-                pt={pt}
-                kind="time"
-                testID="sheet-end"
-                value={f.end}
-                onChange={(v) => v && set('end', v)}
-              />
-            ) : null}
-          </View>
-          <View style={{ marginTop: 8 }}>
-            <Text style={{ color: pt.ink3, fontSize: 11, marginBottom: 4, fontFamily: pt.sans }}>
-              {t('planner.fino_al')}
-            </Text>
-            <Pick
-              pt={pt}
-              kind="date"
-              testID="sheet-enddate"
-              value={f.endDate}
-              clearable
-              placeholder="—"
-              onChange={(v) => set('endDate', v && v > f.date ? v : '')}
-            />
-          </View>
-
-          <Label pt={pt}>{t('planner.calendario')}</Label>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {p.calendars.map((c) => (
-              <Chip
-                key={c.uuid}
-                pt={pt}
-                testID={`cal-${c.uuid}`}
-                label={c.name}
-                active={(f.calendar ?? p.calendars.find((x) => x.is_default)?.uuid) === c.uuid}
-                color={c.color ? longHex(c.color, pt.accent) : undefined}
-                onPress={() => set('calendar', c.uuid)}
-              />
-            ))}
-          </View>
-
-          <Label pt={pt}>{t('planner.categoria')}</Label>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            <Chip
-              pt={pt}
-              testID="cat-none"
-              label={t('planner.nessuna')}
-              active={f.category === null}
-              onPress={() => set('category', null)}
-            />
-            {p.categories.map((c) => (
-              <Chip
-                key={c.uuid}
-                pt={pt}
-                testID={`cat-${c.uuid}`}
-                label={c.name}
-                active={f.category === c.uuid}
-                color={longHex(c.color, pt.accent)}
-                onPress={() => set('category', c.uuid)}
-              />
-            ))}
-          </View>
-
-          <Label pt={pt}>{t('planner.importanza')}</Label>
-          <View style={{ flexDirection: 'row' }}>
-            {IMPORTANCE.map((i) => (
-              <Chip
-                key={i.id}
-                pt={pt}
-                testID={`imp-${i.id}`}
-                label={t(i.key)}
-                active={f.importance === i.id}
-                onPress={() => set('importance', i.id)}
-              />
-            ))}
-          </View>
-
-          <Label pt={pt}>{t('planner.ripeti')}</Label>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {REPEATS.map((r) => (
-              <Chip
-                key={r.id}
-                pt={pt}
-                testID={`rep-${r.id}`}
-                label={t(r.key)}
-                active={f.repeat === r.id}
-                onPress={() => set('repeat', r.id)}
-              />
-            ))}
-          </View>
-          {f.repeat === 'custom' ? (
-            <View style={{ marginTop: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: pt.ink2, fontFamily: pt.sans }}>{t('planner.ogni')}</Text>
+            {/* titolo + progetto, tipo e priorità */}
+            <Field pt={pt}>
+              <View
+                style={[
+                  fieldBox(pt),
+                  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 6 },
+                ]}
+              >
                 <TextInput
-                  testID="rep-interval"
-                  keyboardType="number-pad"
-                  value={String(f.interval)}
-                  onChangeText={(v) =>
-                    set('interval', Math.max(1, Math.min(365, Number(v.replace(/\D/g, '')) || 1)))
-                  }
-                  style={[inputStyle, { width: 64, textAlign: 'center' }]}
+                  testID="sheet-title"
+                  autoFocus={!view}
+                  value={f.title}
+                  maxLength={180}
+                  onChangeText={(v) => {
+                    set('title', v);
+                    // il luogo può arrivare da solo, se il titolo nomina un posto salvato (solo a luogo vuoto)
+                    if (book && !f.location.trim()) {
+                      const hit = book.suggestPlace(v);
+                      if (hit) pickPlace(hit);
+                    }
+                  }}
+                  placeholder={t('planner.titolo')}
+                  placeholderTextColor={pt.ink3}
+                  style={{
+                    flex: 1,
+                    paddingHorizontal: 13,
+                    paddingVertical: 12,
+                    color: pt.ink,
+                    fontSize: 19,
+                    fontFamily: pt.serif,
+                  }}
                 />
+                <IconBtn
+                  pt={pt}
+                  testID="sheet-project-btn"
+                  label={t('todo.collega_progetto')}
+                  onPress={() => setSubSheet('project')}
+                >
+                  <SheetGlyph name="folder" color={pt.ink2} />
+                </IconBtn>
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
-                {UNITS.map((u) => (
-                  <Chip
-                    key={u.id}
+              {project ? (
+                <Text
+                  testID="sheet-project-name"
+                  style={{
+                    color: pt.ink3,
+                    fontSize: 11.5,
+                    marginTop: 6,
+                    marginHorizontal: 2,
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {t('planner.progetto_due')}
+                  {project.name}
+                </Text>
+              ) : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: 10,
+                  rowGap: 8,
+                  marginTop: 8,
+                  marginHorizontal: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    color: pt.ink3,
+                    fontSize: 9,
+                    letterSpacing: 1.3,
+                    textTransform: 'uppercase',
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {t('planner.tipo')}
+                </Text>
+                <Seg
+                  pt={pt}
+                  small
+                  testID="sheet-type"
+                  value={f.type}
+                  onChange={(v) => set('type', v)}
+                  options={[
+                    { id: 'event', label: t('planner.evento'), testID: 'type-event' },
+                    { id: 'task', label: t('planner.task'), testID: 'type-task' },
+                  ]}
+                />
+                <View style={{ marginLeft: 'auto' }}>
+                  <Seg
                     pt={pt}
-                    testID={`unit-${u.id}`}
-                    label={t(u.key)}
-                    active={f.unit === u.id}
-                    onPress={() => set('unit', u.id)}
+                    small
+                    testID="sheet-importance"
+                    value={f.importance}
+                    onChange={(v) => set('importance', v)}
+                    options={[
+                      { id: 'normal', label: t('planner.normale'), testID: 'imp-normal' },
+                      { id: 'high', label: t('planner.importante'), testID: 'imp-high' },
+                      { id: 'highest', label: t('planner.importantissimo'), testID: 'imp-highest' },
+                    ]}
+                  />
+                </View>
+              </View>
+            </Field>
+
+            {/* data, orari, durata */}
+            <Field pt={pt} label={t('planner.quando')}>
+              <RowSB pt={pt} label={t('planner.data_t')}>
+                <Pick
+                  pt={pt}
+                  kind="date"
+                  testID="sheet-date"
+                  value={f.date}
+                  onChange={(v) => v && setDate(v)}
+                />
+              </RowSB>
+              <RowSB pt={pt} label={t('planner.tutto_il_giorno')}>
+                <Toggle pt={pt} testID="sheet-allday" on={f.allDay} onChange={setAllDay} />
+              </RowSB>
+              {!f.allDay ? (
+                <>
+                  <RowSB pt={pt} label={t('planner.inizio_t')}>
+                    <Pick
+                      pt={pt}
+                      kind="time"
+                      testID="sheet-start"
+                      value={f.start}
+                      onChange={(v) => v && setStart(v)}
+                    />
+                  </RowSB>
+                  <RowSB pt={pt}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                      <Text
+                        style={{
+                          color: pt.ink3,
+                          fontSize: 13,
+                          fontStyle: 'italic',
+                          fontFamily: pt.sans,
+                        }}
+                      >
+                        {t('planner.durata')}
+                      </Text>
+                      <LockBtn
+                        pt={pt}
+                        state={f.lock}
+                        label={lockLabel}
+                        onPress={() => set('lock', nextLock(f.lock))}
+                      />
+                      <Pick
+                        pt={pt}
+                        kind="time"
+                        testID="sheet-duration"
+                        value={duration}
+                        width={104}
+                        onChange={(v) => v && setDuration(v)}
+                      />
+                    </View>
+                  </RowSB>
+                  <RowSB pt={pt} label={t('planner.fine_t')} last>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                      <Pick
+                        pt={pt}
+                        kind="date"
+                        testID="sheet-enddate"
+                        value={f.endDate}
+                        dim={f.endDate === f.date}
+                        onChange={setEndDate}
+                      />
+                      <Pick
+                        pt={pt}
+                        kind="time"
+                        testID="sheet-end"
+                        value={f.end}
+                        onChange={(v) => v && setEnd(v)}
+                      />
+                    </View>
+                  </RowSB>
+                </>
+              ) : (
+                <RowSB pt={pt} label={t('planner.fine_t')} last>
+                  <Pick
+                    pt={pt}
+                    kind="date"
+                    testID="sheet-enddate"
+                    value={f.endDate}
+                    dim={f.endDate === f.date}
+                    onChange={setEndDate}
+                  />
+                </RowSB>
+              )}
+            </Field>
+
+            {/* ripetizione */}
+            <Field pt={pt} label={t('planner.ripeti')}>
+              <RowSB pt={pt} label={t('planner.frequenza_t')} last={f.repeat === 'none'}>
+                <SelectField
+                  pt={pt}
+                  testID="rep"
+                  title={t('planner.ripeti')}
+                  value={f.repeat}
+                  options={REPEATS.map((r) => ({ id: r.id, label: t(r.key) }))}
+                  onChange={(v) => set('repeat', v)}
+                />
+              </RowSB>
+              {f.repeat === 'custom' ? (
+                <RowSB pt={pt} label={t('planner.intervallo')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+                    <Text style={{ color: pt.ink3, fontSize: 11.5, fontFamily: pt.sans }}>
+                      {t('planner.ogni')}
+                    </Text>
+                    <TextInput
+                      testID="rep-interval"
+                      keyboardType="number-pad"
+                      value={String(f.interval)}
+                      onChangeText={(v) =>
+                        set(
+                          'interval',
+                          Math.max(1, Math.min(365, Number(v.replace(/\D/g, '')) || 1)),
+                        )
+                      }
+                      style={[
+                        fieldBox(pt),
+                        inputText,
+                        { width: 76, paddingVertical: 8, textAlign: 'center' },
+                      ]}
+                    />
+                    <SelectField
+                      pt={pt}
+                      testID="unit"
+                      value={f.unit}
+                      options={UNITS.map((u) => ({ id: u.id, label: t(u.key) }))}
+                      onChange={(v) => set('unit', v)}
+                    />
+                  </View>
+                </RowSB>
+              ) : null}
+              {f.repeat !== 'none' ? (
+                <RowSB pt={pt} label={t('planner.fino_al')} last>
+                  <Pick
+                    pt={pt}
+                    kind="date"
+                    testID="sheet-until"
+                    value={f.until}
+                    clearable
+                    placeholder={t('planner.infinito')}
+                    onChange={(v) => set('until', v)}
+                  />
+                </RowSB>
+              ) : null}
+            </Field>
+
+            {/* calendario */}
+            {calChoices.length > 1 ? (
+              <Field pt={pt} label={t('planner.calendario')}>
+                <SelectField
+                  pt={pt}
+                  wide
+                  testID="cal"
+                  title={t('planner.calendario')}
+                  value={activeCal}
+                  options={calChoices.map((c) => ({ id: c.uuid, label: c.name }))}
+                  onChange={(v) => set('calendar', v)}
+                />
+              </Field>
+            ) : null}
+
+            {/* categoria */}
+            <Field pt={pt} label={t('planner.categoria')}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {project
+                  ? tag(
+                      'project',
+                      project.name,
+                      projectColor ?? pt.neutralEv,
+                      f.category === null,
+                      () => set('category', null),
+                      'cat-project',
+                    )
+                  : null}
+                {[...p.categories]
+                  .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+                  .map((c) =>
+                    tag(
+                      c.uuid,
+                      c.name,
+                      longHex(c.color, pt.accent),
+                      f.category === c.uuid,
+                      () =>
+                        edit((s) => ({
+                          ...s,
+                          category: s.category === c.uuid ? null : c.uuid,
+                          color: null,
+                        })),
+                      `cat-${c.uuid}`,
+                    ),
+                  )}
+              </View>
+            </Field>
+
+            {/* notifica */}
+            <Field pt={pt} label={t('planner.notifica')}>
+              <RowSB pt={pt} label={t('planner.avvisami')} last={f.notify !== 'custom'}>
+                <SelectField
+                  pt={pt}
+                  testID="not"
+                  title={t('planner.notifica')}
+                  value={f.notify}
+                  options={NOTIFIES.map((n) => ({ id: n.id, label: t(n.key) }))}
+                  onChange={(v) => set('notify', v)}
+                />
+              </RowSB>
+              {f.notify === 'custom' ? (
+                <RowSB pt={pt} label={t('planner.minuti_prima')} last>
+                  <TextInput
+                    testID="not-minutes"
+                    keyboardType="number-pad"
+                    value={String(f.notifyMin)}
+                    onChangeText={(v) =>
+                      set(
+                        'notifyMin',
+                        Math.max(0, Math.min(40320, Number(v.replace(/\D/g, '')) || 0)),
+                      )
+                    }
+                    style={[
+                      fieldBox(pt),
+                      inputText,
+                      { width: 96, paddingVertical: 8, textAlign: 'center' },
+                    ]}
+                  />
+                </RowSB>
+              ) : null}
+            </Field>
+
+            {/* colore */}
+            <Field pt={pt} label={t('planner.colore')}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 4 }}>
+                {[baseColor, ...SWATCHES].map((c, i) => (
+                  <Swatch
+                    key={`${c}-${i}`}
+                    pt={pt}
+                    testID={`sw-${i}`}
+                    color={c}
+                    on={f.color === c || (i === 0 && !f.color)}
+                    onPress={() => set('color', i === 0 ? null : c)}
                   />
                 ))}
               </View>
-            </View>
-          ) : null}
-          {f.repeat !== 'none' ? (
-            <View style={{ marginTop: 6 }}>
-              <Text style={{ color: pt.ink3, fontSize: 11, marginBottom: 4, fontFamily: pt.sans }}>
-                {t('planner.fino_al')}
-              </Text>
-              <Pick
-                pt={pt}
-                kind="date"
-                testID="sheet-until"
-                value={f.until}
-                clearable
-                placeholder={t('planner.infinito')}
-                onChange={(v) => set('until', v)}
-              />
-            </View>
-          ) : null}
+            </Field>
 
-          <Label pt={pt}>{t('planner.notifica')}</Label>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {NOTIFIES.map((n) => (
-              <Chip
-                key={n.id}
-                pt={pt}
-                testID={`not-${n.id}`}
-                label={t(n.key)}
-                active={f.notify === n.id}
-                onPress={() => set('notify', n.id)}
-              />
-            ))}
-          </View>
-          {f.notify === 'custom' ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {/* luogo */}
+            <Field pt={pt} label={t('planner.luogo')}>
+              <View
+                style={[
+                  fieldBox(pt),
+                  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 6 },
+                ]}
+              >
+                <TextInput
+                  testID="sheet-location"
+                  value={f.location}
+                  maxLength={255}
+                  autoCorrect={false}
+                  onChangeText={(v) => {
+                    set('location', v);
+                    // scrivendo a mano l'aggancio cade: coordinate vecchie accanto a un indirizzo nuovo sono peggio di niente
+                    setPlace(null);
+                    forget();
+                    search.type(v);
+                  }}
+                  onBlur={() => setTimeout(search.close, 200)}
+                  placeholder={t('planner.cerca_un_indirizzo_o_un')}
+                  placeholderTextColor={pt.ink3}
+                  style={{
+                    flex: 1,
+                    paddingHorizontal: 13,
+                    paddingVertical: 12,
+                    color: pt.ink,
+                    fontSize: 19,
+                    fontFamily: pt.serif,
+                  }}
+                />
+                <IconBtn
+                  pt={pt}
+                  testID="loc-map"
+                  label={t('planner.apri_nella_mappa')}
+                  onPress={openMap}
+                >
+                  <SheetGlyph name="pin" color={pt.ink2} />
+                </IconBtn>
+                {book ? (
+                  <IconBtn
+                    pt={pt}
+                    testID="loc-book"
+                    label={t('planner.luoghi_salvati')}
+                    onPress={() => setSubSheet('places')}
+                  >
+                    <SheetGlyph name="bookmark" color={pt.ink2} />
+                  </IconBtn>
+                ) : null}
+              </View>
+              <PlaceHits pt={pt} hits={search.hits} onPick={pickHit} />
+              {shownPlace || waiting ? (
+                <PlaceStatus
+                  pt={pt}
+                  place={shownPlace ?? { name: null, lat: null, lon: null, ref: null }}
+                  waiting={waiting}
+                  onClear={() => {
+                    setPlace(null);
+                    forget();
+                  }}
+                />
+              ) : f.location.trim() ? (
+                <Text
+                  testID="place-by-hand"
+                  style={{
+                    color: pt.ink3,
+                    fontSize: 11.5,
+                    marginTop: 7,
+                    marginHorizontal: 2,
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {t('planner.posto_a_mano')}
+                </Text>
+              ) : null}
+              {notFound ? (
+                <Text
+                  testID="place-not-found"
+                  style={{ color: pt.ink3, marginTop: 6, fontFamily: pt.sans }}
+                >
+                  {t('planner.posizione_non_trovata_resta_il')}
+                </Text>
+              ) : null}
+            </Field>
+
+            {/* invitati */}
+            {book ? (
+              <Field pt={pt} label={t('planner.invitati')}>
+                <GuestsField
+                  pt={pt}
+                  guests={guests}
+                  nameOf={(g) =>
+                    g.name || contacts.find((c) => c.email === g.email)?.name || g.email
+                  }
+                  onChange={(g) => {
+                    setDirty(true);
+                    setGuests(g);
+                  }}
+                  onOpenBook={() => setSubSheet('contacts')}
+                />
+              </Field>
+            ) : null}
+
+            {/* note */}
+            <Field pt={pt} label={t('planner.note')}>
               <TextInput
-                testID="not-minutes"
-                keyboardType="number-pad"
-                value={String(f.notifyMin)}
-                onChangeText={(v) =>
-                  set('notifyMin', Math.max(0, Math.min(40320, Number(v.replace(/\D/g, '')) || 0)))
-                }
-                style={[inputStyle, { width: 90, textAlign: 'center' }]}
+                testID="sheet-notes"
+                value={f.notes}
+                onChangeText={(v) => set('notes', v)}
+                multiline
+                maxLength={4000}
+                placeholder={t('planner.qualcosa_da_ricordare')}
+                placeholderTextColor={pt.ink3}
+                style={[fieldInput, { minHeight: 200, lineHeight: 23, textAlignVertical: 'top' }]}
               />
-              <Text style={{ color: pt.ink2, fontFamily: pt.sans }}>
-                {t('planner.minuti_prima')}
-              </Text>
-            </View>
-          ) : null}
+            </Field>
 
-          <Label pt={pt}>{t('planner.luogo')}</Label>
-          <TextInput
-            testID="sheet-location"
-            value={f.location}
-            onChangeText={(v) => {
-              set('location', v);
-              // scrivendo a mano l'aggancio cade: coordinate vecchie accanto a un indirizzo nuovo sono peggio di niente
-              setPlace(null);
-              forget();
-              search.type(v);
-            }}
-            onBlur={() => setTimeout(search.close, 200)}
-            placeholder={p.places ? t('planner.cerca_un_indirizzo_o_un') : undefined}
-            placeholderTextColor={pt.ink3}
-            style={inputStyle}
-          />
-          <PlaceHits pt={pt} hits={search.hits} onPick={pickHit} />
-          {shownPlace ? (
-            <PlaceStatus
-              pt={pt}
-              place={shownPlace}
-              waiting={waiting}
-              onClear={() => {
-                setPlace(null);
-                forget();
-              }}
-            />
-          ) : null}
-          {notFound ? (
-            <Text testID="place-not-found" style={{ color: pt.ink3, marginTop: 6 }}>
-              {t('planner.posizione_non_trovata_resta_il')}
-            </Text>
-          ) : null}
-          <PlacesField
-            pt={pt}
-            places={places}
-            suggested={suggested}
-            chosenName={place !== 'keep' && place ? place.name : null}
-            onPick={pickPlace}
-          />
-          {book ? (
-            <>
-              <Label pt={pt}>{t('planner.invitati')}</Label>
-              <GuestsField pt={pt} contacts={contacts} guests={guests} onChange={setGuests} />
-            </>
-          ) : null}
-          <Label pt={pt}>{t('planner.note')}</Label>
-          <TextInput
-            testID="sheet-notes"
-            value={f.notes}
-            onChangeText={(v) => set('notes', v)}
-            multiline
-            placeholderTextColor={pt.ink3}
-            style={[inputStyle, { minHeight: 90, textAlignVertical: 'top' }]}
-          />
+            {view ? (
+              <Pressable
+                testID="sheet-delete"
+                accessibilityRole="button"
+                onPress={remove}
+                style={{
+                  marginTop: 4,
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  backgroundColor: '#F3DCDC',
+                }}
+              >
+                <Text style={{ color: '#8E5A5A', fontSize: 14.5, fontFamily: pt.sans }}>
+                  {t('planner.elimina_evento')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SheetPanel>
 
-          {view ? (
-            <Pressable
-              testID="sheet-delete"
-              accessibilityRole="button"
-              onPress={remove}
-              style={{ marginTop: 28, alignItems: 'center', padding: 12 }}
-            >
-              <Text style={{ color: '#B4645F', fontSize: 15, fontFamily: pt.sans }}>
-                {t('planner.elimina_evento')}
-              </Text>
-            </Pressable>
-          ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Modal>
+      {subSheet === 'project' ? (
+        <ProjectSheet
+          pt={pt}
+          projects={projects}
+          value={f.project}
+          onClose={() => setSubSheet(null)}
+          onPick={(uuid) => {
+            const chosen = uuid ? projects.find((x) => x.uuid === uuid) : null;
+            edit((s) => ({
+              ...s,
+              project: uuid,
+              // un progetto scelto su un evento senza titolo gli dà il suo nome
+              title: chosen && !s.title.trim() ? chosen.name : s.title,
+            }));
+            setSubSheet(null);
+          }}
+        />
+      ) : null}
+      {subSheet === 'places' && book ? (
+        <SavedPlacesSheet
+          pt={pt}
+          book={book}
+          places={places}
+          onPlaces={setPlaces}
+          canSave={!!shownPlace && shownPlace.lat !== null && shownPlace.lon !== null}
+          placeName={shownPlace?.name ?? null}
+          address={f.location}
+          lat={shownPlace?.lat ?? null}
+          lon={shownPlace?.lon ?? null}
+          placeRef={shownPlace?.ref ?? null}
+          onClose={() => setSubSheet(null)}
+          onPick={(pl) => {
+            pickPlace(pl);
+            setSubSheet(null);
+          }}
+        />
+      ) : null}
+      {subSheet === 'contacts' && book ? (
+        <ContactsSheet
+          pt={pt}
+          book={book}
+          contacts={contacts}
+          onContacts={setContacts}
+          onClose={() => setSubSheet(null)}
+          onInvite={(c) => {
+            setDirty(true);
+            setGuests((cur) =>
+              cur.some((g) => g.email === c.email)
+                ? cur
+                : [...cur, { email: c.email, name: c.name, contactUuid: c.uuid }],
+            );
+            setSubSheet(null);
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 

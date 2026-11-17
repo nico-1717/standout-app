@@ -84,6 +84,7 @@ export interface EventInput {
   allDay?: boolean;
   categoryUuid?: string | null;
   calendarUuid?: string | null;
+  projectUuid?: string | null;
   importance?: 'normal' | 'high' | 'highest';
   color?: string | null;
   type?: 'event' | 'task';
@@ -126,6 +127,7 @@ export function normalise(
   | 'is_all_day'
   | 'category_uuid'
   | 'calendar_uuid'
+  | 'project_uuid'
   | 'importance'
   | 'color'
   | 'item_type'
@@ -203,6 +205,7 @@ export function normalise(
     is_all_day: allDay ? 1 : 0,
     category_uuid: category,
     calendar_uuid: calendar,
+    project_uuid: input.projectUuid ?? null,
     importance: input.importance ?? 'normal',
     color: input.color ?? null,
     item_type: input.type ?? 'event',
@@ -234,6 +237,7 @@ export function inputOf(r: EventRow): EventInput {
     allDay: r.is_all_day === 1,
     categoryUuid: r.category_uuid,
     calendarUuid: r.calendar_uuid,
+    projectUuid: r.project_uuid,
     importance: r.importance as EventInput['importance'],
     color: r.color,
     type: r.item_type as EventInput['type'],
