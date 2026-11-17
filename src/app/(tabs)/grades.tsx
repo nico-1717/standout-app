@@ -41,6 +41,8 @@ import {
   type Exam,
   type GradeData,
 } from '@/features/grades/logic';
+import { CostPane } from '@/features/grades/CostPane';
+import { buildCosts, forecast, type Costs } from '@/features/grades/cost';
 import { Ring, Stepper, TrendChart, accentOf, fmt2, trimNum } from '@/features/grades/parts';
 import { StatsBody } from '@/features/grades/Stats';
 import {
@@ -62,7 +64,8 @@ import {
 import { hoTheme } from '@/features/home/HomeKit';
 import { Card, Header } from '@/ui/kit';
 
-type Tab = 'done' | 'todo' | 'sim';
+const NO_COSTS: Costs = { exams: [], bands: [] };
+type Tab = 'done' | 'todo' | 'sim' | 'costo';
 
 /** Il «voto» di un esame come lo disegna la medaglia: colore e testo (gradeBadge del sito). */
 function badgeOf(
@@ -242,6 +245,15 @@ export default function GradesScreen() {
   const lodi = lodiCount(d, false);
   const doneCount = d.exams.filter((e) => e.status === 'done').length;
   const todoCount = todoVisible(d).length;
+  // «Costo» si calcola solo quando lo si guarda: sono molte somme sui pomodori
+  const costs = tab === 'costo' ? buildCosts(services.grades.doneCosts()) : NO_COSTS;
+  const ahead =
+    tab === 'costo'
+      ? forecast(
+          d.exams.filter((e) => e.status === 'todo').map((e) => ({ name: e.name, cfu: e.cfu })),
+          costs.bands,
+        )
+      : null;
   const totalCount = totalExamsCount(d);
   const range = finalRange(d, w.avg, false);
   const base = d.settings.grade_base;
@@ -1183,7 +1195,7 @@ export default function GradesScreen() {
                       setEditTarget(true);
                     }}
                   />
-                ) : tab === 'sim' ? null : (
+                ) : tab === 'sim' || tab === 'costo' ? null : (
                   <ActionPill
                     testID="grades-select"
                     tone={tone}
@@ -1215,6 +1227,7 @@ export default function GradesScreen() {
                   testID: 'grades-tab-todo',
                 },
                 { key: 'sim', label: t('voti.simulatore'), testID: 'grades-tab-sim' },
+                { key: 'costo', label: t('voti.costo'), testID: 'grades-tab-costo' },
               ]}
             />
 
@@ -1240,6 +1253,7 @@ export default function GradesScreen() {
                 )}
               </View>
             ) : null}
+            {tab === 'costo' ? <CostPane th={th} costs={costs} ahead={ahead} /> : null}
             {tab === 'sim' ? (
               <View testID="grades-list-sim">
                 <Text style={{ color: th.text3, fontSize: 12, lineHeight: 16, marginBottom: 10 }}>
@@ -1383,7 +1397,7 @@ export default function GradesScreen() {
               </View>
             ) : null}
 
-            {tab !== 'sim' ? (
+            {tab !== 'sim' && tab !== 'costo' ? (
               <>
                 {selecting ? (
                   <View

@@ -352,7 +352,14 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
   // non sono righe: si calcolano in lettura (vedi features/planner/recurrence.ts ed events.ts).
   planner_events: {
     order: 130,
-    readOnly: ['completed_at', 'rrule', 'sort_order', 'created_at', 'updated_at'],
+    readOnly: [
+      'completed_at',
+      'rrule',
+      'sort_order',
+      'study_exam_uuid',
+      'created_at',
+      'updated_at',
+    ],
     createOnly: [
       'habit_uuid',
       'project_uuid',
@@ -387,6 +394,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       'calendar_uuid',
       'habit_uuid',
       'project_uuid',
+      'study_exam_uuid',
       'importance',
       'color',
       'item_type',

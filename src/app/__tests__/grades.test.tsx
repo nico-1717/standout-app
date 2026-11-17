@@ -162,6 +162,39 @@ describe('Grades main screen', () => {
     expect(grades.exam(todo)!.predicted_grade).toBeNull();
   });
 
+  test('«Cost» says what finished exams cost and estimates the ones still to take', async () => {
+    const { db, grades } = setup();
+    const done = grades.addExam({ name: 'Analisi', cfu: 6, status: 'done', grade: 30 });
+    grades.addExam({ name: 'Fisica', cfu: 6, status: 'todo' });
+    db.run(
+      `INSERT INTO projects (uuid, name, notes, status, color, color_edited, todo_enabled, is_favorite, sort_key)
+       VALUES ('p1', 'Analisi', '', 'in_progress', '#000', 0, 0, 0, 'a0')`,
+    );
+    db.run(
+      `INSERT INTO planner_events (uuid, title, event_date, project_uuid, study_exam_uuid) VALUES ('e1', 'x', '2030-01-01', 'p1', ?)`,
+      [done],
+    );
+    for (let i = 0; i < 12; i++)
+      db.run(
+        `INSERT INTO pomodoro_sessions (uuid, start_time, end_time, duration_seconds, project_uuid) VALUES (?, '2030-01-01T09:00', '2030-01-01T09:25', 1500, 'p1')`,
+        [`s${i}`],
+      );
+    await render(wrap(<GradesScreen />));
+    await fireEvent.press(screen.getByTestId('grades-tab-costo'));
+    // 12 pomodoros over 6 credits = 2 per credit: the exam to take (6 credits) costs about 12
+    expect(txt('grades-cost-total')).toBe('~12🍅');
+    expect(screen.getAllByText('12🍅 · 5h').length).toBe(1);
+    expect(screen.getByText('2🍅/CFU · 30')).toBeTruthy();
+  });
+
+  test('«Cost» with no finished exam linked to a project explains how it fills in', async () => {
+    const { grades } = setup();
+    grades.addExam({ name: 'A', cfu: 6, status: 'done', grade: 28 });
+    await render(wrap(<GradesScreen />));
+    await fireEvent.press(screen.getByTestId('grades-tab-costo'));
+    expect(screen.getByTestId('grades-cost-empty')).toBeTruthy();
+  });
+
   test('bonuses switch on and off and add to the final grade', async () => {
     const { grades } = setup();
     grades.addExam({ name: 'A', cfu: 6, status: 'done', grade: 30 });

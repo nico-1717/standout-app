@@ -903,6 +903,15 @@ CREATE TRIGGER trg_fc_vocab_cards_birth AFTER INSERT ON fc_vocab_cards BEGIN
 END;
 `,
   },
+  {
+    version: 21,
+    // l'esame a cui si riferisce un evento di studio (lo scrive il sito): serve a calcolare quanto è costato ogni esame dato.
+    // Gli eventi già sul telefono non lo hanno: si riparte da una copia completa, che li riporta con il nuovo campo.
+    sql: `
+ALTER TABLE planner_events ADD COLUMN study_exam_uuid TEXT;
+DELETE FROM sync_state WHERE k = 'cursor';
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

@@ -7,6 +7,8 @@ import type { SyncTable } from '@/core/sync/manifest';
 import { deleteRow, patchRow, upsertRow } from '@/core/sync/rows';
 import type { WireRow, WireValue } from '@/core/sync/types';
 
+import type { DoneExamCost } from './cost';
+
 import {
   type Bonus,
   type BonusType,
@@ -121,6 +123,45 @@ export class GradesRepo {
   ) {}
 
   /* ---------------- lettura ---------------- */
+
+  /**
+   * Quanto è costato ogni esame dato: i pomodori finiti del progetto del suo evento di studio e dei figli di quel
+   * progetto (come `esami_fatti` del sito). Solo gli esami con un progetto collegato: degli altri non si sa.
+   */
+  doneCosts(): DoneExamCost[] {
+    const exams = this.db.all<{
+      uuid: string;
+      name: string;
+      cfu: number;
+      grade: number | null;
+      has_honors: number;
+    }>(
+      `SELECT x.uuid, x.name, x.cfu, x.grade, x.has_honors
+         FROM university_exams x
+        WHERE x.status = 'done'
+          AND EXISTS (SELECT 1 FROM planner_events e WHERE e.study_exam_uuid = x.uuid AND e.project_uuid IS NOT NULL)
+        ORDER BY x.exam_date DESC, x.sort_key`,
+    );
+    return exams.map((x) => {
+      const s = this.db.all<{ n: number; secs: number }>(
+        `SELECT COUNT(*) AS n, COALESCE(SUM(duration_seconds), 0) AS secs
+           FROM pomodoro_sessions
+          WHERE end_time IS NOT NULL AND project_uuid IN (
+            SELECT p.uuid FROM projects p
+              WHERE p.uuid IN (SELECT e.project_uuid FROM planner_events e WHERE e.study_exam_uuid = ?)
+                 OR p.parent_uuid IN (SELECT e.project_uuid FROM planner_events e WHERE e.study_exam_uuid = ?))`,
+        [x.uuid, x.uuid],
+      )[0];
+      return {
+        name: x.name,
+        cfu: Number(x.cfu),
+        grade: x.grade,
+        honors: x.has_honors === 1,
+        pomodori: s?.n ?? 0,
+        seconds: s?.secs ?? 0,
+      };
+    });
+  }
 
   exams(): Exam[] {
     return this.db.all<Exam>(`SELECT ${EXAM_COLS} FROM university_exams ORDER BY sort_key, uuid`);
