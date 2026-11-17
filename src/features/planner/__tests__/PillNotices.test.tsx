@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { useState } from 'react';
 
 import '@/core/i18n';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 import type { DoseView } from '@/features/pills/repo';
+import { SETTLE_MS } from '@/features/pills/settle';
 
 import { PillNotices } from '../PillNotices';
 import { plannerTheme } from '../plannerTheme';
@@ -118,5 +120,73 @@ describe('Pill notices in the planner', () => {
     });
     expect(screen.queryByTestId('pill-group')).toBeNull();
     expect(screen.getByTestId('pill-notice-d3')).toBeTruthy();
+  });
+});
+
+describe('taking a pill is a small animation, not a disappearance', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  test('the answer is written at once; the card shows "Taken" for a moment, then goes', async () => {
+    const onAnswer = jest.fn();
+    function Live() {
+      const [list, setList] = useState([dose({}), dose({ uuid: 'd2', name: 'Zinc' })]);
+      return (
+        <Host
+          doses={list}
+          onAnswer={(u, s) => {
+            onAnswer(u, s);
+            setList((l) => l.filter((x) => x.uuid !== u)); // the page re-reads: the dose is no longer pending
+          }}
+        />
+      );
+    }
+    await render(
+      <ThemeProvider>
+        <Live />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId('pill-taken-d1'));
+    expect(onAnswer).toHaveBeenCalledWith('d1', 'taken');
+    // the dose is already out of the list, but its card is still here, settled
+    expect(screen.getByTestId('pill-done-d1')).toHaveTextContent(/Vitamina D/);
+    expect(screen.getByTestId('pill-notice-d2')).toBeTruthy();
+    // a second tap on the settled card does nothing
+    await fireEvent.press(screen.getByTestId('pill-taken-d1'));
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      jest.advanceTimersByTime(SETTLE_MS + 50);
+    });
+    expect(screen.queryByTestId('pill-notice-d1')).toBeNull();
+    expect(screen.getByTestId('pill-notice-d2')).toBeTruthy();
+  });
+
+  test('"all taken" settles the group card before it leaves', async () => {
+    const onAll = jest.fn();
+    function Live() {
+      const [list, setList] = useState(six);
+      return (
+        <Host
+          doses={list}
+          onAnswer={jest.fn()}
+          onAnswerAll={(ids) => {
+            onAll(ids);
+            setList([]);
+          }}
+        />
+      );
+    }
+    await render(
+      <ThemeProvider>
+        <Live />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId('pill-all-taken'));
+    expect(onAll).toHaveBeenCalledWith(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(screen.getByTestId('pill-group')).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(SETTLE_MS + 50);
+    });
+    expect(screen.queryByTestId('pill-group')).toBeNull();
   });
 });

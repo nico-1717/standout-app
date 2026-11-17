@@ -29,10 +29,21 @@ export function cleanReminders(raw: unknown): ReminderSettings {
 }
 
 export interface PillDue {
+  plan_uuid: string;
+  /** quale presa dello stesso orario (due prese uguali alla stessa ora hanno `seq` diverso) */
+  seq: number;
   due_date: string;
   due_time: string;
   name: string;
   plan_dose: string;
+}
+
+/** Quale presa è: serve alla notifica per segnarla «presa» senza aprire l'app. */
+export interface PillSlot {
+  plan: string;
+  date: string;
+  time: string;
+  seq: number;
 }
 
 export interface HabitDue {
@@ -48,6 +59,8 @@ export interface Reminder {
   at: Date;
   title: string;
   body: string;
+  /** per le pastiglie: la presa a cui la notifica si riferisce */
+  pill?: PillSlot;
 }
 
 export interface ReminderWords {
@@ -83,25 +96,17 @@ export function planReminders(opts: {
   const out: Reminder[] = [];
 
   if (settings.pills) {
-    // più pastiglie alla stessa ora fanno una notifica sola
-    const groups = new Map<string, PillDue[]>();
+    // una notifica per ogni pastiglia, anche se hanno la stessa ora: ognuna si segna «presa» da sola
     for (const d of opts.pills) {
-      const k = `${d.due_date} ${d.due_time}`;
-      groups.set(k, [...(groups.get(k) ?? []), d]);
-    }
-    for (const [k, list] of groups) {
-      const at = localDate(k.slice(0, 10), k.slice(11, 16));
+      const at = localDate(d.due_date, d.due_time);
       if (at.getTime() <= now.getTime()) continue;
-      // lo stesso nome due volte (due prese dello stesso farmaco) si scrive una volta
-      const names = [
-        ...new Set(list.map((d) => (d.plan_dose ? `${d.name} (${d.plan_dose})` : d.name))),
-      ];
       out.push({
-        id: `pill-${k}`,
+        id: `pill-${d.plan_uuid}-${d.due_date}-${d.due_time}-${d.seq}`,
         kind: 'pill',
         at,
         title: words.pillsTitle,
-        body: names.join(', '),
+        body: d.plan_dose ? `${d.name} (${d.plan_dose})` : d.name,
+        pill: { plan: d.plan_uuid, date: d.due_date, time: d.due_time, seq: d.seq },
       });
     }
   }

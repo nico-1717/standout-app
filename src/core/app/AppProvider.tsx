@@ -15,7 +15,14 @@ import { AppState, Platform } from 'react-native';
 
 import { ApiError, HttpSyncApi } from '../api/httpApi';
 import { AccountApi } from '../account/accountApi';
-import { askPermission, phoneNotifier } from '@/features/reminders/notifier';
+import {
+  askPermission,
+  drainTaken,
+  listenForTaken,
+  phoneNotifier,
+  registerPillCategory,
+  takenSinceLaunch,
+} from '@/features/reminders/notifier';
 import { DEFAULT_REMINDERS, type ReminderSettings } from '@/features/reminders/plan';
 import { rescheduleAll } from '@/features/reminders/scheduler';
 import { DiaryRepo } from '@/features/diary/repo';
@@ -459,7 +466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!services) return;
       try {
         const r = await rescheduleAll({
-          notifier: phoneNotifier(i18n.t('app.promemoria_t')),
+          notifier: phoneNotifier(i18n.t('app.promemoria_t'), i18n.t('planner.presa')),
           settings: reminders,
           pills: services.pills,
           habits: services.habits,
@@ -501,6 +508,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setVersion((x) => x + 1);
     services?.scheduler.trigger();
   }, [services]);
+
+  // Il pulsante «Presa» delle notifiche delle pastiglie: il tocco si mette in coda e, appena i dati sono aperti,
+  // la presa si segna (anche se la notifica ha risvegliato l'app in sottofondo).
+  const [takenTick, setTakenTick] = useState(0);
+  useEffect(() => {
+    void registerPillCategory(i18n.t('planner.presa')).catch(() => {});
+    listenForTaken(() => setTakenTick((n) => n + 1));
+    void takenSinceLaunch()
+      .then(() => setTakenTick((n) => n + 1))
+      .catch(() => {});
+  }, [settings.lang]);
+  useEffect(() => {
+    if (!services) return;
+    const slots = drainTaken();
+    let any = false;
+    for (const slot of slots) {
+      try {
+        any = services.pills.takeSlot(slot) || any;
+      } catch {
+        // una presa che non si segna non deve fermare l'app: resta da fare, e si segna a mano
+      }
+    }
+    // fuori dall'effetto: così la rilettura non è uno setState dentro l'effetto
+    if (any) void Promise.resolve().then(changed);
+  }, [services, takenTick, changed]);
 
   const updateSettings = useCallback(
     (patch: Partial<Settings>) => {

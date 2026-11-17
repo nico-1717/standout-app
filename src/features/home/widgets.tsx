@@ -1,12 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import type { TodoTheme } from '@/features/tasks/todoTheme';
+import { mix } from '@/features/buy/buyTheme';
 import type { DoseView } from '@/features/pills/repo';
+import { SettleCard, TickButton, useSettling } from '@/features/pills/settle';
 import type { Task } from '@/features/tasks/repo';
 import type { Project } from '@/features/projects/logic';
 
@@ -172,7 +175,9 @@ export function TodayWidget({
   const past = data.events.filter((e) => !e.allDay && endMin(e) <= nowMin);
   const rest = data.events.filter((e) => !past.includes(e));
   const shown = rest.slice(0, 8);
-  const late = showAllPills ? data.pillsLate : data.pillsLate.slice(0, 1);
+  // la pastiglia presa resta un attimo «fatta» e poi esce piano (vedi pills/settle)
+  const { rows: pillRows, settle: settlePill } = useSettling(data.pillsLate);
+  const late = showAllPills ? pillRows : pillRows.slice(0, 1);
   const free = !cur;
 
   const eventRow = (e: (typeof data.events)[number], i: number, isPast: boolean) => (
@@ -407,45 +412,76 @@ export function TodayWidget({
 
       {late.length ? (
         <View style={{ gap: 8 }}>
-          {late.map((d) => (
-            <View
+          {late.map(({ dose: d, how }) => (
+            <SettleCard
               key={d.uuid}
               testID={`home-pill-${d.uuid}`}
-              style={[
-                styles.av,
-                { backgroundColor: ho.surface, boxShadow: `inset 0 0 0 1px ${ho.purple}6B` },
-              ]}
+              settled={how !== null}
+              base={ho.surface}
+              tint={mix(ho.purple, ho.surface, how === 'skipped' ? 0.06 : 0.16)}
+              style={[styles.av, { boxShadow: `inset 0 0 0 1px ${ho.purple}6B` }]}
             >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('home.presa')}
+              <TickButton
                 testID={`home-pill-take-${d.uuid}`}
-                onPress={() => onPill(d, 'taken')}
-                style={[styles.avOk, { backgroundColor: ho.purpleSoft }]}
-              >
-                <HoIcon name="check" size={16} color={ho.purple} sw={2.6} />
-              </Pressable>
-              <Text style={{ flex: 1, color: ho.text2, fontSize: 13.5, lineHeight: 18 }}>
-                {t('home.hp_hai_preso')}
-                <Text style={{ color: ho.text, fontWeight: '700' }}>{d.name}</Text>{' '}
-                {t('home.hp_alle', { ora: d.due_time })}?
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                testID={`home-pill-skip-${d.uuid}`}
-                onPress={() => onPill(d, 'skipped')}
-                style={{
-                  backgroundColor: ho.surface2,
-                  paddingVertical: 3,
-                  paddingHorizontal: 9,
-                  borderRadius: 999,
+                color={ho.purple}
+                onColor="#FFFFFF"
+                size={34}
+                glyph={16}
+                how={how}
+                label={t('home.presa')}
+                onPress={() => {
+                  settlePill(d, 'taken');
+                  onPill(d, 'taken');
                 }}
-              >
-                <Text style={{ color: ho.text2, fontSize: 11, fontWeight: '600' }}>
-                  {t('home.salta')}
+              />
+              {how ? (
+                <Animated.Text
+                  key="done"
+                  testID={`home-pill-done-${d.uuid}`}
+                  entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)}
+                  style={{
+                    flex: 1,
+                    color: ho.text,
+                    fontSize: 13.5,
+                    lineHeight: 18,
+                    fontWeight: '700',
+                  }}
+                >
+                  {how === 'taken' ? t('home.presa') : t('home.salta')}
+                  {' · '}
+                  {d.name}
+                </Animated.Text>
+              ) : (
+                <Text
+                  key="ask"
+                  style={{ flex: 1, color: ho.text2, fontSize: 13.5, lineHeight: 18 }}
+                >
+                  {t('home.hp_hai_preso')}
+                  <Text style={{ color: ho.text, fontWeight: '700' }}>{d.name}</Text>{' '}
+                  {t('home.hp_alle', { ora: d.due_time })}?
                 </Text>
-              </Pressable>
-            </View>
+              )}
+              {how ? null : (
+                <Pressable
+                  accessibilityRole="button"
+                  testID={`home-pill-skip-${d.uuid}`}
+                  onPress={() => {
+                    settlePill(d, 'skipped');
+                    onPill(d, 'skipped');
+                  }}
+                  style={{
+                    backgroundColor: ho.surface2,
+                    paddingVertical: 3,
+                    paddingHorizontal: 9,
+                    borderRadius: 999,
+                  }}
+                >
+                  <Text style={{ color: ho.text2, fontSize: 11, fontWeight: '600' }}>
+                    {t('home.salta')}
+                  </Text>
+                </Pressable>
+              )}
+            </SettleCard>
           ))}
           {data.pillsLate.length > 1 && !showAllPills ? (
             <Pressable

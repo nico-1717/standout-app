@@ -9,7 +9,10 @@ import {
 const words = { pillsTitle: 'Pills', habitsTitle: 'Habits' };
 const NOW = new Date(2026, 10, 5, 10, 0, 0);
 const on: ReminderSettings = { pills: true, habits: true, habitTime: '20:00' };
+let seq = 0;
 const pill = (due_date: string, due_time: string, name = 'Vitamin D', plan_dose = '1 tablet') => ({
+  plan_uuid: `plan-${name}`,
+  seq: seq++,
   due_date,
   due_time,
   name,
@@ -37,7 +40,7 @@ describe('cleanReminders', () => {
 });
 
 describe('planReminders', () => {
-  test('pills at the same time make one notification; past ones are dropped', () => {
+  test('every pill gets its own notification, even at the same time; past ones are dropped', () => {
     const out = planReminders({
       now: NOW,
       settings: on,
@@ -45,19 +48,27 @@ describe('planReminders', () => {
         pill('2026-11-05', '09:00'), // already past
         pill('2026-11-05', '13:00', 'Zinc', ''),
         pill('2026-11-05', '13:00', 'Vitamin D'),
-        pill('2026-11-05', '13:00', 'Vitamin D'), // second dose of the same drug: written once
       ],
       habits: [],
       words,
     });
-    expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({
-      id: 'pill-2026-11-05 13:00',
-      kind: 'pill',
-      title: 'Pills',
-      body: 'Zinc, Vitamin D (1 tablet)',
-    });
+    expect(out).toHaveLength(2);
+    expect(out.map((r) => r.body).sort()).toEqual(['Vitamin D (1 tablet)', 'Zinc']);
+    expect(new Set(out.map((r) => r.id)).size).toBe(2);
+    expect(out[0]).toMatchObject({ kind: 'pill', title: 'Pills' });
     expect(out[0]!.at).toEqual(new Date(2026, 10, 5, 13, 0));
+  });
+
+  test('a pill notification knows which dose it is, to mark it taken from the notification', () => {
+    const [r] = planReminders({
+      now: NOW,
+      settings: on,
+      pills: [{ ...pill('2026-11-05', '13:00', 'Zinc', ''), plan_uuid: 'p1', seq: 2 }],
+      habits: [],
+      words,
+    });
+    expect(r!.pill).toEqual({ plan: 'p1', date: '2026-11-05', time: '13:00', seq: 2 });
+    expect(r!.id).toBe('pill-p1-2026-11-05-13:00-2');
   });
 
   test('habits make one notification per day at the chosen time', () => {
@@ -109,7 +120,7 @@ describe('planReminders', () => {
   test('sorted by time, and cut to the limit keeping the nearest', () => {
     const pills = ['15:00', '11:00', '19:00'].map((h) => pill('2026-11-05', h));
     const out = planReminders({ now: NOW, settings: on, pills, habits: [], words, limit: 2 });
-    expect(out.map((r) => r.id)).toEqual(['pill-2026-11-05 11:00', 'pill-2026-11-05 15:00']);
+    expect(out.map((r) => r.pill!.time)).toEqual(['11:00', '15:00']);
   });
 
   test('localDate reads the day and hour as local time', () => {

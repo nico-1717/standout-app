@@ -228,9 +228,14 @@ export class PillsRepo {
    * Le prese ancora da fare nei prossimi `days` giorni (da oggi), per i promemoria. NON scrive niente: le prese
    * future si calcolano dalla regola e si tolgono quelle già prese o saltate.
    */
-  upcoming(
-    days: number,
-  ): { due_date: string; due_time: string; name: string; plan_dose: string }[] {
+  upcoming(days: number): {
+    plan_uuid: string;
+    seq: number;
+    due_date: string;
+    due_time: string;
+    name: string;
+    plan_dose: string;
+  }[] {
     const today = this.today();
     const dates = Array.from({ length: days }, (_, i) => addDays(today, i));
     const plans = new Map(this.plans().map((p) => [p.uuid, p]));
@@ -246,11 +251,28 @@ export class PillsRepo {
     return dosesFor([...plans.values()], dates)
       .filter((s) => !done.has(`${s.plan_uuid}|${s.due_date}|${s.due_time}|${s.seq}`))
       .map((s) => ({
+        plan_uuid: s.plan_uuid,
+        seq: s.seq,
         due_date: s.due_date,
         due_time: s.due_time,
         name: plans.get(s.plan_uuid)!.name,
         plan_dose: plans.get(s.plan_uuid)!.dose,
       }));
+  }
+
+  /**
+   * Segna «presa» la presa indicata da una notifica (terapia, giorno, ora, numero). Se la riga non c'è ancora la
+   * scrive prima. Ritorna false se la terapia non esiste più o la presa non è più prevista.
+   */
+  takeSlot(slot: { plan: string; date: string; time: string; seq: number }): boolean {
+    this.db.transaction(() => this.ensureDays([slot.date]));
+    const row = this.db.all<Dose>(
+      `SELECT * FROM pill_doses WHERE plan_uuid = ? AND due_date = ? AND due_time = ? AND seq = ?`,
+      [slot.plan, slot.date, slot.time, slot.seq],
+    )[0];
+    if (!row) return false;
+    if (row.status !== 'taken') this.setStatus(row.uuid, 'taken');
+    return true;
   }
 
   dose(uuid: string): Dose | null {

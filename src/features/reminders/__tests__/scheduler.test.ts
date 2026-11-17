@@ -122,6 +122,26 @@ describe('habitsDue', () => {
   });
 });
 
+describe('PillsRepo.takeSlot (the notification button)', () => {
+  test('marks the dose taken, even one that was never written yet, and not twice', () => {
+    const s = setup();
+    s.pills.createPlan(plan({ times: '20:00' }));
+    const [due] = s.pills.upcoming(2).filter((d) => d.due_date !== TODAY);
+    const slot = { plan: due!.plan_uuid, date: due!.due_date, time: due!.due_time, seq: due!.seq };
+    expect(s.pills.takeSlot(slot)).toBe(true);
+    expect(s.pills.day(slot.date).doses[0]!.status).toBe('taken');
+    expect(s.pills.takeSlot(slot)).toBe(true);
+    expect(s.pills.upcoming(3).some((d) => d.due_date === slot.date)).toBe(false);
+  });
+
+  test('a plan that is gone, or a slot that is not planned, does nothing', () => {
+    const s = setup();
+    s.pills.createPlan(plan({ times: '20:00' }));
+    expect(s.pills.takeSlot({ plan: 'nope', date: TODAY, time: '20:00', seq: 0 })).toBe(false);
+    expect(s.pills.takeSlot({ plan: 'nope', date: TODAY, time: '03:33', seq: 9 })).toBe(false);
+  });
+});
+
 describe('rescheduleAll', () => {
   test('cancels the old ones and schedules the new, in time order', async () => {
     const s = setup();
@@ -134,7 +154,7 @@ describe('rescheduleAll', () => {
     const times = f.scheduled.map((x) => x.at.getTime());
     expect(times).toEqual([...times].sort((a, b) => a - b));
     expect(f.scheduled.find((x) => x.kind === 'pill')).toMatchObject({
-      id: 'pill-2026-11-05 20:00',
+      id: expect.stringMatching(/^pill-.*-2026-11-05-20:00-\d+$/),
       title: 'Pills',
     });
     expect(f.scheduled.some((x) => x.kind === 'habits')).toBe(true);
@@ -156,10 +176,11 @@ describe('rescheduleAll', () => {
     s.pills.createPlan(plan({ times: '20:00' }));
     const f = fakeNotifier();
     const first = await run(s, f);
-    expect(f.scheduled.some((x) => x.id === 'pill-2026-11-05 20:00')).toBe(true);
+    const tonight = (x: { id: string }) => x.id.includes('2026-11-05-20:00');
+    expect(f.scheduled.some(tonight)).toBe(true);
     s.pills.setStatus(s.pills.day(TODAY).doses[0]!.uuid, 'taken');
     await run(s, f, on, first.signature);
-    expect(f.scheduled.some((x) => x.id === 'pill-2026-11-05 20:00')).toBe(false);
+    expect(f.scheduled.some(tonight)).toBe(false);
   });
 
   test('without the phone permission, or with everything off, nothing is scheduled', async () => {

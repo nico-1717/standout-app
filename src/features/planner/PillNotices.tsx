@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
+import { mix } from '@/features/buy/buyTheme';
 import type { DoseView } from '@/features/pills/repo';
+import { SettleCard, TickButton, useSettling, type SettleRow } from '@/features/pills/settle';
 import { haptic } from '@/ui/motion';
 
 import { weekdayOf } from './dates';
-import type { PlannerTheme } from './plannerTheme';
+import { longHex, type PlannerTheme } from './plannerTheme';
 
 /** Il giorno a tre lettere («mar»), come sul sito: serve a capire di quale giorno si parla in una riga sola. */
 function shortDay(t: (k: string) => string, iso: string): string {
@@ -21,14 +24,17 @@ const GROUP_FROM = 4;
 
 /** Un solo avviso per tutte le pastiglie in sospeso: «6 da confermare — le hai prese?». */
 function PillGroup({
-  doses,
+  count,
+  settled,
   pt,
   bottom,
   onAll,
   onReview,
   onClose,
 }: {
-  doses: DoseView[];
+  count: number;
+  /** «tutte prese» già premuto: la scheda si tinge ed esce */
+  settled: boolean;
   pt: PlannerTheme;
   bottom: number;
   onAll: () => void;
@@ -36,11 +42,14 @@ function PillGroup({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const color = pt.accent;
+  const color = longHex(pt.accent, pt.neutralEv);
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 14, right: 90, bottom }}>
-      <View
+      <SettleCard
         testID="pill-group"
+        settled={settled}
+        base={pt.card}
+        tint={mix(color, pt.card, 0.16)}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -49,37 +58,27 @@ function PillGroup({
           paddingLeft: 8,
           paddingRight: 10,
           borderRadius: 22,
-          backgroundColor: pt.card,
           borderWidth: 1,
           borderColor: color + '66',
           boxShadow: pt.dark ? 'none' : '0 6px 18px rgba(60,50,40,0.14)',
         }}
       >
-        <Pressable
+        <TickButton
           testID="pill-all-taken"
-          accessibilityRole="button"
-          accessibilityLabel={t('planner.pillole_tutte_prese')}
-          hitSlop={8}
+          color={color}
+          onColor="#FFFFFF"
+          size={34}
+          glyph={15}
+          how={settled ? 'taken' : null}
+          label={t('planner.pillole_tutte_prese')}
           onPress={() => {
             haptic.success();
             onAll();
           }}
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 17,
-            backgroundColor: color + '29',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-            <Path d="M4 12.5l5.2 5.2L20 6.6" stroke={color} strokeWidth={3} strokeLinecap="round" />
-          </Svg>
-        </Pressable>
+        />
         <View style={{ flex: 1 }}>
           <Text style={{ color: pt.ink, fontSize: 13, fontWeight: '600', fontFamily: pt.sans }}>
-            {t('planner.pillole_da_confermare', { n: doses.length })}
+            {t('planner.pillole_da_confermare', { n: count })}
           </Text>
           <Text style={{ color: pt.ink2, fontSize: 12, fontFamily: pt.sans }}>
             {t('planner.pillole_hai_preso')}
@@ -87,7 +86,7 @@ function PillGroup({
             {t('planner.pillole_tutte_prese')}
           </Text>
         </View>
-        {onReview ? (
+        {onReview && !settled ? (
           <Pressable testID="pill-review" accessibilityRole="button" hitSlop={8} onPress={onReview}>
             <Text
               style={{
@@ -117,7 +116,7 @@ function PillGroup({
             />
           </Svg>
         </Pressable>
-      </View>
+      </SettleCard>
     </View>
   );
 }
@@ -148,18 +147,29 @@ export function PillNotices({
 }) {
   const { t } = useTranslation();
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
-  const shown = doses.filter((d) => !closed.has(d.uuid));
-  if (!shown.length) return null;
+  const visible = useMemo(() => doses.filter((d) => !closed.has(d.uuid)), [doses, closed]);
+  // la risposta si scrive subito; la scheda resta un attimo «fatta» e poi esce piano
+  const { rows, settle } = useSettling(visible);
+  if (!rows.length) return null;
   const close = (ids: string[]) => setClosed((c) => new Set([...c, ...ids]));
-  if (onAnswerAll && shown.length >= GROUP_FROM) {
+  const answer = (d: DoseView, how: 'taken' | 'skipped') => {
+    settle(d, how);
+    onAnswer(d.uuid, how);
+  };
+  if (onAnswerAll && rows.length >= GROUP_FROM) {
+    const pending = rows.filter((r) => !r.how);
     return (
       <PillGroup
-        doses={shown}
+        count={rows.length}
+        settled={pending.length === 0}
         pt={pt}
         bottom={bottom}
-        onAll={() => onAnswerAll(shown.map((d) => d.uuid))}
+        onAll={() => {
+          for (const r of pending) settle(r.dose, 'taken');
+          onAnswerAll(pending.map((r) => r.dose.uuid));
+        }}
         onReview={onReview}
-        onClose={() => close(shown.map((d) => d.uuid))}
+        onClose={() => close(rows.map((r) => r.dose.uuid))}
       />
     );
   }
@@ -168,11 +178,11 @@ export function PillNotices({
       pointerEvents="box-none"
       style={{ position: 'absolute', left: 14, right: 90, bottom, gap: 6 }}
     >
-      {shown.length > 1 ? (
+      {rows.length > 1 ? (
         <Pressable
           testID="pill-close-all"
           accessibilityRole="button"
-          onPress={() => close(shown.map((d) => d.uuid))}
+          onPress={() => close(rows.map((r) => r.dose.uuid))}
           style={{
             alignSelf: 'flex-start',
             backgroundColor: pt.ink,
@@ -186,103 +196,142 @@ export function PillNotices({
           </Text>
         </Pressable>
       ) : null}
-      {shown.map((d) => {
-        const color = d.color || pt.accent;
-        const when =
-          d.due_date === today
-            ? t('planner.alle_ora', { ora: d.due_time })
-            : t('planner.giorno_alle_ora', { giorno: shortDay(t, d.due_date), ora: d.due_time });
-        const lead = d.plan_dose
-          ? t('planner.hai_preso_dose', { dose: d.plan_dose })
-          : t('planner.hai_preso');
-        return (
-          <View
-            key={d.uuid}
-            testID={`pill-notice-${d.uuid}`}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 6,
-              paddingLeft: 6,
-              paddingRight: 8,
-              borderRadius: 99,
-              backgroundColor: pt.card,
-              borderWidth: 1,
-              borderColor: color + '66',
-              boxShadow: pt.dark ? 'none' : '0 6px 18px rgba(60,50,40,0.14)',
+      {rows.map((r) => (
+        <PillNotice
+          key={r.dose.uuid}
+          row={r}
+          today={today}
+          pt={pt}
+          onAnswer={(how) => answer(r.dose, how)}
+          onHide={() => close([r.dose.uuid])}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** Un avviso: «Hai preso X alle 09:00?» con la spunta, «Saltato» e la x; da risposto mostra l'esito. */
+function PillNotice({
+  row,
+  today,
+  pt,
+  onAnswer,
+  onHide,
+}: {
+  row: SettleRow;
+  today: string;
+  pt: PlannerTheme;
+  onAnswer: (how: 'taken' | 'skipped') => void;
+  onHide: () => void;
+}) {
+  const { t } = useTranslation();
+  const { dose: d, how } = row;
+  const color = longHex(d.color, pt.accent);
+  const when =
+    d.due_date === today
+      ? t('planner.alle_ora', { ora: d.due_time })
+      : t('planner.giorno_alle_ora', { giorno: shortDay(t, d.due_date), ora: d.due_time });
+  const lead = d.plan_dose
+    ? t('planner.hai_preso_dose', { dose: d.plan_dose })
+    : t('planner.hai_preso');
+  return (
+    <SettleCard
+      testID={`pill-notice-${d.uuid}`}
+      settled={how !== null}
+      base={pt.card}
+      tint={mix(color, pt.card, how === 'skipped' ? 0.06 : 0.16)}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingLeft: 6,
+        paddingRight: 8,
+        borderRadius: 99,
+        borderWidth: 1,
+        borderColor: color + '66',
+        boxShadow: pt.dark ? 'none' : '0 6px 18px rgba(60,50,40,0.14)',
+      }}
+    >
+      <TickButton
+        testID={`pill-taken-${d.uuid}`}
+        color={color}
+        onColor="#FFFFFF"
+        how={how}
+        label={t('planner.presa')}
+        onPress={() => {
+          haptic.success();
+          onAnswer('taken');
+        }}
+      />
+      {how ? (
+        <Animated.Text
+          key="done"
+          testID={`pill-done-${d.uuid}`}
+          entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)}
+          style={{
+            flex: 1,
+            color: pt.ink,
+            fontSize: 12,
+            lineHeight: 16,
+            fontWeight: '600',
+            fontFamily: pt.sans,
+          }}
+        >
+          {how === 'taken' ? t('planner.presa') : t('planner.saltato')}
+          {' · '}
+          {d.name}
+        </Animated.Text>
+      ) : (
+        <Text
+          key="ask"
+          style={{ flex: 1, color: pt.ink2, fontSize: 12, lineHeight: 16, fontFamily: pt.sans }}
+        >
+          {lead}
+          <Text style={{ color: pt.ink, fontWeight: '600' }}>{d.name}</Text>
+          {` ${when}?`}
+        </Text>
+      )}
+      {how ? null : (
+        <>
+          <Pressable
+            testID={`pill-skip-${d.uuid}`}
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => {
+              haptic.tap();
+              onAnswer('skipped');
             }}
           >
-            <Pressable
-              testID={`pill-taken-${d.uuid}`}
-              accessibilityRole="button"
-              accessibilityLabel={t('planner.presa')}
-              hitSlop={8}
-              onPress={() => {
-                haptic.tap();
-                onAnswer(d.uuid, 'taken');
-              }}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: color + '29',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M4 12.5l5.2 5.2L20 6.6"
-                  stroke={color}
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                />
-              </Svg>
-            </Pressable>
             <Text
-              style={{ flex: 1, color: pt.ink2, fontSize: 12, lineHeight: 16, fontFamily: pt.sans }}
+              style={{
+                color: pt.ink3,
+                fontSize: 11,
+                textDecorationLine: 'underline',
+                fontFamily: pt.sans,
+              }}
             >
-              {lead}
-              <Text style={{ color: pt.ink, fontWeight: '600' }}>{d.name}</Text>
-              {` ${when}?`}
+              {t('planner.saltato')}
             </Text>
-            <Pressable
-              testID={`pill-skip-${d.uuid}`}
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => onAnswer(d.uuid, 'skipped')}
-            >
-              <Text
-                style={{
-                  color: pt.ink3,
-                  fontSize: 11,
-                  textDecorationLine: 'underline',
-                  fontFamily: pt.sans,
-                }}
-              >
-                {t('planner.saltato')}
-              </Text>
-            </Pressable>
-            <Pressable
-              testID={`pill-hide-${d.uuid}`}
-              accessibilityRole="button"
-              accessibilityLabel={t('planner.chiudi_per_ora')}
-              hitSlop={10}
-              onPress={() => close([d.uuid])}
-            >
-              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M6 6l12 12M18 6L6 18"
-                  stroke={pt.ink3}
-                  strokeWidth={2.4}
-                  strokeLinecap="round"
-                />
-              </Svg>
-            </Pressable>
-          </View>
-        );
-      })}
-    </View>
+          </Pressable>
+          <Pressable
+            testID={`pill-hide-${d.uuid}`}
+            accessibilityRole="button"
+            accessibilityLabel={t('planner.chiudi_per_ora')}
+            hitSlop={10}
+            onPress={onHide}
+          >
+            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M6 6l12 12M18 6L6 18"
+                stroke={pt.ink3}
+                strokeWidth={2.4}
+                strokeLinecap="round"
+              />
+            </Svg>
+          </Pressable>
+        </>
+      )}
+    </SettleCard>
   );
 }

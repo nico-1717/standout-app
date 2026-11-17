@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { processColor } from 'react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
@@ -241,7 +241,9 @@ describe('Home', () => {
       </ThemeProvider>,
     );
     expect(screen.queryByText('Pay rent')).toBeNull();
-    expect(screen.queryByTestId(`home-pill-take-${dose.uuid}`)).toBeNull();
+    // the card stays a moment, settled ("Taken"), then leaves
+    expect(screen.getByTestId(`home-pill-done-${dose.uuid}`)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId(`home-pill-take-${dose.uuid}`)).toBeNull());
   });
 
   test('projects widget lists favourites and opens one', async () => {
