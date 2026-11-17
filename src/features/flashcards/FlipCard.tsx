@@ -46,12 +46,18 @@ export function FlipCard({
     turn.set(reduce ? to : withTiming(to, { duration: FLIP_MS, easing: FLIP_EASING }));
   }, [flipped, reduce, turn]);
 
-  const frontAnim = useAnimatedStyle(() => ({
-    transform: [{ perspective: FLIP_PERSPECTIVE }, { rotateY: `${turn.get() * 180}deg` }],
-  }));
-  const backAnim = useAnimatedStyle(() => ({
-    transform: [{ perspective: FLIP_PERSPECTIVE }, { rotateY: `${180 + turn.get() * 180}deg` }],
-  }));
+  const frontAnim = useAnimatedStyle(
+    () => ({
+      transform: [{ perspective: FLIP_PERSPECTIVE }, { rotateY: `${turn.get() * 180}deg` }],
+    }),
+    [turn],
+  );
+  const backAnim = useAnimatedStyle(
+    () => ({
+      transform: [{ perspective: FLIP_PERSPECTIVE }, { rotateY: `${180 + turn.get() * 180}deg` }],
+    }),
+    [turn],
+  );
 
   return (
     <View testID={testID} style={style}>

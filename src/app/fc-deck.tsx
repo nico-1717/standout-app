@@ -128,6 +128,17 @@ export default function DeckScreen() {
   const byStatus = filter === 'all' ? data.cards : data.cards.filter(passes);
   const cards = filterCards(byStatus, levels, { text, level, sort });
   const perLevel = levelCounts(byStatus, levels);
+  // il visore, come sul sito: ogni carta (i titoli no) seguita dalle sue sotto-carte
+  const viewerDeck = viewing
+    ? cards.flatMap((c) => [
+        ...(isTitleCard(c, childCounts.get(c.uuid) ?? 0)
+          ? []
+          : [{ uuid: c.uuid, sub: false, view: studyView(c) }]),
+        ...services.flashcards
+          .subcards(c.uuid)
+          .map((sc) => ({ uuid: sc.uuid, sub: true, view: studyView(sc) })),
+      ])
+    : [];
   const stopSelecting = () => {
     setSelecting(false);
     setPicked(new Set());
@@ -1139,10 +1150,22 @@ export default function DeckScreen() {
           {viewing ? (
             <CardViewer
               testID="fcd-viewer"
+              tone={tone}
               onClose={() => setViewing(false)}
-              cards={cards
-                .filter((c) => !isTitleCard(c, childCounts.get(c.uuid) ?? 0))
-                .map((c) => studyView(c))}
+              cards={viewerDeck.map((v) => v.view)}
+              onEdit={(i) => {
+                const v = viewerDeck[i];
+                if (!v) return;
+                setViewing(false);
+                router.push({
+                  pathname: '/fc-card',
+                  params: v.sub ? { sub: v.uuid } : { id: v.uuid },
+                });
+              }}
+              onPlay={() => {
+                setViewing(false);
+                router.push({ pathname: '/fc-setup', params: { preselect: id } });
+              }}
             />
           ) : null}
           {cards.length ? (

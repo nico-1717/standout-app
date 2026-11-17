@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
@@ -334,10 +335,53 @@ describe('category page', () => {
     expect(screen.queryByTestId(`fcd-level-${t}`)).toBeNull();
     expect(screen.queryByTestId(`fcd-title-${n}`)).toBeNull();
     expect(screen.getByTestId(`fcd-level-${n}`)).toBeTruthy();
-    // il visore non mostra i titoli
+    // il visore non mostra i titoli, ma sì le loro sotto-carte (come il sito)
     await fireEvent.press(screen.getByTestId('fcd-view'));
-    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 1');
+    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 2');
+    expect(screen.getByTestId('fcd-viewer-question')).toHaveTextContent('child q');
+    await fireEvent.press(screen.getByTestId('fcd-viewer-next'));
     expect(screen.getByTestId('fcd-viewer-question')).toHaveTextContent('Normal q');
+  });
+
+  test('the viewer: sub-cards follow their parent, long text scrolls, the pencil edits, play opens the game', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const long = Array.from({ length: 80 }, (_, i) => `line ${i}`).join('\n');
+    const a = flashcards.addCard(id, long, 'short answer')!;
+    const s = flashcards.addSubcard(a, 'sub q', 'sub a')!;
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-view'));
+    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 2');
+    // il testo lungo sta in una zona che scorre, non in una che si taglia
+    const scroll = screen.getByTestId('fcd-viewer-question-scroll');
+    expect(scroll.props.showsVerticalScrollIndicator).toBe(false);
+    expect(StyleSheet.flatten(scroll.props.style).flex).toBe(1);
+    // la barra di avanzamento segue la posizione
+    expect(StyleSheet.flatten(screen.getByTestId('fcd-viewer-bar-fill').props.style).width).toBe(
+      '50%',
+    );
+    await fireEvent.press(screen.getByTestId('fcd-viewer-prev')); // già alla prima: non fa nulla
+    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 2');
+    await fireEvent.press(screen.getByTestId('fcd-viewer-flip'));
+    expect(screen.getByTestId('fcd-viewer-answer')).toHaveTextContent('short answer');
+    await fireEvent.press(screen.getByTestId('fcd-viewer-next'));
+    expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('2 / 2');
+    expect(screen.getByTestId('fcd-viewer-question')).toHaveTextContent('sub q');
+    expect(StyleSheet.flatten(screen.getByTestId('fcd-viewer-bar-fill').props.style).width).toBe(
+      '100%',
+    );
+    await fireEvent.press(screen.getByTestId('fcd-viewer-edit'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-card', params: { sub: s } });
+    expect(screen.queryByTestId('fcd-viewer')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('fcd-view'));
+    await fireEvent.press(screen.getByTestId('fcd-viewer-edit'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-card', params: { id: a } });
+    await fireEvent.press(screen.getByTestId('fcd-view'));
+    await fireEvent.press(screen.getByTestId('fcd-viewer-play'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-setup', params: { preselect: id } });
+    expect(screen.queryByTestId('fcd-viewer')).toBeNull();
   });
 
   test('text search narrows the list and the counter follows', async () => {
