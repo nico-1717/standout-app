@@ -359,6 +359,7 @@ describe('category page', () => {
     const id = flashcards.createDeck({ name: 'Chem' })!;
     mockParams = { id };
     const view = await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-settings'));
     await fireEvent.changeText(screen.getByTestId('fcd-name'), 'Chemistry');
     await fireEvent(screen.getByTestId('fcd-name'), 'blur');
     await fireEvent.press(screen.getByTestId('fcd-color-FF3B30'));
@@ -380,6 +381,7 @@ describe('category page', () => {
     const id = flashcards.createDeck({ name: 'Chem' })!;
     mockParams = { id };
     await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-settings'));
     await fireEvent.press(screen.getByTestId('fcd-icon-toggle'));
     await fireEvent.press(screen.getByTestId('fcd-icon-atomo'));
     expect(flashcards.deck(id)!.icon).toBe('atomo');
@@ -393,6 +395,7 @@ describe('category page', () => {
     const card = flashcards.addCard(id, 'q', 'a')!;
     mockParams = { id };
     const view = await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-settings'));
     expect(screen.getByTestId('fcd-delete-hint')).toBeTruthy();
     expect(screen.queryByTestId('fcd-delete')).toBeNull();
     flashcards.removeCard(card);
@@ -404,6 +407,26 @@ describe('category page', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
+  test('note, sub-category and learnt tick work from the page', async () => {
+    const { flashcards, study } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const card = flashcards.addCard(id, 'q', 'a')!;
+    mockParams = { id };
+    const view = await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-note-add'));
+    await fireEvent.changeText(screen.getByTestId('fcd-note'), 'Exam on Monday');
+    await fireEvent(screen.getByTestId('fcd-note'), 'blur');
+    expect(flashcards.deck(id)!.notes).toBe('Exam on Monday');
+    await fireEvent.press(screen.getByTestId('fcd-sub-new'));
+    await fireEvent.changeText(screen.getByTestId('fcd-sub-input'), 'Organic');
+    await fireEvent.press(screen.getByTestId('fcd-sub-add'));
+    expect(flashcards.decks().some((d) => d.name === 'Organic' && d.parent_uuid === id)).toBe(true);
+    await fireEvent.press(screen.getByTestId(`fcd-learn-toggle-${card}`));
+    expect(study.isLearnt(card)).toBe(true);
+    await view.rerender(wrap(<DeckScreen />));
+    expect(screen.getByTestId(`fcd-learnt-${card}`)).toBeTruthy();
+  });
+
   test('move to another parent skips its own branch', async () => {
     const { flashcards } = setup();
     const a = flashcards.createDeck({ name: 'A' })!;
@@ -411,6 +434,7 @@ describe('category page', () => {
     const c = flashcards.createDeck({ name: 'C' })!;
     mockParams = { id: a };
     await render(wrap(<DeckScreen />));
+    await fireEvent.press(screen.getByTestId('fcd-settings'));
     await fireEvent.press(screen.getByTestId('fcd-parent'));
     await fireEvent.press(screen.getByTestId(`deck-pick-${b}`)); // disabled: own child
     expect(flashcards.deck(a)!.parent_uuid).toBeNull();
