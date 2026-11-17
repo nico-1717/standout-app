@@ -32,6 +32,7 @@ import type { DoseView } from '@/features/pills/repo';
 import { localToday } from '@/features/tasks/groups';
 import { TodoIcon, sansOf } from '@/features/tasks/TodoParts';
 import { TodoSheetHead } from '@/features/tasks/TodoSheetHead';
+import { useTodoScroll } from '@/features/tasks/todoScroll';
 import { todoTheme } from '@/features/tasks/todoTheme';
 import { cardShadow } from '@/ui/kit';
 import { PageTop } from '@/ui/PageTop';
@@ -48,6 +49,7 @@ interface Editing {
 export default function PillsScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
+  const { ref: scrollRef, onSheetLayout, onTabsLayout } = useTodoScroll();
   const { services, version, changed, uiStyle } = useApp();
   const td = todoTheme(uiStyle, th);
   const paper = td.style === 'paper';
@@ -237,6 +239,7 @@ export default function PillsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: td.page }}>
       <ScrollView
+        ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
@@ -248,13 +251,14 @@ export default function PillsScreen() {
           <PageTop back="todo.planner" testID="pills-top" />
         </View>
         <View
+          onLayout={onSheetLayout}
           style={[
             styles.sheet,
             { backgroundColor: td.card, borderRadius: 26 },
             cardShadow(td.dark),
           ]}
         >
-          <TodoSheetHead td={td} current="pills" />
+          <TodoSheetHead td={td} onTabsLayout={onTabsLayout} current="pills" />
 
           <View style={{ marginBottom: 8 }}>{label(t('todo.tipo_pills'))}</View>
 

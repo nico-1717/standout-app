@@ -11,7 +11,7 @@ import { StudyRepo } from '@/features/flashcards/study';
 import { LanguagesRepo } from '@/features/languages/repo';
 import { ProjectsRepo } from '@/features/projects/repo';
 
-import FlashcardsHub from '../fc-hub';
+import FlashcardsHub from '../(tabs)/fc-hub';
 
 let mockServices: unknown;
 const mockPush = jest.fn();

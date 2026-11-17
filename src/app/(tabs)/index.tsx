@@ -27,6 +27,7 @@ import {
   type When,
 } from '@/features/tasks/TodoParts';
 import { TodoSheetHead } from '@/features/tasks/TodoSheetHead';
+import { useTodoScroll } from '@/features/tasks/todoScroll';
 import { TaskProjectSheet } from '@/features/tasks/ProjectSheet';
 import { TodoRow, type RowActions } from '@/features/tasks/TodoRow';
 import { cleanMinutes, humanDay, type UnderstoodPiece } from '@/features/tasks/todoLogic';
@@ -53,6 +54,7 @@ export default function TodoScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { ref: scrollRef, onSheetLayout, onTabsLayout } = useTodoScroll();
   const { services, version, changed, uiStyle } = useApp();
   const td = todoTheme(uiStyle, th);
   const paper = td.style === 'paper';
@@ -334,6 +336,7 @@ export default function TodoScreen() {
         </View>
       )}
       <ScrollView
+        ref={scrollRef}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
@@ -347,6 +350,7 @@ export default function TodoScreen() {
           </View>
         )}
         <View
+          onLayout={onSheetLayout}
           style={[
             styles.sheet,
             { backgroundColor: td.card },
@@ -354,7 +358,7 @@ export default function TodoScreen() {
             cardShadow(td.dark),
           ]}
         >
-          {!selecting && <TodoSheetHead td={td} current="todo" />}
+          {!selecting && <TodoSheetHead td={td} onTabsLayout={onTabsLayout} current="todo" />}
 
           <View style={styles.label}>
             <Text

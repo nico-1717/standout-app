@@ -33,14 +33,14 @@ describe('To do · To buy · Pills tabs', () => {
     expect(screen.getByTestId('todo-tab-todo').props.accessibilityState.selected).toBe(false);
   });
 
-  test('tapping another list opens it; tapping the current one does nothing', async () => {
+  test('tapping a tab opens that list scrolled down to the tabs (the current one too)', async () => {
     await renderTabs('todo');
+    const focus = expect.objectContaining({ focus: expect.any(String) });
     await fireEvent.press(screen.getByTestId('todo-tab-pills'));
-    expect(mockNavigate).toHaveBeenCalledWith('/pills');
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/pills', params: focus });
     await fireEvent.press(screen.getByTestId('todo-tab-buy'));
-    expect(mockNavigate).toHaveBeenCalledWith('/buy');
-    mockNavigate.mockClear();
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/buy', params: focus });
     await fireEvent.press(screen.getByTestId('todo-tab-todo'));
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/', params: focus });
   });
 });

@@ -13,6 +13,7 @@ import { Avatar } from '@/ui/Avatar';
 import { SpaceCard } from '@/features/account/SpaceCard';
 import { RemindersCard } from '@/features/reminders/RemindersCard';
 import { SyncBadge } from '@/ui/SyncBadge';
+import { BarEditor } from '@/features/settings/BarEditor';
 
 type NavItem = {
   id: string;
@@ -217,6 +218,9 @@ export default function SettingsScreen() {
               );
             })}
           </View>
+        </Card>
+        <Card index={8} style={{ padding: 16 }}>
+          <BarEditor bar={localPrefs.bar} onChange={(bar) => updateLocalPrefs({ bar })} />
         </Card>
         <Card index={9} style={{ padding: 16, gap: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

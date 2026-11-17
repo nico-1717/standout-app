@@ -12,7 +12,16 @@ import type { TodoTheme } from './todoTheme';
  * Il capo del riquadro «Attività» del sito (todo.php): titolo, frase, nota veloce e le tre linguette. Sul sito
  * To do, To buy e Pastiglie sono la stessa pagina: qui le tre schermate cominciano tutte da questo pezzo.
  */
-export function TodoSheetHead({ td, current }: { td: TodoTheme; current: TodoTab }) {
+export function TodoSheetHead({
+  td,
+  current,
+  onTabsLayout,
+}: {
+  td: TodoTheme;
+  current: TodoTab;
+  /** a che altezza, dentro il riquadro, stanno le linguette (serve a scendere fin lì) */
+  onTabsLayout?: (y: number) => void;
+}) {
   const { t } = useTranslation();
   const paper = td.style === 'paper';
   return (
@@ -62,7 +71,9 @@ export function TodoSheetHead({ td, current }: { td: TodoTheme; current: TodoTab
         {t('todo.nota')}
       </Text>
       <QuickNoteCard td={td} paper={paper} />
-      <TodoTabs current={current} bt={td} />
+      <View onLayout={(e) => onTabsLayout?.(e.nativeEvent.layout.y)}>
+        <TodoTabs current={current} bt={td} />
+      </View>
     </>
   );
 }

@@ -13,7 +13,7 @@ import { ProjectsRepo } from '@/features/projects/repo';
 import LangCourseScreen from '../lang-course';
 import LangDeckScreen from '../lang-deck';
 import LangWordScreen from '../lang-word';
-import LanguagesScreen from '../languages';
+import LanguagesScreen from '../(tabs)/languages';
 
 jest.mock('@/core/media/pickImage', () => ({ pickImage: jest.fn() }));
 jest.mock('@/core/media/fetchImage', () => ({ imageFromLink: jest.fn() }));

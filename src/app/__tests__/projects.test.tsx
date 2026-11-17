@@ -12,7 +12,7 @@ import { localToday } from '@/features/tasks/groups';
 import { TasksRepo } from '@/features/tasks/repo';
 
 import ProjectScreen from '../project';
-import ProjectsScreen from '../projects';
+import ProjectsScreen from '../(tabs)/projects';
 
 let mockServices: unknown;
 let mockVersion = 0;

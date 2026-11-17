@@ -1,5 +1,6 @@
 import type { SqlDb } from '../db/sqldb';
 import { getState, setState } from '../sync/engine';
+import { DEFAULT_BAR, cleanBar, type BarPrefs } from './bar';
 
 /** Ogni quante carte arriva un checkpoint del gioco (0 = spento). */
 export const CHECKPOINT_STEPS = [0, 5, 10, 15, 20, 25] as const;
@@ -29,6 +30,10 @@ export interface LocalPrefs {
   fcVoiceLang: string;
   /** flashcard a voce, parole: cosa si legge (`fcv_lettura` del sito) */
   fcVoiceRead: string;
+  /** la nota veloce di To do / To buy / Pills è chiusa (resta solo la sua riga) */
+  noteCollapsed: boolean;
+  /** la barra in basso: ordine, schede fissate a sinistra e schede nascoste */
+  bar: BarPrefs;
 }
 
 export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
@@ -37,6 +42,8 @@ export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
   fcSounds: true,
   fcVoiceLang: '',
   fcVoiceRead: '1100',
+  noteCollapsed: false,
+  bar: DEFAULT_BAR,
 };
 
 const KEY = 'local_prefs';
@@ -49,6 +56,8 @@ function clean(raw: unknown): LocalPrefs {
     fcSounds: r.fcSounds !== false,
     fcVoiceLang: cleanVoiceLang(r.fcVoiceLang),
     fcVoiceRead: cleanVoiceRead(r.fcVoiceRead),
+    noteCollapsed: r.noteCollapsed === true,
+    bar: cleanBar(r.bar),
   };
 }
 

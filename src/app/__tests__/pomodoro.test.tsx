@@ -11,7 +11,7 @@ import { TasksRepo } from '@/features/tasks/repo';
 import { upsertRow } from '@/core/sync/rows';
 import { stamp } from '@/features/pomodoro/logic';
 
-import PomodoroScreen from '../pomodoro';
+import PomodoroScreen from '../(tabs)/pomodoro';
 
 let mockServices: unknown;
 let mockVersion = 0;

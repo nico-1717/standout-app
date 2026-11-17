@@ -13,7 +13,7 @@ import GradeBonusScreen from '../grade-bonus';
 import GradeExamScreen from '../grade-exam';
 import GradeGroupScreen from '../grade-group';
 import GradeSettingsScreen from '../grade-settings';
-import GradesScreen from '../grades';
+import GradesScreen from '../(tabs)/grades';
 
 let mockServices: unknown;
 let mockVersion = 0;

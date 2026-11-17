@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import type { BuyTheme } from '@/features/buy/buyTheme';
 import { haptic } from '@/ui/motion';
 
+import { focusParams } from './todoScroll';
+
 export type TodoTab = 'todo' | 'buy' | 'pills';
 
 const TABS: { id: TodoTab; label: string; href: '/' | '/buy' | '/pills' }[] = [
@@ -43,9 +45,9 @@ export function TodoTabs({
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
             onPress={() => {
-              if (on) return;
               haptic.tap();
-              router.navigate(tab.href);
+              // anche sulla linguetta già aperta: si scende alla lista, lontano dalla nota
+              router.navigate({ pathname: tab.href, params: focusParams() });
             }}
             style={[
               styles.tab,

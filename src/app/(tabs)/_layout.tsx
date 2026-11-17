@@ -1,9 +1,12 @@
-import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
-import { StyleSheet, View, type ColorValue } from 'react-native';
+import { Tabs } from 'expo-router/js-tabs';
+import { View, type ColorValue } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { PomodoroBar } from '@/features/pomodoro/PomodoroBar';
+import { AppTabBar } from '@/ui/AppTabBar';
+import { BAR_ITEMS } from '@/ui/barItems';
+import { BAR_IDS } from '@/core/settings/bar';
 import { TAB_COLOR, TabIcon, type TabIconKind } from '@/ui/TabIcon';
 
 /** Le opzioni di una scheda: titolo, icona a linea come sul sito e il colore della sezione quando è aperta. */
@@ -20,94 +23,29 @@ function tabLook(kind: TabIconKind, title: string, fallback: string) {
 export default function TabsLayout() {
   const th = useTheme();
   const { t } = useTranslation();
+  // NON usare `href: null` (= `hidden`): in questa versione di Expo Router chi ci naviga viene rimandato alla Home.
+  // Le schede non hanno un bottone proprio: la barra è la nostra (AppTabBar), con tutte le pagine.
   return (
     <Tabs
-      tabBar={(props) =>
-        th.floatingBar ? (
-          // Glass: la barra è una pillola sospesa sopra il bordo basso (lo spazio sicuro sta fuori dalla pillola)
-          <View style={{ backgroundColor: th.bg }}>
-            <PomodoroBar />
-            <View style={{ paddingHorizontal: 14, paddingBottom: props.insets.bottom + 6 }}>
-              <BottomTabBar {...props} insets={{ ...props.insets, bottom: 0 }} />
-            </View>
-          </View>
-        ) : (
-          <View>
-            <PomodoroBar />
-            <BottomTabBar {...props} />
-          </View>
-        )
-      }
+      tabBar={(props) => (
+        <View style={{ backgroundColor: th.floatingBar ? th.bg : undefined }}>
+          {props.state.routes[props.state.index]?.name === 'pomodoro' ? null : <PomodoroBar />}
+          <AppTabBar {...props} />
+        </View>
+      )}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: th.brand,
         tabBarInactiveTintColor: th.text2,
-        tabBarStyle: th.floatingBar
-          ? {
-              backgroundColor: th.barBg,
-              borderRadius: 33,
-              borderTopWidth: 0,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: th.cardEdge,
-              boxShadow: th.cardShadow,
-              height: 66,
-            }
-          : {
-              backgroundColor: th.barBg,
-              borderTopColor: th.hairline,
-              borderTopWidth: StyleSheet.hairlineWidth,
-            },
-        tabBarItemStyle: th.floatingBar ? { borderRadius: 24, marginVertical: 5 } : undefined,
-        tabBarLabelStyle: { fontSize: 10.5, fontWeight: th.floatingBar ? '700' : '500' },
       }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          ...tabLook('home', t('sidebar.home'), th.brand),
-        }}
-      />
-      <Tabs.Screen
-        name="planner"
-        options={{
-          ...tabLook('planner', t('sidebar.planner'), th.brand),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          ...tabLook('todo', t('planner.to_do'), th.brand),
-        }}
-      />
-      <Tabs.Screen
-        name="habits"
-        options={{
-          ...tabLook('habits', t('abitudini.titolo'), th.brand),
-        }}
-      />
-      <Tabs.Screen
-        name="buy"
-        options={{
-          // la lista della spesa si apre da «Altro», dalla Home e dalle schede di To do: la barra resta a cinque.
-          // NON usare `href: null` (= `hidden`): in questa versione di Expo Router chi ci naviga viene rimandato alla Home.
-          tabBarButton: () => null,
-          ...tabLook('buy', t('planner.to_buy'), th.brand),
-        }}
-      />
-      <Tabs.Screen
-        name="pills"
-        options={{
-          // si apre da «Altro», dalla Home e dalle schede di To do: la barra resta a cinque (vedi sopra: niente `href: null`)
-          tabBarButton: () => null,
-          ...tabLook('pills', t('todo.tipo_pills'), th.brand),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          ...tabLook('more', t('progetti.altro'), th.brand),
-        }}
-      />
+      {BAR_IDS.map((id) => (
+        <Tabs.Screen
+          key={id}
+          name={BAR_ITEMS[id].route}
+          options={tabLook(BAR_ITEMS[id].kind, t(BAR_ITEMS[id].label), th.brand)}
+        />
+      ))}
     </Tabs>
   );
 }

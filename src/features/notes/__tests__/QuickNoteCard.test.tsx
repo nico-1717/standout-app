@@ -14,8 +14,16 @@ let mockNotes: QuickNoteStore;
 let mockServices: Record<string, unknown>;
 let mockVersion = 0;
 const mockChanged = jest.fn();
+let mockCollapsed = false;
+const mockUpdatePrefs = jest.fn();
 jest.mock('@/core/app/AppProvider', () => ({
-  useApp: () => ({ services: mockServices, version: mockVersion, changed: mockChanged }),
+  useApp: () => ({
+    services: mockServices,
+    version: mockVersion,
+    changed: mockChanged,
+    localPrefs: { noteCollapsed: mockCollapsed },
+    updateLocalPrefs: mockUpdatePrefs,
+  }),
 }));
 
 function Card() {
@@ -33,6 +41,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockVersion = 0;
+  mockCollapsed = false;
   const db = memoryDb();
   mockNotes = new QuickNoteStore(db);
   mockServices = {
@@ -43,6 +52,22 @@ beforeEach(() => {
   };
 });
 afterEach(() => jest.useRealTimers());
+
+describe('collapsing the note', () => {
+  test('the button asks to remember the collapsed state', async () => {
+    await ui();
+    await fireEvent.press(screen.getByTestId('note-collapse'));
+    expect(mockUpdatePrefs).toHaveBeenCalledWith({ noteCollapsed: true });
+  });
+
+  test('when collapsed only the header stays: no text box', async () => {
+    mockCollapsed = true;
+    await ui();
+    expect(screen.queryByTestId('note-input')).toBeNull();
+    await fireEvent.press(screen.getByTestId('note-collapse'));
+    expect(mockUpdatePrefs).toHaveBeenCalledWith({ noteCollapsed: false });
+  });
+});
 
 describe('noteLines', () => {
   test('drops empty lines, bullets and numbers, and remembers where each line was', () => {

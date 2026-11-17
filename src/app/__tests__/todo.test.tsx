@@ -27,6 +27,8 @@ jest.mock('@/core/app/AppProvider', () => ({
     services: mockServices,
     version: mockVersion,
     changed: mockChanged,
+    localPrefs: { noteCollapsed: false },
+    updateLocalPrefs: jest.fn(),
     uiStyle: mockStyle,
     syncInfo: { status: 'idle', lastSyncAt: null, pending: 0 },
   }),

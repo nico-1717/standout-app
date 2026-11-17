@@ -30,6 +30,7 @@ import {
 } from '@/features/buy/logic';
 import type { Task } from '@/features/tasks/repo';
 import { TodoSheetHead } from '@/features/tasks/TodoSheetHead';
+import { useTodoScroll } from '@/features/tasks/todoScroll';
 import { todoTheme } from '@/features/tasks/todoTheme';
 import { cardShadow } from '@/ui/kit';
 import { PjIcon } from '@/features/projects/PjIcons';
@@ -39,6 +40,7 @@ import { PageTop } from '@/ui/PageTop';
 export default function BuyScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
+  const { ref: scrollRef, onSheetLayout, onTabsLayout } = useTodoScroll();
   const router = useRouter();
   const { services, version, changed, uiStyle } = useApp();
   const bt = todoTheme(uiStyle, th);
@@ -284,6 +286,7 @@ export default function BuyScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: bt.page }}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 150 }}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
@@ -292,13 +295,14 @@ export default function BuyScreen() {
           <PageTop back="todo.planner" testID="buy-top" />
         </View>
         <View
+          onLayout={onSheetLayout}
           style={[
             { backgroundColor: bt.card, borderRadius: 26, paddingTop: 22, paddingHorizontal: 18 },
             { paddingBottom: 26 },
             cardShadow(bt.dark),
           ]}
         >
-          <TodoSheetHead td={bt} current="buy" />
+          <TodoSheetHead td={bt} onTabsLayout={onTabsLayout} current="buy" />
           <View style={styles.labelRow}>
             <Text
               style={[

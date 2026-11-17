@@ -1,6 +1,19 @@
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-export type TabIconKind = 'home' | 'planner' | 'todo' | 'habits' | 'buy' | 'pills' | 'more';
+export type TabIconKind =
+  | 'home'
+  | 'planner'
+  | 'todo'
+  | 'habits'
+  | 'buy'
+  | 'pills'
+  | 'more'
+  | 'pomodoro'
+  | 'diary'
+  | 'grades'
+  | 'flashcards'
+  | 'languages'
+  | 'projects';
 
 /** Il colore di ogni sezione, lo stesso della barra laterale del sito (--sb-c). `null` = il colore del tema. */
 export const TAB_COLOR: Record<TabIconKind, string | null> = {
@@ -11,6 +24,12 @@ export const TAB_COLOR: Record<TabIconKind, string | null> = {
   buy: '#FF9F0A',
   pills: '#BF5AF2',
   more: null,
+  pomodoro: '#FF6A3D',
+  diary: '#BF8A3C',
+  grades: '#5E5CE6',
+  flashcards: '#BF5AF2',
+  languages: '#32ADE6',
+  projects: '#FF9F0A',
 };
 
 /**
@@ -80,6 +99,45 @@ export function TabIcon({
         </>
       )}
       {kind === 'more' && <Path d="M4.5 7h15M4.5 12h15M4.5 17h9" {...line} />}
+      {kind === 'pomodoro' && (
+        <>
+          <Circle cx={12} cy={13.5} r={7.5} {...line} />
+          <Path d="M12 9.5v4l2.5 1.5M9.5 3h5" {...line} />
+        </>
+      )}
+      {kind === 'diary' && (
+        <>
+          <Rect x={5.5} y={3.8} width={13} height={16.4} rx={2.2} {...line} />
+          <Path d="M9.5 8.2h6M9.5 11.8h6" {...line} />
+        </>
+      )}
+      {kind === 'grades' && (
+        <>
+          <Path d="M2.5 9.5 12 5l9.5 4.5L12 14Z" {...line} />
+          <Path d="M6.5 11.8V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.2M21.5 9.5v5" {...line} />
+        </>
+      )}
+      {kind === 'flashcards' && (
+        <>
+          <Rect x={3.5} y={7.5} width={13} height={12.5} rx={2.5} {...line} />
+          <Path d="M7.5 7.5V6a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2H17" {...line} />
+        </>
+      )}
+      {kind === 'languages' && (
+        <>
+          <Circle cx={12} cy={12} r={8.5} {...line} />
+          <Path
+            d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5"
+            {...line}
+          />
+        </>
+      )}
+      {kind === 'projects' && (
+        <Path
+          d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"
+          {...line}
+        />
+      )}
     </Svg>
   );
 }

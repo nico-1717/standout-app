@@ -11,7 +11,7 @@ import { ProjectOptionsStore } from '@/features/projects/options';
 import { ProjectsRepo } from '@/features/projects/repo';
 
 import PlanScreen from '../plan';
-import ProjectScreen from '../projects';
+import ProjectScreen from '../(tabs)/projects';
 
 const TODAY = new Date(2030, 2, 4, 10, 0, 0); // lunedì 4 marzo 2030
 

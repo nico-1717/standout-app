@@ -45,6 +45,8 @@ jest.mock('@/core/app/AppProvider', () => ({
     services: mockServices,
     version: mockVersion,
     changed: mockChanged,
+    localPrefs: { noteCollapsed: false },
+    updateLocalPrefs: jest.fn(),
     uiStyle: 'standard',
     authState: { status: 'signedIn', user: { id: 7, username: 'Nico' } },
     homeLayout: mockLayout,

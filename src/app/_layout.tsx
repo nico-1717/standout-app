@@ -51,17 +51,13 @@ function Shell() {
           <Stack.Screen name="planner-routines" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="planner-week" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="pomodoro" options={{ presentation: 'modal' }} />
           <Stack.Screen name="pomodoro-history" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="projects" options={{ presentation: 'modal' }} />
           <Stack.Screen name="plan" options={{ presentation: 'modal' }} />
           <Stack.Screen name="project" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="grades" options={{ presentation: 'modal' }} />
           <Stack.Screen name="grade-exam" options={{ presentation: 'modal' }} />
           <Stack.Screen name="grade-group" options={{ presentation: 'modal' }} />
           <Stack.Screen name="grade-bonus" options={{ presentation: 'modal' }} />
           <Stack.Screen name="grade-settings" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="fc-hub" options={{ presentation: 'modal' }} />
           <Stack.Screen name="flashcards" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-deck" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-card" options={{ presentation: 'modal' }} />
@@ -76,12 +72,10 @@ function Shell() {
           <Stack.Screen name="fc-insert" options={{ presentation: 'modal' }} />
           <Stack.Screen name="habit-import" options={{ presentation: 'modal' }} />
           <Stack.Screen name="pomodoro-import" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="languages" options={{ presentation: 'modal' }} />
           <Stack.Screen name="lang-course" options={{ presentation: 'modal' }} />
           <Stack.Screen name="lang-deck" options={{ presentation: 'modal' }} />
           <Stack.Screen name="lang-word" options={{ presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="diary" />
           <Stack.Screen name="diary-year" />
           <Stack.Screen name="diary-read" />
         </Stack.Protected>

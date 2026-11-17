@@ -29,7 +29,10 @@ jest.mock('@/core/app/AppProvider', () => ({
     setUiStyle: mockSetUiStyle,
     settings: { ui_style: 'standard', accent: 'blue', lang: null },
     updateSettings: jest.fn(),
-    localPrefs: { highContrast: mockHigh },
+    localPrefs: {
+      highContrast: mockHigh,
+      bar: jest.requireActual('@/core/settings/bar').DEFAULT_BAR,
+    },
     updateLocalPrefs: mockUpdateLocalPrefs,
   }),
 }));
@@ -66,5 +69,44 @@ describe('settings: high contrast', () => {
     );
     expect(screen.getByTestId('high-contrast').props.value).toBe(true);
     expect(screen.getByTestId('probe')).toHaveTextContent(/^#(000000|FFFFFF)$/);
+  });
+});
+
+describe('settings: bottom bar editor', () => {
+  beforeEach(() => mockUpdateLocalPrefs.mockClear());
+  const open = () =>
+    render(
+      <ThemeProvider>
+        <SettingsScreen />
+      </ThemeProvider>,
+    );
+
+  test('lists Home and Planner as pinned and the other pages as scrollable', async () => {
+    await open();
+    expect(screen.getByTestId('bar-row-home')).toBeTruthy();
+    expect(screen.getByTestId('bar-row-pomodoro')).toBeTruthy();
+    expect(screen.getByTestId('bar-empty-hidden')).toBeTruthy();
+    // «Altro» non si nasconde
+    expect(screen.queryByTestId('bar-hide-settings')).toBeNull();
+  });
+
+  test('pinning, hiding and moving save the new bar', async () => {
+    await open();
+    await fireEvent.press(screen.getByTestId('bar-pin-todo'));
+    expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
+      bar: expect.objectContaining({ pinned: ['home', 'planner', 'todo'] }),
+    });
+    await fireEvent.press(screen.getByTestId('bar-hide-diary'));
+    expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
+      bar: expect.objectContaining({ hidden: ['diary'] }),
+    });
+    await fireEvent.press(screen.getByTestId('bar-down-home'));
+    expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
+      bar: expect.objectContaining({ order: expect.arrayContaining(['home']) }),
+    });
+    await fireEvent.press(screen.getByTestId('bar-reset'));
+    expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
+      bar: expect.objectContaining({ pinned: ['home', 'planner'], hidden: [] }),
+    });
   });
 });

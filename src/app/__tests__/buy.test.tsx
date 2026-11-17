@@ -32,6 +32,7 @@ const mockChanged = jest.fn(() => {
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), navigate: jest.fn() }),
+  useLocalSearchParams: () => ({}),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -41,6 +42,8 @@ jest.mock('@/core/app/AppProvider', () => ({
     services: mockServices,
     version: mockVersion,
     changed: mockChanged,
+    localPrefs: { noteCollapsed: false },
+    updateLocalPrefs: jest.fn(),
     uiStyle: mockStyle,
     syncInfo: { status: 'idle', lastSyncAt: null, pending: 0 },
   }),

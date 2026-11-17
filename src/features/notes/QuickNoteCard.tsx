@@ -32,7 +32,8 @@ const SAVE_DELAY_MS = 700;
  */
 export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) {
   const { t } = useTranslation();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, localPrefs, updateLocalPrefs } = useApp();
+  const collapsed = localPrefs.noteCollapsed;
   const [text, setText] = useState(() => services?.notes.read() ?? '');
   const [focused, setFocused] = useState(false);
   const [status, setStatus] = useState<'' | 'saving' | 'saved'>('');
@@ -161,30 +162,57 @@ export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) 
         </Svg>
         <Text style={[styles.title, { color: goldInk }]}>{t('todo.nota_titolo')}</Text>
         <Text testID="note-status" style={[styles.status, { color: gold }]}>
-          {status === 'saving'
-            ? t('todo.nota_salvo')
-            : status === 'saved'
-              ? t('todo.nota_salvata')
-              : ''}
+          {collapsed && n > 0
+            ? t(n === 1 ? 'todo.nota_riga_1' : 'todo.nota_righe_n', { n })
+            : status === 'saving'
+              ? t('todo.nota_salvo')
+              : status === 'saved'
+                ? t('todo.nota_salvata')
+                : ''}
         </Text>
+        <Pressable
+          testID="note-collapse"
+          accessibilityRole="button"
+          accessibilityLabel={t(collapsed ? 'todo.nota_espandi' : 'todo.nota_comprimi')}
+          accessibilityState={{ expanded: !collapsed }}
+          hitSlop={10}
+          onPress={() => {
+            if (!collapsed && hasTimer.current) flush();
+            updateLocalPrefs({ noteCollapsed: !collapsed });
+          }}
+          style={styles.fold}
+        >
+          <Svg width={18} height={18} viewBox="0 0 24 24">
+            <Path
+              d={collapsed ? 'M7 10l5 5 5-5' : 'M7 14l5-5 5 5'}
+              stroke={gold}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </Svg>
+        </Pressable>
       </View>
-      <TextInput
-        testID="note-input"
-        value={text}
-        onChangeText={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          if (hasTimer.current) flush();
-        }}
-        placeholder={t('todo.nota_ph')}
-        placeholderTextColor={dark ? 'rgba(229,203,122,.55)' : 'rgba(143,120,53,.6)'}
-        multiline
-        maxLength={NOTE_MAX}
-        scrollEnabled
-        style={[styles.input, { color: ink, fontFamily: mono }]}
-      />
-      {n > 0 && (
+      {collapsed ? null : (
+        <TextInput
+          testID="note-input"
+          value={text}
+          onChangeText={onChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            if (hasTimer.current) flush();
+          }}
+          placeholder={t('todo.nota_ph')}
+          placeholderTextColor={dark ? 'rgba(229,203,122,.55)' : 'rgba(143,120,53,.6)'}
+          multiline
+          maxLength={NOTE_MAX}
+          scrollEnabled
+          style={[styles.input, { color: ink, fontFamily: mono }]}
+        />
+      )}
+      {!collapsed && n > 0 && (
         <View
           style={[styles.foot, { borderTopWidth: 0.5, borderTopColor: 'rgba(217,184,79,.28)' }]}
         >
@@ -210,7 +238,7 @@ export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) 
           </Pressable>
         </View>
       )}
-      {notice ? (
+      {notice && !collapsed ? (
         <Text testID="note-notice" style={{ color: td.accent, fontSize: 13, marginTop: 6 }}>
           {notice}
         </Text>
@@ -241,6 +269,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   title: { fontSize: 10.5, letterSpacing: 1.7, textTransform: 'uppercase', fontWeight: '500' },
   status: { marginLeft: 'auto', fontSize: 11.5 },
+  fold: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', marginRight: -4 },
   input: { minHeight: 46, maxHeight: 260, fontSize: 16, lineHeight: 24, paddingVertical: 4 },
   foot: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6 },
   btn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999 },

@@ -10,7 +10,7 @@ import { DEFAULT_DIARY_SETTINGS, type DiarySettings } from '@/features/diary/set
 import { HabitsRepo } from '@/features/habits/repo';
 import { addDaysIso, localToday } from '@/features/tasks/groups';
 
-import DiaryScreen from '../diary';
+import DiaryScreen from '../(tabs)/diary';
 
 let mockStyle: 'standard' | 'paper' = 'standard';
 let mockServices: unknown;
