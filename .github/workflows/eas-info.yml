@@ -18,7 +18,7 @@ jobs:
       - run: npm ci
       - name: Count builds
         run: |
-          eas build:list --platform ios --limit 60 --json --non-interactive > b.json
+          eas build:list --platform ios --limit 50 --json --non-interactive > b.json
           jq 'map(select(.createdAt > "2026-11-01")) | length' b.json
           jq -r 'group_by(.status) | map(.[0].status + ":" + (length | tostring)) | join(" ")' b.json
           jq -r '[.[] | select(.error != null) | .error.message] | unique | join(" ## ")' b.json
