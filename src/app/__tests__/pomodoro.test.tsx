@@ -131,6 +131,32 @@ describe('Pomodoro screen', () => {
     expect(log).toContain('finishSession: end');
   });
 
+  test('a completed pomodoro is closed once a break is open, so it does not come back after the break', async () => {
+    const { db, pomodoro } = setup();
+    const id = pomodoro.start({ mode: 0, plannedMin: 25 })!;
+    db.run('UPDATE pomodoro_sessions SET start_time = ? WHERE uuid = ?', [
+      stamp(new Date(Date.now() - 30 * 60 * 1000)),
+      id,
+    ]);
+    expect(pomodoro.complete(id)).toBe(true);
+    mockSettings = {
+      ...DEFAULT_POMODORO_SETTINGS,
+      current_break: {
+        start_time: stamp(new Date()),
+        planned_duration_min: 10,
+        project_uuid: null,
+      },
+    };
+    await render(
+      <ThemeProvider>
+        <PomodoroScreen />
+      </ThemeProvider>,
+    );
+    expect(pomodoro.lastCompleted()).toBeNull();
+    expect(pomodoro.get(id)?.status).toBe('archiviato');
+    expect(mockChanged).toHaveBeenCalled();
+  });
+
   test('the Pomodoro route shows its own error screen instead of closing the app', async () => {
     await render(<PomodoroBoundary error={new Error('x')} retry={() => undefined} />);
     expect(screen.getByTestId('screen-error')).toBeTruthy();

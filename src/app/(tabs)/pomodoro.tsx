@@ -143,6 +143,15 @@ export function PomodoroPage() {
   );
   const nowMs = useTicker(live, onTick, 250);
 
+  /* Come sul sito (onAvviaPausaClick): con una pausa aperta un pomodoro completato è chiuso, non torna quando la pausa finisce. */
+  const doneUuid = data?.done?.uuid ?? null;
+  useEffect(() => {
+    if (!brk || !doneUuid || !services) return;
+    logStep('a break is open: closing the completed session');
+    services.pomodoro.archive(doneUuid);
+    changed();
+  }, [brk, doneUuid, services, changed]);
+
   if (!services || !data) return null;
   const { active, done, notice } = data;
   const brkRaw = brk
