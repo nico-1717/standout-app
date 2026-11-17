@@ -1,12 +1,24 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Switch, Text, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { Fold, PlSlider } from '@/features/planner/SettingsParts';
 import { PALETTES, plannerTheme, type PaletteKey } from '@/features/planner/plannerTheme';
 import { ZOOMS, type Zoom } from '@/features/planner/settings';
+import {
+  Field,
+  RowSB,
+  SelectField,
+  SheetGlyph,
+  SheetPanel,
+  Swatch,
+  Toggle,
+  TxtBtn,
+} from '@/features/planner/sheetUi';
+import { Text } from '@/ui/CappedText';
 
 const ZOOM_LABEL: Record<Zoom, string> = {
   agenda: 'planner.solo_eventi',
@@ -17,190 +29,218 @@ const ZOOM_LABEL: Record<Zoom, string> = {
   m5: 'planner.5_minuti',
 };
 
-/** Le impostazioni del planner (il pannello «Impostazioni» del sito): colore della pagina, frasi, ambiente, scatti degli orari, contrasto. */
+/**
+ * Il popup «Impostazioni» del planner, com'è sul sito (plSheetOv + openSettings): il foglio dal basso con la maniglia, il
+ * titolo con «Chiudi», il colore della pagina, le sezioni che si aprono (categorie, routine) e «Sulla pagina» con le righe
+ * etichetta a sinistra e controllo a destra (interruttori, cursori, menu degli scatti).
+ */
 export default function PlannerSettingsScreen() {
   const th = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { uiStyle, plannerSettings: s, updatePlannerSettings: update } = useApp();
+  const {
+    services,
+    version,
+    uiStyle,
+    plannerSettings: s,
+    updatePlannerSettings: update,
+  } = useApp();
   const pt = plannerTheme(uiStyle, th, s.palette, s.contrast_level);
+  const repo = services?.planner ?? null;
+  const lists = useMemo(() => {
+    void version;
+    const byName = <T extends { name: string }>(xs: T[]) =>
+      [...xs].sort((a, b) => a.name.localeCompare(b.name));
+    return repo
+      ? { cats: byName(repo.categories()), routines: byName(repo.routines()) }
+      : { cats: [], routines: [] };
+  }, [repo, version]);
 
-  const card = {
-    backgroundColor: pt.card,
-    borderRadius: 18,
-    borderWidth: 0.5,
-    borderColor: pt.hair,
-    padding: 14,
-    gap: 12,
-  } as const;
-  const label = { color: pt.ink, fontSize: 16, fontFamily: pt.sans, flex: 1 } as const;
-  const heading = { color: pt.ink3, fontSize: 12, letterSpacing: 1, fontFamily: pt.sans } as const;
-
-  const toggle = (id: string, text: string, value: boolean, onChange: (v: boolean) => void) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Text style={label}>{text}</Text>
-      <Switch testID={id} value={value} onValueChange={onChange} />
-    </View>
+  const close = () => router.back();
+  const row = (label: string, onPress: () => void, color: string, testID: string) => (
+    <Pressable
+      key={testID}
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 4,
+        borderBottomWidth: 0.5,
+        borderBottomColor: pt.hair,
+      }}
+    >
+      <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: color }} />
+      <Text style={{ flex: 1, color: pt.ink, fontSize: 14.5, fontFamily: pt.sans }}>{label}</Text>
+      <SheetGlyph name="chevron" color={pt.ink3} size={14} />
+    </Pressable>
   );
-  const stepper = (
-    id: string,
-    text: string,
-    value: number,
-    min: number,
-    max: number,
-    onChange: (v: number) => void,
-    show: (v: number) => string = String,
-  ) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Text style={label}>{text}</Text>
-      <Pressable
-        hitSlop={4}
-        testID={`${id}-minus`}
-        accessibilityRole="button"
-        accessibilityLabel="−"
-        disabled={value <= min}
-        onPress={() => onChange(value - 1)}
-        style={{
-          width: 36,
-          height: 36,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: value <= min ? 0.3 : 1,
-        }}
-      >
-        <Text style={{ color: pt.accentInk, fontSize: 22 }}>−</Text>
-      </Pressable>
-      <Text testID={`${id}-value`} style={{ color: pt.ink, minWidth: 44, textAlign: 'center' }}>
-        {show(value)}
-      </Text>
-      <Pressable
-        hitSlop={4}
-        testID={`${id}-plus`}
-        accessibilityRole="button"
-        accessibilityLabel="+"
-        disabled={value >= max}
-        onPress={() => onChange(value + 1)}
-        style={{
-          width: 36,
-          height: 36,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: value >= max ? 0.3 : 1,
-        }}
-      >
-        <Text style={{ color: pt.accentInk, fontSize: 22 }}>+</Text>
-      </Pressable>
-    </View>
+  const add = (label: string, onPress: () => void, testID: string) => (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 8,
+        padding: 11,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: pt.hair2,
+      }}
+    >
+      <Text style={{ color: pt.accentInk, fontSize: 16, fontFamily: pt.sans }}>+</Text>
+      <Text style={{ color: pt.accentInk, fontSize: 14, fontFamily: pt.sans }}>{label}</Text>
+    </Pressable>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: pt.page }}>
-      <View
-        style={{
-          paddingTop: Math.max(insets.top - 20, 12),
-          paddingHorizontal: 16,
-          paddingBottom: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-      >
-        <Text style={{ flex: 1, color: pt.ink, fontSize: 22, fontFamily: pt.serif }}>
-          {t('planner.impostazioni')}
-        </Text>
-        <Pressable testID="ps-done" accessibilityRole="button" onPress={() => router.back()}>
-          <Text style={{ color: pt.accentInk, fontSize: 16, fontFamily: pt.sans }}>
-            {t('comune.fine')}
+    <SheetPanel
+      pt={pt}
+      tall
+      onBackdrop={close}
+      onClose={close}
+      head={
+        <>
+          <Text style={{ color: pt.ink, fontSize: 20, fontFamily: pt.serif }}>
+            {t('planner.impostazioni')}
           </Text>
-        </Pressable>
-      </View>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 60 }}>
+          <TxtBtn pt={pt} testID="ps-done" label={t('comune.chiudi')} onPress={close} />
+        </>
+      }
+    >
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {uiStyle === 'paper' ? (
-          <View style={card}>
-            <Text style={heading}>{t('planner.colore_della_pagina').toUpperCase()}</Text>
-            <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+          <Field pt={pt} label={t('planner.colore_della_pagina')}>
+            <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
               {(Object.keys(PALETTES) as PaletteKey[]).map((k) => (
-                <Pressable
-                  hitSlop={6}
+                <Swatch
                   key={k}
+                  pt={pt}
                   testID={`ps-palette-${k}`}
-                  accessibilityRole="radio"
-                  accessibilityLabel={k}
-                  accessibilityState={{ selected: s.palette === k }}
+                  color={PALETTES[k][0]}
+                  on={s.palette === k}
                   onPress={() => update({ palette: k })}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: PALETTES[k][0],
-                    borderWidth: s.palette === k ? 3 : 0,
-                    borderColor: pt.ink,
-                  }}
                 />
               ))}
             </View>
-          </View>
+          </Field>
         ) : null}
 
-        <View style={card}>
-          <Text style={heading}>{t('planner.sulla_pagina').toUpperCase()}</Text>
-          {toggle('ps-motivational', t('planner.frasi_motivazionali'), s.show_motivational, (v) =>
-            update({ show_motivational: v }),
+        <Fold
+          pt={pt}
+          testID="ps-fold-categories"
+          title={t('planner.categorie')}
+          count={lists.cats.length}
+        >
+          {lists.cats.map((c) =>
+            row(c.name, () => router.push('/planner-manage'), c.color, `ps-cat-${c.uuid}`),
           )}
-          {toggle('ps-affirmations', t('planner.affermazioni_positive'), s.show_affirmations, (v) =>
-            update({ show_affirmations: v }),
-          )}
-          {uiStyle === 'paper'
-            ? toggle('ps-ambient', t('planner.alberi_e_animali'), s.ambient_enabled, (v) =>
-                update({ ambient_enabled: v }),
-              )
-            : null}
-          {uiStyle === 'paper' && s.ambient_enabled
-            ? stepper(
-                'ps-ambient-opacity',
-                t('planner.quanto_si_vedono'),
-                s.ambient_opacity,
-                0,
-                10,
-                (v) => update({ ambient_opacity: v }),
-              )
-            : null}
-        </View>
+          {add(t('planner.nuova_categoria'), () => router.push('/planner-manage'), 'ps-cat-add')}
+        </Fold>
 
-        <View style={card}>
-          <Text style={label}>{t('planner.scatti_degli_orari')}</Text>
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {ZOOMS.map((z) => (
-              <Pressable
-                key={z}
-                testID={`ps-zoom-${z}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: s.zoom === z }}
-                onPress={() => update({ zoom: z })}
-                style={{
-                  paddingVertical: 7,
-                  paddingHorizontal: 12,
-                  borderRadius: 16,
-                  backgroundColor: s.zoom === z ? pt.accent : pt.accentSoft,
-                }}
-              >
-                <Text style={{ color: s.zoom === z ? pt.onAccent : pt.ink }}>
-                  {t(ZOOM_LABEL[z])}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          {stepper('ps-contrast', t('planner.quanto_marcato'), s.contrast_level, 1, 5, (v) =>
-            update({ contrast_level: v }),
+        <Fold
+          pt={pt}
+          testID="ps-fold-routines"
+          title={t('planner.routine_t')}
+          count={lists.routines.length}
+        >
+          {lists.routines.map((r) =>
+            row(r.name, () => router.push('/planner-routines'), r.color, `ps-routine-${r.uuid}`),
           )}
-          {width >= 760
-            ? stepper('ps-days', t('planner.giorni_affiancati'), s.days_visible, 1, 7, (v) =>
-                update({ days_visible: v }),
-              )
-            : null}
-        </View>
+          {add(
+            t('planner.nuova_routine'),
+            () => router.push('/planner-routines'),
+            'ps-routine-add',
+          )}
+        </Fold>
+
+        <Field pt={pt} label={t('planner.sulla_pagina')}>
+          <RowSB pt={pt} label={t('planner.frasi_motivazionali')}>
+            <Toggle
+              pt={pt}
+              testID="ps-motivational"
+              on={s.show_motivational}
+              onChange={(v) => update({ show_motivational: v })}
+            />
+          </RowSB>
+          <RowSB pt={pt} label={t('planner.affermazioni_positive')}>
+            <Toggle
+              pt={pt}
+              testID="ps-affirmations"
+              on={s.show_affirmations}
+              onChange={(v) => update({ show_affirmations: v })}
+            />
+          </RowSB>
+          {uiStyle === 'paper' ? (
+            <RowSB pt={pt} label={t('planner.alberi_e_animali')}>
+              <Toggle
+                pt={pt}
+                testID="ps-ambient"
+                on={s.ambient_enabled}
+                onChange={(v) => update({ ambient_enabled: v })}
+              />
+            </RowSB>
+          ) : null}
+          {uiStyle === 'paper' && s.ambient_enabled ? (
+            <RowSB pt={pt} label={t('planner.quanto_si_vedono')}>
+              <PlSlider
+                pt={pt}
+                testID="ps-ambient-opacity"
+                label={t('planner.quanto_si_vedono')}
+                min={0}
+                max={10}
+                value={s.ambient_opacity}
+                onChange={(v) => update({ ambient_opacity: v })}
+              />
+            </RowSB>
+          ) : null}
+          <RowSB pt={pt} label={t('planner.scatti_degli_orari')}>
+            <SelectField
+              pt={pt}
+              testID="ps-zoom"
+              title={t('planner.scatti_degli_orari')}
+              value={s.zoom}
+              options={ZOOMS.map((z) => ({ id: z, label: t(ZOOM_LABEL[z]) }))}
+              onChange={(z) => update({ zoom: z })}
+            />
+          </RowSB>
+          <RowSB pt={pt} label={t('planner.quanto_marcato')} last={width < 760}>
+            <PlSlider
+              pt={pt}
+              testID="ps-contrast"
+              label={t('planner.quanto_marcato')}
+              min={1}
+              max={5}
+              value={s.contrast_level}
+              onChange={(v) => update({ contrast_level: v })}
+            />
+          </RowSB>
+          {width >= 760 ? (
+            <RowSB pt={pt} label={t('planner.giorni_affiancati')} last>
+              <PlSlider
+                pt={pt}
+                testID="ps-days"
+                label={t('planner.giorni_affiancati')}
+                min={1}
+                max={7}
+                value={s.days_visible}
+                onChange={(v) => update({ days_visible: v })}
+              />
+            </RowSB>
+          ) : null}
+        </Field>
       </ScrollView>
-    </View>
+    </SheetPanel>
   );
 }
