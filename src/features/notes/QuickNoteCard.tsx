@@ -131,7 +131,8 @@ export function QuickNoteCard({ td, paper }: { td: TodoTheme; paper: boolean }) 
   const lines = noteLines(text);
   const n = lines.length;
   const mono = paper ? td.serif : undefined;
-  const dark = td.dark && !paper;
+  // la carta scura ha il fondo scuro: il testo deve chiarirsi anche lì (prima restava marrone scuro e non si leggeva)
+  const dark = td.dark;
   const gold = dark ? '#E5CB7A' : '#A8873A';
   const goldInk = dark ? '#E5CB7A' : '#8F7835';
   const ink = dark ? td.ink : '#4A443D';

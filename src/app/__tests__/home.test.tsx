@@ -230,6 +230,10 @@ describe('Home', () => {
     expect(screen.getByText('Pay rent')).toBeTruthy();
     // la pastiglia delle 00:01 è in ritardo
     const dose = pills.day(today).doses[0]!;
+    // the pills live in a popup opened from the pill button: nothing inline on Home
+    expect(screen.queryByTestId(`home-pill-take-${dose.uuid}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('home-pillbtn'));
+    expect(screen.getByTestId('home-pills-popup')).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`home-pill-take-${dose.uuid}`));
     expect(pills.day(today).doses[0]!.status).toBe('taken');
     await fireEvent.press(screen.getByTestId(`home-todo-${task}`));
@@ -244,6 +248,37 @@ describe('Home', () => {
     // the card stays a moment, settled ("Taken"), then leaves
     expect(screen.getByTestId(`home-pill-done-${dose.uuid}`)).toBeTruthy();
     await waitFor(() => expect(screen.queryByTestId(`home-pill-take-${dose.uuid}`)).toBeNull());
+  });
+
+  test('the pills popup: All taken marks every late dose, Open pills goes to the page', async () => {
+    const n = new Date();
+    const minutes = n.getHours() * 60 + n.getMinutes();
+    if (minutes < 3 || minutes > 1437) return;
+    const { pills, today } = setup();
+    for (const [name, times] of [
+      ['Vitamin', '00:01'],
+      ['Iron', '00:02'],
+    ] as const)
+      pills.createPlan({
+        name,
+        dose: '1',
+        notes: '',
+        color: '#FF0000',
+        freq_type: 'daily',
+        weekdays: '1111111',
+        month_days: '',
+        interval_days: 1,
+        times,
+        start_date: today,
+        end_date: null,
+        is_active: true,
+      });
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('home-pillbtn'));
+    await fireEvent.press(screen.getByTestId('home-pills-all'));
+    expect(pills.day(today).doses.map((d) => d.status)).toEqual(['taken', 'taken']);
+    await fireEvent.press(screen.getByTestId('home-pills-open'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/pills');
   });
 
   test('projects widget lists favourites and opens one', async () => {

@@ -28,7 +28,15 @@ describe('bottom bar preferences', () => {
     expect(bar.order.slice(0, 2)).toEqual(['grades', 'home']);
     expect(bar.order).toHaveLength(BAR_IDS.length);
     expect(bar.pinned).toEqual(['grades']);
-    expect(bar.hidden).toEqual(['diary']);
+    expect(bar.hidden).toEqual(['diary', 'buy', 'pills', 'languages']);
+  });
+
+  test('a bar saved before the merged icons hides To buy, Pills and Languages once, then respects the choice', () => {
+    const old = cleanBar({ order: [...BAR_IDS], pinned: ['home'], hidden: [] });
+    expect(old.hidden).toEqual(['buy', 'pills', 'languages']);
+    // later the user adds Pills back: the saved bar is already on the new version, so it stays
+    const added = moveBar(old, { kind: 'hide', id: 'pills', on: false });
+    expect(cleanBar(JSON.parse(JSON.stringify(added))).hidden).toEqual(['buy', 'languages']);
   });
 
   test('garbage gives the default', () => {

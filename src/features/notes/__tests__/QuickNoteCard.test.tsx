@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
@@ -52,6 +53,22 @@ beforeEach(() => {
   };
 });
 afterEach(() => jest.useRealTimers());
+
+describe('colours', () => {
+  test('on dark paper the text is light (it used to stay dark brown on a dark card)', async () => {
+    function PaperCard() {
+      const th = useTheme();
+      return <QuickNoteCard td={todoTheme('paper', { ...th, scheme: 'dark' })} paper />;
+    }
+    await render(
+      <ThemeProvider accent="blue">
+        <PaperCard />
+      </ThemeProvider>,
+    );
+    const color = String(StyleSheet.flatten(screen.getByTestId('note-input').props.style).color);
+    expect(color.toLowerCase()).not.toBe('#4a443d');
+  });
+});
 
 describe('collapsing the note', () => {
   test('the button asks to remember the collapsed state', async () => {

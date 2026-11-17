@@ -18,6 +18,8 @@ export type BarId = (typeof BAR_IDS)[number];
 
 /** Come l'utente ha disposto la barra: ordine di tutte, quelle fissate a sinistra, quelle nascoste. */
 export interface BarPrefs {
+  /** versione della disposizione: salendo, le pagine che vivono dentro un'altra si nascondono una volta sola */
+  v: number;
   order: BarId[];
   pinned: BarId[];
   hidden: BarId[];
@@ -34,7 +36,9 @@ export const BAR_PARENT: Partial<Record<BarId, BarId>> = {
 };
 
 /** Di base: Home e Planner fissate, le altre scorrevoli e in vista, tranne quelle che vivono dentro un'altra. */
+export const BAR_VERSION = 2;
 export const DEFAULT_BAR: BarPrefs = {
+  v: BAR_VERSION,
   order: [...BAR_IDS],
   pinned: ['home', 'planner'],
   hidden: ['buy', 'pills', 'languages'],
@@ -64,7 +68,11 @@ export function cleanBar(raw: unknown): BarPrefs {
   for (const id of BAR_IDS) if (!order.includes(id)) order.push(id);
   const pinned = ids(r.pinned);
   const hidden = ids(r.hidden).filter((id) => id !== NEVER_HIDDEN);
-  return { order, pinned: pinned.filter((id) => !hidden.includes(id)), hidden };
+  // una barra salvata prima di questa versione mostrava Da comprare, Pillole e Lingue: ora stanno dentro le loro schede
+  if (r.v !== BAR_VERSION) {
+    for (const id of Object.keys(BAR_PARENT) as BarId[]) if (!hidden.includes(id)) hidden.push(id);
+  }
+  return { v: BAR_VERSION, order, pinned: pinned.filter((id) => !hidden.includes(id)), hidden };
 }
 
 /** Le due metà della barra: le fissate (a sinistra, ferme) e le altre (a destra, scorrevoli). */

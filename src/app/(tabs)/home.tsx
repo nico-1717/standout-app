@@ -236,6 +236,11 @@ export default function HomeScreen() {
                 services?.pills.setStatus(d.uuid, how);
                 changed();
               }}
+              onTakeAllPills={(ids) => {
+                services?.pills.markAll(ids, 'on_time');
+                changed();
+              }}
+              onOpenPills={() => go('/(tabs)/pills')}
               onOpenEvent={() => go('/(tabs)/planner')}
               onOpenTodo={() => go('/(tabs)')}
               onOpenBuy={() => go('/(tabs)/buy')}
