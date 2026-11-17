@@ -13,12 +13,15 @@ import { Chip, Glyph, LevelPill, RoundBtn, catTones } from '@/features/flashcard
 import {
   CARD_SORTS,
   filterCards,
+  isDuplicateCard,
   levelCounts,
   plainText,
   type CardSort,
 } from '@/features/flashcards/cardList';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
-import type { GameStatus } from '@/features/flashcards/game';
+import { DocView } from '@/features/flashcards/DocView';
+import { DeckCardSide } from '@/features/flashcards/DeckCardSide';
+import { DeckViewSheet } from '@/features/flashcards/DeckViewSheet';
 import { studyView } from '@/features/flashcards/gameKit';
 import { isTitleCard } from '@/features/flashcards/game';
 import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
@@ -61,7 +64,7 @@ export default function DeckScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, localPrefs, updateLocalPrefs } = useApp();
 
   const [name, setName] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -69,7 +72,6 @@ export default function DeckScreen() {
   const [moving, setMoving] = useState(false);
   const [iconsOpen, setIconsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [filter, setFilter] = useState<GameStatus>('all');
   const [text, setText] = useState('');
   const [level, setLevel] = useState<Level | ''>('');
   const [sort, setSort] = useState<CardSort>('position');
@@ -78,6 +80,7 @@ export default function DeckScreen() {
   const [bulk, setBulk] = useState<'move' | 'delete' | 'join' | null>(null);
   const [joinNote, setJoinNote] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [sheet, setSheet] = useState(false);
   const [settings, setSettings] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -99,6 +102,7 @@ export default function DeckScreen() {
       levels: services.games.cardLevels(repo.cards(id)),
       childCounts: repo.childCounts(id),
       learnt: services.study.learnt(),
+      questions: repo.questionCounts(),
     };
   }, [services, version, id]);
 
@@ -116,7 +120,11 @@ export default function DeckScreen() {
     );
   }
   const { deck, decks, kids, counts, levels, learnt, childCounts } = data;
-  const passes = services.games.cardFilter(filter);
+  const filter = localPrefs.fcViewStatus;
+  const passes =
+    filter === 'dup'
+      ? (c: (typeof data.cards)[number]) => isDuplicateCard(c, data.questions)
+      : services.games.cardFilter(filter);
   const byStatus = filter === 'all' ? data.cards : data.cards.filter(passes);
   const cards = filterCards(byStatus, levels, { text, level, sort });
   const perLevel = levelCounts(byStatus, levels);
@@ -352,10 +360,15 @@ export default function DeckScreen() {
           <RoundBtn
             th={th}
             testID="fcd-settings"
-            label={t('comune.impostazioni')}
+            label={t('fc.vis_impostazioni')}
             glyph="gear"
-            active={settings}
-            onPress={() => setSettings(!settings)}
+            active={sheet}
+            dot={
+              localPrefs.fcFullCards || localPrefs.fcFullExamples || filter !== 'all'
+                ? tone.color
+                : undefined
+            }
+            onPress={() => setSheet(true)}
           />
           <RoundBtn
             th={th}
@@ -956,23 +969,6 @@ export default function DeckScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 7, alignItems: 'center' }}
           >
-            {(
-              [
-                ['all', t('fc.cg_tutti_stati')],
-                ['0', t('fc.cg_to_learn')],
-                ['1', t('fc.cg_learnt')],
-              ] as [GameStatus, string][]
-            ).map(([v, label]) => (
-              <Chip
-                key={v}
-                th={th}
-                tone={tone}
-                testID={`fcd-filter-${v}`}
-                label={label}
-                on={filter === v}
-                onPress={() => setFilter(v)}
-              />
-            ))}
             {perLevel.size
               ? [
                   ['' as const, t('fc.vis_tutti_livelli'), byStatus.length] as const,
@@ -1281,59 +1277,30 @@ export default function DeckScreen() {
                         >
                           {t('fc.vis_titolo')}
                         </Text>
-                        <Text
-                          style={{
-                            color: th.text,
-                            fontSize: 16.5,
-                            fontWeight: '800',
-                            lineHeight: 21,
-                          }}
-                          numberOfLines={3}
-                        >
-                          {preview(c.question_desc)}
-                        </Text>
+                        <DocView raw={c.question_desc} size={16.5} weight="800" />
                         <Text style={{ color: th.text3, fontSize: 11.5, fontWeight: '700' }}>
                           {t('fc.vis_n_sottocarte', { n: childCounts.get(c.uuid) ?? 0 })}
                         </Text>
                       </View>
                     ) : (
                       <>
-                        {(
-                          [
-                            ['q', t('fc.ifc_domanda'), c.question_desc],
-                            ['a', t('fc.ifc_risposta'), c.answer_desc],
-                          ] as const
-                        ).map(([k, label, raw]) => (
-                          <View key={k} style={{ gap: 5 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <Text
-                                style={{
-                                  color: th.text3,
-                                  fontSize: 10.5,
-                                  fontWeight: '800',
-                                  letterSpacing: 1,
-                                  textTransform: 'uppercase',
-                                }}
-                              >
-                                {label}
-                              </Text>
-                              <View
-                                style={{ flex: 1, height: 0.5, backgroundColor: th.hairline }}
-                              />
-                            </View>
-                            <Text
-                              style={{
-                                color: th.text,
-                                fontSize: k === 'q' ? 15.5 : 14.5,
-                                fontWeight: k === 'q' ? '700' : '500',
-                                lineHeight: 21,
-                              }}
-                              numberOfLines={3}
-                            >
-                              {preview(raw) || '—'}
-                            </Text>
-                          </View>
-                        ))}
+                        <DeckCardSide
+                          testID={`fcd-q-${c.uuid}`}
+                          label={t('fc.ifc_domanda')}
+                          raw={c.question_desc}
+                          image={c.question_image}
+                          audio={c.question_audio}
+                          full={localPrefs.fcFullCards}
+                          question
+                        />
+                        <DeckCardSide
+                          testID={`fcd-a-${c.uuid}`}
+                          label={t('fc.ifc_risposta')}
+                          raw={c.answer_desc}
+                          image={c.answer_image}
+                          audio={c.answer_audio}
+                          full={localPrefs.fcFullCards}
+                        />
                       </>
                     )}
                   </Pressable>
@@ -1353,6 +1320,26 @@ export default function DeckScreen() {
           )}
         </View>
       </ScrollView>
+
+      <DeckViewSheet
+        visible={sheet}
+        color={deck.color}
+        status={filter}
+        fullCards={localPrefs.fcFullCards}
+        fullExamples={localPrefs.fcFullExamples}
+        onStatus={(v) => updateLocalPrefs({ fcViewStatus: v })}
+        onFullCards={(v) => updateLocalPrefs({ fcFullCards: v })}
+        onFullExamples={(v) => updateLocalPrefs({ fcFullExamples: v })}
+        onBigEdit={() => {
+          setSheet(false);
+          router.push({ pathname: '/fc-insert', params: { deck: id } });
+        }}
+        onEditDeck={() => {
+          setSheet(false);
+          setSettings(true);
+        }}
+        onClose={() => setSheet(false)}
+      />
 
       {!selecting && !viewing ? (
         <Pressable

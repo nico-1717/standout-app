@@ -18,6 +18,12 @@ export const cleanVoiceLang = (v: unknown): string =>
 export const cleanVoiceRead = (v: unknown): string =>
   typeof v === 'string' && /^[01][12][01][012]$/.test(v) ? v : '1100';
 
+/** Quali carte mostra la vista di un mazzo (il filtro delle impostazioni del sito): tutte, da imparare, imparate, doppie. */
+export const FC_VIEW_STATUSES = ['all', '0', '1', 'dup'] as const;
+export type FcViewStatus = (typeof FC_VIEW_STATUSES)[number];
+export const cleanViewStatus = (v: unknown): FcViewStatus =>
+  (FC_VIEW_STATUSES as readonly unknown[]).includes(v) ? (v as FcViewStatus) : 'all';
+
 /** Preferenze che restano su questo telefono (il sito non le ha): non si sincronizzano. */
 export interface LocalPrefs {
   /** colori più forti e linee ben visibili (Altro › Stile) */
@@ -32,6 +38,12 @@ export interface LocalPrefs {
   fcVoiceRead: string;
   /** la nota veloce di To do / To buy / Pills è chiusa (resta solo la sua riga) */
   noteCollapsed: boolean;
+  /** vista di un mazzo: quali carte (le impostazioni della vista del sito, `fc_view_prefs`, per dispositivo) */
+  fcViewStatus: FcViewStatus;
+  /** vista di un mazzo: le carte per intero, senza scorrere dentro */
+  fcFullCards: boolean;
+  /** vista di un mazzo: anche gli esempi per intero */
+  fcFullExamples: boolean;
   /** la barra in basso: ordine, schede fissate a sinistra e schede nascoste */
   bar: BarPrefs;
 }
@@ -43,6 +55,9 @@ export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
   fcVoiceLang: '',
   fcVoiceRead: '1100',
   noteCollapsed: false,
+  fcViewStatus: 'all',
+  fcFullCards: false,
+  fcFullExamples: false,
   bar: DEFAULT_BAR,
 };
 
@@ -57,6 +72,9 @@ function clean(raw: unknown): LocalPrefs {
     fcVoiceLang: cleanVoiceLang(r.fcVoiceLang),
     fcVoiceRead: cleanVoiceRead(r.fcVoiceRead),
     noteCollapsed: r.noteCollapsed === true,
+    fcViewStatus: cleanViewStatus(r.fcViewStatus),
+    fcFullCards: r.fcFullCards === true,
+    fcFullExamples: r.fcFullExamples === true,
     bar: cleanBar(r.bar),
   };
 }

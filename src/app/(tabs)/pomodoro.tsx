@@ -117,7 +117,7 @@ export default function PomodoroScreen() {
     },
     [services, changed],
   );
-  const nowMs = useTicker(live, onTick);
+  const nowMs = useTicker(live, onTick, 250);
 
   if (!services || !data) return null;
   const { active, done, notice } = data;

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -142,6 +142,24 @@ describe('Pomodoro screen', () => {
     );
     await fireEvent.press(screen.getByTestId('pomodoro-resume'));
     expect(pomodoro.active()!.status).toBeNull();
+  });
+
+  test('the clock keeps moving by itself while a timer runs (no taps, no re-render from outside)', async () => {
+    jest.useRealTimers();
+    jest.useFakeTimers();
+    const { pomodoro } = setup();
+    pomodoro.start({ mode: 0, plannedMin: 25 });
+    await renderIt();
+    const first = String(screen.getByTestId('pomodoro-clock').props.children);
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+    const later = String(screen.getByTestId('pomodoro-clock').props.children);
+    expect(later).not.toBe(first);
+    await act(async () => {
+      jest.advanceTimersByTime(60_000);
+    });
+    expect(String(screen.getByTestId('pomodoro-clock').props.children)).toMatch(/^2[34]:\d\d$/);
   });
 
   test('opening it from a project starts on that project', async () => {

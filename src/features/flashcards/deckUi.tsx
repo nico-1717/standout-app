@@ -84,6 +84,7 @@ export function RoundBtn({
   label,
   tone,
   active,
+  dot,
   children,
 }: {
   th: Theme;
@@ -93,6 +94,8 @@ export function RoundBtn({
   label: string;
   tone?: { from: string; to: string; shadow: string };
   active?: boolean;
+  /** il pallino del sito (`.has-dot`): qualcosa non è come di solito, di questo colore */
+  dot?: string;
   children?: ReactNode;
 }) {
   const ink = tone ? '#fff' : active ? th.brand : th.text;
@@ -140,6 +143,23 @@ export function RoundBtn({
           {body}
         </View>
       )}
+      {dot ? (
+        <View
+          testID={`${testID}-dot`}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 1,
+            right: 1,
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: dot,
+            borderWidth: 2,
+            borderColor: th.bg,
+          }}
+        />
+      ) : null}
     </Pressable>
   );
 }

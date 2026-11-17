@@ -28,12 +28,13 @@ export function PomodoroBar() {
     if (!active?.project_uuid || !services) return null;
     return services.projects.get(active.project_uuid)?.color ?? null;
   }, [active, services, version]);
-  const now = useTicker(!!active || !!brk, () => {});
+  const now = useTicker(!!active || !!brk, () => {}, 250);
   if (!active && !brk) return null;
 
   let text = '';
   let label = '';
   let dot = th.brand;
+  let fraction = 0;
   if (active) {
     const left = remainingSeconds(active, now);
     text = clock(left !== null ? left : elapsedSeconds(active, now));
@@ -44,11 +45,16 @@ export function PomodoroBar() {
           ? t('pomodoro.cronometro_in_corso')
           : t('pomodoro.concentrazione');
     dot = color ?? '#8E8E93';
+    fraction =
+      left !== null && active.planned_duration_min
+        ? 1 - Math.max(0, left) / (active.planned_duration_min * 60)
+        : (elapsedSeconds(active, now) % 3600) / 3600;
   } else if (brk) {
     const left = brk.planned_duration_min * 60 - Math.floor((now - stampMs(brk.start_time)) / 1000);
     text = clock(Math.max(0, left));
     label = left <= 0 ? t('pomodoro.pausa_finita') : t('pomodoro.pausa_in_corso');
     dot = th.teal;
+    fraction = Math.min(1, Math.max(0, 1 - left / (brk.planned_duration_min * 60)));
   }
   return (
     <Pressable
@@ -71,6 +77,20 @@ export function PomodoroBar() {
       <Text style={{ color: th.text2, flex: 1 }} numberOfLines={1}>
         {label}
       </Text>
+      <View
+        testID="pomodoro-bar-line"
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          bottom: 0,
+          height: 2.5,
+          width: `${(Math.max(0, Math.min(1, fraction)) * 100).toFixed(2)}%`,
+          backgroundColor: dot,
+          borderTopRightRadius: 2,
+          borderBottomRightRadius: 2,
+        }}
+      />
       <Text
         testID="pomodoro-bar-clock"
         style={{ color: th.text, fontWeight: '600', fontVariant: ['tabular-nums'] }}

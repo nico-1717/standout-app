@@ -17,6 +17,7 @@ import {
   type SubCard,
 } from './logic';
 import { searchCardRows, type CardHit } from './cardSearch';
+import { plainText } from './cardList';
 import { dropCardDependents } from './study';
 
 const DECK_COLS =
@@ -81,6 +82,18 @@ export class FlashcardsRepo {
         [deckUuid],
       ),
     );
+  }
+
+  /** Quante volte compare ogni domanda in tutte le carte (minuscola, senza spazi ai lati): chi compare più di una volta è «doppia». */
+  questionCounts(): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const r of this.db.all<{ q: string | null }>(
+      'SELECT question_desc AS q FROM fc_study_cards',
+    )) {
+      const key = plainText(r.q).trim().toLowerCase();
+      if (key) out.set(key, (out.get(key) ?? 0) + 1);
+    }
+    return out;
   }
 
   card(uuid: string): Card | null {

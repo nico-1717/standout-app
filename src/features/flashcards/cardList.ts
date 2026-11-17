@@ -17,6 +17,10 @@ export interface CardListFilter {
 export const plainText = (raw: string | null): string =>
   docToPlain(parseDoc(raw)).replace(/\s+/g, ' ').trim();
 
+/** La carta ha la stessa domanda di un'altra (di qualunque mazzo)? È il «Duplicati» del sito. */
+export const isDuplicateCard = (c: Card, counts: ReadonlyMap<string, number>): boolean =>
+  (counts.get(plainText(c.question_desc).toLowerCase()) ?? 0) > 1;
+
 const fold = (s: string): string => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 /** Il testo su cui si cerca: domanda e risposta (senza formato). */

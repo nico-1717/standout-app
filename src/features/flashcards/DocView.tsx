@@ -85,11 +85,14 @@ export const DocView = memo(function DocView({
   raw,
   size = 17,
   color,
+  weight,
   testID,
 }: {
   raw: string | null | undefined;
   size?: number;
   color?: string;
+  /** lo spessore di base del testo (le parti in grassetto restano in grassetto) */
+  weight?: TextStyle['fontWeight'];
   testID?: string;
 }) {
   const th = useTheme();
@@ -98,6 +101,7 @@ export const DocView = memo(function DocView({
     color: color ?? th.text,
     fontSize: size,
     lineHeight: Math.round(size * 1.4),
+    ...(weight ? { fontWeight: weight } : null),
   };
 
   const out: ReactNode[] = [];

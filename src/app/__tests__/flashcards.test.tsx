@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
+import type { LocalPrefs } from '@/core/settings/localPrefs';
 import { MediaQueue } from '@/core/media/mediaQueue';
 import { pickImage } from '@/core/media/pickImage';
 import '@/core/i18n';
@@ -42,12 +43,27 @@ jest.mock('expo-router', () => ({
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+let mockPrefs: Partial<LocalPrefs> = {};
+const mockUpdatePrefs = jest.fn((patch: Partial<LocalPrefs>) => {
+  mockPrefs = { ...mockPrefs, ...patch };
+  mockVersion += 1;
+});
 jest.mock('@/core/app/AppProvider', () => ({
-  useApp: () => ({ services: mockServices, version: mockVersion, changed: mockChanged }),
+  useApp: () => ({
+    services: mockServices,
+    version: mockVersion,
+    changed: mockChanged,
+    localPrefs: {
+      ...jest.requireActual('@/core/settings/localPrefs').DEFAULT_LOCAL_PREFS,
+      ...mockPrefs,
+    },
+    updateLocalPrefs: mockUpdatePrefs,
+  }),
 }));
 
 function setup() {
   mockVersion = 0;
+  mockPrefs = {};
   mockParams = {};
   mockPush.mockClear();
   mockBack.mockClear();
@@ -229,16 +245,77 @@ describe('category page', () => {
     const b = flashcards.addCard(id, 'QB', 'AB')!;
     study.setLearnt(a, false, true);
     mockParams = { id };
-    await render(wrap(<DeckScreen />));
+    const view = await render(wrap(<DeckScreen />));
     expect(screen.getByTestId(`fcd-level-${a}`)).toBeTruthy();
     expect(screen.getByTestId(`fcd-learnt-${a}`)).toBeTruthy();
     expect(screen.queryByTestId(`fcd-learnt-${b}`)).toBeNull();
-    await fireEvent.press(screen.getByTestId('fcd-filter-1'));
+    // il filtro sta nelle impostazioni della vista, come sul sito
+    expect(screen.queryByTestId('fcd-filter-1')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcd-settings'));
+    await fireEvent.press(screen.getByTestId('fcd-status'));
+    await fireEvent.press(screen.getByTestId('fcd-status-1'));
+    await view.rerender(wrap(<DeckScreen />));
     expect(screen.getByTestId(`fcd-card-${a}`)).toBeTruthy();
     expect(screen.queryByTestId(`fcd-card-${b}`)).toBeNull();
-    await fireEvent.press(screen.getByTestId('fcd-filter-0'));
+    await fireEvent.press(screen.getByTestId('fcd-status'));
+    await fireEvent.press(screen.getByTestId('fcd-status-0'));
+    await view.rerender(wrap(<DeckScreen />));
     expect(screen.queryByTestId(`fcd-card-${a}`)).toBeNull();
     expect(screen.getByTestId(`fcd-card-${b}`)).toBeTruthy();
+  });
+
+  test('the cards are drawn formatted (bold, lists), with their image, and «full cards» removes the height cap', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const q = stringifyDoc({
+      v: 2,
+      blocks: [
+        { t: 'p', runs: [{ s: 'Water ', m: { b: true } }, { s: 'is wet' }] },
+        { t: 'li', lvl: 1, runs: [{ s: 'H2O' }] },
+      ],
+    });
+    const a = flashcards.addCard(id, q, 'plain answer')!;
+    mockParams = { id };
+    const view = await render(wrap(<DeckScreen />));
+    // niente testo JSON grezzo: il grassetto è un pezzo di testo in grassetto, l'elenco ha il suo pallino
+    expect(screen.queryByText(/"blocks"/)).toBeNull();
+    const bold = screen.getByText('Water ');
+    expect(bold).toHaveStyle({ fontWeight: '700' });
+    expect(screen.getByText('•')).toBeTruthy();
+    expect(screen.getByText('plain answer')).toBeTruthy();
+    expect(screen.getByTestId(`fcd-q-${a}-scroll`)).toBeTruthy();
+    mockPrefs = { fcFullCards: true };
+    mockVersion += 1;
+    await view.rerender(wrap(<DeckScreen />));
+    expect(screen.queryByTestId(`fcd-q-${a}-scroll`)).toBeNull();
+    expect(screen.getByText('Water ')).toBeTruthy();
+  });
+
+  test('the view settings sheet: filter incl. duplicates, full cards, full examples, Big Edit', async () => {
+    const { flashcards } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const other = flashcards.createDeck({ name: 'Bio' })!;
+    const a = flashcards.addCard(id, 'Same question', 'A1')!;
+    const b = flashcards.addCard(id, 'Unique', 'A2')!;
+    flashcards.addCard(other, ' same QUESTION ', 'A3');
+    mockParams = { id };
+    const view = await render(wrap(<DeckScreen />));
+    expect(screen.queryByTestId('fcd-settings-dot')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcd-settings'));
+    expect(screen.getByText('View settings')).toBeTruthy();
+    expect(screen.getByText('Which cards')).toBeTruthy();
+    expect(screen.getByText('How to show them')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcd-status'));
+    await fireEvent.press(screen.getByTestId('fcd-status-dup'));
+    await view.rerender(wrap(<DeckScreen />));
+    expect(screen.getByTestId(`fcd-card-${a}`)).toBeTruthy();
+    expect(screen.queryByTestId(`fcd-card-${b}`)).toBeNull();
+    expect(screen.getByTestId('fcd-settings-dot')).toBeTruthy();
+    await fireEvent(screen.getByTestId('fcd-full-cards'), 'valueChange', true);
+    await fireEvent(screen.getByTestId('fcd-full-examples'), 'valueChange', true);
+    expect(mockPrefs).toMatchObject({ fcViewStatus: 'dup', fcFullCards: true, fcFullExamples: true });
+    await fireEvent.press(screen.getByTestId('fcd-bigedit'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-insert', params: { deck: id } });
   });
 
   test('a father card with an empty answer shows as a group title', async () => {
@@ -360,6 +437,7 @@ describe('category page', () => {
     mockParams = { id };
     const view = await render(wrap(<DeckScreen />));
     await fireEvent.press(screen.getByTestId('fcd-settings'));
+    await fireEvent.press(screen.getByTestId('fcd-edit-deck'));
     await fireEvent.changeText(screen.getByTestId('fcd-name'), 'Chemistry');
     await fireEvent(screen.getByTestId('fcd-name'), 'blur');
     await fireEvent.press(screen.getByTestId('fcd-color-FF3B30'));
@@ -382,6 +460,7 @@ describe('category page', () => {
     mockParams = { id };
     await render(wrap(<DeckScreen />));
     await fireEvent.press(screen.getByTestId('fcd-settings'));
+    await fireEvent.press(screen.getByTestId('fcd-edit-deck'));
     await fireEvent.press(screen.getByTestId('fcd-icon-toggle'));
     await fireEvent.press(screen.getByTestId('fcd-icon-atomo'));
     expect(flashcards.deck(id)!.icon).toBe('atomo');
@@ -396,6 +475,7 @@ describe('category page', () => {
     mockParams = { id };
     const view = await render(wrap(<DeckScreen />));
     await fireEvent.press(screen.getByTestId('fcd-settings'));
+    await fireEvent.press(screen.getByTestId('fcd-edit-deck'));
     expect(screen.getByTestId('fcd-delete-hint')).toBeTruthy();
     expect(screen.queryByTestId('fcd-delete')).toBeNull();
     flashcards.removeCard(card);
@@ -435,6 +515,7 @@ describe('category page', () => {
     mockParams = { id: a };
     await render(wrap(<DeckScreen />));
     await fireEvent.press(screen.getByTestId('fcd-settings'));
+    await fireEvent.press(screen.getByTestId('fcd-edit-deck'));
     await fireEvent.press(screen.getByTestId('fcd-parent'));
     await fireEvent.press(screen.getByTestId(`deck-pick-${b}`)); // disabled: own child
     expect(flashcards.deck(a)!.parent_uuid).toBeNull();
