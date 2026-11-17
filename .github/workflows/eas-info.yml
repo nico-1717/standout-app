@@ -16,4 +16,10 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm ci
-      - run: eas build:list --platform ios --limit 60 --json --non-interactive | jq -r '(map(select(.createdAt>"2026-11-01"))|length), (group_by(.status)|map(.[0].status+":"+(length|tostring))|join(" ")), ([.[]|select(.error!=null)|.error.message]|unique|join(" ## "))'
+      - name: Count builds
+        run: |
+          eas build:list --platform ios --limit 60 --json --non-interactive > b.json
+          jq 'map(select(.createdAt > "2026-11-01")) | length' b.json
+          jq -r 'group_by(.status) | map(.[0].status + ":" + (length | tostring)) | join(" ")' b.json
+          jq -r '[.[] | select(.error != null) | .error.message] | unique | join(" ## ")' b.json
+          jq -r '[.[] | select(.createdAt > "2026-11-01")] | map(.createdAt[0:10]) | group_by(.) | map(.[0] + "=" + (length | tostring)) | join(" ")' b.json
