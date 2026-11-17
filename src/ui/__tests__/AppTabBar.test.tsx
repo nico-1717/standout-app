@@ -28,25 +28,34 @@ beforeEach(() => {
   mockBar = DEFAULT_BAR;
 });
 
-test('shows every page: pinned ones, a divider, then the scrollable ones', async () => {
+test('shows the pinned pages, a divider, then the scrollable ones; To buy, Pills, Languages are not there', async () => {
   await bar();
   for (const id of [
     'home',
     'planner',
     'todo',
-    'buy',
-    'pills',
     'habits',
     'pomodoro',
     'diary',
     'grades',
     'flashcards',
-    'languages',
     'projects',
     'settings',
   ])
     expect(screen.getByTestId(`bar-${id}`)).toBeTruthy();
+  for (const id of ['buy', 'pills', 'languages'])
+    expect(screen.queryByTestId(`bar-${id}`)).toBeNull();
   expect(screen.getByTestId('bar-divider')).toBeTruthy();
+});
+
+test('on Pills the To do icon is lit; once Pills is added to the bar it lights itself', async () => {
+  await bar('pills');
+  expect(screen.getByTestId('bar-todo').props.accessibilityState).toMatchObject({ selected: true });
+  mockBar = moveBar(DEFAULT_BAR, { kind: 'hide', id: 'pills', on: false });
+  await bar('pills');
+  expect(screen.getAllByTestId('bar-pills').at(-1)!.props.accessibilityState).toMatchObject({
+    selected: true,
+  });
 });
 
 test('a hidden page is not in the bar, and no divider without pinned pages', async () => {
@@ -57,6 +66,7 @@ test('a hidden page is not in the bar, and no divider without pinned pages', asy
 });
 
 test('To do / To buy / Pills open already scrolled to the tabs; other pages do not', async () => {
+  mockBar = moveBar(DEFAULT_BAR, { kind: 'hide', id: 'buy', on: false });
   await bar();
   await fireEvent.press(screen.getByTestId('bar-buy'));
   expect(mockNavigate).toHaveBeenLastCalledWith({

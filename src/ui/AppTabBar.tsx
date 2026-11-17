@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View, type ScrollViewInstance } from
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
-import { barLayout, type BarId } from '@/core/settings/bar';
+import { barLayout, litBarId, type BarId } from '@/core/settings/bar';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { focusParams } from '@/features/tasks/todoScroll';
 import { Text } from '@/ui/CappedText';
@@ -27,16 +27,19 @@ export function AppTabBar({ state, insets }: BarProps) {
   const { t } = useTranslation();
   const { localPrefs } = useApp();
   const current = state.routes[state.index]?.name;
+  const currentId = (Object.keys(BAR_ITEMS) as BarId[]).find((x) => BAR_ITEMS[x].route === current);
+  // su una pagina nascosta (Pillole, Da comprare, Lingue) si accende l'icona della pagina che la contiene
+  const lit = currentId ? litBarId(localPrefs.bar, currentId) : null;
   const { pinned, scroll } = barLayout(localPrefs.bar);
   const scroller = useRef<ScrollViewInstance>(null);
   const xs = useRef(new Map<BarId, number>());
 
   // la scheda aperta resta in vista anche se sta fra quelle scorrevoli
   useEffect(() => {
-    const id = scroll.find((x) => BAR_ITEMS[x].route === current);
+    const id = scroll.find((x) => x === lit);
     const x = id ? xs.current.get(id) : undefined;
     if (x !== undefined) scroller.current?.scrollTo({ x: Math.max(0, x - ITEM_W), animated: true });
-  }, [current, scroll]);
+  }, [lit, scroll]);
 
   const open = (id: BarId) => {
     const route = BAR_ITEMS[id].route;
@@ -49,7 +52,7 @@ export function AppTabBar({ state, insets }: BarProps) {
 
   const button = (id: BarId) => {
     const it = BAR_ITEMS[id];
-    const on = current === it.route;
+    const on = lit === id;
     const color = on ? (TAB_COLOR[it.kind] ?? th.brand) : th.text2;
     return (
       <Pressable

@@ -23,12 +23,28 @@ export interface BarPrefs {
   hidden: BarId[];
 }
 
-/** Di base: Home e Planner fissate, tutte le altre scorrevoli e in vista. */
+/**
+ * Le pagine che hanno già la loro porta dentro un'altra: Da comprare e Pillole sono linguette di «Da fare», Lingue si
+ * apre dalle Flashcard. Di base non hanno un'icona propria; si possono aggiungere dalle impostazioni.
+ */
+export const BAR_PARENT: Partial<Record<BarId, BarId>> = {
+  buy: 'todo',
+  pills: 'todo',
+  languages: 'flashcards',
+};
+
+/** Di base: Home e Planner fissate, le altre scorrevoli e in vista, tranne quelle che vivono dentro un'altra. */
 export const DEFAULT_BAR: BarPrefs = {
   order: [...BAR_IDS],
   pinned: ['home', 'planner'],
-  hidden: [],
+  hidden: ['buy', 'pills', 'languages'],
 };
+
+/** Quale icona accendere per la pagina `id`: la sua, o (se è nascosta) quella della pagina che la contiene. */
+export function litBarId(bar: BarPrefs, id: BarId): BarId {
+  const parent = BAR_PARENT[id];
+  return bar.hidden.includes(id) && parent && !bar.hidden.includes(parent) ? parent : id;
+}
 
 /** «Altro» (le impostazioni) non si nasconde mai: è da lì che si cambia la barra. */
 export const NEVER_HIDDEN: BarId = 'settings';

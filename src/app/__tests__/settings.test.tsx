@@ -85,7 +85,9 @@ describe('settings: bottom bar editor', () => {
     await open();
     expect(screen.getByTestId('bar-row-home')).toBeTruthy();
     expect(screen.getByTestId('bar-row-pomodoro')).toBeTruthy();
-    expect(screen.getByTestId('bar-empty-hidden')).toBeTruthy();
+    // Da comprare, Pillole e Lingue stanno dentro altre icone: di base sono fra le nascoste
+    expect(screen.getByTestId('bar-row-buy')).toBeTruthy();
+    expect(screen.queryByTestId('bar-empty-hidden')).toBeNull();
     // «Altro» non si nasconde
     expect(screen.queryByTestId('bar-hide-settings')).toBeNull();
   });
@@ -98,7 +100,7 @@ describe('settings: bottom bar editor', () => {
     });
     await fireEvent.press(screen.getByTestId('bar-hide-diary'));
     expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
-      bar: expect.objectContaining({ hidden: ['diary'] }),
+      bar: expect.objectContaining({ hidden: ['buy', 'pills', 'languages', 'diary'] }),
     });
     await fireEvent.press(screen.getByTestId('bar-down-home'));
     expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
@@ -106,7 +108,10 @@ describe('settings: bottom bar editor', () => {
     });
     await fireEvent.press(screen.getByTestId('bar-reset'));
     expect(mockUpdateLocalPrefs).toHaveBeenLastCalledWith({
-      bar: expect.objectContaining({ pinned: ['home', 'planner'], hidden: [] }),
+      bar: expect.objectContaining({
+        pinned: ['home', 'planner'],
+        hidden: ['buy', 'pills', 'languages'],
+      }),
     });
   });
 });
