@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
+import * as Updates from 'expo-updates';
 import * as Sharing from 'expo-sharing';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
@@ -375,6 +376,15 @@ export default function AccountScreen() {
           />
           <Message note={delNote} id="delete-note" />
         </Card>
+        <Text
+          testID="app-version"
+          selectable
+          style={{ color: th.text3, fontSize: 12, textAlign: 'center' }}
+        >
+          {`Update ${Updates.updateId ? Updates.updateId.slice(0, 8) : 'embedded'}${
+            Updates.createdAt ? ` · ${Updates.createdAt.toLocaleString()}` : ''
+          } · runtime ${Updates.runtimeVersion ? Updates.runtimeVersion.slice(0, 8) : '-'}`}
+        </Text>
       </ScrollView>
     </View>
   );

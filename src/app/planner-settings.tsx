@@ -1,11 +1,15 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Fold, PlSlider } from '@/features/planner/SettingsParts';
+import { WeatherCard, WxPlacePicker, WxPopup } from '@/features/planner/WeatherUi';
+import { useWeather } from '@/features/planner/useWeather';
+import { localToday } from '@/features/tasks/groups';
+import { dayTitle } from '@/features/planner/PlannerParts';
 import { PALETTES, plannerTheme, type PaletteKey } from '@/features/planner/plannerTheme';
 import { ZOOMS, type Zoom } from '@/features/planner/settings';
 import {
@@ -58,6 +62,28 @@ export default function PlannerSettingsScreen() {
   }, [repo, version]);
 
   const close = () => router.back();
+
+  // il meteo: la scheda in cima (come sul sito), il popup delle previsioni e la scelta del luogo la prima volta
+  const weather = useWeather();
+  const loadWeather = weather.load;
+  useEffect(() => {
+    void loadWeather(true);
+  }, [loadWeather]);
+  const today = localToday();
+  const [picking, setPicking] = useState(false);
+  const [wxBusy, setWxBusy] = useState(false);
+  const [wxDate, setWxDate] = useState<string | null>(null);
+  const toggleWeather = (on: boolean) => {
+    if (!on) {
+      void weather.disable();
+      return;
+    }
+    const known = weather.wx;
+    if (known && known.lat !== null && known.lon !== null) {
+      setWxBusy(true);
+      void weather.enable(known.lat, known.lon).finally(() => setWxBusy(false));
+    } else setPicking(true);
+  };
   const row = (label: string, onPress: () => void, color: string, testID: string) => (
     <Pressable
       key={testID}
@@ -120,6 +146,30 @@ export default function PlannerSettingsScreen() {
         contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
+        <WeatherCard
+          pt={pt}
+          wx={weather.wx}
+          today={today}
+          busy={wxBusy}
+          onToggle={toggleWeather}
+          onOpen={() => setWxDate(today)}
+        />
+        {picking ? (
+          <View style={{ marginBottom: 12 }}>
+            <WxPlacePicker
+              pt={pt}
+              autoFocus
+              search={weather.places}
+              onCancel={() => setPicking(false)}
+              onPick={(pl) => {
+                setPicking(false);
+                setWxBusy(true);
+                void weather.enable(pl.lat, pl.lon).finally(() => setWxBusy(false));
+              }}
+            />
+          </View>
+        ) : null}
+
         {uiStyle === 'paper' ? (
           <Field pt={pt} label={t('planner.colore_della_pagina')}>
             <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', paddingTop: 4 }}>
@@ -241,6 +291,23 @@ export default function PlannerSettingsScreen() {
           ) : null}
         </Field>
       </ScrollView>
+      {wxDate && weather.wx?.enabled ? (
+        <WxPopup
+          pt={pt}
+          wx={weather.wx}
+          date={wxDate}
+          today={today}
+          title={(d) => dayTitle(t, d)}
+          onDate={setWxDate}
+          places={weather.places}
+          onPreview={(pl) => weather.preview(pl.lat, pl.lon, pl.nome)}
+          onOff={() => {
+            setWxDate(null);
+            void weather.disable();
+          }}
+          onClose={() => setWxDate(null)}
+        />
+      ) : null}
     </SheetPanel>
   );
 }

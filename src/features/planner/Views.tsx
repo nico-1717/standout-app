@@ -22,6 +22,8 @@ import { LineIcon } from './PlannerIcons';
 import { eventColor, type PlannerTheme } from './plannerTheme';
 import type { Calendar, Category } from './repo';
 import { isBand } from './layout';
+import type { WxCtx } from './weather';
+import { WxTag } from './WeatherUi';
 
 interface Look {
   pt: PlannerTheme;
@@ -70,6 +72,7 @@ export function WeekGrid(
     onPickDay: (d: string) => void;
     onOpen: (ev: EventView) => void;
     onCreate: (date: string, startMin: number) => void;
+    weather?: WxCtx;
   },
 ) {
   const { t } = useTranslation();
@@ -276,6 +279,17 @@ export function WeekGrid(
                   >
                     {dayOfMonth(d)}
                   </Text>
+                  {p.weather?.wx.giorni[d] ? (
+                    <WxTag
+                      pt={pt}
+                      date={d}
+                      day={p.weather.wx.giorni[d]}
+                      today={d === p.today}
+                      nowTemp={p.weather.nowTemp}
+                      single={false}
+                      onPress={p.weather.onOpen}
+                    />
+                  ) : null}
                   {first ? (
                     <View
                       style={{

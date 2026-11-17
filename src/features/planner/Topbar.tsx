@@ -14,6 +14,8 @@ import { Text } from '@/ui/CappedText';
 import { addDaysIso, addMonths, dayOfMonth, monthOf, weekdayOf, yearOf } from './dates';
 import { LineIcon, ToolButton } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
+import type { WxCtx } from './weather';
+import { WxTag } from './WeatherUi';
 import { monthGrid } from './Views';
 
 export type PlannerView = 'day' | 'week' | 'month';
@@ -510,6 +512,7 @@ export function PlannerTopbar(p: {
   letter: string;
   affirmation: string | null;
   ambient?: ReactNode;
+  weather?: WxCtx;
   onViewPress: (x: number) => void;
   onToday: () => void;
   onWeek: () => void;
@@ -681,6 +684,19 @@ export function PlannerTopbar(p: {
               >
                 {upper(t(`planner.gg_${weekdayOf(p.date)}`))}
               </Text>
+              {p.weather?.wx.giorni[p.date] ? (
+                <View style={{ paddingBottom: 3 }}>
+                  <WxTag
+                    pt={pt}
+                    date={p.date}
+                    day={p.weather.wx.giorni[p.date]}
+                    today={p.date === p.today}
+                    nowTemp={p.weather.nowTemp}
+                    single
+                    onPress={p.weather.onOpen}
+                  />
+                </View>
+              ) : null}
             </Pressable>
           )}
         </View>

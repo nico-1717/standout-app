@@ -73,6 +73,65 @@ export type DiaryAiReply = {
   libro_possibile?: boolean;
 };
 
+/** Un giorno di previsioni (api/v1 weather: gli stessi campi del sito). */
+export interface WxDay {
+  date: string;
+  code: number;
+  label: string;
+  /** il nome dell'icona del sito: sole, sole-nubi, nubi, nebbia, pioggia-leggera, pioggia, temporale, neve... */
+  icon: string;
+  tmax: number | null;
+  tmin: number | null;
+  /** probabilità di pioggia, % */
+  pioggia: number | null;
+  vento: number | null;
+  percepita_max: number | null;
+  percepita_min: number | null;
+  pioggia_mm: number | null;
+  raffiche: number | null;
+  vento_da: string | null;
+  uv: number | null;
+  alba: string | null;
+  tramonto: string | null;
+  sole_min: number | null;
+  affidabilita: number | null;
+}
+
+export interface WxNow {
+  ora: string | null;
+  label: string;
+  icon: string;
+  temp: number | null;
+  percepita: number | null;
+  umidita: number | null;
+  vento: number | null;
+  pioggia_mm: number | null;
+  giorno: boolean | null;
+}
+
+/** Lo stato del meteo come lo dà il sito. */
+export interface WxState {
+  enabled: boolean;
+  place: string | null;
+  lat: number | null;
+  lon: number | null;
+  /** il luogo è stato scelto a mano per una sbirciata (non è salvato) */
+  manual: boolean;
+  fonte: string;
+  fonteUrl: string;
+  nota: string;
+  giorni: Record<string, WxDay>;
+  adesso: WxNow | null;
+  errore: string | null;
+}
+
+export interface WxPlace {
+  nome: string;
+  dove: string;
+  lat: number;
+  lon: number;
+}
+
 /** Un posto proposto dalla ricerca. Le coordinate ci sono già solo con la scorta (OpenStreetMap); con Google arrivano dopo. */
 export interface PlaceHit {
   name: string;
@@ -181,6 +240,44 @@ export class AccountApi {
     return { used: Number(r.used ?? 0), quota: Number(r.quota ?? 0) };
   }
 
+  /** Il meteo salvato dell'utente (acceso o no) e le previsioni. Serve rete. */
+  async weather(): Promise<WxState> {
+    return wxState(await this.json(await this.send('GET', '/api/v1/weather')));
+  }
+
+  /** Accende il meteo per un punto. */
+  async weatherEnable(lat: number, lon: number): Promise<WxState> {
+    return wxState(
+      await this.json(await this.send('POST', '/api/v1/weather/enable', { lat, lon })),
+    );
+  }
+
+  async weatherDisable(): Promise<void> {
+    await this.json(await this.send('POST', '/api/v1/weather/disable', {}));
+  }
+
+  /** La previsione di un punto qualsiasi, senza salvare niente (come il popup del sito). */
+  async weatherPreview(lat: number, lon: number, place: string): Promise<WxState> {
+    return wxState(
+      await this.json(await this.send('POST', '/api/v1/weather/preview', { lat, lon, place })),
+    );
+  }
+
+  /** I luoghi che si chiamano così (almeno 3 lettere). */
+  async weatherPlaces(q: string): Promise<WxPlace[]> {
+    const text = q.trim().replace(/\s+/g, ' ');
+    if (text.length < 3) return [];
+    const r = await this.json<{ places?: WxPlace[] }>(
+      await this.send('GET', `/api/v1/weather/places?q=${encodeURIComponent(text)}`),
+    );
+    return (r.places ?? []).map((p) => ({
+      nome: String(p.nome ?? ''),
+      dove: String(p.dove ?? ''),
+      lat: Number(p.lat),
+      lon: Number(p.lon),
+    }));
+  }
+
   /** I posti che corrispondono al testo (almeno 3 lettere; meno: nessuna chiamata). Serve rete. */
   async placeSearch(q: string, lang: string): Promise<PlaceHit[]> {
     const text = q.trim().replace(/\s+/g, ' ');
@@ -284,4 +381,65 @@ export class AccountApi {
       return 'errore';
     }
   }
+}
+
+const num = (v: unknown): number | null =>
+  v === null || v === undefined || v === '' ? null : Number(v);
+const str = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+
+/** La risposta del sito → lo stato, con i campi sempre dello stesso tipo. */
+export function wxState(r: Record<string, unknown>): WxState {
+  const raw = (r.giorni && typeof r.giorni === 'object' ? r.giorni : {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  const giorni: Record<string, WxDay> = {};
+  for (const [date, d] of Object.entries(raw)) {
+    giorni[date] = {
+      date,
+      code: Number(d.code ?? 3),
+      label: String(d.label ?? ''),
+      icon: String(d.icon ?? 'nubi'),
+      tmax: num(d.tmax),
+      tmin: num(d.tmin),
+      pioggia: num(d.pioggia),
+      vento: num(d.vento),
+      percepita_max: num(d.percepita_max),
+      percepita_min: num(d.percepita_min),
+      pioggia_mm: num(d.pioggia_mm),
+      raffiche: num(d.raffiche),
+      vento_da: str(d.vento_da),
+      uv: num(d.uv),
+      alba: str(d.alba),
+      tramonto: str(d.tramonto),
+      sole_min: num(d.sole_min),
+      affidabilita: num(d.affidabilita),
+    };
+  }
+  const n = r.adesso as Record<string, unknown> | null | undefined;
+  return {
+    enabled: r.enabled === true,
+    place: str(r.place),
+    lat: num(r.lat),
+    lon: num(r.lon),
+    manual: r.manual === true,
+    fonte: String(r.fonte ?? 'Open-Meteo'),
+    fonteUrl: String(r.fonte_url ?? 'https://open-meteo.com'),
+    nota: String(r.nota_affidabilita ?? ''),
+    giorni,
+    adesso: n
+      ? {
+          ora: str(n.ora),
+          label: String(n.label ?? ''),
+          icon: String(n.icon ?? 'nubi'),
+          temp: num(n.temp),
+          percepita: num(n.percepita),
+          umidita: num(n.umidita),
+          vento: num(n.vento),
+          pioggia_mm: num(n.pioggia_mm),
+          giorno: typeof n.giorno === 'boolean' ? n.giorno : null,
+        }
+      : null,
+    errore: str(r.errore),
+  };
 }

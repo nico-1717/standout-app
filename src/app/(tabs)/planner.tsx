@@ -49,6 +49,9 @@ import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthAgenda, MonthView, WeekGrid, monthGrid } from '@/features/planner/Views';
 import { isBand } from '@/features/planner/layout';
 import { usePinchZoom } from '@/features/planner/usePinchZoom';
+import { WxPopup } from '@/features/planner/WeatherUi';
+import { useWeather } from '@/features/planner/useWeather';
+import type { WxCtx } from '@/features/planner/weather';
 import { ZoomDial } from '@/features/planner/ZoomDial';
 
 /** Il planner: vista giorno (con le ore), settimana (un elenco per giorno) e mese (una griglia). */
@@ -72,6 +75,13 @@ export default function PlannerScreen() {
   const userName = authState?.status === 'signedIn' ? authState.user.username : '';
   const pt = plannerTheme(uiStyle, th, plannerSettings.palette, plannerSettings.contrast_level);
   const today = localToday();
+  const weather = useWeather();
+  const [wxDate, setWxDate] = useState<string | null>(null);
+  // il meteo si ricarica ogni volta che si apre il planner (al massimo ogni 10 minuti)
+  const loadWeather = weather.load;
+  useEffect(() => {
+    void loadWeather();
+  }, [loadWeather]);
   const [date, setDate] = useState(today);
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day');
   const [note, setNote] = useState<SmartNote | null>(null);
@@ -308,6 +318,14 @@ export default function PlannerScreen() {
   const viewLabel = t(
     mode === 'day' ? 'planner.giorno' : mode === 'week' ? 'planner.settimana_2' : 'planner.mese',
   );
+  const wxCtx: WxCtx | undefined =
+    weather.wx?.enabled === true
+      ? {
+          wx: weather.wx,
+          nowTemp: weather.wx.adesso?.temp ?? null,
+          onOpen: setWxDate,
+        }
+      : undefined;
   const barTop = topH + barH;
   const agendaH = Math.round(screenH * 0.58);
 
@@ -325,6 +343,7 @@ export default function PlannerScreen() {
           viewLabel={viewLabel}
           letter={(userName || '?').slice(0, 1).toUpperCase()}
           affirmation={plannerSettings.show_affirmations ? affirmation : null}
+          weather={wxCtx}
           ambient={
             uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
               <MonthScene
@@ -400,6 +419,7 @@ export default function PlannerScreen() {
             now={now}
             load={load}
             bottomPad={60}
+            weather={wxCtx}
             onFocus={setDate}
             onPickDay={(d) => {
               setDate(d);
@@ -753,6 +773,24 @@ export default function PlannerScreen() {
           changed();
         }}
       />
+
+      {wxDate && weather.wx?.enabled ? (
+        <WxPopup
+          pt={pt}
+          wx={weather.wx}
+          date={wxDate}
+          today={today}
+          title={(d) => dayTitle(t, d)}
+          onDate={setWxDate}
+          places={weather.places}
+          onPreview={(pl) => weather.preview(pl.lat, pl.lon, pl.nome)}
+          onOff={() => {
+            setWxDate(null);
+            void weather.disable();
+          }}
+          onClose={() => setWxDate(null)}
+        />
+      ) : null}
 
       <SearchSheet
         visible={searching}
