@@ -313,7 +313,11 @@ describe('category page', () => {
     expect(screen.getByTestId('fcd-settings-dot')).toBeTruthy();
     await fireEvent(screen.getByTestId('fcd-full-cards'), 'valueChange', true);
     await fireEvent(screen.getByTestId('fcd-full-examples'), 'valueChange', true);
-    expect(mockPrefs).toMatchObject({ fcViewStatus: 'dup', fcFullCards: true, fcFullExamples: true });
+    expect(mockPrefs).toMatchObject({
+      fcViewStatus: 'dup',
+      fcFullCards: true,
+      fcFullExamples: true,
+    });
     await fireEvent.press(screen.getByTestId('fcd-bigedit'));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-insert', params: { deck: id } });
   });

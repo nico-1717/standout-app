@@ -56,7 +56,9 @@ export function DeckCardSide(p: {
         <View style={{ flex: 1, height: 0.5, backgroundColor: th.hairline }} />
       </View>
       {hasText || hasImage ? (
-        <View style={{ flexDirection: split ? 'row' : 'column', alignItems: 'flex-start', gap: 12 }}>
+        <View
+          style={{ flexDirection: split ? 'row' : 'column', alignItems: 'flex-start', gap: 12 }}
+        >
           {hasText ? (
             <View style={{ flex: split ? 1 : undefined, alignSelf: 'stretch', minWidth: 0 }}>
               {p.full ? (
