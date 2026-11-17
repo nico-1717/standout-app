@@ -31,6 +31,8 @@ export function ProjectSheet(p: {
   onClose: () => void;
   /** nome del tasto «nessuno» (default «Nessun progetto»); `false` lo toglie */
   noneLabel?: string | false;
+  /** righe in più in cima (es. «Livello principale»); `id` torna in `onPick` */
+  extras?: { id: string; label: string }[];
   /** crea un progetto al volo e lo restituisce (null = non si può creare) */
   onCreate?: (name: string) => string | null;
 }) {
@@ -106,6 +108,7 @@ export function ProjectSheet(p: {
               projects={p.projects}
               value={p.value}
               noneLabel={p.noneLabel}
+              extras={p.extras}
               onCreate={p.onCreate}
               onPick={p.onPick}
             />

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Fragment, useMemo, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -7,10 +7,13 @@ import { human } from '@/features/pomodoro/logic';
 import { localToday } from '@/features/tasks/groups';
 import { PrimaryButton, TextButton } from '@/ui/kit';
 
+import { ActionSwipe } from './ActionSwipe';
+import { AddInput } from './AddInput';
 import { DragItem } from './DragItem';
 import { PjIcon, StatusRing } from './PjIcons';
 import { Lab, ListCard, RowLine } from './PjParts';
 import { ProjectPicker } from './ProjectPicker';
+import { RowDialogs, type RowAction } from './RowDialogs';
 import type { SubView } from './options';
 import { subtreeIds, type Project, type TreeRow } from './logic';
 import { dateLabel, shortDate } from './pjFormat';
@@ -38,7 +41,8 @@ export function SubProjects(p: {
   onOpen: (project: Project) => void;
   onStart: (project: Project) => void;
   onCycle: (uuid: string) => void;
-  onAdd: (name: string) => boolean;
+  /** crea un sotto-progetto (di `parent`, se dato: «Aggiungi dentro» di una riga) */
+  onAdd: (name: string, parent?: string) => boolean;
   changed: () => void;
   /** il tempo di lavoro di ogni progetto, sotto-progetti compresi */
   totals?: ReadonlyMap<string, number>;
@@ -58,8 +62,16 @@ export function SubProjects(p: {
   const [panel, setPanel] = useState<Panel>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
+  // lo scorrimento della riga: quale è aperta, a chi si sta aggiungendo, e cosa si sposta/elimina
+  const [swiped, setSwiped] = useState<string | null>(null);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [rowAction, setRowAction] = useState<RowAction>(null);
   const grid = (p.view ?? 'list') === 'grid' && !selecting;
   const accent = p.parent.color;
+  const addSub = useMemo(
+    () => new Set(addingTo ? subtreeIds(p.all, addingTo) : []),
+    [p.all, addingTo],
+  );
 
   // tenere premuta una riga e trascinarla: fra i fratelli cambia posto, sopra un progetto ci entra
   const parentOf = useMemo(() => new Map(p.all.map((x) => [x.uuid, x.parent_uuid])), [p.all]);
@@ -132,10 +144,17 @@ export function SubProjects(p: {
     setPanel(panel === which ? null : which);
   };
   const submit = () => {
-    if (p.onAdd(draft)) {
+    if (p.onAdd(draft, addingTo ?? undefined)) {
       setDraft('');
       setAdding(false);
+      setAddingTo(null);
     }
+  };
+  const addInside = (id: string) => {
+    if (p.collapsed.has(id)) p.onToggleBranch(id);
+    setAdding(false);
+    setDraft('');
+    setAddingTo(id);
   };
 
   const subtree = picked.flatMap((id) => subtreeIds(p.all, id));
@@ -265,131 +284,161 @@ export function SubProjects(p: {
                     .filter(Boolean)
                     .join(' · ')
                 : '';
+              // «Aggiungi dentro»: il campo compare dopo l'ultima riga del ramo, un livello più in dentro
+              const inAdd = addingTo ? addSub.has(k.uuid) : false;
+              const next = p.rows[i + 1];
+              const addHere = inAdd && !(next && addSub.has(next.project.uuid));
+              const addDepth = addingTo
+                ? (p.rows.find((x) => x.project.uuid === addingTo)?.depth ?? 0) + 1
+                : 0;
               return (
-                <DragItem
-                  key={k.uuid}
-                  id={k.uuid}
-                  drag={drag}
-                  caption={drag.ui.active === k.uuid ? caption : null}
-                >
-                  {i ? <RowLine inset={74 + r.depth * 22} /> : null}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      minHeight: 54,
-                      paddingVertical: 8,
-                      paddingRight: 8,
-                      paddingLeft: r.depth * 22,
-                    }}
+                <Fragment key={k.uuid}>
+                  <DragItem
+                    id={k.uuid}
+                    drag={drag}
+                    caption={drag.ui.active === k.uuid ? caption : null}
                   >
-                    <View style={{ width: 40, alignItems: 'center' }}>
-                      {selecting ? null : r.hasChildren ? (
-                        <Pressable
-                          testID={`proj-toggle-${k.uuid}`}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('progetti.apri_chiudi_sotto')}
-                          accessibilityState={{ expanded: !closed }}
-                          hitSlop={8}
-                          onPress={() => p.onToggleBranch(k.uuid)}
-                          style={{ padding: 6 }}
-                        >
-                          <View style={{ transform: [{ rotate: closed ? '0deg' : '90deg' }] }}>
-                            <PjIcon name="chevron" color={th.text3} size={15} />
-                          </View>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                    {selecting ? (
-                      <Pressable
-                        testID={`kid-${k.uuid}`}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on }}
-                        onPress={() => toggle(k.uuid)}
-                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                    {i ? <RowLine inset={74 + r.depth * 22} /> : null}
+                    <ActionSwipe
+                      id={k.uuid}
+                      open={swiped === k.uuid}
+                      disabled={selecting || drag.ui.active !== null}
+                      onOpenChange={(on) => setSwiped(on ? k.uuid : null)}
+                      onAdd={() => addInside(k.uuid)}
+                      onMove={() => setRowAction({ kind: 'move', id: k.uuid })}
+                      onDelete={() => setRowAction({ kind: 'delete', id: k.uuid })}
+                    >
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          minHeight: 54,
+                          paddingVertical: 8,
+                          paddingRight: 8,
+                          paddingLeft: r.depth * 22,
+                        }}
                       >
-                        <View
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: 12,
-                            borderWidth: 2,
-                            borderColor: k.color,
-                            backgroundColor: on ? k.color : 'transparent',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {on ? (
-                            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
-                              ✓
-                            </Text>
+                        <View style={{ width: 40, alignItems: 'center' }}>
+                          {selecting ? null : r.hasChildren ? (
+                            <Pressable
+                              testID={`proj-toggle-${k.uuid}`}
+                              accessibilityRole="button"
+                              accessibilityLabel={t('progetti.apri_chiudi_sotto')}
+                              accessibilityState={{ expanded: !closed }}
+                              hitSlop={8}
+                              onPress={() => p.onToggleBranch(k.uuid)}
+                              style={{ padding: 6 }}
+                            >
+                              <View style={{ transform: [{ rotate: closed ? '0deg' : '90deg' }] }}>
+                                <PjIcon name="chevron" color={th.text3} size={15} />
+                              </View>
+                            </Pressable>
                           ) : null}
                         </View>
-                        <Text
-                          numberOfLines={1}
-                          style={{ color: th.text, fontSize: 16, fontWeight: '500', flex: 1 }}
-                        >
-                          {k.name}
-                        </Text>
-                      </Pressable>
-                    ) : (
-                      <>
-                        <Pressable
-                          testID={`proj-status-${k.uuid}`}
-                          accessibilityRole="checkbox"
-                          accessibilityLabel={t('progetti.cambia_stato')}
-                          accessibilityState={{ checked: doneRow }}
-                          hitSlop={8}
-                          onPress={() => p.onCycle(k.uuid)}
-                        >
-                          <StatusRing status={k.status} color={k.color} size={24} />
-                        </Pressable>
-                        <Pressable
-                          testID={`kid-${k.uuid}`}
-                          accessibilityRole="button"
-                          onPress={() => p.onOpen(k)}
-                          delayLongPress={GRAB_MS}
-                          onLongPress={() => drag.grab(k.uuid)}
-                          onPressOut={drag.release}
-                          style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
-                        >
-                          <Text
-                            numberOfLines={2}
-                            style={{
-                              color: doneRow ? th.text3 : th.text,
-                              fontSize: 16,
-                              fontWeight: '500',
-                              textDecorationLine: doneRow ? 'line-through' : 'none',
-                            }}
+                        {selecting ? (
+                          <Pressable
+                            testID={`kid-${k.uuid}`}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: on }}
+                            onPress={() => toggle(k.uuid)}
+                            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
                           >
-                            {k.name}
-                          </Text>
-                          {meta ? (
-                            <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
-                              {meta}
+                            <View
+                              style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: 12,
+                                borderWidth: 2,
+                                borderColor: k.color,
+                                backgroundColor: on ? k.color : 'transparent',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {on ? (
+                                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
+                                  ✓
+                                </Text>
+                              ) : null}
+                            </View>
+                            <Text
+                              numberOfLines={1}
+                              style={{ color: th.text, fontSize: 16, fontWeight: '500', flex: 1 }}
+                            >
+                              {k.name}
                             </Text>
-                          ) : null}
-                        </Pressable>
-                        <Pressable
-                          testID={`proj-start-${k.uuid}`}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('progetti.concentrati')}
-                          hitSlop={6}
-                          onPress={() => p.onStart(k)}
-                          style={{
-                            width: 34,
-                            height: 32,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <PjIcon name="timer" color={th.text3} size={19} />
-                        </Pressable>
-                      </>
-                    )}
-                  </View>
-                </DragItem>
+                          </Pressable>
+                        ) : (
+                          <>
+                            <Pressable
+                              testID={`proj-status-${k.uuid}`}
+                              accessibilityRole="checkbox"
+                              accessibilityLabel={t('progetti.cambia_stato')}
+                              accessibilityState={{ checked: doneRow }}
+                              hitSlop={8}
+                              onPress={() => p.onCycle(k.uuid)}
+                            >
+                              <StatusRing status={k.status} color={k.color} size={24} />
+                            </Pressable>
+                            <Pressable
+                              testID={`kid-${k.uuid}`}
+                              accessibilityRole="button"
+                              onPress={() => p.onOpen(k)}
+                              delayLongPress={GRAB_MS}
+                              onLongPress={() => drag.grab(k.uuid)}
+                              onPressOut={drag.release}
+                              style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
+                            >
+                              <Text
+                                numberOfLines={2}
+                                style={{
+                                  color: doneRow ? th.text3 : th.text,
+                                  fontSize: 16,
+                                  fontWeight: '500',
+                                  textDecorationLine: doneRow ? 'line-through' : 'none',
+                                }}
+                              >
+                                {k.name}
+                              </Text>
+                              {meta ? (
+                                <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
+                                  {meta}
+                                </Text>
+                              ) : null}
+                            </Pressable>
+                            <Pressable
+                              testID={`proj-start-${k.uuid}`}
+                              accessibilityRole="button"
+                              accessibilityLabel={t('progetti.concentrati')}
+                              hitSlop={6}
+                              onPress={() => p.onStart(k)}
+                              style={{
+                                width: 34,
+                                height: 32,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <PjIcon name="timer" color={th.text3} size={19} />
+                            </Pressable>
+                          </>
+                        )}
+                      </View>
+                    </ActionSwipe>
+                  </DragItem>
+                  {addHere ? (
+                    <View style={{ paddingLeft: addDepth * 22 + 14 }}>
+                      <AddInput
+                        draft={draft}
+                        onDraft={setDraft}
+                        onSubmit={submit}
+                        onCancel={() => setAddingTo(null)}
+                        accent={accent}
+                        inCard
+                      />
+                    </View>
+                  ) : null}
+                </Fragment>
               );
             })}
           </View>
@@ -428,6 +477,14 @@ export function SubProjects(p: {
           )}
         </ListCard>
       )}
+
+      <RowDialogs
+        repo={p.repo}
+        all={p.all}
+        action={rowAction}
+        onClose={() => setRowAction(null)}
+        changed={p.changed}
+      />
 
       {notice ? (
         <View
@@ -588,62 +645,6 @@ const labTool = (on: string | null) => ({
   justifyContent: 'center' as const,
   backgroundColor: on ? `${on}22` : 'transparent',
 });
-
-function AddInput(p: {
-  draft: string;
-  onDraft: (s: string) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  accent: string;
-  inCard?: boolean;
-}) {
-  const th = useTheme();
-  const { t } = useTranslation();
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        padding: 12,
-        flexBasis: '100%',
-        backgroundColor: p.inCard ? undefined : th.surface,
-        borderRadius: 14,
-      }}
-    >
-      <PjIcon name="plus" color={p.accent} size={20} width={2} />
-      <TextInput
-        testID="proj-sub-input"
-        autoFocus
-        value={p.draft}
-        onChangeText={p.onDraft}
-        onSubmitEditing={p.onSubmit}
-        onBlur={() => !p.draft.trim() && p.onCancel()}
-        returnKeyType="done"
-        placeholder={t('progetti.nome_nuovo_sotto')}
-        placeholderTextColor={th.text3}
-        style={{ flex: 1, color: th.text, fontSize: 16, paddingVertical: 8 }}
-      />
-      <Pressable
-        testID="proj-sub-add"
-        accessibilityRole="button"
-        accessibilityLabel={t('progetti.aggiungi')}
-        disabled={!p.draft.trim()}
-        onPress={p.onSubmit}
-        style={{
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          borderRadius: 999,
-          backgroundColor: p.draft.trim() ? p.accent : th.surface2,
-        }}
-      >
-        <Text style={{ color: p.draft.trim() ? '#fff' : th.text3, fontWeight: '700' }}>
-          {t('progetti.aggiungi')}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
 
 /** Una scheda della griglia (pr-grid-card del sito): pallino col colore, nome, scadenza, barra dei sotto-progetti fatti, tempo. */
 function GridCard(p: { kid: Project; all: Project[]; secs: number; onOpen: () => void }) {

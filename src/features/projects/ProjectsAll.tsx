@@ -7,16 +7,23 @@ import { human } from '@/features/pomodoro/logic';
 import { titleStyle } from '@/ui/kit';
 import { localToday } from '@/features/tasks/groups';
 
+import { ActionSwipe } from './ActionSwipe';
+import { AddInput } from './AddInput';
 import { PjIcon } from './PjIcons';
 import { Lab, ListCard, RowLine } from './PjParts';
 import type { Project, TreeRow } from './logic';
 import { dateLabel, metaLine, progressOf } from './pjFormat';
+import type { ProjectsRepo } from './repo';
+import { RowDialogs, type RowAction } from './RowDialogs';
 
 /**
  * «Tutti» › «Elenco» (progetti.php, vista `all`): i preferiti, poi i progetti principali con la barra di quanti
  * sotto-progetti sono fatti e il tempo di concentrazione, e in fondo «Nuovo progetto».
  */
 export function ProjectsAll({
+  repo,
+  all,
+  changed,
   roots,
   favorites,
   totals,
@@ -24,22 +31,36 @@ export function ProjectsAll({
   onOpen,
   onCreate,
 }: {
+  repo: ProjectsRepo;
+  all: Project[];
+  changed: () => void;
   roots: TreeRow[];
   favorites: Project[];
   totals: ReadonlyMap<string, number>;
   showTags: boolean;
   onOpen: (uuid: string) => void;
-  onCreate: (name: string) => boolean;
+  /** crea un progetto (di `parent`, se dato: «Aggiungi dentro» di una riga) */
+  onCreate: (name: string, parent?: string) => boolean;
 }) {
   const th = useTheme();
   const { t } = useTranslation();
   const today = localToday();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
+  const [swiped, setSwiped] = useState<string | null>(null);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [rowAction, setRowAction] = useState<RowAction>(null);
+  const [inner, setInner] = useState('');
   const submit = () => {
     if (onCreate(draft)) {
       setDraft('');
       setAdding(false);
+    }
+  };
+  const submitInner = () => {
+    if (addingTo && onCreate(inner, addingTo)) {
+      setInner('');
+      setAddingTo(null);
     }
   };
 
@@ -134,76 +155,102 @@ export function ProjectsAll({
           return (
             <View key={p.uuid}>
               {i ? <RowLine inset={44} /> : null}
-              <Pressable
-                testID={`proj-row-${p.uuid}`}
-                accessibilityRole="button"
-                onPress={() => onOpen(p.uuid)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  paddingVertical: 10,
-                  paddingLeft: 14,
-                  paddingRight: 14,
-                  minHeight: 63,
+              <ActionSwipe
+                id={p.uuid}
+                open={swiped === p.uuid}
+                onOpenChange={(on) => setSwiped(on ? p.uuid : null)}
+                onAdd={() => {
+                  setInner('');
+                  setAddingTo(p.uuid);
                 }}
+                onMove={() => setRowAction({ kind: 'move', id: p.uuid })}
+                onDelete={() => setRowAction({ kind: 'delete', id: p.uuid })}
               >
-                <View
-                  style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: p.color }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      color: p.status === 'completed' ? th.text2 : th.text,
-                      fontSize: 16,
-                      lineHeight: 22,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {p.name}
-                  </Text>
-                  {meta ? (
-                    <Text style={{ color: th.text2, fontSize: 12.5, lineHeight: 20 }}>{meta}</Text>
-                  ) : null}
-                  {r.total || p.status === 'completed' ? (
-                    <View
+                <Pressable
+                  testID={`proj-row-${p.uuid}`}
+                  accessibilityRole="button"
+                  onPress={() => onOpen(p.uuid)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    paddingVertical: 10,
+                    paddingLeft: 14,
+                    paddingRight: 14,
+                    minHeight: 63,
+                  }}
+                >
+                  <View
+                    style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: p.color }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      numberOfLines={1}
                       style={{
-                        height: 4,
-                        borderRadius: 99,
-                        backgroundColor: th.surface2,
-                        marginTop: 8,
-                        overflow: 'hidden',
+                        color: p.status === 'completed' ? th.text2 : th.text,
+                        fontSize: 16,
+                        lineHeight: 22,
+                        fontWeight: '600',
                       }}
                     >
+                      {p.name}
+                    </Text>
+                    {meta ? (
+                      <Text style={{ color: th.text2, fontSize: 12.5, lineHeight: 20 }}>
+                        {meta}
+                      </Text>
+                    ) : null}
+                    {r.total || p.status === 'completed' ? (
                       <View
                         style={{
-                          width: `${Math.round(fill * 100)}%`,
                           height: 4,
                           borderRadius: 99,
-                          backgroundColor: p.color,
+                          backgroundColor: th.surface2,
+                          marginTop: 8,
+                          overflow: 'hidden',
                         }}
-                      />
-                    </View>
-                  ) : null}
+                      >
+                        <View
+                          style={{
+                            width: `${Math.round(fill * 100)}%`,
+                            height: 4,
+                            borderRadius: 99,
+                            backgroundColor: p.color,
+                          }}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={{ alignItems: 'flex-end', minWidth: 33, alignSelf: 'flex-start' }}>
+                    <Text
+                      style={{
+                        color: secs ? th.text : th.text2,
+                        fontSize: 14.5,
+                        lineHeight: 22,
+                        fontWeight: '600',
+                        fontVariant: ['tabular-nums'],
+                      }}
+                    >
+                      {secs ? human(secs) : '–'}
+                    </Text>
+                    <Text style={{ color: th.text2, fontSize: 10, lineHeight: 20 }}>
+                      {t('progetti.in_tutto')}
+                    </Text>
+                  </View>
+                </Pressable>
+              </ActionSwipe>
+              {addingTo === p.uuid ? (
+                <View style={{ paddingLeft: 14 }}>
+                  <AddInput
+                    draft={inner}
+                    onDraft={setInner}
+                    onSubmit={submitInner}
+                    onCancel={() => setAddingTo(null)}
+                    accent={p.color}
+                    inCard
+                  />
                 </View>
-                <View style={{ alignItems: 'flex-end', minWidth: 33, alignSelf: 'flex-start' }}>
-                  <Text
-                    style={{
-                      color: secs ? th.text : th.text2,
-                      fontSize: 14.5,
-                      lineHeight: 22,
-                      fontWeight: '600',
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    {secs ? human(secs) : '–'}
-                  </Text>
-                  <Text style={{ color: th.text2, fontSize: 10, lineHeight: 20 }}>
-                    {t('progetti.in_tutto')}
-                  </Text>
-                </View>
-              </Pressable>
+              ) : null}
             </View>
           );
         })}
@@ -245,6 +292,13 @@ export function ProjectsAll({
           <NewLine onPress={() => setAdding(true)} />
         )}
       </ListCard>
+      <RowDialogs
+        repo={repo}
+        all={all}
+        action={rowAction}
+        onClose={() => setRowAction(null)}
+        changed={changed}
+      />
     </View>
   );
 }

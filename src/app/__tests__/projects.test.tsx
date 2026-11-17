@@ -704,3 +704,140 @@ describe('Projects › dragging a row', () => {
     expect(order(projects, a)).toEqual(['Kid 1', 'Kid 2', 'Kid 3']);
   });
 });
+
+/* ---- scorrere una riga: i tasti nascosti (Aggiungi dentro, Sposta, Elimina) ---- */
+let lastX = 100;
+const touchX = (x: number, active = true) => {
+  clock += 1;
+  const before = lastX;
+  lastX = x;
+  const t = { pageX: x, pageY: 30, identifier: 0, timestamp: clock, locationX: 0, locationY: 0 };
+  return {
+    nativeEvent: { touches: active ? [t] : [], changedTouches: [t], pageX: x, pageY: 30 },
+    touchHistory: {
+      touchBank: [
+        {
+          touchActive: active,
+          startPageX: 100,
+          startPageY: 30,
+          startTimeStamp: 1,
+          currentPageX: x,
+          currentPageY: 30,
+          currentTimeStamp: clock,
+          previousPageX: before,
+          previousPageY: 30,
+          previousTimeStamp: clock - 1,
+        },
+      ],
+      numberActiveTouches: active ? 1 : 0,
+      indexOfSingleActiveTouch: active ? 0 : -1,
+      mostRecentTimeStamp: clock,
+    },
+  } as never;
+};
+/** Trascinare la riga `id` di `dx` punti verso destra e lasciarla. */
+const swipe = async (id: string, dx: number) => {
+  const h = screen.getByTestId(`swipe-pan-${id}`).props as Handlers;
+  lastX = 100;
+  await act(async () => {
+    // il capture aggiorna il gesto (come fa il telefono prima di chiedere «lo prendo io?»)
+    h.onMoveShouldSetResponderCapture!(touchX(100));
+    const end = touchX(100 + dx);
+    h.onMoveShouldSetResponderCapture!(end);
+    expect(h.onMoveShouldSetResponder!(end)).toBe(true);
+    h.onResponderGrant!(touchX(100));
+    h.onResponderMove!(touchX(100 + dx));
+    h.onResponderRelease!(touchX(100 + dx, false));
+  });
+};
+
+describe('Projects › swiping a row', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const kids = () => {
+    const s = setup();
+    const a = s.projects.create({ name: 'Alpha' })!;
+    const k1 = s.projects.create({ name: 'Kid 1', parent: a, position: 'last' })!;
+    const k2 = s.projects.create({ name: 'Kid 2', parent: a, position: 'last' })!;
+    mockParams = { id: a };
+    return { ...s, a, k1, k2 };
+  };
+
+  test('a short swipe springs back, a long one stays open; a tap on the open row only closes it', async () => {
+    const { k1 } = kids();
+    await renderPage();
+    await swipe(k1, 40);
+    expect(screen.queryByTestId(`swipe-close-${k1}`)).toBeNull();
+    await swipe(k1, 150);
+    expect(screen.getByTestId(`swipe-close-${k1}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`swipe-close-${k1}`));
+    expect(screen.queryByTestId(`swipe-close-${k1}`)).toBeNull();
+    expect(mockParams.id).toBeTruthy();
+  });
+
+  test('only one row is open at a time', async () => {
+    const { k1, k2 } = kids();
+    await renderPage();
+    await swipe(k1, 150);
+    await swipe(k2, 150);
+    expect(screen.queryByTestId(`swipe-close-${k1}`)).toBeNull();
+    expect(screen.getByTestId(`swipe-close-${k2}`)).toBeTruthy();
+  });
+
+  test('«Add inside» opens the field under that row and creates a child of it', async () => {
+    const { projects, k1 } = kids();
+    await renderPage();
+    await swipe(k1, 150);
+    await fireEvent.press(screen.getByTestId(`swipe-add-${k1}`));
+    await fireEvent.changeText(screen.getByTestId('proj-sub-input'), 'Deep one');
+    await fireEvent.press(screen.getByTestId('proj-sub-add'));
+    const made = projects.all().find((x) => x.name === 'Deep one');
+    expect(made?.parent_uuid).toBe(k1);
+  });
+
+  test('«Move» sends it to the top level', async () => {
+    const { projects, k1 } = kids();
+    await renderPage();
+    await swipe(k1, 150);
+    await fireEvent.press(screen.getByTestId(`swipe-move-${k1}`));
+    await fireEvent.press(screen.getByTestId('project-pick-root'));
+    expect(projects.get(k1)?.parent_uuid).toBeNull();
+  });
+
+  test('«Delete» asks first; Cancel keeps the project, Delete removes it', async () => {
+    const { projects, k1 } = kids();
+    await renderPage();
+    await swipe(k1, 150);
+    await fireEvent.press(screen.getByTestId(`swipe-delete-${k1}`));
+    await fireEvent.press(screen.getByTestId('row-delete-cancel'));
+    expect(projects.get(k1)).not.toBeNull();
+    await swipe(k1, 150);
+    await fireEvent.press(screen.getByTestId(`swipe-delete-${k1}`));
+    await fireEvent.press(screen.getByTestId('row-delete-yes'));
+    expect(projects.get(k1)).toBeNull();
+  });
+
+  test('with pomodoros linked it asks what to do with them', async () => {
+    const { projects, pomodoro, k1 } = kids();
+    pomodoro.addManual({ day: '2030-01-01', from: '09:00', to: '09:30', projectUuid: k1 });
+    await renderPage();
+    await swipe(k1, 150);
+    await fireEvent.press(screen.getByTestId(`swipe-delete-${k1}`));
+    await fireEvent.press(screen.getByTestId('row-delete-keep'));
+    await fireEvent.press(screen.getByTestId('row-delete-yes'));
+    expect(projects.get(k1)).toBeNull();
+    expect(projects.sessionCount([k1])).toBe(0);
+  });
+
+  test('on the main list too: «Add inside» a top-level project', async () => {
+    const s = setup();
+    const a = s.projects.create({ name: 'Alpha' })!;
+    await renderPage();
+    await swipe(a, 150);
+    await fireEvent.press(screen.getByTestId(`swipe-add-${a}`));
+    await fireEvent.changeText(screen.getByTestId('proj-sub-input'), 'First kid');
+    await fireEvent.press(screen.getByTestId('proj-sub-add'));
+    expect(s.projects.all().find((x) => x.name === 'First kid')?.parent_uuid).toBe(a);
+  });
+});

@@ -180,12 +180,15 @@ export default function ProjectsScreen() {
               />
               {allTab === 'list' ? (
                 <ProjectsAll
+                  repo={repo}
+                  all={all}
+                  changed={changed}
                   roots={roots}
                   favorites={favorites}
                   totals={totals}
                   showTags={showTags}
                   onOpen={open}
-                  onCreate={(name) => create(name, null)}
+                  onCreate={(name, parent) => create(name, parent ?? null)}
                 />
               ) : (
                 <PlanPanel
@@ -261,7 +264,7 @@ export default function ProjectsScreen() {
                   onOpen={(k) => open(k.uuid)}
                   onStart={(k) => startPomodoro(k.uuid)}
                   onCycle={cycle}
-                  onAdd={(name) => create(name, me.uuid)}
+                  onAdd={(name, parent) => create(name, parent ?? me.uuid)}
                   changed={changed}
                   totals={totals}
                   view={data.subView}
