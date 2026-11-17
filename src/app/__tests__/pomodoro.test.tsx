@@ -11,7 +11,10 @@ import { TasksRepo } from '@/features/tasks/repo';
 import { upsertRow } from '@/core/sync/rows';
 import { stamp } from '@/features/pomodoro/logic';
 
-import PomodoroScreen, { ErrorBoundary as PomodoroBoundary } from '../(tabs)/pomodoro';
+import GatedPomodoro, {
+  ErrorBoundary as PomodoroBoundary,
+  PomodoroPage as PomodoroScreen,
+} from '../(tabs)/pomodoro';
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -29,6 +32,17 @@ let mockParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: mockBack, push: jest.fn() }),
   useLocalSearchParams: () => mockParams,
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const { useEffect } = jest.requireActual('react');
+    useEffect(cb, [cb]);
+  },
+}));
+jest.mock('expo-updates', () => ({
+  updateId: 'test-update',
+  runtimeVersion: '1',
+  channel: 'main',
+  isEmbeddedLaunch: false,
+  createdAt: new Date('2026-11-17T20:00:00Z'),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -74,6 +88,48 @@ describe('Pomodoro screen', () => {
     jest.useFakeTimers({ doNotFake: ['Date'] });
   });
   afterEach(() => jest.useRealTimers());
+
+  test('the route opens on the diagnostics screen, with the session in it, and then the page', async () => {
+    const { pomodoro } = setup();
+    pomodoro.start({ mode: 0, plannedMin: 25 });
+    await render(
+      <ThemeProvider>
+        <GatedPomodoro />
+      </ThemeProvider>,
+    );
+    expect(screen.queryByTestId('pomodoro-clock')).toBeNull();
+    const text = screen.getByTestId('gate-report').props.children as string;
+    expect(text).toContain('STANDOUT POMODORO REPORT');
+    expect(text).toContain('"planned_duration_min": 25');
+    expect(text).toContain('test-update');
+    expect(text).toContain('Pomodoro route focused');
+    await fireEvent.press(screen.getByTestId('gate-open'));
+    expect(screen.getByTestId('pomodoro-clock')).toBeTruthy();
+  });
+
+  test('the steps of a stop-and-break are written down, and the switches reach the page', async () => {
+    const { pomodoro, db } = setup();
+    const id = pomodoro.start({ mode: 0, plannedMin: 25 })!;
+    db.run('UPDATE pomodoro_sessions SET start_time = ? WHERE uuid = ?', [
+      stamp(new Date(Date.now() - 10 * 60 * 1000)),
+      id,
+    ]);
+    await render(
+      <ThemeProvider>
+        <GatedPomodoro />
+      </ThemeProvider>,
+    );
+    await fireEvent.press(screen.getByTestId('gate-flag-noScene'));
+    await fireEvent.press(screen.getByTestId('gate-open'));
+    await fireEvent.press(screen.getByTestId('pomodoro-stop'));
+    await fireEvent.press(screen.getByTestId('stop-choice-break'));
+    expect(screen.queryByTestId('break-scene')).toBeNull();
+    const { readLog } = jest.requireActual('@/features/pomodoro/debugLog');
+    const log = readLog().join('\n');
+    expect(log).toContain('stop choice: break');
+    expect(log).toContain('startBreak: scheduling alarm');
+    expect(log).toContain('finishSession: end');
+  });
 
   test('the Pomodoro route shows its own error screen instead of closing the app', async () => {
     await render(<PomodoroBoundary error={new Error('x')} retry={() => undefined} />);

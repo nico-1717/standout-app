@@ -14,6 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
+import { logStep } from './debugLog';
+
 /**
  * La scena della pausa (portata da `pausa_scena.php` del sito): un disegno a matita all'aperto, con il sole che
  * respira, un albero, tre ciuffi d'erba, due uccelli, un'ape, una farfalla e una persona con la tisana (il vapore sale).
@@ -95,6 +97,10 @@ export function BreakScene({
 }) {
   const still = useReducedMotion();
   const k = width / 320;
+  useEffect(() => {
+    logStep('BreakScene mounted');
+    return () => logStep('BreakScene unmounted');
+  }, []);
   const sun = useLoop(7000, still, { yoyo: true });
   const rays = useLoop(22000, still, { linear: true });
   const steam1 = useLoop(2500, still);

@@ -33,6 +33,8 @@ import { ProjectSheet } from '@/features/projects/ProjectSheet';
 import { Avatar } from '@/ui/Avatar';
 import { Card, titleStyle } from '@/ui/kit';
 import { ScreenError } from '@/ui/ScreenError';
+import { DebugGate } from '@/features/pomodoro/DebugGate';
+import { logChange, logStep, readFlags, NO_FLAGS } from '@/features/pomodoro/debugLog';
 
 /** Parte da solo una volta (dal Piano: «ogni giorno» → Avvia il timer). */
 function AutoStart({ go }: { go: () => void }) {
@@ -48,10 +50,20 @@ function AutoStart({ go }: { go: () => void }) {
 /** Il Pomodoro: timer a tempo o cronometro, pausa, progetto, e la pausa dopo lo studio (pomodoro.php). */
 /** Se la pagina si rompe, mostra l'errore invece di chiudere l'app. */
 export function ErrorBoundary(p: { error: Error; retry: () => unknown }) {
+  logStep(`ErrorBoundary: ${p.error?.message ?? String(p.error)}`);
   return <ScreenError error={p.error} retry={p.retry} />;
 }
 
+/** La pagina vera si apre dopo la schermata di diagnostica (si vedono lo stato e gli ultimi passi). */
 export default function PomodoroScreen() {
+  return (
+    <DebugGate>
+      <PomodoroPage />
+    </DebugGate>
+  );
+}
+
+export function PomodoroPage() {
   const th = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
@@ -88,6 +100,7 @@ export default function PomodoroScreen() {
   /** cosa si fa dopo aver chiuso la sessione: la pausa o niente */
   const [thenBreak, setThenBreak] = useState(false);
   const [noteTasks, setNoteTasks] = useState<string[]>([]);
+  const flags = useMemo(() => (services ? readFlags(services.db) : NO_FLAGS), [services]);
 
   const data = useMemo(() => {
     void version;
@@ -112,6 +125,7 @@ export default function PomodoroScreen() {
       if (!services) return;
       const p = services.pomodoro;
       if (p.closeStale()) {
+        logStep('tick: closed a stale session');
         changed();
         return;
       }
@@ -119,6 +133,7 @@ export default function PomodoroScreen() {
       if (s && s.status !== 'pausa') {
         const left = remainingSeconds(s, nowMs);
         if (left !== null && left <= 0 && p.complete(s.uuid)) {
+          logStep('tick: timer reached zero, session completed');
           void cancelAlarm();
           changed();
         }
@@ -152,6 +167,7 @@ export default function PomodoroScreen() {
   };
 
   const start = async () => {
+    logStep('start pressed');
     void askPermission();
     const id = services.pomodoro.start({
       mode,
@@ -166,17 +182,21 @@ export default function PomodoroScreen() {
     changed();
   };
   const pause = (s: Session) => {
+    logStep('pause pressed');
     services.pomodoro.pause(s.uuid);
     void cancelAlarm();
     changed();
   };
   const resume = (s: Session) => {
+    logStep('resume pressed');
     services.pomodoro.resume(s.uuid);
     armAlarm(services.pomodoro.get(s.uuid));
     changed();
   };
   const startBreak = (min: number) => {
+    logStep(`startBreak(${min}): begin`);
     void askPermission();
+    logStep('startBreak: updating settings');
     updatePomodoroSettings({
       last_break_duration_min: min,
       current_break: {
@@ -188,13 +208,16 @@ export default function PomodoroScreen() {
         project_uuid: null,
       },
     });
+    logStep('startBreak: scheduling alarm');
     void scheduleAlarm(new Date(Date.now() + min * 60000), {
       channel: t('pomodoro.timer'),
       title: t('pomodoro.pausa_finita'),
       body: t('pomodoro.torna_al_lavoro'),
     });
+    logStep('startBreak: done');
   };
   const endBreak = () => {
+    logStep('endBreak pressed');
     updatePomodoroSettings({ current_break: null });
     void cancelAlarm();
   };
@@ -204,15 +227,21 @@ export default function PomodoroScreen() {
   };
   /** Chiude la sessione (salvata, o scartata se `drop`) e dice com'è andata; `poi` = subito la pausa (doInterrompi). */
   const finishSession = (s: Session, drop: boolean, poi: boolean) => {
+    logStep(`finishSession: drop=${drop} thenBreak=${poi}`);
     services.pomodoro.stop(s.uuid, drop);
+    logStep('finishSession: stopped in db');
     void cancelAlarm();
     closePopup();
+    logStep('finishSession: popup closed');
     changed();
     toast.show(t(drop ? 'pomodoro.sessione_scartata' : 'pomodoro.sessione_salvata'));
+    logStep('finishSession: toast shown');
     if (poi) startBreak(breakMin);
+    logStep('finishSession: end');
   };
   /** «Interrompi»: sotto il minuto si butta senza chiedere; altrimenti si sceglie cosa farne (onInterrompiClick). */
   const askStop = (s: Session) => {
+    logStep('stop pressed');
     if (elapsedSeconds(s, Date.now()) < 60) {
       finishSession(s, true, false);
       return;
@@ -220,6 +249,7 @@ export default function PomodoroScreen() {
     setPopup('stop');
   };
   const onStopChoice = (s: Session, key: string | null) => {
+    logStep(`stop choice: ${key}`);
     if (!key) {
       closePopup();
       return;
@@ -268,6 +298,8 @@ export default function PomodoroScreen() {
       : done
         ? 'done'
         : 'idle';
+  const logKey = `state=${state} popup=${popup} glass=${pomodoroSettings.last_display_style}`;
+  logChange(`render ${logKey}`);
   const shownProject = active ? active.project_uuid : done && !brk ? done.project_uuid : project;
   const projectColor = colorOf(shownProject);
   const accent = state === 'break' ? th.teal : (projectColor ?? NEUTRAL_ACCENT[th.scheme]);
@@ -407,6 +439,10 @@ export default function PomodoroScreen() {
     sub = mode === 0 ? t('pomodoro.pausa_di', { minuti: breakMin }) : undefined;
   }
 
+  if (flags.noFx) {
+    glow = false;
+    spark = false;
+  }
   fraction = Number.isFinite(fraction) ? Math.max(0, Math.min(1, fraction)) : 0;
 
   const dialPress = state === 'idle' && mode === 0 ? () => setDurOpen(true) : undefined;
@@ -869,7 +905,7 @@ export default function PomodoroScreen() {
 
         {brk ? (
           <View style={{ alignItems: 'center', gap: 8 }}>
-            <BreakScene color={th.text} accent={th.teal} />
+            {flags.noScene ? null : <BreakScene color={th.text} accent={th.teal} />}
             {!brkOver ? (
               <Text testID="break-tip" style={{ color: th.text2, textAlign: 'center' }}>
                 {t(`pomodoro.pausa_consiglio_${breakTipIndex(brk.start_time)}`)}

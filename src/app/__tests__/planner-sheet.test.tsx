@@ -96,6 +96,32 @@ const open = async () => {
 };
 
 describe('Event sheet, as on the website', () => {
+  // la scheda parte da «adesso»: si ferma l'orologio alle 9 così il risultato non dipende dall'ora in cui girano i test
+  beforeEach(() =>
+    jest.useFakeTimers({
+      now: (() => {
+        const d = new Date();
+        d.setHours(9, 0, 0, 0);
+        return d;
+      })(),
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'performance',
+        'hrtime',
+      ],
+    }),
+  );
+  afterEach(() => jest.useRealTimers());
+
   test('the duration lock cycles auto → locked → open → auto', async () => {
     setup();
     await open();
