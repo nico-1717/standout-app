@@ -1,0 +1,18 @@
+name: EAS info
+on:
+  workflow_dispatch:
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: eas build:list --platform ios --limit 12 --json --non-interactive | jq -r '.[]|[.createdAt,.status,.buildProfile,(.error.message // "")]|@tsv'
