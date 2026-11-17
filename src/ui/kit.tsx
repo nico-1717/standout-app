@@ -258,3 +258,14 @@ export function bigNumber(th: Pick<Theme, 'display'>, size: number): TextStyle {
     ? { fontSize: size, fontFamily: th.display, letterSpacing: -0.8, fontVariant: ['tabular-nums'] }
     : { fontSize: size, fontWeight: '800', fontVariant: ['tabular-nums'] };
 }
+
+/** Il testo di un titolo (di pagina, di scheda): serif sottile in Calm paper, grassetto in Glass. */
+export function titleStyle(
+  th: Pick<Theme, 'display'>,
+  size: number,
+  weight: TextStyle['fontWeight'] = '800',
+): TextStyle {
+  return th.display
+    ? { fontSize: Math.round(size * 1.3), fontFamily: th.display, letterSpacing: -0.5 }
+    : { fontSize: size, fontWeight: weight, letterSpacing: -size * 0.02 };
+}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { human } from '@/features/pomodoro/logic';
+import { titleStyle } from '@/ui/kit';
 import { localToday } from '@/features/tasks/groups';
 
 import { PjIcon } from './PjIcons';
@@ -46,7 +47,7 @@ export function ProjectsAll({
     return (
       <View style={{ gap: 14 }}>
         <View style={{ padding: 28, alignItems: 'center', gap: 6 }}>
-          <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+          <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
             {t('progetti.nessun_progetto_ancora')}
           </Text>
           <Text style={{ color: th.text2, textAlign: 'center' }}>

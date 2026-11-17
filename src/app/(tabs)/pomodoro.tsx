@@ -30,7 +30,7 @@ import { TasksNote } from '@/features/pomodoro/TasksNote';
 import { useTicker } from '@/features/pomodoro/useTicker';
 import { ProjectSheet } from '@/features/projects/ProjectSheet';
 import { Avatar } from '@/ui/Avatar';
-import { Card, PrimaryButton, TextButton } from '@/ui/kit';
+import { Card, PrimaryButton, TextButton, titleStyle } from '@/ui/kit';
 
 /** Parte da solo una volta (dal Piano: «ogni giorno» → Avvia il timer). */
 function AutoStart({ go }: { go: () => void }) {
@@ -288,9 +288,10 @@ export default function PomodoroScreen() {
           testID="pomodoro-clock"
           style={{
             color: o.timeColor ?? th.text,
-            fontSize: 54,
+            fontSize: th.display ? 60 : 54,
             lineHeight: 58,
-            fontWeight: '700',
+            fontWeight: th.display ? undefined : '700',
+            fontFamily: th.display,
             letterSpacing: -1.6,
             fontVariant: ['tabular-nums'],
           }}
@@ -386,7 +387,7 @@ export default function PomodoroScreen() {
       <Card style={{ padding: 16, gap: 10 }}>
         {short ? (
           <>
-            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+            <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
               {t('pomodoro.molto_breve')}
             </Text>
             <Text style={{ color: th.text2 }}>{t('pomodoro.molto_breve_testo')}</Text>
@@ -405,7 +406,7 @@ export default function PomodoroScreen() {
           </>
         ) : discarding ? (
           <>
-            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+            <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
               {t('pomodoro.scarta_titolo')}
             </Text>
             <Text style={{ color: th.text2 }}>{t('pomodoro.scarta_testo')}</Text>
@@ -419,7 +420,7 @@ export default function PomodoroScreen() {
           </>
         ) : (
           <>
-            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
+            <Text style={[{ color: th.text }, titleStyle(th, 17, '700')]}>
               {t('pomodoro.scelta_stop_titolo')}
             </Text>
             <Text style={{ color: th.text2 }}>{t('pomodoro.scelta_stop_testo')}</Text>
@@ -571,10 +572,7 @@ export default function PomodoroScreen() {
         >
           <Text style={{ color: th.text, fontSize: 20, lineHeight: 22, fontWeight: '600' }}>‹</Text>
         </Pressable>
-        <Text
-          accessibilityRole="header"
-          style={{ flex: 1, color: th.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.7 }}
-        >
+        <Text accessibilityRole="header" style={[{ flex: 1, color: th.text }, titleStyle(th, 21)]}>
           Pomodoro
         </Text>
         <Pressable

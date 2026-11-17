@@ -11,7 +11,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { LearnedCard } from '@/features/flashcards/LearnedCard';
 import { hubSummary, type HubCourse } from '@/features/flashcards/hub';
 import type { OpenGame } from '@/features/flashcards/homeCards';
-import { HoIcon, hoTheme, type Ho, type HoIconName } from '@/features/home/HomeKit';
+import { HoIcon, hoTheme, hoTitle, type Ho, type HoIconName } from '@/features/home/HomeKit';
 import { localToday } from '@/features/tasks/groups';
 import { Avatar } from '@/ui/Avatar';
 
@@ -144,7 +144,7 @@ function CourseRow({
       >
         <Text style={{ fontSize: 34 }}>{c.flag}</Text>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: ho.text, fontSize: 17, fontWeight: '800' }}>{c.name}</Text>
+          <Text style={[{ color: ho.text }, hoTitle(ho, 17)]}>{c.name}</Text>
           <Text style={{ color: ho.text2, fontSize: 13 }}>
             {c.words} {t(c.words === 1 ? 'fchub.parola' : 'fchub.parole')} · {c.pct}%{' '}
             {t('fchub.imparate')}
@@ -299,10 +299,7 @@ export default function FlashcardsHub() {
         }}
       >
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            accessibilityRole="header"
-            style={{ color: ho.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.42 }}
-          >
+          <Text accessibilityRole="header" style={[{ color: ho.text }, hoTitle(ho, 21)]}>
             {t('fchub.home_titolo')}
           </Text>
           <Text
@@ -348,11 +345,7 @@ export default function FlashcardsHub() {
           >
             {tile(ho.blue, 'cap')}
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                style={{ color: ho.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 }}
-              >
-                {t('fchub.studio')}
-              </Text>
+              <Text style={[{ color: ho.text }, hoTitle(ho, 21)]}>{t('fchub.studio')}</Text>
               <Text
                 style={{ color: ho.text2, fontSize: 13.5, fontWeight: '500' }}
                 numberOfLines={1}
@@ -417,11 +410,7 @@ export default function FlashcardsHub() {
               tile(ho.orange, 'globe')
             )}
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                style={{ color: ho.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 }}
-              >
-                {t('fchub.lingue')}
-              </Text>
+              <Text style={[{ color: ho.text }, hoTitle(ho, 21)]}>{t('fchub.lingue')}</Text>
               <Text
                 style={{ color: ho.text2, fontSize: 13.5, fontWeight: '500' }}
                 numberOfLines={1}
@@ -551,9 +540,7 @@ export default function FlashcardsHub() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: ho.text, fontSize: 20, fontWeight: '800' }}>
-                    {hub.numbers.streak}
-                  </Text>
+                  <Text style={[{ color: ho.text }, hoTitle(ho, 20)]}>{hub.numbers.streak}</Text>
                   <Text style={{ color: ho.text2, fontSize: 12.5 }}>
                     {t(hub.numbers.streak === 1 ? 'fchub.giorno_di_fila' : 'fchub.giorni_di_fila')}
                   </Text>
@@ -573,9 +560,7 @@ export default function FlashcardsHub() {
                   <HoIcon name="target" size={19} color={ho.green} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: ho.text, fontSize: 20, fontWeight: '800' }}>
-                    {hub.numbers.accuracy}%
-                  </Text>
+                  <Text style={[{ color: ho.text }, hoTitle(ho, 20)]}>{hub.numbers.accuracy}%</Text>
                   <Text style={{ color: ho.text2, fontSize: 12.5 }}>
                     {t('fchub.precisione_30')}
                   </Text>

@@ -26,7 +26,7 @@ import {
 } from '@/features/flashcards/logic';
 import { localToday } from '@/features/tasks/groups';
 import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
-import { HoIcon, hoTheme } from '@/features/home/HomeKit';
+import { HoIcon, hoTheme, hoTitle } from '@/features/home/HomeKit';
 
 /** Le categorie delle flashcard di studio ad albero (fc_decks.php): materie, sottocategorie, archivio, ricerca. */
 export default function FlashcardsScreen() {
@@ -371,7 +371,7 @@ export default function FlashcardsScreen() {
             <Text
               accessibilityRole="header"
               numberOfLines={1}
-              style={{ color: ho.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}
+              style={[{ color: ho.text }, hoTitle(ho, 24)]}
             >
               {t('vocab.cat_categorie')}
             </Text>
@@ -795,7 +795,7 @@ export default function FlashcardsScreen() {
             >
               <HoIcon name="folder" color={ho.blue} size={30} />
             </View>
-            <Text style={{ color: ho.text, fontWeight: '800', fontSize: 22, letterSpacing: -0.4 }}>
+            <Text style={[{ color: ho.text }, hoTitle(ho, 22)]}>
               {scope === 'active' ? t('vocab.cat_nessuna') : t('fc.cfc_archivio_vuoto')}
             </Text>
             <Text style={{ color: ho.text2, textAlign: 'center', fontSize: 15, lineHeight: 21 }}>

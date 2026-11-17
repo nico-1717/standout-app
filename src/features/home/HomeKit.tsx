@@ -39,9 +39,40 @@ export interface Ho {
   teal: string;
   pink: string;
   shadow: string;
+  /** il carattere dei titoli in Calm paper (serif); in Glass non c'è e i titoli sono in grassetto */
+  display?: string;
 }
 
+/** Lo stile di un titolo: serif sottile in Calm paper, grassetto in Glass. */
+export function hoTitle(ho: Pick<Ho, 'display'>, size: number, glass = '800' as const) {
+  return ho.display
+    ? { fontSize: size, fontFamily: ho.display, letterSpacing: -size * 0.02 }
+    : { fontSize: size, fontWeight: glass, letterSpacing: -size * 0.025 };
+}
+
+/**
+ * I colori della Home. In Glass sono quelli del sito; in Calm paper gli sfondi, i testi e le linee seguono la carta
+ * (come tutte le altre pagine) e le carte non hanno ombra, solo la linea sottile. I colori vivi restano gli stessi.
+ */
 export function hoTheme(th: Theme): Ho {
+  const base = glassTheme(th);
+  if (th.style !== 'paper') return base;
+  return {
+    ...base,
+    bg: th.bg,
+    surface: th.surface,
+    surface2: th.surface2,
+    text: th.text,
+    text2: th.text2,
+    text3: th.text3,
+    hair: th.hairline,
+    hair2: th.hairline2,
+    shadow: `0 0 0 0.5px ${th.cardEdge}`,
+    display: th.display,
+  };
+}
+
+function glassTheme(th: Theme): Ho {
   const dark = th.scheme === 'dark';
   return dark
     ? {
@@ -250,14 +281,14 @@ export function HoHeader({
           <Text
             testID="home-greeting"
             accessibilityRole="header"
-            style={{
-              color: ho.text,
-              marginTop: 2,
-              fontSize: 26,
-              lineHeight: 28.6,
-              fontWeight: '800',
-              letterSpacing: -0.65,
-            }}
+            style={[
+              {
+                color: ho.text,
+                marginTop: 2,
+                lineHeight: ho.display ? 34 : 28.6,
+              },
+              hoTitle(ho, ho.display ? 30 : 26),
+            ]}
           >
             {hello}
           </Text>
@@ -436,13 +467,7 @@ export function HoWidget({
           ) : null}
           <Text
             numberOfLines={1}
-            style={{
-              flex: 1,
-              color: ho.text,
-              fontSize: 17,
-              fontWeight: '800',
-              letterSpacing: -0.17,
-            }}
+            style={[{ flex: 1, color: ho.text }, hoTitle(ho, ho.display ? 20 : 17)]}
           >
             {title}
           </Text>

@@ -17,7 +17,7 @@ import {
   learnChoices,
 } from '@/features/languages/langs';
 import type { Course, CourseError } from '@/features/languages/repo';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Card, Header, PrimaryButton, SectionLabel, TextButton, titleStyle } from '@/ui/kit';
 
 const ERROR_KEY: Record<CourseError, string> = {
   languages: 'fchub.err_lingua',
@@ -134,7 +134,7 @@ export default function LanguagesScreen() {
         >
           <Text style={{ fontSize: 34 }}>{langFlag(c.learn_lang)}</Text>
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ color: th.text, fontSize: 18, fontWeight: '700' }}>
+            <Text style={[{ color: th.text }, titleStyle(th, 18, '700')]}>
               {langName(c.learn_lang, ui)}
             </Text>
             <Text style={{ color: th.text2, fontSize: 12 }}>
@@ -321,7 +321,7 @@ export default function LanguagesScreen() {
           </Text>
         ) : (
           <View style={{ gap: 4, paddingTop: 8 }}>
-            <Text style={{ color: th.text, fontSize: 20, fontWeight: '700' }}>
+            <Text style={[{ color: th.text }, titleStyle(th, 20, '700')]}>
               {t('fchub.vuoto_titolo')}
             </Text>
             <Text style={{ color: th.text2 }}>
