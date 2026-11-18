@@ -47,12 +47,17 @@ jobs:
 
       - name: Build for the simulator
         run: |
+          set -o pipefail
           WORKSPACE="$(ls -d ios/*.xcworkspace | head -1)"
           SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
-          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
+          if ! xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES \
-            | tail -n 40
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO > xcodebuild.log 2>&1; then
+            echo "::group::Errors from xcodebuild"
+            grep -n -B2 -A12 -E "error:|Error:|\*\* BUILD FAILED|failed with" xcodebuild.log | head -150
+            echo "::endgroup::"
+            exit 1
+          fi
           APP="$(ls -d build/Build/Products/Release-iphonesimulator/*.app | head -1)"
           echo "APP=$APP" >> "$GITHUB_ENV"
 
@@ -81,6 +86,14 @@ jobs:
           maestro --device "$DEVICE" test "$TARGET" \
             -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \
             --test-output-dir shots --format junit --output shots/report.xml
+
+      - name: Keep the build log if the build failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
 
       - name: Keep the screenshots
         if: always()
