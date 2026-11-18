@@ -2,6 +2,10 @@ appId: app.standout.mobile
 name: A card with a very long answer scrolls in the viewer
 ---
 - runFlow: common/login.yaml
+# The bar scrolls sideways: slide it so that Flashcards shows.
+- swipe:
+    start: 85%, 92%
+    end: 15%, 92%
 - tapOn:
     id: bar-flashcards
 - takeScreenshot: 10-flashcards-hub
