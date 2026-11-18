@@ -73,6 +73,18 @@ export type DiaryAiReply = {
   libro_possibile?: boolean;
 };
 
+/** Un'ora di previsione (`ore` del sito: h ora, i icona, l descrizione, t gradi, ap percepita, p pioggia %, v vento, u umidità). */
+export interface WxHour {
+  h: string;
+  i: string;
+  l: string;
+  t: number | null;
+  ap: number | null;
+  p: number | null;
+  v: number | null;
+  u: number | null;
+}
+
 /** Un giorno di previsioni (api/v1 weather: gli stessi campi del sito). */
 export interface WxDay {
   date: string;
@@ -95,6 +107,10 @@ export interface WxDay {
   tramonto: string | null;
   sole_min: number | null;
   affidabilita: number | null;
+  /** per quante ore piove */
+  pioggia_ore: number | null;
+  /** le ore del giorno, per il grafico (vuoto se il servizio non le manda) */
+  ore: WxHour[];
 }
 
 export interface WxNow {
@@ -393,6 +409,21 @@ export function wxState(r: Record<string, unknown>): WxState {
     string,
     Record<string, unknown>
   >;
+  const hours = (v: unknown): WxHour[] =>
+    Array.isArray(v)
+      ? v
+          .filter((o): o is Record<string, unknown> => !!o && typeof o === 'object')
+          .map((o) => ({
+            h: String(o.h ?? '00:00'),
+            i: String(o.i ?? 'nubi'),
+            l: String(o.l ?? ''),
+            t: num(o.t),
+            ap: num(o.ap),
+            p: num(o.p),
+            v: num(o.v),
+            u: num(o.u),
+          }))
+      : [];
   const giorni: Record<string, WxDay> = {};
   for (const [date, d] of Object.entries(raw)) {
     giorni[date] = {
@@ -414,6 +445,8 @@ export function wxState(r: Record<string, unknown>): WxState {
       tramonto: str(d.tramonto),
       sole_min: num(d.sole_min),
       affidabilita: num(d.affidabilita),
+      pioggia_ore: num(d.pioggia_ore),
+      ore: hours(d.ore),
     };
   }
   const n = r.adesso as Record<string, unknown> | null | undefined;

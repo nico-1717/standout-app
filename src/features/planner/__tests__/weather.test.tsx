@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 
 import { plannerTheme } from '../plannerTheme';
 import { WeatherCard, WxPlacePicker, WxPopup, WxTag } from '../WeatherUi';
+import { hourIcon, WxChart } from '../WxChart';
 import { WeatherStore, wxIconName, wxTagText, wxTone, wxUvKey } from '../weather';
 
 const raw = {
@@ -39,6 +40,18 @@ const raw = {
       tramonto: '16:55',
       sole_min: 380,
       affidabilita: 95,
+      pioggia_mm: 2.4,
+      pioggia_ore: 3,
+      ore: Array.from({ length: 12 }, (_, k) => ({
+        h: `${String(6 + k).padStart(2, '0')}:00`,
+        i: k === 0 ? 'nubi' : k === 6 ? 'sole-nubi' : 'sole',
+        l: 'Clear',
+        t: k === 6 ? 13 : 5 + (k % 4),
+        ap: 3,
+        p: k === 6 ? 20 : 0,
+        v: 6,
+        u: 70,
+      })),
     },
     '2026-11-18': { code: 63, label: 'Rain', icon: 'pioggia', tmax: 10, tmin: 5, pioggia: 80 },
   },
@@ -211,6 +224,48 @@ describe('weather UI', () => {
     expect(screen.getByTestId('wx-prev').props.accessibilityState?.disabled).toBe(true);
     await fireEvent.press(screen.getByTestId('wx-off'));
     expect(onOff).toHaveBeenCalled();
+  });
+  test('the hour-by-hour chart: hours, temperatures, sunrise and sunset, and the now line only today', async () => {
+    const day = wxState(raw).giorni['2026-11-17']!;
+    expect(day.ore).toHaveLength(12);
+    expect(day.pioggia_ore).toBe(3);
+    // il sole diventa luna dopo il tramonto, ora per ora
+    expect(hourIcon(day, day.ore[2]!)).toBe('sole');
+    expect(hourIcon(day, day.ore[11]!)).toBe('luna');
+    expect(hourIcon(day, day.ore[0]!)).toBe('nubi');
+    const noon = new Date(2026, 10, 17, 12, 30);
+    await render(wrap((pt) => <WxChart pt={pt} day={day} isToday now={noon} />));
+    expect(screen.getByTestId('wx-chart')).toBeTruthy();
+    expect(screen.getByTestId('wx-chart-t-6')).toHaveTextContent('13°');
+    expect(screen.getByTestId('wx-chart-sunrise')).toHaveTextContent('↑ 07:20');
+    expect(screen.getByTestId('wx-chart-sunset')).toHaveTextContent('↓ 16:55');
+    expect(screen.getByTestId('wx-chart-now')).toBeTruthy();
+    await screen.unmount();
+    await render(wrap((pt) => <WxChart pt={pt} day={day} isToday={false} />));
+    expect(screen.queryByTestId('wx-chart-now')).toBeNull();
+  });
+  test('the popup shows the chart only when the day has hours, and the rain duration', async () => {
+    const mk = (date: string) =>
+      wrap((pt) => (
+        <WxPopup
+          pt={pt}
+          wx={wxState(raw)}
+          date={date}
+          today="2026-11-17"
+          title={(d) => d}
+          onDate={() => undefined}
+          places={async () => []}
+          onPreview={async () => undefined}
+          onOff={() => undefined}
+          onClose={() => undefined}
+        />
+      ));
+    await render(mk('2026-11-17'));
+    expect(screen.getByTestId('wx-chart')).toBeTruthy();
+    expect(screen.getByText('2.4 mm · 3 hours')).toBeTruthy();
+    await screen.unmount();
+    await render(mk('2026-11-18'));
+    expect(screen.queryByTestId('wx-chart')).toBeNull();
   });
   test('the place picker waits for three letters and returns the chosen place', async () => {
     jest.useFakeTimers();

@@ -18,9 +18,10 @@ import { Text } from '@/ui/CappedText';
 import type { PlannerTheme } from './plannerTheme';
 import { wxDuration, wxIconName, wxTagText, wxTone, wxUvKey, type WxTone } from './weather';
 import { WX_ICONS } from './weatherIcons';
+import { WxChart } from './WxChart';
 
 /** I colori dei tag (planner_griglia.css): sfondo e testo per tinta; al buio lo sfondo è il testo diluito. */
-function tone(pt: PlannerTheme, t: WxTone): { bg: string; fg: string } {
+export function wxToneColors(pt: PlannerTheme, t: WxTone): { bg: string; fg: string } {
   const light: Record<WxTone, [string, string]> = {
     sun: ['#F8EFD4', '#7A6127'],
     moon: ['#E3E6F1', '#4C5473'],
@@ -57,7 +58,7 @@ export function WxTag(p: {
   onPress: (date: string) => void;
 }) {
   const icon = wxIconName(p.day.icon, p.day, p.today);
-  const c = tone(p.pt, wxTone(icon));
+  const c = wxToneColors(p.pt, wxTone(icon));
   const text = wxTagText(p.day, { single: p.single, today: p.today, now: p.nowTemp });
   return (
     <Pressable
@@ -109,7 +110,7 @@ export function WeatherCard(p: {
       ? parts.join(' · ')
       : t('planner.wx_acceso')
     : t('planner.wx_spento_sub');
-  const c = tone(pt, on ? wxTone(icon) : 'plain');
+  const c = wxToneColors(pt, on ? wxTone(icon) : 'plain');
   return (
     <View
       testID="ps-weather"
@@ -297,13 +298,19 @@ export function WxPopup(p: {
   const next = wx.giorni[addDays(p.date, 1)];
   const isToday = p.date === p.today;
   const icon = wxIconName(g.icon, g, isToday);
-  const c = tone(pt, wxTone(icon));
+  const c = wxToneColors(pt, wxTone(icon));
 
   const rows: [string, string | null][] = [
     [t('planner.probabilita_di_pioggia'), g.pioggia !== null ? `${g.pioggia}%` : null],
     [
       t('planner.pioggia_prevista'),
-      g.pioggia_mm !== null && g.pioggia_mm > 0 ? `${g.pioggia_mm} mm` : null,
+      g.pioggia_mm !== null && g.pioggia_mm > 0
+        ? `${g.pioggia_mm} mm${
+            g.pioggia_ore
+              ? ` · ${t(g.pioggia_ore === 1 ? 'planner.n_ora' : 'planner.n_ore', { n: g.pioggia_ore })}`
+              : ''
+          }`
+        : null,
     ],
     [
       t('planner.vento_massimo'),
@@ -474,6 +481,17 @@ export function WxPopup(p: {
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
+              </View>
+            ) : null}
+
+            {g.ore.length ? (
+              <View style={{ gap: 6 }}>
+                <Text
+                  style={{ color: pt.ink3, fontSize: 11, letterSpacing: 1, fontFamily: pt.sans }}
+                >
+                  {t('planner.ora_per_ora').toUpperCase()}
+                </Text>
+                <WxChart pt={pt} day={g} isToday={isToday} />
               </View>
             ) : null}
 
