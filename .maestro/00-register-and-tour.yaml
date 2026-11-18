@@ -4,10 +4,10 @@ name: Register a test account and look at the main screens
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: 'Sign up'
+    visible: '.*Sign up.*'
     timeout: 60000
 - takeScreenshot: 00-login
-- tapOn: 'Don.t have an account\? Sign up|Sign up'
+- tapOn: '.*Sign up.*'
 - extendedWaitUntil:
     visible: 'Create your account'
     timeout: 15000
