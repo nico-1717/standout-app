@@ -85,6 +85,11 @@ jobs:
           export E2E_USER="e2e$GITHUB_RUN_ID"
           export E2E_PASS="Zz$(openssl rand -hex 8)!9a"
           echo "::add-mask::$E2E_PASS"
+          # The account is made here with the site's API (the iPhone "Strong Password" box blocks typing a new password
+          # in the form); the flow then logs in through the app like a real person.
+          curl -fsS -X POST "https://nisama.altervista.org/api/v1/auth/register" -H 'Content-Type: application/json' \
+            -d "{\"username\":\"$E2E_USER\",\"email\":\"$E2E_USER@users.noreply.github.com\",\"password\":\"$E2E_PASS\",\"password_confirm\":\"$E2E_PASS\",\"accetto\":true,\"device_name\":\"simulator-test\"}" \
+            | head -c 200 | sed -E 's/"(access|refresh)_token":"[^"]+"/"\1_token":"..."/g'; echo
           if [ -n "${{ inputs.flow }}" ]; then TARGET=".maestro/${{ inputs.flow }}.yaml"; else TARGET=".maestro"; fi
           maestro --device "$DEVICE" test "$TARGET" \
             -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \

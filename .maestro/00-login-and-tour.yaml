@@ -1,0 +1,22 @@
+appId: app.standout.mobile
+name: Log in with a test account and look at the main screens
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: 'Email or username'
+    timeout: 60000
+- takeScreenshot: 00-login
+- tapOn: 'Email or username'
+- inputText: ${E2E_USER}
+- tapOn: 'Password'
+- inputText: ${E2E_PASS}
+- takeScreenshot: 01-login-filled
+- tapOn:
+    text: 'Log in'
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: app-tab-bar
+    timeout: 60000
+- takeScreenshot: 02-home
