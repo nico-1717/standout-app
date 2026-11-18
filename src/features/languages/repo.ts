@@ -217,6 +217,25 @@ export class LanguagesRepo {
     return true;
   }
 
+  /** «Collega un progetto» (fc_languages.js): a un corso senza progetto ne dà uno, quello della lingua. Torna l'uuid del progetto, o null se il corso non c'è. */
+  linkProject(uuid: string, ui: 'it' | 'en' = 'it'): string | null {
+    const cur = this.course(uuid);
+    if (!cur) return null;
+    if (cur.project_uuid) return cur.project_uuid;
+    let project: string | null = null;
+    this.db.transaction(() => {
+      project = this.projectFor(cur.learn_lang, ui, uuid);
+      const now = this.clock();
+      patchRow(this.db, 'fc_vocab_courses', uuid, { project_uuid: project, updated_at: now });
+      enqueue(
+        this.db,
+        { table: 'fc_vocab_courses', uuid, op: 'upsert', patch: { project_uuid: project } },
+        now,
+      );
+    });
+    return project;
+  }
+
   /** Mette il corso tra `before` e `after` (null = in cima / in fondo). */
   reorderCourse(uuid: string, before: string | null, after: string | null): void {
     const all = this.courses();

@@ -125,6 +125,21 @@ describe('Languages hub', () => {
     expect(languages.word(w)).toBeNull();
   });
 
+  test('a course without a project can be linked to one, and then says so', async () => {
+    const { languages, db } = setup();
+    const a = languages.addCourse('it', 'en-GB', 'en') as string;
+    // un corso arrivato dal sito senza progetto
+    db.run('UPDATE fc_vocab_courses SET project_uuid = NULL WHERE uuid = ?', [a]);
+    const view = await render(wrap(<LanguagesScreen />));
+    await fireEvent.press(screen.getByTestId(`lang-options-${a}`));
+    expect(screen.getByText('Link to a project')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`lang-project-${a}`));
+    expect(languages.course(a)!.project_uuid).toBeTruthy();
+    await view.rerender(wrap(<LanguagesScreen />));
+    expect(screen.getByText('Project already linked')).toBeTruthy();
+    expect(screen.getByTestId(`lang-project-${a}`).props.accessibilityState?.disabled).toBe(true);
+  });
+
   test('a course opens its page', async () => {
     const { languages } = setup();
     const c = languages.addCourse('it', 'de', 'en') as string;

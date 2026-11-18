@@ -11,6 +11,7 @@ import type { Direction, GameOrder, GameStatus } from '@/features/flashcards/gam
 import { kitForCourse } from '@/features/flashcards/gameKit';
 import { LEVEL_CHOICES, LEVEL_COLORS, type Level } from '@/features/flashcards/levels';
 import { deckBranch, deckIcon, flattenDecks, type Deck } from '@/features/flashcards/logic';
+import { movePickGroup, pickGroups } from '@/features/flashcards/pickOrder';
 import { Card, Header, SectionLabel } from '@/ui/kit';
 
 /** Un interruttore a tre o due scelte (come i «segmented» del sito). */
@@ -79,6 +80,11 @@ export default function GameSetupScreen() {
   const [status, setStatus] = useState<GameStatus>('0');
   const [levels, setLevels] = useState<Level[]>([]);
   const [onlyHard, setOnlyHard] = useState(false);
+  // significato ed esempi già visibili sulla carta (fcvIndiziAperti): una scelta sul profilo, non della sola partita
+  const [hintsOpen, setHintsOpen] = useState(() => {
+    const st = services?.study.settings();
+    return !st || (st.vocab_meaning === 'aperto' && st.vocab_examples === 'aperto');
+  });
   const [multi, setMulti] = useState(!!params.preselect);
   const [picked, setPicked] = useState<string[]>(() =>
     params.preselect && kit ? deckBranch(kit.decks(), params.preselect) : [],
@@ -269,6 +275,24 @@ export default function GameSetupScreen() {
               />
             </View>
           ) : null}
+          {kit.vocab ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: th.text, fontWeight: '600' }}>{t('fcv.indizi_aperti')}</Text>
+                <Text style={{ color: th.text2, fontSize: 13 }}>{t('fcv.indizi_aperti_sub')}</Text>
+              </View>
+              <Switch
+                testID="fcs-hints-open"
+                value={hintsOpen}
+                onValueChange={(v) => {
+                  setHintsOpen(v);
+                  const mode = v ? 'aperto' : 'tocco';
+                  services.study.saveSettings({ vocab_meaning: mode, vocab_examples: mode });
+                }}
+                trackColor={{ true: th.brand }}
+              />
+            </View>
+          ) : null}
           <View style={{ gap: 6 }}>
             <SectionLabel>{t('fc.cg_ordine')}</SectionLabel>
             <Segmented
@@ -358,6 +382,46 @@ export default function GameSetupScreen() {
               trackColor={{ true: th.brand }}
             />
           </View>
+          {multi && picked.length ? (
+            <View
+              testID="fcs-order-list"
+              style={{ borderRadius: 12, backgroundColor: th.surface2, padding: 6, gap: 2 }}
+            >
+              {pickGroups(decks, picked).map((g, i, all) => (
+                <View
+                  key={g[0]}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 6 }}
+                >
+                  <Text style={{ color: th.text2, fontWeight: '700', width: 20 }}>{i + 1}</Text>
+                  <Text style={{ flex: 1, color: th.text, fontWeight: '600' }} numberOfLines={1}>
+                    {byId.get(g[0]!)?.name}
+                  </Text>
+                  <Pressable
+                    testID={`fcs-order-up-${i}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('fc.cg_sposta_su')}
+                    disabled={i === 0}
+                    hitSlop={8}
+                    onPress={() => setPicked(movePickGroup(decks, picked, i, -1))}
+                    style={{ opacity: i === 0 ? 0.3 : 1, padding: 6 }}
+                  >
+                    <Text style={{ color: th.text, fontSize: 16 }}>↑</Text>
+                  </Pressable>
+                  <Pressable
+                    testID={`fcs-order-down-${i}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('fc.cg_sposta_giu')}
+                    disabled={i === all.length - 1}
+                    hitSlop={8}
+                    onPress={() => setPicked(movePickGroup(decks, picked, i, 1))}
+                    style={{ opacity: i === all.length - 1 ? 0.3 : 1, padding: 6 }}
+                  >
+                    <Text style={{ color: th.text, fontSize: 16 }}>↓</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </Card>
 
         {empty ? (

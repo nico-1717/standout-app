@@ -122,6 +122,24 @@ describe('game setup', () => {
     });
   });
 
+  test('with more categories, the picked ones can be moved up and down before playing', async () => {
+    const { flashcards, games } = setup();
+    const a = flashcards.createDeck({ name: 'A' })!;
+    const b = flashcards.createDeck({ name: 'B' })!;
+    flashcards.addCard(a, 'QA', 'AA');
+    flashcards.addCard(b, 'QB', 'AB');
+    await render(wrap(<SetupScreen />));
+    expect(screen.queryByTestId('fcs-order-list')).toBeNull();
+    await fireEvent(screen.getByTestId('fcs-multi'), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId(`fcs-pick-${a}`));
+    await fireEvent.press(screen.getByTestId(`fcs-pick-${b}`));
+    expect(screen.getByTestId('fcs-order-list')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcs-order-down-0'));
+    await fireEvent.press(screen.getByTestId('fcs-multi-play'));
+    const call = mockReplace.mock.calls[0]![0] as { params: { game: string } };
+    expect(games.gameDecks(call.params.game)).toEqual([b, a]);
+  });
+
   test('preselect picks the deck and plays it', async () => {
     const { flashcards, games } = setup();
     const a = flashcards.createDeck({ name: 'A' })!;

@@ -96,6 +96,18 @@ describe('language game screens', () => {
     expect(g).toMatchObject({ kind: 'vocab', course_uuid: course, type: 't2w' });
   });
 
+  test('setup: «meaning and examples already visible» is a saved choice, on by default', async () => {
+    const { course } = setup();
+    mockParams = { course };
+    await render(wrap(<SetupScreen />));
+    const study = (mockServices as { study: StudyRepo }).study;
+    expect(screen.getByTestId('fcs-hints-open').props.value).toBe(true);
+    await fireEvent(screen.getByTestId('fcs-hints-open'), 'valueChange', false);
+    expect(study.settings()).toMatchObject({ vocab_meaning: 'tocco', vocab_examples: 'tocco' });
+    await fireEvent(screen.getByTestId('fcs-hints-open'), 'valueChange', true);
+    expect(study.settings()).toMatchObject({ vocab_meaning: 'aperto', vocab_examples: 'aperto' });
+  });
+
   test('play: the translation is the question, the word is the answer; finishing goes to the result', async () => {
     const { languages, course, deck } = setup();
     const games = languages.games(course);

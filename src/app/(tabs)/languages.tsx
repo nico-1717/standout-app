@@ -176,6 +176,22 @@ export default function LanguagesScreen() {
         </Pressable>
         {options === c.uuid ? (
           <View style={{ paddingHorizontal: 14, paddingBottom: 12, gap: 4 }}>
+            <Pressable
+              testID={`lang-project-${c.uuid}`}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !!c.project_uuid }}
+              disabled={!!c.project_uuid}
+              hitSlop={10}
+              onPress={() => {
+                repo.linkProject(c.uuid, ui);
+                changed();
+              }}
+              style={{ alignItems: 'center', padding: 8, opacity: c.project_uuid ? 0.55 : 1 }}
+            >
+              <Text style={{ color: th.brand, fontSize: 15 }}>
+                {t(c.project_uuid ? 'fchub.progetto_collegato' : 'fchub.collega_progetto')}
+              </Text>
+            </Pressable>
             {variants.length > 1 ? (
               <TextButton
                 testID={`lang-variant-${c.uuid}`}

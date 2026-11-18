@@ -218,6 +218,9 @@ export default function AccountScreen() {
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
+        <Text testID="account-intro" style={{ color: th.text2, lineHeight: 20 }}>
+          {t('privacydati.intro')}
+        </Text>
         <Card style={{ padding: 16, gap: 8 }}>
           <Text style={{ color: th.text, fontSize: 17, fontWeight: '700' }}>{user?.username}</Text>
           {user?.email ? <Text style={{ color: th.text2 }}>{user.email}</Text> : null}
