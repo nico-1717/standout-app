@@ -55,7 +55,7 @@ jobs:
           SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
           if ! xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build CODE_SIGNING_ALLOWED=NO > xcodebuild.log 2>&1; then
+            -derivedDataPath build CODE_SIGN_IDENTITY="-" > xcodebuild.log 2>&1; then
             echo "::group::Errors from xcodebuild"
             grep -n -B2 -A12 -E "error:|Error:|\*\* BUILD FAILED|failed with" xcodebuild.log | head -150
             echo "::endgroup::"
