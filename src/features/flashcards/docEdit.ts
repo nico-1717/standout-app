@@ -342,3 +342,104 @@ export function toggleChecked(doc: Doc, i: number): Doc {
   if (!b || b.t !== 'li' || b.ck === undefined) return doc;
   return setBlock(doc, i, { ...b, ck: b.ck === 1 ? 0 : 1 });
 }
+
+/** Toglie l'evidenziatore dal pezzo [start, end) (il pallino «predefinito» con l'evidenziatore acceso). */
+export function clearHighlight(doc: Doc, i: number, start: number, end: number): Doc {
+  return mapRange(doc, i, start, end, (r) => withMark(r, 'h', null));
+}
+
+/** Accende o spegne l'evidenziatore di riga di un blocco di codice (come il sito: la riga prende il fondo giallo). */
+export function toggleHighlightLine(doc: Doc, i: number): Doc {
+  const b = doc.blocks[i];
+  if (!b || b.t !== 'p' || !b.code) return doc;
+  if (b.hl) {
+    const { hl: _off, ...rest } = b;
+    void _off;
+    return setBlock(doc, i, rest);
+  }
+  return setBlock(doc, i, { ...b, hl: 1 });
+}
+
+/** Il documento ha qualcosa oltre al testo semplice (formattazione, un tipo di blocco particolare, una formula): serve a dire se l'anteprima ha qualcosa da mostrare. */
+export function isRich(doc: Doc): boolean {
+  return doc.blocks.some(
+    (b) =>
+      b.t !== 'p' ||
+      !!b.code ||
+      !!b.q ||
+      !!b.lvl ||
+      b.runs.some((r) => isMath(r) || (r as TextRun).m !== undefined),
+  );
+}
+
+/** Mette `mid` al posto del pezzo [start, end) del blocco (le formule toccate diventano testo prima). */
+function replaceRange(doc: Doc, i: number, start: number, end: number, mid: Run[]): Doc {
+  const b = doc.blocks[i];
+  if (!b || b.t === 'fx') return doc;
+  const [pre, , post] = splitThree(flattenMath(b.runs, start, end), start, end);
+  return setBlock(doc, i, withRuns(b, [...pre, ...mid, ...post]));
+}
+
+/**
+ * Formula in linea: il testo scelto [start, end) diventa una formula (senza testo scelto ne nasce una con una «x»).
+ * Ritorna il documento e dove va il cursore (subito dopo la formula).
+ */
+export function insertMathInline(
+  doc: Doc,
+  i: number,
+  start: number,
+  end: number,
+): { doc: Doc; at: number } {
+  const b = doc.blocks[i];
+  if (!b || b.t === 'fx' || (b.t === 'p' && b.code)) return { doc, at: start };
+  const text = textOf(b).slice(start, end).replace(/\n/g, ' ');
+  const x = text.trim() === '' ? 'x' : text;
+  return { doc: replaceRange(doc, i, start, end, [{ x }]), at: start + x.length };
+}
+
+const SMART_TOKEN =
+  /(^|\s)(\\[a-zA-Z]+(?:\{[^}\s]*\})*|[A-Za-z0-9]+(?:[_^](?:\{[^}\s]*\}|[A-Za-z0-9]))+)\s$/;
+
+/**
+ * Le due scorciatoie dell'interruttore della formula: con `dollars`, scrivere $...$ crea una formula in linea e $$...$$ (da
+ * soli sulla riga) una formula a blocco; con `smart`, un comando LaTeX appena scritto («\omega », «a^2 », «x_1 ») diventa una
+ * formula da solo (a blocco se è l'unica cosa sulla riga). Ritorna il documento e dove va il cursore (`null` = non è cambiato).
+ */
+export function autoMath(
+  doc: Doc,
+  i: number,
+  opts: { dollars: boolean; smart: boolean },
+): { doc: Doc; at: number | null } {
+  const b = doc.blocks[i];
+  if (!b || b.t === 'fx' || (b.t === 'p' && b.code)) return { doc, at: null };
+  const text = textOf(b);
+  if (opts.dollars) {
+    const block = /^\s*\$\$([^$]+)\$\$\s*$/.exec(text);
+    if (block && block[1]!.trim()) {
+      return { doc: setBlock(doc, i, { t: 'fx', tex: block[1]!.trim() }), at: null };
+    }
+    const inline = /\$([^$\n]+)\$/.exec(text);
+    if (inline && inline[1]!.trim()) {
+      const start = inline.index;
+      return {
+        doc: replaceRange(doc, i, start, start + inline[0].length, [{ x: inline[1]! }]),
+        at: start + inline[1]!.length,
+      };
+    }
+  }
+  if (opts.smart) {
+    const m = SMART_TOKEN.exec(text);
+    if (m) {
+      const token = m[2]!;
+      const start = m.index + m[1]!.length;
+      if (text.trim() === token && b.t === 'p' && !b.q) {
+        return { doc: setBlock(doc, i, { t: 'fx', tex: token }), at: null };
+      }
+      return {
+        doc: replaceRange(doc, i, start, start + token.length, [{ x: token }]),
+        at: start + token.length + 1,
+      };
+    }
+  }
+  return { doc, at: null };
+}

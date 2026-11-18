@@ -1,9 +1,13 @@
 import { blockText, normDoc, parseDoc, stringifyDoc, type Doc } from '../doc';
 import {
+  autoMath,
+  clearHighlight,
   clearMarks,
   editBlockText,
   highlightColorAt,
   indent,
+  insertMathInline,
+  isRich,
   kindOf,
   marksAt,
   mergeWithPrevious,
@@ -15,6 +19,7 @@ import {
   splitRuns,
   textOf,
   toggleChecked,
+  toggleHighlightLine,
   toggleMark,
 } from '../docEdit';
 
@@ -222,5 +227,78 @@ describe('highlighter colour', () => {
     d = setHighlightColor(d, 0, 4, 7, null);
     expect(highlightColorAt(d, 0, 4, 7)).toBeNull();
     expect(marksAt(d, 0, 4, 7).h).toBe(true); // resta evidenziato, in giallo
+  });
+});
+
+describe('highlighter off, code-line highlight, inline formulas', () => {
+  test('clearHighlight takes the highlighter off a piece', () => {
+    let d = doc([p({ s: 'one two' })]);
+    d = setHighlightColor(d, 0, 0, 3, 'red');
+    d = clearHighlight(d, 0, 0, 3);
+    expect(marksAt(d, 0, 0, 3).h).toBe(false);
+  });
+
+  test('the code-line highlight toggles only on a code block', () => {
+    const plain = doc([p({ s: 'x' })]);
+    expect(toggleHighlightLine(plain, 0)).toBe(plain);
+    const code = setKind(plain, 0, 'code');
+    const on = toggleHighlightLine(code, 0);
+    expect(on.blocks[0]).toMatchObject({ code: 'python', hl: 1 });
+    expect(toggleHighlightLine(on, 0).blocks[0]).not.toHaveProperty('hl');
+  });
+
+  test('insertMathInline wraps the selection, or makes an x', () => {
+    const d = doc([p({ s: 'area a b' })]);
+    const r = insertMathInline(d, 0, 5, 6);
+    expect((r.doc.blocks[0] as { runs: unknown[] }).runs).toEqual([
+      { s: 'area ' },
+      { x: 'a' },
+      { s: ' b' },
+    ]);
+    expect(r.at).toBe(6);
+    const e = insertMathInline(doc([p({ s: 'ab' })]), 0, 1, 1);
+    expect((e.doc.blocks[0] as { runs: unknown[] }).runs).toEqual([
+      { s: 'a' },
+      { x: 'x' },
+      { s: 'b' },
+    ]);
+    // in un blocco di codice non si fa
+    const code = setKind(doc([p({ s: 'x' })]), 0, 'code');
+    expect(insertMathInline(code, 0, 0, 1).doc).toBe(code);
+  });
+
+  test('autoMath: dollars, double dollars, and the smart words', () => {
+    const on = { dollars: true, smart: true };
+    expect(autoMath(doc([p({ s: 'costs 5$ only' })]), 0, on).at).toBeNull();
+    const a = autoMath(doc([p({ s: 'let $x^2$ be' })]), 0, on);
+    expect((a.doc.blocks[0] as { runs: unknown[] }).runs).toEqual([
+      { s: 'let ' },
+      { x: 'x^2' },
+      { s: ' be' },
+    ]);
+    expect(a.at).toBe(7);
+    expect(autoMath(doc([p({ s: '$$a+b$$' })]), 0, on).doc.blocks[0]).toMatchObject({
+      t: 'fx',
+      tex: 'a+b',
+    });
+    // spenti: nulla cambia
+    const off = doc([p({ s: 'let $x^2$ be' })]);
+    expect(autoMath(off, 0, { dollars: false, smart: false }).doc).toBe(off);
+    // smart: serve lo spazio dopo la parola, e una parola normale non diventa una formula
+    const s1 = doc([p({ s: 'angle \\omega ' })]);
+    expect(autoMath(s1, 0, { dollars: false, smart: true }).doc.blocks[0]).toMatchObject({
+      runs: [{ s: 'angle ' }, { x: '\\omega' }, { s: ' ' }],
+    });
+    const s2 = doc([p({ s: 'angle \\omega' })]);
+    expect(autoMath(s2, 0, { dollars: false, smart: true }).doc).toBe(s2);
+    const s3 = doc([p({ s: 'hello world ' })]);
+    expect(autoMath(s3, 0, { dollars: false, smart: true }).doc).toBe(s3);
+  });
+
+  test('isRich tells plain text from formatted text', () => {
+    expect(isRich(doc([p({ s: 'plain' })]))).toBe(false);
+    expect(isRich(doc([p({ s: 'b', m: { b: 1 } })]))).toBe(true);
+    expect(isRich(doc([{ t: 'li', lvl: 1, runs: [{ s: 'x' }] }]))).toBe(true);
+    expect(isRich(doc([p({ x: 'a' })]))).toBe(true);
   });
 });

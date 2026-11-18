@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
@@ -41,9 +41,26 @@ export function FlipCard({
 }) {
   const reduce = useReducedMotion();
   const turn = useSharedValue(flipped ? 1 : 0);
+  // A riposo la carta è una vista piatta, senza trasformazioni 3D: sul telefono una faccia girata (anche di 360°) può
+  // non lasciar scorrere il testo lungo. Le due facce 3D esistono solo durante il giro.
+  const [moving, setMoving] = useState(false);
+  const [shown, setShown] = useState(flipped);
+  if (shown !== flipped) {
+    // il giro comincia: finché dura servono le due facce 3D (si imposta durante il render, come vuole React per uno stato derivato)
+    setShown(flipped);
+    setMoving(!reduce);
+  }
+  const first = useRef(true);
   useEffect(() => {
     const to = flipped ? 1 : 0;
-    turn.set(reduce ? to : withTiming(to, { duration: FLIP_MS, easing: FLIP_EASING }));
+    if (first.current || reduce) {
+      first.current = false;
+      turn.set(to);
+      return;
+    }
+    turn.set(withTiming(to, { duration: FLIP_MS, easing: FLIP_EASING }));
+    const id = setTimeout(() => setMoving(false), FLIP_MS + 60);
+    return () => clearTimeout(id);
   }, [flipped, reduce, turn]);
 
   const frontAnim = useAnimatedStyle(
@@ -58,6 +75,16 @@ export function FlipCard({
     }),
     [turn],
   );
+
+  if (!moving) {
+    return (
+      <View testID={testID} style={style}>
+        <View style={[FACE, flipped ? backStyle : frontStyle]} accessibilityElementsHidden={false}>
+          {flipped ? back : front}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View testID={testID} style={style}>

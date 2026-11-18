@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -12,21 +11,17 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
+import { parseDoc, stringifyDoc, trimDoc, TEXT_COLORS, bulletFor, type Doc } from './doc';
+import { DocView } from './DocView';
 import {
-  parseDoc,
-  stringifyDoc,
-  trimDoc,
-  CODE_LANGS,
-  TEXT_COLORS,
-  bulletFor,
-  type Doc,
-} from './doc';
-import { DocView, markColor } from './DocView';
-import {
+  autoMath,
+  clearHighlight,
   clearMarks,
   editBlockText,
   highlightColorAt,
   indent,
+  insertMathInline,
+  isRich,
   kindOf,
   marksAt,
   mergeWithPrevious,
@@ -38,13 +33,18 @@ import {
   splitBlock,
   textOf,
   toggleChecked,
+  toggleHighlightLine,
   toggleMark,
   type BlockKind,
-  type MarkKey,
 } from './docEdit';
+import { FormatBar, type BarActions, type BarState, type PanelId, type Target } from './FormatBar';
 
 const MONO = 'Menlo';
-const COLORS = ['red', 'orange', 'green', 'blue', 'purple', 'gray'];
+const HISTORY = 100;
+/** Le battute scritte una dopo l'altra entro questo tempo sono un solo passo di «annulla» (come sul sito: a blocchi). */
+const TYPING_MS = 1000;
+/** Il tempo che la barra resta se il campo perde il fuoco perché si è toccata la barra stessa. */
+const BAR_TOUCH_MS = 700;
 
 /** Il testo del campo: documento pronto da salvare, o null se non c'è niente di scritto. */
 export function docToField(doc: Doc): string | null {
@@ -53,10 +53,16 @@ export function docToField(doc: Doc): string | null {
   return empty ? null : stringifyDoc(t);
 }
 
+/** L'ora in millisecondi (fuori dal render: il linter non vuole chiamate impure dentro un componente). */
+const nowMs = (): number => Date.now();
+
+const newlines = (s: string): number => s.split('\n').length - 1;
+
 /**
- * L'editor ricco di una carta (domanda o risposta): un blocco per riga, una barra con grassetto, corsivo, sottolineato,
- * evidenziatore, colori, elenco, casella, citazione, codice, formula e rientro. Il testo si scrive in caselle normali; le
- * etichette si vedono nell'anteprima sotto. `onChange` riceve il campo da salvare (o null se è vuoto).
+ * L'editor ricco di una carta (domanda o risposta), con la barra del formato del sito: la pastiglia con il tastino, le
+ * famiglie Testo / Elenco / Formula / Codice e «annulla». La barra c'è solo mentre si scrive in quel campo. Il testo si scrive
+ * in caselle normali, una per blocco; quello che ne esce (grassetto, colori, formule…) si vede nell'anteprima sotto.
+ * `onChange` riceve il campo da salvare (o null se è vuoto).
  */
 export function RichEditor({
   value,
@@ -76,12 +82,52 @@ export function RichEditor({
   const [sel, setSel] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const inputs = useRef<(ComponentRef<typeof TextInput> | null)[]>([]);
   const pending = useRef<{ block: number; at: number } | null>(null);
-  // i pallini colorano il testo o l'evidenziatore (due scelte separate, come sul sito)
-  const [pickTarget, setTarget] = useState<'text' | 'mark' | 'bullet'>('text');
+  // la barra: c'è mentre si scrive qui; aperta o chiusa al tastino; un pannello alla volta
+  const [active, setActive] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [panel, setPanel] = useState<PanelId | null>(null);
+  const [target, setTarget] = useState<Target>('c');
+  const [dollars, setDollars] = useState(false);
+  const [smart, setSmart] = useState(false);
+  // la cronologia di «annulla»
+  const history = useRef<Doc[]>([]);
+  const lastTyping = useRef(0);
+  const [canUndo, setCanUndo] = useState(false);
+  // il dito sulla barra: il campo perde il fuoco, ma la barra deve restare
+  const barTouched = useRef(0);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const update = (next: Doc) => {
+  useEffect(
+    () => () => {
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+    },
+    [],
+  );
+
+  const commit = (next: Doc) => {
     setDoc(next);
     onChange(docToField(next));
+  };
+  const remember = (typing: boolean) => {
+    const now = nowMs();
+    const sameRun = typing && lastTyping.current > 0 && now - lastTyping.current < TYPING_MS;
+    lastTyping.current = typing ? now : 0;
+    if (sameRun) return;
+    history.current.push(doc);
+    if (history.current.length > HISTORY) history.current.shift();
+    setCanUndo(true);
+  };
+  const update = (next: Doc, typing = false) => {
+    if (next === doc) return;
+    remember(typing);
+    commit(next);
+  };
+  const undo = () => {
+    const prev = history.current.pop();
+    if (!prev) return;
+    lastTyping.current = 0;
+    setCanUndo(history.current.length > 0);
+    commit(prev);
   };
 
   // dopo uno spezza/unisci si porta il cursore dove deve stare
@@ -115,56 +161,167 @@ export function RichEditor({
     [doc, cur, sel, block],
   );
   const kind = kindOf(block);
-  // il pallino di un elenco si colora solo se il blocco è un elenco
-  const isList = block?.t === 'li';
-  const target = pickTarget === 'bullet' && !isList ? 'text' : pickTarget;
-  const targetLabel =
-    target === 'text'
-      ? t('editor.colora_testo')
-      : target === 'mark'
-        ? t('editor.evidenziatore')
-        : t('editor.elenco');
-  const nextTarget = () => {
-    if (target === 'text') return 'mark' as const;
-    if (target === 'mark') return isList ? ('bullet' as const) : ('text' as const);
-    return 'text' as const;
-  };
-
-  const toggle = (k: MarkKey) => {
-    const [a, b] = range();
-    update(toggleMark(doc, cur, a, b, k));
-  };
-  const color = (c: string | null) => {
-    const [a, b] = range();
-    update(setColor(doc, cur, a, b, c));
-  };
-  const highlightNow = (() => {
+  const hlName = (() => {
     if (!block) return null;
     const [a, b] = range();
     return highlightColorAt(doc, cur, a, b);
   })();
-  const highlightWith = (c: string | null) => {
-    const [a, b] = range();
-    update(setHighlightColor(doc, cur, a, b, c));
+  const highlight = !marks.h ? 'default' : (hlName ?? 'yellow');
+  const listColor = block?.t === 'li' ? (block.c ?? null) : null;
+
+  /** Dopo aver agito sulla barra il campo riprende il fuoco, così la tastiera resta su. */
+  const back = () => {
+    barTouched.current = nowMs();
+    const input = inputs.current[cur];
+    input?.focus?.();
   };
-  const clear = () => {
-    const [a, b] = range();
-    update(clearMarks(doc, cur, a, b));
+
+  const actions: BarActions = {
+    toggleOpen: () => {
+      setOpen((o) => !o);
+      setPanel(null);
+    },
+    tab: (p) => {
+      if (p === 'list') {
+        // a due tempi, come sul sito: una riga senza pallino ne riceve uno e il pannello si apre; con il pallino già messo
+        // il primo tocco apre solo il pannello, il secondo (a pannello aperto) toglie il pallino e lo chiude
+        const isList = block?.t === 'li';
+        if (isList && panel !== 'list') {
+          setPanel('list');
+          return;
+        }
+        update(setKind(doc, cur, isList ? 'p' : 'li'));
+        setPanel(isList ? null : 'list');
+        back();
+        return;
+      }
+      setPanel(panel === p ? null : p);
+    },
+    undo: () => {
+      undo();
+      back();
+    },
+    mark: (k) => {
+      const [a, b] = range();
+      update(toggleMark(doc, cur, a, b, k));
+      back();
+    },
+    clear: () => {
+      const [a, b] = range();
+      update(clearMarks(doc, cur, a, b));
+      back();
+    },
+    kind: (k: BlockKind) => {
+      update(setKind(doc, cur, kind === k ? 'p' : k));
+      back();
+    },
+    target: (k) => setTarget(k),
+    color: (c) => {
+      const [a, b] = range();
+      update(setColor(doc, cur, a, b, c));
+      back();
+    },
+    highlight: (c) => {
+      const [a, b] = range();
+      update(
+        c === 'default'
+          ? clearHighlight(doc, cur, a, b)
+          : setHighlightColor(doc, cur, a, b, c === 'yellow' ? null : c),
+      );
+      back();
+    },
+    outdent: () => {
+      update(indent(doc, cur, -1));
+      back();
+    },
+    indent: () => {
+      update(indent(doc, cur, 1));
+      back();
+    },
+    softBreak: () => {
+      // a capo senza aprire un punto nuovo: la riga continua sotto lo stesso pallino
+      if (!block || block.t === 'fx') return;
+      const old = textOf(block);
+      const a = Math.min(sel.start, old.length);
+      const b = Math.min(sel.end, old.length);
+      pending.current = { block: cur, at: a + 1 };
+      update(editBlockText(doc, cur, `${old.slice(0, a)}\n${old.slice(b)}`));
+    },
+    listColor: (c) => {
+      update(setListColor(doc, cur, c));
+      back();
+    },
+    codeHl: () => {
+      update(toggleHighlightLine(doc, cur));
+      back();
+    },
+    codeLang: (l) => {
+      update(kind === 'code' ? setCodeLang(doc, cur, l) : setKind(doc, cur, 'code', l));
+      back();
+    },
+    mathInline: () => {
+      const r = insertMathInline(doc, cur, sel.start, sel.end);
+      if (r.doc === doc) return;
+      pending.current = { block: cur, at: r.at };
+      update(r.doc);
+    },
+    toggleDollars: () => setDollars((d) => !d),
+    toggleSmart: () => setSmart((s) => !s),
   };
-  const asKind = (k: BlockKind) => update(setKind(doc, cur, kind === k ? 'p' : k));
+  const barState: BarState = {
+    open,
+    panel,
+    canUndo,
+    marks,
+    target,
+    highlight,
+    kind,
+    listColor,
+    codeLang: block && block.t === 'p' ? (block.code ?? null) : null,
+    codeHl: block?.t === 'p' && !!block.hl,
+    dollars,
+    smart,
+  };
 
   const onText = (i: number, text: string) => {
-    const nl = text.indexOf('\n');
-    if (nl === -1) {
-      update(editBlockText(doc, i, text));
+    const b = doc.blocks[i];
+    const old = textOf(b);
+    let added = newlines(text) - newlines(old);
+    if (added <= 0) {
+      const edited = editBlockText(doc, i, text);
+      if (dollars || smart) {
+        const m = autoMath(edited, i, { dollars, smart });
+        if (m.doc !== edited) {
+          if (m.at !== null) pending.current = { block: i, at: m.at };
+          update(m.doc, true);
+          return;
+        }
+      }
+      update(edited, true);
       return;
     }
-    // un a capo: il blocco si spezza lì
-    const before = editBlockText(doc, i, text.slice(0, nl) + text.slice(nl + 1));
-    const next = splitBlock(before, i, nl);
-    pending.current = { block: i + 1, at: 0 };
-    setFocus(i + 1);
-    update(next);
+    // un a capo scritto: il blocco si spezza lì (se ne sono incollati di più, si spezza a ogni a capo)
+    let d = doc;
+    let idx = i;
+    let rest = text;
+    let first = true;
+    while (added > 0) {
+      let from = 0;
+      if (first) {
+        const base = textOf(d.blocks[idx]);
+        while (from < base.length && base[from] === rest[from]) from++;
+      }
+      const nl = rest.indexOf('\n', from);
+      if (nl === -1) break;
+      d = splitBlock(editBlockText(d, idx, rest.slice(0, nl) + rest.slice(nl + 1)), idx, nl);
+      idx += 1;
+      rest = textOf(d.blocks[idx]);
+      first = false;
+      added -= 1;
+    }
+    pending.current = { block: idx, at: 0 };
+    setFocus(idx);
+    update(d);
   };
 
   const onKey = (i: number, e: TextInputKeyPressEvent) => {
@@ -177,145 +334,43 @@ export function RichEditor({
     update(r.doc);
   };
 
-  const btn = (
-    id: string,
-    label: string,
-    on: boolean,
-    press: () => void,
-    a11y: string,
-    style?: object,
-  ) => (
-    <Pressable
-      hitSlop={10}
-      key={id}
-      testID={`${testID}-${id}`}
-      accessibilityRole="button"
-      accessibilityLabel={a11y}
-      accessibilityState={{ selected: on }}
-      onPress={press}
-      style={{
-        minWidth: 34,
-        height: 34,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 6,
-        backgroundColor: on ? th.brand : th.surface2,
-      }}
-    >
-      <Text style={[{ color: on ? '#fff' : th.text, fontWeight: '700' }, style]}>{label}</Text>
-    </Pressable>
-  );
+  const onFocus = (i: number) => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setActive(true);
+    setFocus(i);
+  };
+  const onBlur = () => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    // la barra se ne va solo se il campo ha perso il fuoco davvero (non perché si è toccata la barra)
+    blurTimer.current = setTimeout(() => {
+      if (nowMs() - barTouched.current < BAR_TOUCH_MS) return;
+      setActive(false);
+    }, 250);
+  };
 
   return (
     <View testID={testID} style={{ gap: 8 }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
-        contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
-      >
-        {btn('b', 'B', marks.b, () => toggle('b'), t('editor.grassetto'))}
-        {btn('i', 'I', marks.i, () => toggle('i'), t('editor.corsivo'), { fontStyle: 'italic' })}
-        {btn('u', 'U', marks.u, () => toggle('u'), t('editor.sottolineato'), {
-          textDecorationLine: 'underline',
-        })}
-        {btn('h', '▮', marks.h, () => toggle('h'), t('editor.evidenziatore'), { color: '#FFD60A' })}
-        {btn(
-          'target',
-          target === 'text' ? 'A' : target === 'mark' ? '▮' : '•',
-          target !== 'text',
-          () => setTarget(nextTarget()),
-          targetLabel,
-          target === 'mark' ? { color: '#FFD60A' } : undefined,
-        )}
-        {COLORS.map((c) => {
-          const chosen =
-            target === 'text'
-              ? marks.c === c
-              : target === 'mark'
-                ? highlightNow === c
-                : block?.t === 'li' && block.c === c;
-          return (
-            <Pressable
-              hitSlop={5}
-              key={c}
-              testID={`${testID}-c-${c}`}
-              accessibilityRole="button"
-              accessibilityLabel={targetLabel}
-              accessibilityState={{ selected: chosen }}
-              onPress={() =>
-                target === 'text'
-                  ? color(marks.c === c ? null : c)
-                  : target === 'mark'
-                    ? highlightWith(chosen ? null : c)
-                    : update(setListColor(doc, cur, chosen ? null : c))
-              }
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: chosen ? 3 : 0,
-                borderColor: th.text,
-                backgroundColor: markColor(th, c),
-              }}
-            />
-          );
-        })}
-        {btn('clear', 'Tx', false, clear, t('editor.cancella_formato'), {
-          textDecorationLine: 'line-through',
-        })}
-        {btn('li', '•', kind === 'li', () => asKind('li'), t('editor.elenco'))}
-        {btn('ck', '☐', kind === 'ck', () => asKind('ck'), t('editor.checklist'))}
-        {btn('q', '❝', kind === 'q', () => asKind('q'), t('editor.citazione'))}
-        {btn('code', '</>', kind === 'code', () => asKind('code'), t('editor.codice'), {
-          fontFamily: MONO,
-          fontSize: 12,
-        })}
-        {btn('fx', 'fx', kind === 'fx', () => asKind('fx'), t('editor.formula'))}
-        {btn('out', '←', false, () => update(indent(doc, cur, -1)), t('editor.riduci_livello'))}
-        {btn('in', '→', false, () => update(indent(doc, cur, 1)), t('editor.sotto_punto'))}
-      </ScrollView>
-
-      {kind === 'code' ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
-          contentContainerStyle={{ gap: 6 }}
-        >
-          {['auto', ...Object.keys(CODE_LANGS)].map((l) => {
-            const on = (block && block.t === 'p' ? block.code : undefined) === l;
-            return (
-              <Pressable
-                key={l}
-                testID={`${testID}-lang-${l}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                onPress={() => update(setCodeLang(doc, cur, l))}
-                style={{
-                  paddingVertical: 5,
-                  paddingHorizontal: 11,
-                  borderRadius: 14,
-                  backgroundColor: on ? th.brand : th.surface2,
-                }}
-              >
-                <Text style={{ color: on ? '#fff' : th.text, fontSize: 13, fontWeight: '600' }}>
-                  {l === 'auto'
-                    ? t('editor.codice_auto')
-                    : l === 'other'
-                      ? t('editor.codice_altro')
-                      : (CODE_LANGS[l] ?? l)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+      {active ? (
+        <FormatBar
+          testID={testID}
+          state={barState}
+          actions={actions}
+          onTouch={() => {
+            barTouched.current = nowMs();
+          }}
+        />
       ) : null}
 
-      <View style={{ gap: 4 }}>
+      <View
+        style={{
+          gap: 2,
+          borderRadius: 14,
+          backgroundColor: th.surface2,
+          paddingVertical: 6,
+          paddingHorizontal: 6,
+          minHeight: 96,
+        }}
+      >
         {doc.blocks.map((b, i) => {
           const k = kindOf(b);
           const lvl = b.t === 'li' ? b.lvl : b.t === 'p' ? (b.lvl ?? 0) : (b.lvl ?? 0);
@@ -353,7 +408,8 @@ export function RichEditor({
                 }}
                 value={textOf(b)}
                 onChangeText={(v) => onText(i, v)}
-                onFocus={() => setFocus(i)}
+                onFocus={() => onFocus(i)}
+                onBlur={onBlur}
                 onSelectionChange={(e: TextInputSelectionChangeEvent) => {
                   if (i === focus) setSel(e.nativeEvent.selection);
                 }}
@@ -367,10 +423,10 @@ export function RichEditor({
                   color: th.text,
                   fontSize: 16,
                   paddingVertical: 8,
-                  paddingHorizontal: 10,
+                  paddingHorizontal: 8,
                   borderRadius: 8,
-                  backgroundColor: i === cur ? th.surface2 : 'transparent',
                   ...(k === 'code' || k === 'fx' ? { fontFamily: MONO } : null),
+                  ...(b.t === 'p' && b.hl ? { backgroundColor: '#FFCC0040' } : null),
                   ...(k === 'q'
                     ? {
                         fontStyle: 'italic' as const,
@@ -385,12 +441,14 @@ export function RichEditor({
         })}
       </View>
 
-      <View style={{ gap: 4 }}>
-        <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
-          {t('fc.smi_anteprima').toUpperCase()}
-        </Text>
-        <DocView testID={`${testID}-preview`} raw={stringifyDoc(doc)} />
-      </View>
+      {isRich(doc) ? (
+        <View style={{ gap: 4 }}>
+          <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
+            {t('fc.smi_anteprima').toUpperCase()}
+          </Text>
+          <DocView testID={`${testID}-preview`} raw={stringifyDoc(doc)} />
+        </View>
+      ) : null}
     </View>
   );
 }

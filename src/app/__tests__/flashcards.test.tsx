@@ -355,7 +355,7 @@ describe('category page', () => {
     expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 2');
     // il testo lungo sta in una zona che scorre, non in una che si taglia
     const scroll = screen.getByTestId('fcd-viewer-question-scroll');
-    expect(scroll.props.showsVerticalScrollIndicator).toBe(false);
+    expect(scroll.props.showsVerticalScrollIndicator).toBe(true);
     expect(StyleSheet.flatten(scroll.props.style).flex).toBe(1);
     // la barra di avanzamento segue la posizione
     expect(StyleSheet.flatten(screen.getByTestId('fcd-viewer-bar-fill').props.style).width).toBe(
@@ -363,8 +363,12 @@ describe('category page', () => {
     );
     await fireEvent.press(screen.getByTestId('fcd-viewer-prev')); // già alla prima: non fa nulla
     expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('1 / 2');
-    await fireEvent.press(screen.getByTestId('fcd-viewer-flip'));
+    // toccando il testo la carta si gira (il tocco sta DENTRO la zona che scorre, così lo scorrimento non viene rubato)
+    await fireEvent.press(screen.getByTestId('fcd-viewer-card'));
     expect(screen.getByTestId('fcd-viewer-answer')).toHaveTextContent('short answer');
+    const back = screen.getByTestId('fcd-viewer-answer-scroll');
+    expect(back.props.showsVerticalScrollIndicator).toBe(true);
+    expect(screen.getByTestId('fcd-viewer-answer-tap')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fcd-viewer-next'));
     expect(screen.getByTestId('fcd-viewer-count')).toHaveTextContent('2 / 2');
     expect(screen.getByTestId('fcd-viewer-question')).toHaveTextContent('sub q');

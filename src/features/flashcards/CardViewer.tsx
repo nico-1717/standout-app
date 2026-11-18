@@ -202,7 +202,9 @@ export function CardViewer(p: {
     </Text>
   );
   const bodyScroll = { flex: 1, minHeight: 0 } as const;
-  const bodyContent = { gap: 14, paddingBottom: 6 } as const;
+  // contentContainer che riempie la zona: un testo corto si gira toccando ovunque, uno lungo scorre
+  const bodyContent = { flexGrow: 1, paddingBottom: 6 } as const;
+  const tapArea = { flexGrow: 1, gap: 14 } as const;
 
   return (
     <Modal visible animationType="fade" onRequestClose={p.onClose} testID={id}>
@@ -298,32 +300,34 @@ export function CardViewer(p: {
                 frontStyle={face(tone.color)}
                 backStyle={face(tone.color)}
                 front={
-                  <Pressable
-                    testID={`${id}-card`}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('fc.res_gira')}
-                    onPress={flip}
-                    style={{ flex: 1 }}
-                  >
+                  <View style={{ flex: 1 }}>
                     {eyebrow(t('fc.ifc_domanda'), th.text3)}
                     <ScrollView
                       testID={`${id}-question-scroll`}
                       style={bodyScroll}
                       contentContainerStyle={bodyContent}
                       nestedScrollEnabled
-                      showsVerticalScrollIndicator={false}
+                      showsVerticalScrollIndicator
                     >
-                      <DocView testID={`${id}-question`} raw={card.question} size={17} />
-                      <CardImage
-                        testID={`${id}-question-image`}
-                        name={card.questionImage}
-                        height={220}
-                      />
-                      {card.questionAudio ? (
-                        <View style={{ alignSelf: 'flex-start' }}>
-                          <CardAudio testID={`${id}-question-audio`} name={card.questionAudio} />
-                        </View>
-                      ) : null}
+                      <Pressable
+                        testID={`${id}-card`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('fc.res_gira')}
+                        onPress={flip}
+                        style={tapArea}
+                      >
+                        <DocView testID={`${id}-question`} raw={card.question} size={17} />
+                        <CardImage
+                          testID={`${id}-question-image`}
+                          name={card.questionImage}
+                          height={220}
+                        />
+                        {card.questionAudio ? (
+                          <View style={{ alignSelf: 'flex-start' }}>
+                            <CardAudio testID={`${id}-question-audio`} name={card.questionAudio} />
+                          </View>
+                        ) : null}
+                      </Pressable>
                     </ScrollView>
                     <Text
                       style={{
@@ -337,36 +341,39 @@ export function CardViewer(p: {
                     >
                       {t('fc.res_tocca_girare')}
                     </Text>
-                  </Pressable>
+                  </View>
                 }
                 back={
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('fc.res_gira')}
-                    onPress={flip}
-                    style={{ flex: 1 }}
-                  >
+                  <View style={{ flex: 1 }}>
                     {eyebrow(t('fc.ifc_risposta'), tone.color)}
                     <ScrollView
                       testID={`${id}-answer-scroll`}
                       style={bodyScroll}
                       contentContainerStyle={bodyContent}
                       nestedScrollEnabled
-                      showsVerticalScrollIndicator={false}
+                      showsVerticalScrollIndicator
                     >
-                      <DocView testID={`${id}-answer`} raw={card.answer} size={17} />
-                      <CardImage
-                        testID={`${id}-answer-image`}
-                        name={card.answerImage}
-                        height={220}
-                      />
-                      {card.answerAudio ? (
-                        <View style={{ alignSelf: 'flex-start' }}>
-                          <CardAudio testID={`${id}-answer-audio`} name={card.answerAudio} />
-                        </View>
-                      ) : null}
+                      <Pressable
+                        testID={`${id}-answer-tap`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('fc.res_gira')}
+                        onPress={flip}
+                        style={tapArea}
+                      >
+                        <DocView testID={`${id}-answer`} raw={card.answer} size={17} />
+                        <CardImage
+                          testID={`${id}-answer-image`}
+                          name={card.answerImage}
+                          height={220}
+                        />
+                        {card.answerAudio ? (
+                          <View style={{ alignSelf: 'flex-start' }}>
+                            <CardAudio testID={`${id}-answer-audio`} name={card.answerAudio} />
+                          </View>
+                        ) : null}
+                      </Pressable>
                     </ScrollView>
-                  </Pressable>
+                  </View>
                 }
               />
               {p.onEdit ? (
