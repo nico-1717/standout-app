@@ -8,6 +8,7 @@ name: Log in with a test account and look at the main screens
     timeout: 60000
 - takeScreenshot: 00-login
 # Typing on the simulator can lose letters: the whole login is tried up to 3 times.
+# (No "hideKeyboard": on iPhone it taps the screen and hit the "Sign up" link. The Return key sends the form.)
 - retry:
     maxRetries: 3
     commands:
@@ -17,10 +18,11 @@ name: Log in with a test account and look at the main screens
       - tapOn: 'Password'
       - eraseText: 60
       - inputText: ${E2E_PASS}
-      - hideKeyboard
+      - pressKey: Enter
+      # iOS may ask "Save Password?" after a login
       - tapOn:
-          text: 'Log in'
-          index: 0
+          text: 'Not Now'
+          optional: true
       - extendedWaitUntil:
           visible:
             id: app-tab-bar
