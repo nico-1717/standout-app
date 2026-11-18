@@ -11,10 +11,7 @@ import { TasksRepo } from '@/features/tasks/repo';
 import { upsertRow } from '@/core/sync/rows';
 import { stamp } from '@/features/pomodoro/logic';
 
-import GatedPomodoro, {
-  ErrorBoundary as PomodoroBoundary,
-  PomodoroPage as PomodoroScreen,
-} from '../(tabs)/pomodoro';
+import PomodoroScreen, { ErrorBoundary as PomodoroBoundary } from '../(tabs)/pomodoro';
 
 let mockServices: unknown;
 let mockVersion = 0;
@@ -89,25 +86,7 @@ describe('Pomodoro screen', () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  test('the route opens on the diagnostics screen, with the session in it, and then the page', async () => {
-    const { pomodoro } = setup();
-    pomodoro.start({ mode: 0, plannedMin: 25 });
-    await render(
-      <ThemeProvider>
-        <GatedPomodoro />
-      </ThemeProvider>,
-    );
-    expect(screen.queryByTestId('pomodoro-clock')).toBeNull();
-    const text = screen.getByTestId('gate-report').props.children as string;
-    expect(text).toContain('STANDOUT POMODORO REPORT');
-    expect(text).toContain('"planned_duration_min": 25');
-    expect(text).toContain('test-update');
-    expect(text).toContain('Pomodoro route focused');
-    await fireEvent.press(screen.getByTestId('gate-open'));
-    expect(screen.getByTestId('pomodoro-clock')).toBeTruthy();
-  });
-
-  test('the steps of a stop-and-break are written down, and the switches reach the page', async () => {
+  test('stopping a session and taking a break shows the break page', async () => {
     const { pomodoro, db } = setup();
     const id = pomodoro.start({ mode: 0, plannedMin: 25 })!;
     db.run('UPDATE pomodoro_sessions SET start_time = ? WHERE uuid = ?', [
@@ -116,19 +95,14 @@ describe('Pomodoro screen', () => {
     ]);
     await render(
       <ThemeProvider>
-        <GatedPomodoro />
+        <PomodoroScreen />
       </ThemeProvider>,
     );
-    await fireEvent.press(screen.getByTestId('gate-flag-noScene'));
-    await fireEvent.press(screen.getByTestId('gate-open'));
     await fireEvent.press(screen.getByTestId('pomodoro-stop'));
     await fireEvent.press(screen.getByTestId('stop-choice-break'));
-    expect(screen.queryByTestId('break-scene')).toBeNull();
-    const { readLog } = jest.requireActual('@/features/pomodoro/debugLog');
-    const log = readLog().join('\n');
-    expect(log).toContain('stop choice: break');
-    expect(log).toContain('startBreak: scheduling alarm');
-    expect(log).toContain('finishSession: end');
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ current_break: expect.anything() }),
+    );
   });
 
   test('a completed pomodoro is closed once a break is open, so it does not come back after the break', async () => {

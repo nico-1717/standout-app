@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import {
   Pressable,
   Text,
@@ -11,8 +11,19 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
-import { parseDoc, stringifyDoc, trimDoc, TEXT_COLORS, bulletFor, type Doc } from './doc';
-import { DocView } from './DocView';
+import {
+  parseDoc,
+  stringifyDoc,
+  trimDoc,
+  TEXT_COLORS,
+  bulletFor,
+  type Block,
+  type Doc,
+  type TextRun,
+} from './doc';
+import { codeGroups, codeSegments } from './codeBlocks';
+import { codeSegStyle, DocView, markColor, markStyle } from './DocView';
+import { CODE_BG, CODE_FG, CODE_HEAD_FG } from './highlight';
 import {
   autoMath,
   clearHighlight,
@@ -21,7 +32,6 @@ import {
   highlightColorAt,
   indent,
   insertMathInline,
-  isRich,
   kindOf,
   marksAt,
   mergeWithPrevious,
@@ -348,6 +358,203 @@ export function RichEditor({
     }, 250);
   };
 
+  const groups = codeGroups(doc.blocks);
+  const hasMath = doc.blocks.some(
+    (b) => b.t === 'fx' || ((b.t === 'p' || b.t === 'li') && b.runs.some((r) => 'x' in r)),
+  );
+
+  /** Il testo della casella a tratti, già formattato (la casella è il campo: quello che scrivi lo vedi com'è). */
+  const spans = (b: Block, i: number): ReactNode => {
+    if (b.t === 'fx') return b.tex ? <Text style={{ color: th.blue }}>{b.tex}</Text> : null;
+    const found = b.t === 'p' && b.code ? groups.at(i) : null;
+    if (found && b.t === 'p') {
+      return codeSegments(b.runs, found.group.lines[found.line] ?? []).map((sg, n) => (
+        <Text key={n} style={codeSegStyle(th, sg)}>
+          {sg.s}
+        </Text>
+      ));
+    }
+    return b.runs.map((r, n) =>
+      'x' in r && typeof r.x === 'string' ? (
+        <Text
+          key={n}
+          style={{
+            ...markStyle(th, r.m),
+            color: th.blue,
+            fontFamily: MONO,
+            backgroundColor: `${th.blue}1F`,
+          }}
+        >
+          {r.x}
+        </Text>
+      ) : (
+        <Text key={n} style={markStyle(th, r.m)}>
+          {(r as TextRun).s}
+        </Text>
+      ),
+    );
+  };
+
+  const input = (b: Block, i: number, k: BlockKind) => {
+    const code = k === 'code';
+    return (
+      <TextInput
+        key={`in${i}`}
+        testID={`${testID}-block-${i}`}
+        ref={(r) => {
+          inputs.current[i] = r;
+        }}
+        onChangeText={(v) => onText(i, v)}
+        onFocus={() => onFocus(i)}
+        onBlur={onBlur}
+        onSelectionChange={(e: TextInputSelectionChangeEvent) => {
+          if (i === focus) setSel(e.nativeEvent.selection);
+        }}
+        onKeyPress={(e) => onKey(i, e)}
+        multiline
+        scrollEnabled={false}
+        placeholder={i === 0 && doc.blocks.length === 1 ? placeholder : undefined}
+        placeholderTextColor={code ? CODE_HEAD_FG : th.text3}
+        selectionColor={code ? '#fff' : undefined}
+        style={{
+          flex: 1,
+          color: code ? CODE_FG : th.text,
+          fontSize: code ? 14 : 16,
+          lineHeight: code ? 22 : 22,
+          paddingVertical: code ? 0 : 8,
+          paddingHorizontal: code ? 0 : 8,
+          borderRadius: 8,
+          ...(code || k === 'fx' ? { fontFamily: MONO } : null),
+          ...(k === 'q' ? { fontStyle: 'italic' as const, color: th.text2 } : null),
+          ...(b.t === 'li' && b.ck === 1
+            ? { color: th.text2, textDecorationLine: 'line-through' as const }
+            : null),
+        }}
+      >
+        {spans(b, i)}
+      </TextInput>
+    );
+  };
+
+  const rows: ReactNode[] = [];
+  let skipUntil = -1;
+  for (let i = 0; i < doc.blocks.length; i++) {
+    if (i <= skipUntil) continue;
+    const b = doc.blocks[i]!;
+    const k = kindOf(b);
+    const group = groups.byStart.get(i);
+    if (group) {
+      // le righe di codice formano un riquadro scuro con la lingua in testa, come sul sito
+      const lines: ReactNode[] = [];
+      for (let n = group.start; n <= group.end; n++) {
+        const l = doc.blocks[n]!;
+        lines.push(
+          <View
+            key={n}
+            style={
+              l.t === 'p' && l.hl
+                ? {
+                    backgroundColor: 'rgba(255,214,10,.16)',
+                    borderLeftWidth: 3,
+                    borderLeftColor: '#FFD60A',
+                    paddingHorizontal: 11,
+                  }
+                : { paddingHorizontal: 14 }
+            }
+          >
+            {input(l, n, 'code')}
+          </View>,
+        );
+      }
+      rows.push(
+        <View
+          key={`code${i}`}
+          testID={`${testID}-code-${i}`}
+          style={{
+            backgroundColor: CODE_BG,
+            borderRadius: 12,
+            overflow: 'hidden',
+            marginVertical: 4,
+            paddingBottom: 10,
+          }}
+        >
+          <Text
+            style={{
+              backgroundColor: 'rgba(255,255,255,.07)',
+              color: CODE_HEAD_FG,
+              fontSize: 11.5,
+              fontWeight: '700',
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+              paddingHorizontal: 14,
+              paddingVertical: 7,
+              marginBottom: 6,
+            }}
+          >
+            {group.label}
+          </Text>
+          {lines}
+        </View>,
+      );
+      skipUntil = group.end;
+      continue;
+    }
+    const lvl = b.t === 'li' ? b.lvl : (b.lvl ?? 0);
+    rows.push(
+      <View
+        key={i}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          paddingLeft: Math.max(0, k === 'li' || k === 'ck' ? lvl - 1 : lvl) * 18,
+          gap: 6,
+        }}
+      >
+        {k === 'li' ? (
+          <Text
+            style={{
+              color: b.t === 'li' && b.c ? markColor(th, b.c) : th.text,
+              paddingTop: 10,
+              width: 16,
+            }}
+          >
+            {bulletFor(lvl)}
+          </Text>
+        ) : null}
+        {k === 'ck' ? (
+          <Pressable
+            hitSlop={11}
+            testID={`${testID}-check-${i}`}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: b.t === 'li' && b.ck === 1 }}
+            onPress={() => update(toggleChecked(doc, i))}
+            style={{ paddingTop: 8, width: 22 }}
+          >
+            <Text style={{ color: th.text, fontSize: 17 }}>
+              {b.t === 'li' && b.ck === 1 ? '☑' : '☐'}
+            </Text>
+          </Pressable>
+        ) : null}
+        <View
+          style={[
+            { flex: 1 },
+            k === 'q'
+              ? {
+                  borderLeftWidth: 4,
+                  borderLeftColor: th.blue,
+                  backgroundColor: `${th.blue}14`,
+                  borderTopRightRadius: 10,
+                  borderBottomRightRadius: 10,
+                }
+              : null,
+          ]}
+        >
+          {input(b, i, k)}
+        </View>
+      </View>,
+    );
+  }
+
   return (
     <View testID={testID} style={{ gap: 8 }}>
       {active ? (
@@ -371,77 +578,10 @@ export function RichEditor({
           minHeight: 96,
         }}
       >
-        {doc.blocks.map((b, i) => {
-          const k = kindOf(b);
-          const lvl = b.t === 'li' ? b.lvl : b.t === 'p' ? (b.lvl ?? 0) : (b.lvl ?? 0);
-          return (
-            <View
-              key={i}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                paddingLeft: Math.max(0, k === 'li' || k === 'ck' ? lvl - 1 : lvl) * 18,
-                gap: 6,
-              }}
-            >
-              {k === 'li' ? (
-                <Text style={{ color: th.text, paddingTop: 10, width: 16 }}>{bulletFor(lvl)}</Text>
-              ) : null}
-              {k === 'ck' ? (
-                <Pressable
-                  hitSlop={11}
-                  testID={`${testID}-check-${i}`}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: b.t === 'li' && b.ck === 1 }}
-                  onPress={() => update(toggleChecked(doc, i))}
-                  style={{ paddingTop: 8, width: 22 }}
-                >
-                  <Text style={{ color: th.text, fontSize: 17 }}>
-                    {b.t === 'li' && b.ck === 1 ? '☑' : '☐'}
-                  </Text>
-                </Pressable>
-              ) : null}
-              <TextInput
-                testID={`${testID}-block-${i}`}
-                ref={(r) => {
-                  inputs.current[i] = r;
-                }}
-                value={textOf(b)}
-                onChangeText={(v) => onText(i, v)}
-                onFocus={() => onFocus(i)}
-                onBlur={onBlur}
-                onSelectionChange={(e: TextInputSelectionChangeEvent) => {
-                  if (i === focus) setSel(e.nativeEvent.selection);
-                }}
-                onKeyPress={(e) => onKey(i, e)}
-                multiline
-                scrollEnabled={false}
-                placeholder={i === 0 && doc.blocks.length === 1 ? placeholder : undefined}
-                placeholderTextColor={th.text3}
-                style={{
-                  flex: 1,
-                  color: th.text,
-                  fontSize: 16,
-                  paddingVertical: 8,
-                  paddingHorizontal: 8,
-                  borderRadius: 8,
-                  ...(k === 'code' || k === 'fx' ? { fontFamily: MONO } : null),
-                  ...(b.t === 'p' && b.hl ? { backgroundColor: '#FFCC0040' } : null),
-                  ...(k === 'q'
-                    ? {
-                        fontStyle: 'italic' as const,
-                        borderLeftWidth: 3,
-                        borderLeftColor: th.hairline2,
-                      }
-                    : null),
-                }}
-              />
-            </View>
-          );
-        })}
+        {rows}
       </View>
 
-      {isRich(doc) ? (
+      {hasMath ? (
         <View style={{ gap: 4 }}>
           <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
             {t('fc.smi_anteprima').toUpperCase()}
