@@ -7,12 +7,14 @@ export function PartIcon({
   type,
   color,
   size,
+  height,
 }: {
   type: ParticleType;
   color: string;
   size: number;
+  height?: number;
 }) {
-  const h = type === 'rain' ? size * 1.6 : size;
+  const h = height ?? (type === 'rain' ? size * 1.6 : size);
   const common = { width: size, height: h };
   switch (type) {
     case 'snow':

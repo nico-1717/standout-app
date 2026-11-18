@@ -34,16 +34,16 @@ import {
 
 const AV = Animated.View;
 /** il primo quarto di giro di un'onda che va avanti e indietro (ease-in-out, come `alternate`) */
-const wave = (t: number, half: number) => {
+export const wave = (t: number, half: number) => {
   'worklet';
   return (1 - Math.cos((Math.PI * t) / half)) / 2;
 };
-const cycle = (t: number, duration: number, phase: number) => {
+export const cycle = (t: number, duration: number, phase: number) => {
   'worklet';
   return (t / duration + phase) % 1;
 };
 
-function Fall({ p, time }: { p: Particle; time: SharedValue<number> }) {
+export function Fall({ p, time }: { p: Particle; time: SharedValue<number> }) {
   const rain = p.type === 'rain';
   const style = useAnimatedStyle(() => {
     const u = cycle(time.get(), p.duration, p.phase);
@@ -67,12 +67,12 @@ function Fall({ p, time }: { p: Particle; time: SharedValue<number> }) {
   });
   return (
     <AV style={[{ position: 'absolute', top: -14, left: `${p.left}%` }, style]}>
-      <PartIcon type={p.type} color={p.color} size={p.size} />
+      <PartIcon type={p.type} color={p.color} size={p.size} height={p.height} />
     </AV>
   );
 }
 
-function Twinkle({ p, time }: { p: Particle; time: SharedValue<number> }) {
+export function Twinkle({ p, time }: { p: Particle; time: SharedValue<number> }) {
   const style = useAnimatedStyle(() => {
     const w = wave(time.get() + p.phase * p.duration, p.duration / 2);
     return {
@@ -275,6 +275,7 @@ export function MonthScene({
   opacity = 0.9,
   page,
   sky = true,
+  bare = false,
   testID = 'month-scene',
 }: {
   /** 1–12 */
@@ -285,6 +286,8 @@ export function MonthScene({
   page: string;
   /** il cielo colorato del mese (solo nel chiaro) */
   sky?: boolean;
+  /** solo il cielo: albero, animale e insetti lasciano il posto alla scena del meteo */
+  bare?: boolean;
   testID?: string;
 }) {
   const still = useReducedMotion();
@@ -294,7 +297,7 @@ export function MonthScene({
   const time = useSharedValue(0);
   useFrameCallback((f) => {
     time.set((f.timeSinceFirstFrame ?? 0) / 1000);
-  }, !still);
+  }, !still && !bare);
 
   const parts = useMemo(() => (cfg ? buildParticles(cfg, month * 7919) : []), [cfg, month]);
   const drifters = useMemo(() => (cfg ? buildDrifters(cfg, month * 104729) : []), [cfg, month]);
@@ -323,33 +326,35 @@ export function MonthScene({
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#sky)" />
         </Svg>
       ) : null}
-      <View style={{ flex: 1, opacity }}>
-        <Tree name={cfg.tree} color={cfg.treeColor ?? '#9BAA9C'} width={size.w} time={time} />
-        {cfg.animal ? (
-          <Animal
-            name={cfg.animal}
-            color={cfg.animalColor ?? '#7A6F64'}
-            width={size.w}
-            height={size.h}
-            time={time}
-            phase={animalPhase}
-          />
-        ) : null}
-        {still
-          ? null
-          : parts.map((p, i) =>
-              p.type === 'star' ? (
-                <Twinkle key={`p${i}`} p={p} time={time} />
-              ) : (
-                <Fall key={`p${i}`} p={p} time={time} />
-              ),
-            )}
-        {still
-          ? null
-          : drifters.map((d, i) => (
-              <Cross key={`d${i}`} d={d} time={time} width={size.w} height={size.h} />
-            ))}
-      </View>
+      {bare ? null : (
+        <View style={{ flex: 1, opacity }}>
+          <Tree name={cfg.tree} color={cfg.treeColor ?? '#9BAA9C'} width={size.w} time={time} />
+          {cfg.animal ? (
+            <Animal
+              name={cfg.animal}
+              color={cfg.animalColor ?? '#7A6F64'}
+              width={size.w}
+              height={size.h}
+              time={time}
+              phase={animalPhase}
+            />
+          ) : null}
+          {still
+            ? null
+            : parts.map((p, i) =>
+                p.type === 'star' ? (
+                  <Twinkle key={`p${i}`} p={p} time={time} />
+                ) : (
+                  <Fall key={`p${i}`} p={p} time={time} />
+                ),
+              )}
+          {still
+            ? null
+            : drifters.map((d, i) => (
+                <Cross key={`d${i}`} d={d} time={time} width={size.w} height={size.h} />
+              ))}
+        </View>
+      )}
     </View>
   );
 }

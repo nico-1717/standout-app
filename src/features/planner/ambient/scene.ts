@@ -67,6 +67,8 @@ export type Particle = {
   sway: number;
   /** solo le stelle, ferme: quanto in alto, in % */
   top: number;
+  /** l'altezza, se non è quella di default del tipo (le gocce di pioggia del meteo) */
+  height?: number;
 };
 
 export type Drifter = {

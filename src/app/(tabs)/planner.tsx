@@ -44,6 +44,8 @@ import {
 import { minutesOf } from '@/features/planner/model';
 import { weekPhraseId } from '@/features/planner/phrases';
 import { MonthScene } from '@/features/planner/ambient/MonthScene';
+import { WeatherScene } from '@/features/planner/ambient/WeatherScene';
+import { wxSceneInput } from '@/features/planner/ambient/wxScene';
 import { ambientOpacity } from '@/features/planner/ambient/scene';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthAgenda, MonthView, WeekGrid, monthGrid } from '@/features/planner/Views';
@@ -326,6 +328,8 @@ export default function PlannerScreen() {
           onOpen: setWxDate,
         }
       : undefined;
+  // la scena racconta il tempo di *un* giorno: vale dove se ne guarda uno (non nel mese)
+  const wxScene = mode === 'month' ? null : wxSceneInput(weather.wx, date, today, new Date());
   const barTop = topH + barH;
   const agendaH = Math.round(screenH * 0.58);
 
@@ -346,12 +350,16 @@ export default function PlannerScreen() {
           weather={wxCtx}
           ambient={
             uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
-              <MonthScene
-                month={monthOf(date)}
-                opacity={ambientOpacity(plannerSettings.ambient_opacity)}
-                page={pt.page}
-                sky={!pt.dark}
-              />
+              <>
+                <MonthScene
+                  month={monthOf(date)}
+                  opacity={ambientOpacity(plannerSettings.ambient_opacity)}
+                  page={pt.page}
+                  sky={!pt.dark}
+                  bare={wxScene !== null}
+                />
+                {wxScene ? <WeatherScene input={wxScene} /> : null}
+              </>
             ) : null
           }
           onHeight={setTopH}
