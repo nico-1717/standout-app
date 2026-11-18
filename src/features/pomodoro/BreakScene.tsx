@@ -80,8 +80,6 @@ function Piece(p: {
   );
 }
 
-const fin = (n: number) => (Number.isFinite(n) ? n : 0);
-
 export function BreakScene({
   color,
   accent,
@@ -116,7 +114,7 @@ export function BreakScene({
     transform: [{ scale: interpolate(sun.value, [0, 1], [1, 1.06]) }],
   }));
   const raysStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${fin(rays.value * 360)}deg` }],
+    transform: [{ rotate: `${rays.value * 360}deg` }],
   }));
   const steamStyle = (v: SharedValue<number>) => () => {
     'worklet';
