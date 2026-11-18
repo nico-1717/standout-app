@@ -1,0 +1,51 @@
+appId: app.standout.mobile
+name: A screenshot of every main screen
+---
+- runFlow: common/login.yaml
+- tapOn:
+    id: bar-home
+- takeScreenshot: 30-home
+- tapOn:
+    id: bar-planner
+- takeScreenshot: 31-planner
+- tapOn:
+    id: bar-todo
+- takeScreenshot: 32-todo
+- tapOn:
+    id: bar-habits
+- takeScreenshot: 33-habits
+- tapOn:
+    id: bar-pomodoro
+- takeScreenshot: 34-pomodoro
+# The bar scrolls sideways: slide it to reach the other pages.
+- swipe:
+    start: 85%, 92%
+    end: 15%, 92%
+- takeScreenshot: 35-bar-scrolled
+- tapOn:
+    id: bar-diary
+    optional: true
+- takeScreenshot: 36-diary
+- tapOn:
+    id: bar-grades
+    optional: true
+- takeScreenshot: 37-grades
+- tapOn:
+    id: bar-flashcards
+    optional: true
+- takeScreenshot: 38-flashcards
+- swipe:
+    start: 85%, 92%
+    end: 15%, 92%
+- tapOn:
+    id: bar-languages
+    optional: true
+- takeScreenshot: 39-languages
+- tapOn:
+    id: bar-projects
+    optional: true
+- takeScreenshot: 40-projects
+- tapOn:
+    id: bar-settings
+    optional: true
+- takeScreenshot: 41-more

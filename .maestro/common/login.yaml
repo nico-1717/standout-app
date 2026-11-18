@@ -1,0 +1,28 @@
+# Shared step (not a flow by itself): opens the app fresh and logs in with the run's test account.
+appId: app.standout.mobile
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: 'Email or username'
+    timeout: 60000
+# Typing on the simulator can lose letters: the whole login is tried up to 3 times.
+# (No "hideKeyboard": on iPhone it taps the screen and hit the "Sign up" link. The Return key sends the form.)
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn: 'Email or username'
+      - eraseText: 60
+      - inputText: ${E2E_USER}
+      - tapOn: 'Password'
+      - eraseText: 60
+      - inputText: ${E2E_PASS}
+      - pressKey: Enter
+      # iOS may ask "Save Password?" after a login
+      - tapOn:
+          text: 'Not Now'
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: app-tab-bar
+          timeout: 20000

@@ -35,20 +35,31 @@ jobs:
           java-version: 17
       - run: npm ci
 
+      - name: Reuse the built app if the app code did not change (only the flows did)
+        id: appcache
+        uses: actions/cache/restore@v4
+        with:
+          path: built-app
+          key: simulator-app-${{ hashFiles('src/**', 'assets/**', 'app.json', 'app.config.js', 'package-lock.json', 'package.json') }}
+
       - name: Make the iOS project (only on this Mac, never saved in the repo)
+        if: steps.appcache.outputs.cache-hit != 'true'
         run: npx expo prebuild --platform ios --no-install
 
       - name: Turn off over-the-air updates in this test build
+        if: steps.appcache.outputs.cache-hit != 'true'
         # Otherwise the app would download the live version in the middle of a flow and restart.
         run: |
           PLIST="$(ls ios/*/Supporting/Expo.plist)"
           /usr/libexec/PlistBuddy -c "Set :EXUpdatesEnabled false" "$PLIST" || /usr/libexec/PlistBuddy -c "Add :EXUpdatesEnabled bool false" "$PLIST"
 
       - name: Install the iOS libraries (CocoaPods)
+        if: steps.appcache.outputs.cache-hit != 'true'
         working-directory: ios
         run: pod install
 
       - name: Build for the simulator
+        if: steps.appcache.outputs.cache-hit != 'true'
         run: |
           set -o pipefail
           WORKSPACE="$(ls -d ios/*.xcworkspace | head -1)"
@@ -61,8 +72,15 @@ jobs:
             echo "::endgroup::"
             exit 1
           fi
-          APP="$(ls -d build/Build/Products/Release-iphonesimulator/*.app | head -1)"
-          echo "APP=$APP" >> "$GITHUB_ENV"
+          mkdir -p built-app
+          cp -R "$(ls -d build/Build/Products/Release-iphonesimulator/*.app | head -1)" built-app/
+
+      - name: Keep the built app for the next run
+        if: steps.appcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: built-app
+          key: simulator-app-${{ hashFiles('src/**', 'assets/**', 'app.json', 'app.config.js', 'package-lock.json', 'package.json') }}
 
       - name: Start an iPhone simulator and install the app
         run: |
@@ -76,6 +94,7 @@ jobs:
           xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardPrediction -bool false
           xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardCapsLock -bool false
           xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardShowPredictionBar -bool false
+          APP="$(ls -d built-app/*.app | head -1)"
           xcrun simctl install "$DEVICE" "$APP"
           echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
 
