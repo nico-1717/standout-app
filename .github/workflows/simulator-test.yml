@@ -3,7 +3,7 @@ name: iPhone simulator test
 # A Mac in the cloud (free for public repos) builds the app for the iPhone simulator, opens it, taps through
 # the flows in the .maestro folder and keeps the screenshots (Artifacts, at the bottom of the run page).
 # Nothing here changes the app, the Apple signing or the phone-update channel, and it needs NO secret:
-# every run creates its own throw-away test account on the site and deletes it again at the end.
+# every run creates its own throw-away test account on the site (named e2e + the run number; not deleted yet).
 on:
   workflow_dispatch:
     inputs:
