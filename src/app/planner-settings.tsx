@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Fold, PlSlider } from '@/features/planner/SettingsParts';
+import { GoogleCard } from '@/features/planner/GoogleUi';
 import { WeatherCard, WxPlacePicker, WxPopup } from '@/features/planner/WeatherUi';
 import { useWeather } from '@/features/planner/useWeather';
 import { localToday } from '@/features/tasks/groups';
@@ -40,11 +41,12 @@ const ZOOM_LABEL: Record<Zoom, string> = {
  */
 export default function PlannerSettingsScreen() {
   const th = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const {
     services,
+    account,
     version,
     uiStyle,
     plannerSettings: s,
@@ -169,6 +171,8 @@ export default function PlannerSettingsScreen() {
             />
           </View>
         ) : null}
+
+        <GoogleCard pt={pt} account={account} language={i18n.language} />
 
         {uiStyle === 'paper' ? (
           <Field pt={pt} label={t('planner.colore_della_pagina')}>

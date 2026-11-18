@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Alert, Linking } from 'react-native';
 
 import '@/core/i18n';
+import { parseGcCalendars, parseGcStatus } from '@/features/planner/gcal';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { DEFAULT_PLANNER_SETTINGS, type PlannerSettings } from '@/features/planner/settings';
 import PlannerSettingsScreen from '../planner-settings';
@@ -24,8 +26,22 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, back: mock
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+const mockStatus = jest.fn();
+const mockAccount = {
+  gcStatus: () => mockStatus() as Promise<unknown>,
+  gcCalendars: jest.fn(async () => parseGcCalendars({ google: [], mine: [] })),
+  gcSync: jest.fn(async () => undefined),
+  gcDisconnect: jest.fn(async () => undefined),
+  gcRepair: jest.fn(async () => 2),
+  gcSetModes: jest.fn(async () => undefined),
+  gcMapSet: jest.fn(async () => undefined),
+  gcPushSet: jest.fn(async () => undefined),
+  gcConnectUrl: () => 'https://site.test/planner/google_calendar.php?action=connect',
+  weather: jest.fn(async () => ({ enabled: false, giorni: {}, adesso: null })),
+};
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
+    account: mockAccount,
     services: { planner: mockPlanner },
     version: 0,
     uiStyle: mockStyle,
@@ -34,7 +50,20 @@ jest.mock('@/core/app/AppProvider', () => ({
   }),
 }));
 
+const connected = {
+  ok: true,
+  configured: true,
+  connected: true,
+  email: 'nico@example.com',
+  last_sync: '2026-11-18 14:03:00',
+  calendar: 'Standout',
+  modes: { dedicated: 'all', primary: 'none' },
+  window: { back: 30, forward: 180 },
+  build: 'v7',
+};
 beforeEach(() => {
+  mockStatus.mockReset();
+  mockStatus.mockImplementation(async () => parseGcStatus({ ok: true, configured: true }));
   mockStyle = 'paper';
   mockSettings = DEFAULT_PLANNER_SETTINGS;
   mockUpdate.mockClear();
@@ -111,5 +140,81 @@ describe('planner settings popup (as the website one)', () => {
     expect(screen.queryByTestId('ps-ambient')).toBeNull();
     await fireEvent.press(screen.getByTestId('ps-done'));
     expect(mockBack).toHaveBeenCalled();
+  });
+});
+
+describe('Google Calendar card (as the website one)', () => {
+  const open = async () => {
+    await render(
+      <ThemeProvider>
+        <PlannerSettingsScreen />
+      </ThemeProvider>,
+    );
+  };
+
+  test('not connected: it opens by itself and the button goes to the website consent page', async () => {
+    const link = jest.spyOn(Linking, 'openURL').mockResolvedValue();
+    await open();
+    await waitFor(() => expect(screen.getByTestId('gc-connect')).toBeTruthy());
+    expect(screen.getByTestId('ps-google-state')).toHaveTextContent('Not connected');
+    await fireEvent.press(screen.getByTestId('gc-connect'));
+    expect(link).toHaveBeenCalledWith(
+      'https://site.test/planner/google_calendar.php?action=connect',
+    );
+  });
+
+  test('connected: the header says who, and the body stays closed until you tap it', async () => {
+    mockStatus.mockImplementation(async () => parseGcStatus(connected));
+    await open();
+    await waitFor(() =>
+      expect(screen.getByTestId('ps-google-sub')).toHaveTextContent('nico@example.com'),
+    );
+    expect(screen.getByTestId('ps-google-state')).toHaveTextContent('Connected');
+    expect(screen.queryByTestId('ps-google-body')).toBeNull();
+    await fireEvent.press(screen.getByTestId('ps-google-head'));
+    expect(screen.getByTestId('gc-when')).toHaveTextContent(/last sync: november 18, 14:03/);
+    expect(screen.getByTestId('gc-bridge')).toBeTruthy();
+  });
+
+  test('sync, the two choices and the repair go to the server', async () => {
+    mockStatus.mockImplementation(async () => parseGcStatus(connected));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    await open();
+    await waitFor(() => expect(screen.getByTestId('ps-google-head')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('ps-google-head'));
+    await fireEvent.press(screen.getByTestId('gc-sync'));
+    expect(mockAccount.gcSync).toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId('gc-dedicated'));
+    await fireEvent.press(screen.getByTestId('gc-dedicated-high'));
+    expect(mockAccount.gcSetModes).toHaveBeenCalledWith({ gc_dedicated: 'high' });
+    await fireEvent.press(screen.getByTestId('gc-primary'));
+    await fireEvent.press(screen.getByTestId('gc-primary-highest'));
+    expect(mockAccount.gcSetModes).toHaveBeenCalledWith({ gc_primary: 'highest' });
+
+    // riparare chiede conferma, e poi dice quante copie ha tolto
+    await fireEvent.press(screen.getByTestId('gc-repair'));
+    const buttons = alert.mock.calls.at(-1)![2]!;
+    await buttons.find((b) => b.style !== 'cancel')!.onPress!();
+    await waitFor(() => expect(screen.getByTestId('gc-message')).toHaveTextContent(/^2 copies/));
+  });
+
+  test('disconnecting asks first', async () => {
+    mockStatus.mockImplementation(async () => parseGcStatus(connected));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    await open();
+    await waitFor(() => expect(screen.getByTestId('ps-google-head')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('ps-google-head'));
+    await fireEvent.press(screen.getByTestId('gc-disconnect'));
+    expect(mockAccount.gcDisconnect).not.toHaveBeenCalled();
+    await alert.mock.calls.at(-1)![2]!.find((b) => b.style === 'destructive')!.onPress!();
+    expect(mockAccount.gcDisconnect).toHaveBeenCalled();
+  });
+
+  test('a server that cannot answer says so', async () => {
+    mockStatus.mockImplementation(async () => Promise.reject(new Error('net')));
+    await open();
+    await fireEvent.press(screen.getByTestId('ps-google-head'));
+    await waitFor(() => expect(screen.getByText('Status not available.')).toBeTruthy());
   });
 });

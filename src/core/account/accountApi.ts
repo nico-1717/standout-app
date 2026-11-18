@@ -1,4 +1,12 @@
 import type { AiBook, AiList, AiReport } from '@/features/diary/aiReading';
+import {
+  parseGcCalendars,
+  parseGcStatus,
+  type GcCalendars,
+  type GcDedicated,
+  type GcPrimary,
+  type GcStatus,
+} from '@/features/planner/gcal';
 import type { Insights } from '@/features/diary/insights';
 
 import { ApiError } from '../api/httpApi';
@@ -178,7 +186,7 @@ export class AccountApi {
   ) {}
 
   private async send(
-    method: 'GET' | 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
   ): Promise<Response> {
@@ -254,6 +262,47 @@ export class AccountApi {
   async storage(): Promise<StorageUsage> {
     const r = await this.json<Partial<StorageUsage>>(await this.send('GET', '/api/v1/storage'));
     return { used: Number(r.used ?? 0), quota: Number(r.quota ?? 0) };
+  }
+
+  // --- Google Calendar: lo stesso file del sito (planner/google_calendar.php), che accetta anche il token dell'app ---
+  private gc(action: string): string {
+    return `/planner/google_calendar.php?ajax=${action}`;
+  }
+  /** Lo stato del collegamento e le due scelte su cosa mandare a Google. */
+  async gcStatus(): Promise<GcStatus> {
+    return parseGcStatus(await this.json(await this.send('GET', this.gc('status'))));
+  }
+  /** I calendari di Google e i miei, con dove va ciascuno. */
+  async gcCalendars(): Promise<GcCalendars> {
+    return parseGcCalendars(await this.json(await this.send('GET', this.gc('calendars'))));
+  }
+  /** Sincronizza adesso. */
+  async gcSync(): Promise<void> {
+    await this.json(await this.send('POST', this.gc('sync'), {}));
+  }
+  async gcDisconnect(): Promise<void> {
+    await this.json(await this.send('POST', this.gc('disconnect'), {}));
+  }
+  /** Cerca e toglie i doppioni su Google; quante copie ha tolto. */
+  async gcRepair(): Promise<number> {
+    const r = await this.json<{ removed?: number }>(await this.send('POST', this.gc('repair'), {}));
+    return typeof r.removed === 'number' ? r.removed : 0;
+  }
+  /** Dove far finire gli eventi di un calendario di Google (0 = nessuno: quelli già entrati se ne vanno). */
+  async gcMapSet(ref: string, calendarId: number): Promise<void> {
+    await this.json(await this.send('POST', this.gc('map_set'), { ref, calendar_id: calendarId }));
+  }
+  /** Dove finiscono su Google gli eventi di un mio calendario ('' = come impostato sopra). */
+  async gcPushSet(calendarId: number, ref: string): Promise<void> {
+    await this.json(await this.send('POST', this.gc('push_set'), { calendar_id: calendarId, ref }));
+  }
+  /** Cosa mandare a Google: nel calendario dedicato e nel principale. */
+  async gcSetModes(p: { gc_dedicated?: GcDedicated; gc_primary?: GcPrimary }): Promise<void> {
+    await this.json(await this.send('PATCH', '/api/v1/planner/settings', p));
+  }
+  /** L'indirizzo che porta al consenso di Google: si apre nel browser, dove c'è la sessione del sito. */
+  gcConnectUrl(): string {
+    return `${this.baseUrl.replace(/\/$/, '')}/planner/google_calendar.php?action=connect`;
   }
 
   /** Il meteo salvato dell'utente (acceso o no) e le previsioni. Serve rete. */
