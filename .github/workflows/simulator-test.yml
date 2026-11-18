@@ -70,6 +70,12 @@ jobs:
           echo "Simulator: $DEVICE"
           xcrun simctl boot "$DEVICE"
           xcrun simctl bootstatus "$DEVICE" -b
+          # No keyboard tips, no auto-correct: they swallow letters that Maestro types.
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardAutocorrection -bool false
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardPrediction -bool false
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardCapsLock -bool false
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardShowPredictionBar -bool false
           xcrun simctl install "$DEVICE" "$APP"
           echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
 
@@ -87,9 +93,8 @@ jobs:
           echo "::add-mask::$E2E_PASS"
           # The account is made here with the site's API (the iPhone "Strong Password" box blocks typing a new password
           # in the form); the flow then logs in through the app like a real person.
-          curl -fsS -X POST "https://nisama.altervista.org/api/v1/auth/register" -H 'Content-Type: application/json' \
-            -d "{\"username\":\"$E2E_USER\",\"email\":\"$E2E_USER@users.noreply.github.com\",\"password\":\"$E2E_PASS\",\"password_confirm\":\"$E2E_PASS\",\"accetto\":true,\"device_name\":\"simulator-test\"}" \
-            | head -c 200 | sed -E 's/"(access|refresh)_token":"[^"]+"/"\1_token":"..."/g'; echo
+          curl -fsS -o /dev/null -w "register HTTP %{http_code}\n" -X POST "https://nisama.altervista.org/api/v1/auth/register" -H 'Content-Type: application/json' \
+            -d "{\"username\":\"$E2E_USER\",\"email\":\"$E2E_USER@users.noreply.github.com\",\"password\":\"$E2E_PASS\",\"password_confirm\":\"$E2E_PASS\",\"accetto\":true,\"device_name\":\"simulator-test\"}"
           if [ -n "${{ inputs.flow }}" ]; then TARGET=".maestro/${{ inputs.flow }}.yaml"; else TARGET=".maestro"; fi
           maestro --device "$DEVICE" test "$TARGET" \
             -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \
