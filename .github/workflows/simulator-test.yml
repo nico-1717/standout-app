@@ -1,0 +1,91 @@
+name: iPhone simulator test
+# The button: GitHub > Actions > "iPhone simulator test" > Run workflow.
+# A Mac in the cloud (free for public repos) builds the app for the iPhone simulator, opens it, taps through
+# the flows in the .maestro folder and keeps the screenshots (Artifacts, at the bottom of the run page).
+# Nothing here changes the app, the Apple signing or the phone-update channel, and it needs NO secret:
+# every run creates its own throw-away test account on the site and deletes it again at the end.
+on:
+  workflow_dispatch:
+    inputs:
+      flow:
+        description: 'Which flow to run (file name in .maestro, without .yaml). Empty = all of them.'
+        required: false
+        default: ''
+
+concurrency:
+  group: simulator-test
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+
+      - name: Make the iOS project (only on this Mac, never saved in the repo)
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Turn off over-the-air updates in this test build
+        # Otherwise the app would download the live version in the middle of a flow and restart.
+        run: |
+          PLIST="$(ls ios/*/Supporting/Expo.plist)"
+          /usr/libexec/PlistBuddy -c "Set :EXUpdatesEnabled false" "$PLIST" || /usr/libexec/PlistBuddy -c "Add :EXUpdatesEnabled bool false" "$PLIST"
+
+      - name: Install the iOS libraries (CocoaPods)
+        working-directory: ios
+        run: pod install
+
+      - name: Build for the simulator
+        run: |
+          WORKSPACE="$(ls -d ios/*.xcworkspace | head -1)"
+          SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES \
+            | tail -n 40
+          APP="$(ls -d build/Build/Products/Release-iphonesimulator/*.app | head -1)"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Start an iPhone simulator and install the app
+        run: |
+          DEVICE="$(xcrun simctl list devices available | grep -E 'iPhone 1[5-9]( Pro)? \(' | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+          echo "Simulator: $DEVICE"
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" "$APP"
+          echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run the flows
+        run: |
+          mkdir -p shots
+          # A new throw-away account for this run only.
+          export E2E_USER="e2e$GITHUB_RUN_ID"
+          export E2E_PASS="Zz$(openssl rand -hex 8)!9a"
+          echo "::add-mask::$E2E_PASS"
+          if [ -n "${{ inputs.flow }}" ]; then TARGET=".maestro/${{ inputs.flow }}.yaml"; else TARGET=".maestro"; fi
+          maestro --device "$DEVICE" test "$TARGET" \
+            -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \
+            --test-output-dir shots --format junit --output shots/report.xml
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots
+          if-no-files-found: warn
