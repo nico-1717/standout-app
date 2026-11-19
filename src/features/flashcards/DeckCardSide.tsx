@@ -3,6 +3,7 @@ import {
   ScrollView,
   Text,
   View,
+  type LayoutChangeEvent,
   type ScrollViewInstance,
   type ScrollViewProps,
 } from 'react-native';
@@ -52,7 +53,9 @@ export function DeckCardSide(p: {
   const th = useTheme();
   const lock = useContext(ScrollLockContext);
   const inner = useRef<ScrollViewInstance>(null);
-  const [tall, setTall] = useState(false);
+  const [textH, setTextH] = useState(0);
+  const tall = textH > TEXT_MAX + 1;
+  const measure = (e: LayoutChangeEvent) => setTextH(e.nativeEvent.layout.height);
   const hasText = docToPlain(parseDoc(p.raw)).trim().length > 0;
   const hasImage = !!p.image;
   const split = hasText && hasImage;
@@ -98,27 +101,24 @@ export function DeckCardSide(p: {
                   onTouchCancel={() => lock(false)}
                 >
                   {tall ? (
-                    // altezza FISSA (non solo massima): così il contenuto più alto scorre davvero dentro il riquadro
+                    // altezza FISSA (non solo massima) e contenuto alto quanto il testo misurato: così c'è sempre qualcosa
+                    // che sporge e il riquadro scorre davvero (prima il contenuto restava alto quanto il riquadro e non partiva nulla)
                     <ScrollView
                       testID={`${p.testID}-box`}
                       ref={inner}
                       nestedScrollEnabled
                       style={{ height: TEXT_MAX }}
+                      contentContainerStyle={{ minHeight: textH }}
                       showsVerticalScrollIndicator
-                      onContentSizeChange={(_w, h) => {
-                        if (h <= TEXT_MAX + 1) setTall(false);
-                        // la barra si mostra un attimo: si vede che si può scorrere
-                        else inner.current?.flashScrollIndicators();
-                      }}
+                      onLayout={() => inner.current?.flashScrollIndicators()}
                     >
-                      {text}
+                      <View testID={`${p.testID}-measure`} onLayout={measure}>
+                        {text}
+                      </View>
                     </ScrollView>
                   ) : (
                     // un testo corto sta com'è; se alla misura risulta più alto del tetto passa nel riquadro che scorre
-                    <View
-                      testID={`${p.testID}-measure`}
-                      onLayout={(e) => setTall(e.nativeEvent.layout.height > TEXT_MAX + 1)}
-                    >
+                    <View testID={`${p.testID}-measure`} onLayout={measure}>
                       {text}
                     </View>
                   )}
