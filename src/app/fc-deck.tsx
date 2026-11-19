@@ -20,7 +20,7 @@ import {
 } from '@/features/flashcards/cardList';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { DocView } from '@/features/flashcards/DocView';
-import { DeckCardSide, LockedScrollView } from '@/features/flashcards/DeckCardSide';
+import { DeckCardSide } from '@/features/flashcards/DeckCardSide';
 import { DeckViewSheet } from '@/features/flashcards/DeckViewSheet';
 import { studyView } from '@/features/flashcards/gameKit';
 import { isTitleCard } from '@/features/flashcards/game';
@@ -401,7 +401,7 @@ export default function DeckScreen() {
         </View>
       </View>
 
-      <LockedScrollView
+      <ScrollView
         contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 96, gap: 14 }}
         keyboardShouldPersistTaps="handled"
       >
@@ -1175,21 +1175,22 @@ export default function DeckScreen() {
                 const isLearnt = learnt.has(c.uuid);
                 const isPicked = selecting && picked.has(c.uuid);
                 const lvl = levels.get(c.uuid);
+                const pressCard = () => {
+                  if (!selecting) {
+                    router.push({ pathname: '/fc-card', params: { id: c.uuid } });
+                    return;
+                  }
+                  const next = new Set(picked);
+                  if (next.has(c.uuid)) next.delete(c.uuid);
+                  else next.add(c.uuid);
+                  setPicked(next);
+                };
                 return (
                   <Pressable
                     key={c.uuid}
                     testID={`fcd-card-${c.uuid}`}
                     accessibilityRole="button"
-                    onPress={() => {
-                      if (!selecting) {
-                        router.push({ pathname: '/fc-card', params: { id: c.uuid } });
-                        return;
-                      }
-                      const next = new Set(picked);
-                      if (next.has(c.uuid)) next.delete(c.uuid);
-                      else next.add(c.uuid);
-                      setPicked(next);
-                    }}
+                    onPress={pressCard}
                     accessibilityState={selecting ? { checked: picked.has(c.uuid) } : undefined}
                     style={{
                       borderRadius: th.radiusCard,
@@ -1314,6 +1315,7 @@ export default function DeckScreen() {
                           image={c.question_image}
                           audio={c.question_audio}
                           full={localPrefs.fcFullCards}
+                          onPress={pressCard}
                           question
                         />
                         <DeckCardSide
@@ -1323,6 +1325,7 @@ export default function DeckScreen() {
                           image={c.answer_image}
                           audio={c.answer_audio}
                           full={localPrefs.fcFullCards}
+                          onPress={pressCard}
                         />
                       </>
                     )}
@@ -1342,7 +1345,7 @@ export default function DeckScreen() {
             </View>
           )}
         </View>
-      </LockedScrollView>
+      </ScrollView>
 
       <DeckViewSheet
         visible={sheet}

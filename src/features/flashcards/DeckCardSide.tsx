@@ -1,11 +1,11 @@
-import { createContext, useContext, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   Text,
   View,
   type LayoutChangeEvent,
   type ScrollViewInstance,
-  type ScrollViewProps,
 } from 'react-native';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -17,23 +17,6 @@ import { DocView } from './DocView';
 
 /** L'altezza oltre la quale il testo di una carta scorre da sé (`.qa-text{max-height:190px}` del sito). */
 const TEXT_MAX = 190;
-
-/**
- * Chi tiene l'elenco delle carte (la pagina che scorre) la mette qui: mentre il dito è su un testo lungo che scorre da sé,
- * la pagina si ferma, così il tocco va al testo e non alla pagina (su iPhone due scorrimenti in verticale uno dentro
- * l'altro si litigavano il dito e vinceva la pagina).
- */
-const ScrollLockContext = createContext<(locked: boolean) => void>(() => {});
-
-/** La pagina con l'elenco delle carte: come un ScrollView, ma si ferma mentre il dito è su un testo lungo che scorre da sé. */
-export function LockedScrollView(props: ScrollViewProps) {
-  const [held, setHeld] = useState(false);
-  return (
-    <ScrollLockContext.Provider value={setHeld}>
-      <ScrollView {...props} scrollEnabled={!held} />
-    </ScrollLockContext.Provider>
-  );
-}
 
 /**
  * Un lato della carta nell'elenco del mazzo (`.qa-side` di fc_view.php): l'etichetta con la sua linea, poi il testo FORMATTATO
@@ -49,9 +32,10 @@ export function DeckCardSide(p: {
   full: boolean;
   /** domanda: un po' più grossa e marcata, come sul sito */
   question?: boolean;
+  /** il tocco sul testo che scorre: lo scorrimento non può stare dentro il tocco della carta, quindi lo gestisce il testo stesso */
+  onPress?: () => void;
 }) {
   const th = useTheme();
-  const lock = useContext(ScrollLockContext);
   const inner = useRef<ScrollViewInstance>(null);
   const [textH, setTextH] = useState(0);
   const tall = textH > TEXT_MAX + 1;
@@ -94,15 +78,10 @@ export function DeckCardSide(p: {
               {p.full ? (
                 text
               ) : (
-                <View
-                  testID={`${p.testID}-scroll`}
-                  onTouchStart={() => lock(true)}
-                  onTouchEnd={() => lock(false)}
-                  onTouchCancel={() => lock(false)}
-                >
+                <View testID={`${p.testID}-scroll`}>
                   {tall ? (
-                    // altezza FISSA (non solo massima) e contenuto alto quanto il testo misurato: così c'è sempre qualcosa
-                    // che sporge e il riquadro scorre davvero (prima il contenuto restava alto quanto il riquadro e non partiva nulla)
+                    // altezza FISSA e contenuto alto quanto il testo misurato. Il tocco della carta sta DENTRO il riquadro:
+                    // su iPhone uno ScrollView dentro il tocco (Pressable) di una carta non scorre mai, vince la pagina
                     <ScrollView
                       testID={`${p.testID}-box`}
                       ref={inner}
@@ -112,9 +91,11 @@ export function DeckCardSide(p: {
                       showsVerticalScrollIndicator
                       onLayout={() => inner.current?.flashScrollIndicators()}
                     >
-                      <View testID={`${p.testID}-measure`} onLayout={measure}>
-                        {text}
-                      </View>
+                      <Pressable accessible={false} onPress={p.onPress}>
+                        <View testID={`${p.testID}-measure`} onLayout={measure}>
+                          {text}
+                        </View>
+                      </Pressable>
                     </ScrollView>
                   ) : (
                     // un testo corto sta com'è; se alla misura risulta più alto del tetto passa nel riquadro che scorre
