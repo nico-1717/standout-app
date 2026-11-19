@@ -16,7 +16,7 @@ name: A card with a very long answer scrolls in the viewer
 - inputText: Test subject
 - pressKey: Enter
 - takeScreenshot: 11-subject-made
-- tapOn: 'Test subject'
+- tapOn: '.*Test subject.*'
 - tapOn:
     id: fcd-settings
 - tapOn:
