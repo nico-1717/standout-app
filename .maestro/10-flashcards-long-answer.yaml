@@ -110,11 +110,19 @@ name: A card with a very long answer scrolls in the viewer
 - tapOn:
     id: fcd-viewer-flip
 - takeScreenshot: 22-viewer-answer-top
+# Quick flicks (short swipe time) inside the card; a slow press-and-drag can be read as a long press.
 - swipe:
-    direction: UP
-    duration: 600
-- takeScreenshot: 23-viewer-answer-after-swipe
+    start: 50%,70%
+    end: 50%,30%
+    duration: 150
+- takeScreenshot: 23-viewer-answer-after-flick
 - swipe:
-    direction: UP
-    duration: 600
-- takeScreenshot: 24-viewer-answer-after-2nd-swipe
+    start: 50%,70%
+    end: 50%,30%
+    duration: 150
+- takeScreenshot: 24-viewer-answer-after-2nd-flick
+- swipe:
+    start: 50%,75%
+    end: 50%,20%
+    duration: 150
+- takeScreenshot: 25-viewer-answer-after-3rd-flick
