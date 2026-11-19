@@ -24,7 +24,11 @@ appId: app.standout.mobile
             - eraseText: 60
             - inputText: ${E2E_PASS}
             - pressKey: Enter
-            # iOS may ask "Save Password?" after a login
+            # iOS may ask "Save Password?" after a login, sometimes a few seconds late; it hides the app until answered
+            - extendedWaitUntil:
+                visible: 'Not Now'
+                timeout: 12000
+                optional: true
             - tapOn:
                 text: 'Not Now'
                 optional: true
