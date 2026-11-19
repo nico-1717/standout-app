@@ -19,6 +19,8 @@ name: A card with a very long answer scrolls in the viewer
 - tapOn: '.*Test subject.*'
 - tapOn:
     id: fcd-settings
+- takeScreenshot: 11b-view-settings
+- tapOn: '.*Edit this deck.*'
 - tapOn:
     id: fcd-insert
 - tapOn:
