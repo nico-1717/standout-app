@@ -193,6 +193,7 @@ export default function InsertScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 40 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Text style={{ color: th.text2 }}>{deck.name}</Text>
         <View
