@@ -11,9 +11,15 @@ name: A card with a very long answer scrolls in the viewer
 - takeScreenshot: 10-flashcards-hub
 - tapOn:
     id: hub-study-open
-- tapOn:
-    id: fc-new
-- inputText: Test subject
+# Typing on the simulator can lose letters: type, check the field, and only then press Enter (up to 3 tries).
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: fc-new
+      - eraseText: 40
+      - inputText: Test subject
+      - assertVisible: 'Test subject'
 - pressKey: Enter
 - takeScreenshot: 11-subject-made
 - tapOn: '.*Test subject.*'
