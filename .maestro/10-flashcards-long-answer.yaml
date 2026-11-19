@@ -20,9 +20,9 @@ name: A card with a very long answer scrolls in the viewer
 - tapOn:
     id: fcd-settings
 - takeScreenshot: 11b-view-settings
-- tapOn: '.*Edit this deck.*'
+# "Edit all cards" opens the page where new cards are typed.
 - tapOn:
-    id: fcd-insert
+    id: fcd-bigedit
 - tapOn:
     id: fci-mode-rows
 - tapOn:
