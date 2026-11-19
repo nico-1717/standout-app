@@ -133,7 +133,7 @@ jobs:
         if: always()
         run: |
           rm -rf publish && mkdir publish
-          (cd shots && find . -type f \( -name '*.png' -o -name '*.log' -o -name '*.xml' \) -print0 | cpio -0pdm ../publish) || true
+          (cd shots && find . -type f \( -name '*.png' -o -name 'maestro.log' -o -name 'report.xml' \) -print0 | cpio -0pdm ../publish) || true
           cd publish
           git init -q
           git checkout -q -b simulator-shots
