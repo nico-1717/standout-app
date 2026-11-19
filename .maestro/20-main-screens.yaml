@@ -19,8 +19,8 @@ name: A screenshot of every main screen
 - takeScreenshot: 34-pomodoro
 # The bar scrolls sideways: slide it to reach the other pages.
 - swipe:
-    start: 85%, 92%
-    end: 15%, 92%
+    start: 85%, 95%
+    end: 15%, 95%
 - takeScreenshot: 35-bar-scrolled
 - tapOn:
     id: bar-diary
@@ -35,8 +35,8 @@ name: A screenshot of every main screen
     optional: true
 - takeScreenshot: 38-flashcards
 - swipe:
-    start: 85%, 92%
-    end: 15%, 92%
+    start: 85%, 95%
+    end: 15%, 95%
 - tapOn:
     id: bar-languages
     optional: true
