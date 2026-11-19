@@ -33,16 +33,19 @@ name: A card with a very long answer scrolls in the viewer
     id: fci-a-0
 - inputText: 'Point 1: the answer goes on with one more sentence so that this card is much longer than the screen. Point 2: the answer goes on with one more sentence so that this card is much longer than the screen. Point 3: the answer goes on with one more sentence so that this card is much longer than the screen. Point 4: the answer goes on with one more sentence so that this card is much longer than the screen. Point 5: the answer goes on with one more sentence so that this card is much longer than the screen. Point 6: the answer goes on with one more sentence so that this card is much longer than the screen. Point 7: the answer goes on with one more sentence so that this card is much longer than the screen. Point 8: the answer goes on with one more sentence so that this card is much longer than the screen. Point 9: the answer goes on with one more sentence so that this card is much longer than the screen. Point 10: the answer goes on with one more sentence so that this card is much longer than the screen. Point 11: the answer goes on with one more sentence so that this card is much longer than the screen. Point 12: the answer goes on with one more sentence so that this card is much longer than the screen. Point 13: the answer goes on with one more sentence so that this card is much longer than the screen. Point 14: the answer goes on with one more sentence so that this card is much longer than the screen. Point 15: the answer goes on with one more sentence so that this card is much longer than the screen. Point 16: the answer goes on with one more sentence so that this card is much longer than the screen. Point 17: the answer goes on with one more sentence so that this card is much longer than the screen. Point 18: the answer goes on with one more sentence so that this card is much longer than the screen. Point 19: the answer goes on with one more sentence so that this card is much longer than the screen. Point 20: the answer goes on with one more sentence so that this card is much longer than the screen. Point 21: the answer goes on with one more sentence so that this card is much longer than the screen. Point 22: the answer goes on with one more sentence so that this card is much longer than the screen. Point 23: the answer goes on with one more sentence so that this card is much longer than the screen. Point 24: the answer goes on with one more sentence so that this card is much longer than the screen. Point 25: the answer goes on with one more sentence so that this card is much longer than the screen.'
 - takeScreenshot: 12-card-typed
-# The keyboard covers the Save button. Dragging the page from the tab row (not from a text box) closes the
-# keyboard and scrolls (3 tries at most, so a miss fails fast instead of looping for an hour).
+# The keyboard covers the Save button and the answer box is as tall as its text. Dragging the page by its left
+# margin (not from a text box, which would only move the cursor) closes the keyboard and scrolls; at most 8 tries.
 - repeat:
-    times: 3
+    times: 8
+    while:
+      notVisible:
+        id: fci-save
     commands:
       - swipe:
-          start: 50%,30%
-          end: 50%,12%
-          duration: 500
-      - takeScreenshot: 12b-after-drag
+          start: 2%,85%
+          end: 2%,15%
+          duration: 600
+- takeScreenshot: 12b-after-drag
 - tapOn:
     id: fci-save
 - takeScreenshot: 13-card-saved
