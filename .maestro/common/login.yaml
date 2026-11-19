@@ -40,3 +40,12 @@ appId: app.standout.mobile
     visible:
       id: app-tab-bar
     timeout: 30000
+# The iPhone "Save Password?" box can come a few seconds AFTER the app is already showing (slow login): answer it now,
+# or it covers the app in the next steps.
+- extendedWaitUntil:
+    visible: 'Not Now'
+    timeout: 20000
+    optional: true
+- tapOn:
+    text: 'Not Now'
+    optional: true
