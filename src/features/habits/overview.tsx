@@ -276,7 +276,9 @@ export function StatCarousel(p: {
                   style={{
                     color: th.inkText,
                     fontSize: 47,
-                    lineHeight: 41,
+                    // riga più alta del carattere: con 41 la cima delle cifre veniva tagliata su iPhone
+                    lineHeight: 54,
+                    marginTop: -6,
                     fontWeight: '800',
                     letterSpacing: -2.7,
                     fontVariant: ['tabular-nums'],

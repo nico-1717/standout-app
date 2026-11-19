@@ -662,7 +662,9 @@ export function PlannerTopbar(p: {
                 style={{
                   color: pt.ink,
                   fontSize: 43,
-                  lineHeight: 39,
+                  // la riga più alta del carattere: con 39 la cima delle cifre veniva tagliata su iPhone
+                  lineHeight: 50,
+                  marginTop: -11,
                   fontWeight: standard ? '700' : '400',
                   letterSpacing: -1.5,
                   fontFamily: pt.serif,
@@ -670,22 +672,9 @@ export function PlannerTopbar(p: {
               >
                 {dayOfMonth(p.date)}
               </Text>
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: pt.ink2,
-                  fontSize: 13,
-                  fontWeight: '600',
-                  letterSpacing: 0.13,
-                  paddingBottom: 3,
-                  flexShrink: 1,
-                  fontFamily: pt.sans,
-                }}
-              >
-                {upper(t(`planner.gg_${weekdayOf(p.date)}`))}
-              </Text>
-              {p.weather?.wx.giorni[p.date] ? (
-                <View style={{ paddingBottom: 3 }}>
+              {/* come sul sito: il meteo sopra e il nome del giorno sotto, così il nome si legge sempre intero */}
+              <View style={{ flexShrink: 1, alignItems: 'flex-start', gap: 4, paddingBottom: 3 }}>
+                {p.weather?.wx.giorni[p.date] ? (
                   <WxTag
                     pt={pt}
                     date={p.date}
@@ -695,8 +684,20 @@ export function PlannerTopbar(p: {
                     single
                     onPress={p.weather.onOpen}
                   />
-                </View>
-              ) : null}
+                ) : null}
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: pt.ink2,
+                    fontSize: 13,
+                    fontWeight: '600',
+                    letterSpacing: 0.13,
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {upper(t(`planner.gg_${weekdayOf(p.date)}`))}
+                </Text>
+              </View>
             </Pressable>
           )}
         </View>

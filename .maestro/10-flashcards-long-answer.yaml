@@ -103,6 +103,18 @@ name: A card with a very long answer scrolls in the viewer
 - tapOn:
     id: fci-close
 - takeScreenshot: 14-back-in-deck
+# The card list in the deck: the long answer sits in its own scrolling box (max 190 high), as on the website.
+# A quick flick inside the answer text must move the text inside the box (the ANSWER label stays), not the page.
+- swipe:
+    start: 50%,82%
+    end: 50%,66%
+    duration: 150
+- takeScreenshot: 15-list-answer-after-flick
+- swipe:
+    start: 50%,82%
+    end: 50%,66%
+    duration: 150
+- takeScreenshot: 16-list-answer-after-2nd-flick
 # Back in the deck: open the card viewer, turn the card and scroll the long answer.
 - tapOn:
     id: fcd-view
