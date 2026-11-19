@@ -19,13 +19,18 @@ name: A habit row follows a sideways swipe and the page does not scroll
 - tapOn:
     id: habit-save
 - extendedWaitUntil:
-    visible: 'Swipe test'
+    visible: '.*Swipe test.*'
     timeout: 10000
 - takeScreenshot: 51-habit-before-swipe
-# A slow, slightly slanted drag to the right: the row must follow the finger and the page must stay where it is.
+# A slow drag to the right along the row: the row must follow the finger and the page must stay where it is.
 - swipe:
-    from:
-      text: 'Swipe test'
-    direction: RIGHT
-    duration: 700
+    start: 15%, 76%
+    end: 70%, 79%
+    duration: 900
 - takeScreenshot: 52-habit-after-swipe
+# A quick flick to the right on the same row, slightly slanted: it must tick the habit as done.
+- swipe:
+    start: 20%, 76%
+    end: 60%, 78%
+    duration: 120
+- takeScreenshot: 53-habit-after-flick
