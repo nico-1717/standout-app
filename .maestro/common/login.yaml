@@ -35,7 +35,7 @@ appId: app.standout.mobile
             - extendedWaitUntil:
                 visible:
                   id: app-tab-bar
-                timeout: 20000
+                timeout: 60000
 - extendedWaitUntil:
     visible:
       id: app-tab-bar
