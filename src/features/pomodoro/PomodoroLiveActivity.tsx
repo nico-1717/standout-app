@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
@@ -16,12 +16,15 @@ export function PomodoroLiveActivity() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
   const brk = pomodoroSettings.current_break;
-  const desired = useMemo(() => {
+  useEffect(() => {
     void version;
-    if (!services) return null;
+    if (!services) {
+      void syncLiveActivity(null);
+      return;
+    }
     const active = services.pomodoro.active();
     const project = active?.project_uuid ? services.projects.get(active.project_uuid) : null;
-    return activityFor({
+    const desired = activityFor({
       active,
       brk,
       nowMs: Date.now(),
@@ -41,9 +44,7 @@ export function PomodoroLiveActivity() {
         fallbackSubtitle: 'Standout',
       },
     });
-  }, [services, version, brk, th.brand, th.teal, i18n.language, t]);
-  useEffect(() => {
     void syncLiveActivity(desired);
-  }, [desired]);
+  }, [services, version, brk, th.brand, th.teal, i18n.language, t]);
   return null;
 }
