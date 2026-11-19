@@ -99,9 +99,9 @@ export function DeckCardSide(p: {
               ) : (
                 <View
                   testID={`${p.testID}-scroll`}
-                  onTouchStart={() => { add('S'); lock(true); }}
-                  onTouchEnd={() => { add('E'); lock(false); }}
-                  onTouchCancel={() => { add('C'); lock(false); }}
+                  onTouchStart={() => { add('S'); }}
+                  onTouchEnd={() => { add('E'); }}
+                  onTouchCancel={() => { add('C'); }}
                 >
                   {tall ? (
                     // altezza FISSA (non solo massima) e contenuto alto quanto il testo misurato: così c'è sempre qualcosa
