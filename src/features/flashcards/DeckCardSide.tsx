@@ -38,8 +38,6 @@ export function DeckCardSide(p: {
   const th = useTheme();
   const inner = useRef<ScrollViewInstance>(null);
   const [textH, setTextH] = useState(0);
-  const [dbg, setDbg] = useState('');
-  const add = (x: string) => setDbg((d) => (d + ' ' + x).slice(-70));
   const tall = textH > TEXT_MAX + 1;
   const measure = (e: LayoutChangeEvent) => setTextH(e.nativeEvent.layout.height);
   const hasText = docToPlain(parseDoc(p.raw)).trim().length > 0;
@@ -71,11 +69,6 @@ export function DeckCardSide(p: {
         </Text>
         <View style={{ flex: 1, height: 0.5, backgroundColor: th.hairline }} />
       </View>
-      {dbg ? (
-        <Text testID={`${p.testID}-dbg`} style={{ color: 'red', fontSize: 10 }}>
-          {dbg}
-        </Text>
-      ) : null}
       {hasText || hasImage ? (
         <View
           style={{ flexDirection: split ? 'row' : 'column', alignItems: 'flex-start', gap: 12 }}
@@ -87,8 +80,8 @@ export function DeckCardSide(p: {
               ) : (
                 <View testID={`${p.testID}-scroll`}>
                   {tall ? (
-                    // altezza FISSA (non solo massima) e contenuto alto quanto il testo misurato: così c'è sempre qualcosa
-                    // che sporge e il riquadro scorre davvero (prima il contenuto restava alto quanto il riquadro e non partiva nulla)
+                    // altezza FISSA e contenuto alto quanto il testo misurato. Il tocco della carta sta DENTRO il riquadro:
+                    // su iPhone uno ScrollView dentro il tocco (Pressable) di una carta non scorre mai, vince la pagina
                     <ScrollView
                       testID={`${p.testID}-box`}
                       ref={inner}
@@ -96,14 +89,7 @@ export function DeckCardSide(p: {
                       style={{ height: TEXT_MAX }}
                       contentContainerStyle={{ minHeight: textH }}
                       showsVerticalScrollIndicator
-                      onLayout={(e) => {
-                        add('L' + Math.round(e.nativeEvent.layout.height));
-                        inner.current?.flashScrollIndicators();
-                      }}
-                      onContentSizeChange={(_w, h) => add('c' + Math.round(h))}
-                      onScrollBeginDrag={() => add('D')}
-                      onScroll={(e) => add('y' + Math.round(e.nativeEvent.contentOffset.y))}
-                      scrollEventThrottle={50}
+                      onLayout={() => inner.current?.flashScrollIndicators()}
                     >
                       <Pressable accessible={false} onPress={p.onPress}>
                         <View testID={`${p.testID}-measure`} onLayout={measure}>
