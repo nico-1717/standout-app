@@ -1,4 +1,11 @@
-import { ScrollView, Text, View } from 'react-native';
+import { createContext, useContext, useRef, useState } from 'react';
+import {
+  ScrollView,
+  Text,
+  View,
+  type ScrollViewInstance,
+  type ScrollViewProps,
+} from 'react-native';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
@@ -9,6 +16,23 @@ import { DocView } from './DocView';
 
 /** L'altezza oltre la quale il testo di una carta scorre da sé (`.qa-text{max-height:190px}` del sito). */
 const TEXT_MAX = 190;
+
+/**
+ * Chi tiene l'elenco delle carte (la pagina che scorre) la mette qui: mentre il dito è su un testo lungo che scorre da sé,
+ * la pagina si ferma, così il tocco va al testo e non alla pagina (su iPhone due scorrimenti in verticale uno dentro
+ * l'altro si litigavano il dito e vinceva la pagina).
+ */
+const ScrollLockContext = createContext<(locked: boolean) => void>(() => {});
+
+/** La pagina con l'elenco delle carte: come un ScrollView, ma si ferma mentre il dito è su un testo lungo che scorre da sé. */
+export function LockedScrollView(props: ScrollViewProps) {
+  const [held, setHeld] = useState(false);
+  return (
+    <ScrollLockContext.Provider value={setHeld}>
+      <ScrollView {...props} scrollEnabled={!held} />
+    </ScrollLockContext.Provider>
+  );
+}
 
 /**
  * Un lato della carta nell'elenco del mazzo (`.qa-side` di fc_view.php): l'etichetta con la sua linea, poi il testo FORMATTATO
@@ -26,6 +50,8 @@ export function DeckCardSide(p: {
   question?: boolean;
 }) {
   const th = useTheme();
+  const lock = useContext(ScrollLockContext);
+  const inner = useRef<ScrollViewInstance>(null);
   const hasText = docToPlain(parseDoc(p.raw)).trim().length > 0;
   const hasImage = !!p.image;
   const split = hasText && hasImage;
@@ -64,14 +90,25 @@ export function DeckCardSide(p: {
               {p.full ? (
                 text
               ) : (
-                <ScrollView
-                  testID={`${p.testID}-scroll`}
-                  nestedScrollEnabled
-                  style={{ maxHeight: TEXT_MAX }}
-                  showsVerticalScrollIndicator={false}
+                <View
+                  onTouchStart={() => lock(true)}
+                  onTouchEnd={() => lock(false)}
+                  onTouchCancel={() => lock(false)}
                 >
-                  {text}
-                </ScrollView>
+                  <ScrollView
+                    ref={inner}
+                    testID={`${p.testID}-scroll`}
+                    nestedScrollEnabled
+                    style={{ maxHeight: TEXT_MAX }}
+                    showsVerticalScrollIndicator
+                    // se il testo è più alto del riquadro, la barra si mostra un attimo: si vede che si può scorrere
+                    onContentSizeChange={(_w, h) => {
+                      if (h > TEXT_MAX + 1) inner.current?.flashScrollIndicators();
+                    }}
+                  >
+                    {text}
+                  </ScrollView>
+                </View>
               )}
             </View>
           ) : null}

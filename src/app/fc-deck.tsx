@@ -20,7 +20,7 @@ import {
 } from '@/features/flashcards/cardList';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { DocView } from '@/features/flashcards/DocView';
-import { DeckCardSide } from '@/features/flashcards/DeckCardSide';
+import { DeckCardSide, LockedScrollView } from '@/features/flashcards/DeckCardSide';
 import { DeckViewSheet } from '@/features/flashcards/DeckViewSheet';
 import { studyView } from '@/features/flashcards/gameKit';
 import { isTitleCard } from '@/features/flashcards/game';
@@ -401,7 +401,7 @@ export default function DeckScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <LockedScrollView
         contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 96, gap: 14 }}
         keyboardShouldPersistTaps="handled"
       >
@@ -1342,7 +1342,7 @@ export default function DeckScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </LockedScrollView>
 
       <DeckViewSheet
         visible={sheet}
