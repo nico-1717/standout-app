@@ -33,8 +33,49 @@ name: A card with a very long answer scrolls in the viewer
     id: fci-a-0
 - inputText: 'Point 1: the answer goes on with one more sentence so that this card is much longer than the screen. Point 2: the answer goes on with one more sentence so that this card is much longer than the screen. Point 3: the answer goes on with one more sentence so that this card is much longer than the screen. Point 4: the answer goes on with one more sentence so that this card is much longer than the screen. Point 5: the answer goes on with one more sentence so that this card is much longer than the screen. Point 6: the answer goes on with one more sentence so that this card is much longer than the screen. Point 7: the answer goes on with one more sentence so that this card is much longer than the screen. Point 8: the answer goes on with one more sentence so that this card is much longer than the screen. Point 9: the answer goes on with one more sentence so that this card is much longer than the screen. Point 10: the answer goes on with one more sentence so that this card is much longer than the screen. Point 11: the answer goes on with one more sentence so that this card is much longer than the screen. Point 12: the answer goes on with one more sentence so that this card is much longer than the screen. Point 13: the answer goes on with one more sentence so that this card is much longer than the screen. Point 14: the answer goes on with one more sentence so that this card is much longer than the screen. Point 15: the answer goes on with one more sentence so that this card is much longer than the screen. Point 16: the answer goes on with one more sentence so that this card is much longer than the screen. Point 17: the answer goes on with one more sentence so that this card is much longer than the screen. Point 18: the answer goes on with one more sentence so that this card is much longer than the screen. Point 19: the answer goes on with one more sentence so that this card is much longer than the screen. Point 20: the answer goes on with one more sentence so that this card is much longer than the screen. Point 21: the answer goes on with one more sentence so that this card is much longer than the screen. Point 22: the answer goes on with one more sentence so that this card is much longer than the screen. Point 23: the answer goes on with one more sentence so that this card is much longer than the screen. Point 24: the answer goes on with one more sentence so that this card is much longer than the screen. Point 25: the answer goes on with one more sentence so that this card is much longer than the screen.'
 - takeScreenshot: 12-card-typed
-# The keyboard covers the Save button and the answer box is as tall as its text. Dragging the page by its left
-# margin (not from a text box, which would only move the cursor) closes the keyboard and scrolls; at most 7 tries (the same step written 7 times, because Maestro cannot combine a loop with a limit).
+# The keyboard covers the Save button and the answer box is as tall as its text. A quick flick (short swipe time)
+# starting on the tab row (not on a text box, which would only move the cursor) closes the keyboard and keeps
+# scrolling by momentum. Each step runs only while Save is hidden; every step has its own screenshot.
+- runFlow:
+    when:
+      notVisible:
+        id: fci-save
+    commands:
+      - swipe:
+          start: 50%,31%
+          end: 50%,3%
+          duration: 120
+      - takeScreenshot: 12b-drag-1
+- runFlow:
+    when:
+      notVisible:
+        id: fci-save
+    commands:
+      - swipe:
+          start: 94%,85%
+          end: 94%,15%
+          duration: 120
+      - takeScreenshot: 12b-drag-2
+- runFlow:
+    when:
+      notVisible:
+        id: fci-save
+    commands:
+      - swipe:
+          start: 50%,31%
+          end: 50%,3%
+          duration: 120
+      - takeScreenshot: 12b-drag-3
+- runFlow:
+    when:
+      notVisible:
+        id: fci-save
+    commands:
+      - swipe:
+          start: 50%,24%
+          end: 50%,3%
+          duration: 120
+      - takeScreenshot: 12b-drag-4
 - runFlow:
     when:
       notVisible:
@@ -43,61 +84,18 @@ name: A card with a very long answer scrolls in the viewer
       - swipe:
           start: 6%,85%
           end: 6%,15%
-          duration: 600
+          duration: 120
+      - takeScreenshot: 12b-drag-5
 - runFlow:
     when:
       notVisible:
         id: fci-save
     commands:
       - swipe:
-          start: 6%,85%
-          end: 6%,15%
-          duration: 600
-- runFlow:
-    when:
-      notVisible:
-        id: fci-save
-    commands:
-      - swipe:
-          start: 6%,85%
-          end: 6%,15%
-          duration: 600
-- runFlow:
-    when:
-      notVisible:
-        id: fci-save
-    commands:
-      - swipe:
-          start: 6%,85%
-          end: 6%,15%
-          duration: 600
-- runFlow:
-    when:
-      notVisible:
-        id: fci-save
-    commands:
-      - swipe:
-          start: 6%,85%
-          end: 6%,15%
-          duration: 600
-- runFlow:
-    when:
-      notVisible:
-        id: fci-save
-    commands:
-      - swipe:
-          start: 6%,85%
-          end: 6%,15%
-          duration: 600
-- runFlow:
-    when:
-      notVisible:
-        id: fci-save
-    commands:
-      - swipe:
-          start: 6%,85%
-          end: 6%,15%
-          duration: 600
+          start: 94%,85%
+          end: 94%,15%
+          duration: 120
+      - takeScreenshot: 12b-drag-6
 - takeScreenshot: 12b-after-drag
 - tapOn:
     id: fci-save
