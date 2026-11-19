@@ -1,0 +1,28 @@
+appId: app.standout.mobile
+name: The Pomodoro timer outside the app (Live Activity)
+---
+- runFlow: common/login.yaml
+- tapOn:
+    id: bar-pomodoro
+- extendedWaitUntil:
+    visible:
+      id: pomodoro-start
+    timeout: 15000
+- takeScreenshot: 40-pomodoro-before-start
+- tapOn:
+    id: pomodoro-start
+- extendedWaitUntil:
+    visible:
+      id: pomodoro-pause
+    timeout: 15000
+- takeScreenshot: 41-pomodoro-running
+# Leave the app: the Dynamic Island / lock screen timer must stay and keep counting by itself.
+- pressKey: Home
+- extendedWaitUntil:
+    visible: 'Calendar'
+    timeout: 8000
+    optional: true
+- takeScreenshot: 42-home-screen-with-timer
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: 43-home-screen-6s-later

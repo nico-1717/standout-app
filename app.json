@@ -49,6 +49,13 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "app.standout.mobile.ExpoWidgetsTarget",
+          "groupIdentifier": "group.app.standout.mobile"
+        }
+      ],
       "expo-localization",
       [
         "expo-notifications",

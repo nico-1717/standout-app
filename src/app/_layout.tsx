@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import '@/core/i18n';
 import { AppProvider, useApp } from '@/core/app/AppProvider';
+import { PomodoroLiveActivity } from '@/features/pomodoro/PomodoroLiveActivity';
 import { AppLock } from '@/core/lock/AppLock';
 import { useAutoUpdate } from '@/core/updates/autoUpdate';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
@@ -37,6 +38,7 @@ function Shell() {
   return (
     <>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <PomodoroLiveActivity />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.bg } }}>
         <Stack.Protected guard={!loading && signedOut}>
           <Stack.Screen name="login" />

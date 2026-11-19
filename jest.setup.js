@@ -47,6 +47,21 @@ jest.mock('expo-image-manipulator', () => {
   };
 });
 
+// il Live Activity (timer sul blocco schermo) ha bisogno del telefono: un finto che registra start/update/end
+jest.mock('expo-widgets', () => {
+  const instance = {
+    getId: jest.fn(() => 'activity-1'),
+    update: jest.fn(() => Promise.resolve()),
+    end: jest.fn(() => Promise.resolve()),
+  };
+  const factory = {
+    __instance: instance,
+    start: jest.fn(() => instance),
+    getInstances: jest.fn(() => []),
+  };
+  return { createLiveActivity: jest.fn(() => factory), createWidget: jest.fn(), after: jest.fn() };
+});
+
 // la mappa nativa non c'è nei test: una vista semplice che tiene i figli (il segnaposto)
 jest.mock('react-native-maps', () => {
   const React = require('react');
