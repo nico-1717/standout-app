@@ -11,6 +11,10 @@ on:
         description: 'Which flow to run (file name in .maestro, without .yaml). Empty = all of them.'
         required: false
         default: ''
+      cachekey:
+        description: 'Advanced: reuse the built app saved under this exact cache key. Empty = the key worked out from the code.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -35,12 +39,18 @@ jobs:
           java-version: 17
       - run: npm ci
 
+      # The key is worked out once, BEFORE expo prebuild (prebuild rewrites app.json/package.json, so a key worked out
+      # again later never matched the one used to restore, and the app was rebuilt every time).
+      - name: Work out the key of the built app
+        id: appkey
+        run: echo "key=simulator-app-${{ hashFiles('src/**', 'assets/**', 'app.json', 'app.config.js', 'package-lock.json', 'package.json') }}" >> "$GITHUB_OUTPUT"
+
       - name: Reuse the built app if the app code did not change (only the flows did)
         id: appcache
         uses: actions/cache/restore@v4
         with:
           path: built-app
-          key: simulator-app-${{ hashFiles('src/**', 'assets/**', 'app.json', 'app.config.js', 'package-lock.json', 'package.json') }}
+          key: ${{ inputs.cachekey || steps.appkey.outputs.key }}
 
       - name: Make the iOS project (only on this Mac, never saved in the repo)
         if: steps.appcache.outputs.cache-hit != 'true'
@@ -80,7 +90,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: built-app
-          key: simulator-app-${{ hashFiles('src/**', 'assets/**', 'app.json', 'app.config.js', 'package-lock.json', 'package.json') }}
+          key: ${{ steps.appkey.outputs.key }}
 
       - name: Start an iPhone simulator and install the app
         run: |
@@ -115,6 +125,7 @@ jobs:
           curl -fsS -o /dev/null -w "register HTTP %{http_code}\n" -X POST "https://nisama.altervista.org/api/v1/auth/register" -H 'Content-Type: application/json' \
             -d "{\"username\":\"$E2E_USER\",\"email\":\"$E2E_USER@users.noreply.github.com\",\"password\":\"$E2E_PASS\",\"password_confirm\":\"$E2E_PASS\",\"accetto\":true,\"device_name\":\"simulator-test\"}"
           if [ -n "${{ inputs.flow }}" ]; then TARGET=".maestro/${{ inputs.flow }}.yaml"; else TARGET=".maestro"; fi
+          export MAESTRO_DRIVER_STARTUP_TIMEOUT=300000   # the iPhone test driver can take minutes to start on the Mac
           maestro --device "$DEVICE" test "$TARGET" \
             -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \
             --test-output-dir shots --format junit --output shots/report.xml
