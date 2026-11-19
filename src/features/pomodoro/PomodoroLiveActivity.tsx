@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 
-import { syncLiveActivity } from './liveActivity';
+import { debug, syncLiveActivity } from './liveActivity';
 import { activityFor } from './liveActivityState';
 
 /**
@@ -16,10 +17,11 @@ export function PomodoroLiveActivity() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
   const brk = pomodoroSettings.current_break;
+  const [dbg, setDbg] = useState('');
   useEffect(() => {
     void version;
     if (!services) {
-      void syncLiveActivity(null);
+      void syncLiveActivity(null).then(() => setDbg(debug.status));
       return;
     }
     const active = services.pomodoro.active();
@@ -44,7 +46,23 @@ export function PomodoroLiveActivity() {
         fallbackSubtitle: 'Standout',
       },
     });
-    void syncLiveActivity(desired);
+    void syncLiveActivity(desired).then(() => setDbg(debug.status));
   }, [services, version, brk, th.brand, th.teal, i18n.language, t]);
-  return null;
+  return dbg ? (
+    <Text
+      testID="la-debug"
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 54,
+        left: 70,
+        right: 8,
+        zIndex: 999,
+        color: 'red',
+        fontSize: 10,
+      }}
+    >
+      {dbg}
+    </Text>
+  ) : null;
 }

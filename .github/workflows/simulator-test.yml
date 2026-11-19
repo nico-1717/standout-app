@@ -104,6 +104,7 @@ jobs:
           set -eo pipefail
           APP="$(ls -d built-app/*.app | head -1)"
           ls "$APP" | head -40
+          echo "PlugIns:"; ls -R "$APP/PlugIns" | head -30
           ENTRY="$(node -e "console.log(require('expo/scripts/resolveAppEntry'))" 2>/dev/null || true)"
           [ -z "$ENTRY" ] && ENTRY="node_modules/expo-router/entry.js"
           npx expo export:embed --eager --platform ios --dev false --minify false --reset-cache \
@@ -151,6 +152,14 @@ jobs:
             -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \
             --test-output-dir shots --format junit --output shots/report.xml
 
+      - name: Keep the iPhone's own log (Live Activity errors)
+        if: always()
+        run: |
+          xcrun simctl spawn "$DEVICE" log show --last 40m --style compact \
+            --predicate 'process == "Standout" OR process == "chronod" OR process == "ExpoWidgetsTarget" OR subsystem CONTAINS "ActivityKit" OR subsystem CONTAINS "Activity"' \
+            2>/dev/null | tail -c 600000 > shots/device.log || true
+          ls -la shots/device.log || true
+
       - name: Keep the build log if the build failed
         if: failure()
         uses: actions/upload-artifact@v4
@@ -165,7 +174,7 @@ jobs:
         if: always()
         run: |
           rm -rf publish && mkdir publish
-          (cd shots && find . -type f \( -name '*.png' -o -name 'maestro.log' -o -name 'report.xml' \) -print0 | cpio -0pdm ../publish) || true
+          (cd shots && find . -type f \( -name '*.png' -o -name 'maestro.log' -o -name 'device.log' -o -name 'report.xml' \) -print0 | cpio -0pdm ../publish) || true
           cd publish
           git init -q
           git checkout -q -b simulator-shots

@@ -11,6 +11,7 @@ type Instance = ReturnType<typeof PomodoroActivity.getInstances>[number];
 let current: Instance | null = null;
 let lastKey: string | null = null;
 let queue: Promise<void> = Promise.resolve();
+export const debug = { status: '' };
 
 async function endEverything(): Promise<void> {
   const all = new Map<string, Instance>();
@@ -38,14 +39,17 @@ async function apply(desired: DesiredActivity | null): Promise<void> {
     try {
       await current.update(desired.props, stale);
       lastKey = desired.key;
+      debug.status = `updated ${current.getId()}`;
       return;
-    } catch {
+    } catch (e) {
+      debug.status = `update failed: ${String(e)}`;
       // chiuso da chi lo usa (scorrendolo via): se ne fa uno nuovo
       current = null;
     }
   }
   current = PomodoroActivity.start(desired.props, OPEN_URL, stale);
   lastKey = desired.key;
+  debug.status = `started ${current.getId()} inst=${PomodoroActivity.getInstances().length}`;
 }
 
 /**
@@ -54,6 +58,10 @@ async function apply(desired: DesiredActivity | null): Promise<void> {
  */
 export function syncLiveActivity(desired: DesiredActivity | null): Promise<void> {
   if (Platform.OS !== 'ios') return Promise.resolve();
-  queue = queue.then(() => apply(desired)).catch(() => {});
+  queue = queue
+    .then(() => apply(desired))
+    .catch((e) => {
+      debug.status = `ERR ${String(e)}`;
+    });
   return queue;
 }
