@@ -67,3 +67,10 @@ jest.mock('expo-speech-recognition', () => ({
     addListener: () => ({ remove: () => undefined }),
   },
 }));
+
+// Il gesto della riga (Gesture Handler) gira sul thread nativo, che nei test non c'è: il rilevatore lascia passare i figli.
+jest.mock('react-native-gesture-handler', () => ({
+  GestureHandlerRootView: ({ children }) => children,
+  GestureDetector: ({ children }) => children,
+  usePanGesture: () => ({}),
+}));

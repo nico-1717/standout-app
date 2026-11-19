@@ -275,6 +275,16 @@ export class PillsRepo {
     return true;
   }
 
+  /** Lo stato della presa indicata da una notifica; null se la riga non c'è (ancora). Non scrive niente. */
+  slotStatus(slot: { plan: string; date: string; time: string; seq: number }): DoseStatus | null {
+    return (
+      this.db.all<{ status: DoseStatus }>(
+        `SELECT status FROM pill_doses WHERE plan_uuid = ? AND due_date = ? AND due_time = ? AND seq = ?`,
+        [slot.plan, slot.date, slot.time, slot.seq],
+      )[0]?.status ?? null
+    );
+  }
+
   dose(uuid: string): Dose | null {
     return this.db.all<Dose>('SELECT * FROM pill_doses WHERE uuid = ?', [uuid])[0] ?? null;
   }

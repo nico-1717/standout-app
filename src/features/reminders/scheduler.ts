@@ -6,6 +6,7 @@ import { addDaysIso } from '@/features/tasks/groups';
 import {
   planReminders,
   type HabitDue,
+  type PillSlot,
   type Reminder,
   type ReminderSettings,
   type ReminderWords,
@@ -20,6 +21,27 @@ export interface Notifier {
   allowed(): Promise<boolean>;
   cancelAll(): Promise<void>;
   schedule(r: Reminder): Promise<void>;
+  /** Le notifiche delle pastiglie già comparse sul telefono (nel centro notifiche), con la presa a cui si riferiscono. */
+  delivered?(): Promise<{ id: string; pill: PillSlot }[]>;
+  /** Toglie dal telefono queste notifiche già comparse. */
+  dismiss?(ids: string[]): Promise<void>;
+}
+
+/**
+ * Toglie dal centro notifiche le notifiche di pastiglie già comparse la cui presa è stata segnata «presa» o «saltata»
+ * (nell'app, sul sito o da un altro telefono). Una presa ancora da fare, o non scritta, resta dov'è.
+ */
+export async function dismissSettledPills(notifier: Notifier, pills: PillsRepo): Promise<number> {
+  if (!notifier.delivered || !notifier.dismiss) return 0;
+  const shown = await notifier.delivered();
+  const gone = shown
+    .filter((n) => {
+      const st = pills.slotStatus(n.pill);
+      return st === 'taken' || st === 'skipped';
+    })
+    .map((n) => n.id);
+  if (gone.length > 0) await notifier.dismiss(gone);
+  return gone.length;
 }
 
 /** Le abitudini «da costruire» previste in ciascuno dei prossimi giorni e non ancora fatte né saltate. */
@@ -72,6 +94,8 @@ export async function rescheduleAll(opts: {
           words: opts.words,
         });
   const signature = signatureOf(list);
+  // anche se la lista da programmare non cambia: una notifica già comparsa si toglie quando la presa è segnata
+  if (!off) await dismissSettledPills(notifier, opts.pills).catch(() => 0);
   if (opts.previous === signature) return { count: list.length, signature };
   await notifier.cancelAll();
   for (const r of list) await notifier.schedule(r);

@@ -195,6 +195,53 @@ describe('rescheduleAll', () => {
   });
 });
 
+describe('notifications already on the phone', () => {
+  function shownNotifier() {
+    const f = fakeNotifier();
+    const shown: { id: string; pill: { plan: string; date: string; time: string; seq: number } }[] =
+      [];
+    const dismissed: string[] = [];
+    f.n.delivered = async () => [...shown];
+    f.n.dismiss = async (ids) => void dismissed.push(...ids);
+    return { f, shown, dismissed };
+  }
+
+  test('a shown pill notification goes away once the dose is taken or skipped, even with the same list', async () => {
+    const s = setup();
+    s.pills.createPlan(plan({ times: '08:00,09:00,09:30' }));
+    const doses = s.pills.day(TODAY).doses;
+    const [a, b, c] = doses;
+    const { f, shown, dismissed } = shownNotifier();
+    for (const d of [a!, b!, c!])
+      shown.push({
+        id: `n-${d.uuid}`,
+        pill: { plan: d.plan_uuid, date: d.due_date, time: d.due_time, seq: d.seq },
+      });
+    const first = await run(s, f);
+    expect(dismissed).toEqual([]); // all still to do: they stay
+    s.pills.setStatus(a!.uuid, 'taken');
+    s.pills.setStatus(b!.uuid, 'skipped');
+    await run(s, f, on, first.signature); // the planned list is the same (all of it is in the past)
+    expect(dismissed.sort()).toEqual([`n-${a!.uuid}`, `n-${b!.uuid}`].sort());
+  });
+
+  test('a dose that is not written yet, or still pending, is left alone', async () => {
+    const s = setup();
+    s.pills.createPlan(plan({ times: '08:00' }));
+    const { f, shown, dismissed } = shownNotifier();
+    shown.push({ id: 'ghost', pill: { plan: 'nope', date: TODAY, time: '08:00', seq: 0 } });
+    expect(s.pills.slotStatus(shown[0]!.pill)).toBeNull();
+    await run(s, f);
+    expect(dismissed).toEqual([]);
+  });
+
+  test('a notifier without those two functions is fine', async () => {
+    const s = setup();
+    s.pills.createPlan(plan());
+    await expect(run(s, fakeNotifier())).resolves.toBeDefined();
+  });
+});
+
 describe('RemindersStore', () => {
   test('starts off, keeps what is saved and cleans bad values', () => {
     const db = memoryDb();

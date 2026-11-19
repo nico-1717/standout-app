@@ -1,88 +1,105 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import type { HabitsTheme } from './habitsTheme';
 
-/** Quanto si deve trascinare perché scatti (prima 74: troppo, il dito si stancava). */
-const THRESHOLD = 52;
+/** Quanto si deve trascinare perché scatti. */
+const THRESHOLD = 46;
 /** Uno scatto veloce basta anche se è corto: dalla metà della soglia, con una certa velocità (punti per ms). */
-const FLICK_MIN = 26;
-const FLICK_SPEED = 0.35;
+const FLICK_MIN = 24;
+const FLICK_SPEED = 0.3;
+/** Quanto dito si muove di lato prima che il gesto prenda la riga; e quanto in verticale prima che lo lasci alla pagina. */
+const GRAB_X = 7;
+const LEAVE_Y = 12;
+const SPRING_BACK = { damping: 22, stiffness: 320, mass: 0.7 } as const;
 const TRASH_PATH = 'M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3';
-
-/** Il movimento è uno scorrimento di riga (e non quello della pagina)? Più orizzontale che verticale. */
-export function isRowSwipe(dx: number, dy: number): boolean {
-  return Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy) * 1.15;
-}
 
 /** Al rilascio: scatta l'azione? Serve la distanza intera, oppure uno scatto veloce nella stessa direzione. */
 export function swipeFires(dx: number, vx: number): boolean {
+  'worklet';
   if (Math.abs(dx) >= THRESHOLD) return true;
   return (
     Math.abs(dx) >= FLICK_MIN && Math.abs(vx) >= FLICK_SPEED && Math.sign(vx) === Math.sign(dx)
   );
 }
 
-interface SwipeProps {
+/** Dove sta la riga per un dito mosso di `dx`: oltre la soglia c'è resistenza, si sente che il gesto è «arrivato». */
+export function easedOffset(dx: number): number {
+  'worklet';
+  const a = Math.abs(dx);
+  return a > THRESHOLD ? Math.sign(dx) * (THRESHOLD + (a - THRESHOLD) * 0.34) : dx;
+}
+
+type Live = {
   allowRight: boolean;
   allowLeft: boolean;
   onSwipe: (dir: 1 | -1) => void;
   onBuzz?: () => void;
-}
+};
 
-/** Il gesto vero e proprio. Sta fuori dal componente: legge sempre le proprietà più recenti tramite update(). */
-class SwipeGesture {
-  private props: SwipeProps;
-  private buzzed = false;
-  readonly responder;
+/**
+ * Il gesto della riga. Gira tutto sul thread dell'interfaccia (Gesture Handler + Reanimated): la riga segue il dito
+ * senza passare dal JavaScript, e un tratto orizzontale prende il tocco prima dello scorrimento della pagina
+ * (che lo perde appena il dito sale o scende di più di LEAVE_Y senza muoversi di lato).
+ */
+function useRowSwipe(live: Live) {
+  const x = useSharedValue(0);
+  const latest = useRef(live);
+  useEffect(() => {
+    latest.current = live;
+  });
+  const buzzed = useSharedValue(false);
+  const buzz = useCallback(() => latest.current.onBuzz?.(), []);
+  const fire = useCallback((dir: 1 | -1) => latest.current.onSwipe(dir), []);
 
-  constructor(
-    private readonly x: Animated.Value,
-    props: SwipeProps,
-  ) {
-    this.props = props;
-    this.responder = PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) =>
-        isRowSwipe(g.dx, g.dy) && (g.dx > 0 ? this.props.allowRight : this.props.allowLeft),
-      onPanResponderMove: (_e, g) => {
-        const ok = g.dx > 0 ? this.props.allowRight : this.props.allowLeft;
-        const dx = ok ? g.dx : 0;
-        // resistenza oltre la soglia: si sente che il gesto è «arrivato»
-        const eased =
-          Math.abs(dx) > THRESHOLD
-            ? Math.sign(dx) * (THRESHOLD + (Math.abs(dx) - THRESHOLD) * 0.34)
-            : dx;
-        this.x.setValue(eased);
-        if (!this.buzzed && Math.abs(dx) >= THRESHOLD) {
-          this.buzzed = true;
-          this.props.onBuzz?.();
-        }
-        if (this.buzzed && Math.abs(dx) < THRESHOLD) this.buzzed = false;
-      },
-      onPanResponderRelease: (_e, g) => {
-        this.buzzed = false;
-        Animated.spring(this.x, { toValue: 0, useNativeDriver: true, bounciness: 8 }).start();
-        if (!swipeFires(g.dx, g.vx)) return;
-        if (g.dx > 0 && this.props.allowRight) this.props.onSwipe(1);
-        else if (g.dx < 0 && this.props.allowLeft) this.props.onSwipe(-1);
-      },
-      onPanResponderTerminate: () => {
-        this.buzzed = false;
-        Animated.spring(this.x, { toValue: 0, useNativeDriver: true }).start();
-      },
-    });
-  }
+  const { allowRight, allowLeft } = live;
+  const activeOffsetX: number | [number, number] = allowRight
+    ? allowLeft
+      ? [-GRAB_X, GRAB_X]
+      : GRAB_X
+    : -GRAB_X;
 
-  update(props: SwipeProps) {
-    this.props = props;
-  }
+  const pan = usePanGesture({
+    enabled: allowRight || allowLeft,
+    activeOffsetX,
+    failOffsetY: [-LEAVE_Y, LEAVE_Y],
+    onUpdate: (e) => {
+      'worklet';
+      const dx = e.translationX;
+      const ok = dx > 0 ? allowRight : allowLeft;
+      x.value = ok ? easedOffset(dx) : 0;
+      const past = ok && Math.abs(dx) >= THRESHOLD;
+      if (past && !buzzed.value) {
+        buzzed.value = true;
+        scheduleOnRN(buzz);
+      } else if (!past && buzzed.value) {
+        buzzed.value = false;
+      }
+    },
+    onDeactivate: (e) => {
+      'worklet';
+      const dx = e.translationX;
+      const ok = dx > 0 ? allowRight : allowLeft;
+      if (!e.canceled && ok && swipeFires(dx, e.velocityX / 1000))
+        scheduleOnRN(fire, dx > 0 ? 1 : -1);
+    },
+    onFinalize: () => {
+      'worklet';
+      buzzed.value = false;
+      x.value = withSpring(0, SPRING_BACK);
+    },
+  });
+  return { x, pan };
 }
 
 /**
  * Lo scorrimento laterale di una riga (come .hb-row-behind del sito): verso destra «Fatto» (o «Ci sono cascato»),
- * verso sinistra «Annulla». Oltre 52 punti (o con uno scatto veloce, già da 26), al rilascio, scatta l'azione; se in quella direzione non c'è nulla
- * da fare la riga resta ferma. Un movimento più verticale che orizzontale è lo scorrimento della pagina e non conta.
+ * verso sinistra «Annulla». Oltre 46 punti (o con uno scatto veloce, già da 24), al rilascio, scatta l'azione; se in quella direzione non c'è nulla
+ * da fare la riga resta ferma. Un movimento verticale è lo scorrimento della pagina e non prende mai il tocco.
  */
 export function SwipeRow(p: {
   th: Pick<HabitsTheme, 'red'>;
@@ -101,12 +118,10 @@ export function SwipeRow(p: {
   radius?: number;
 }) {
   const { th } = p;
-  const [x] = useState(() => new Animated.Value(0));
-  const [gesture] = useState(() => new SwipeGesture(x, p));
-  useEffect(() => {
-    gesture.update(p);
-  });
-  const pan = gesture.responder;
+  const { x, pan } = useRowSwipe(p);
+  // fermo non si vede (niente bordino colorato attorno alla riga); appena si muove, appare
+  const behindStyle = useAnimatedStyle(() => ({ opacity: Math.min(1, Math.abs(x.value) / 6) }));
+  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 
   return (
     <View
@@ -118,8 +133,7 @@ export function SwipeRow(p: {
           StyleSheet.absoluteFill,
           styles.behind,
           p.radius !== undefined && { borderRadius: p.radius },
-          // fermo non si vede (niente bordino colorato attorno alla riga); appena si muove, appare
-          { opacity: x.interpolate({ inputRange: [-6, 0, 6], outputRange: [1, 0, 1] }) },
+          behindStyle,
         ]}
         pointerEvents="none"
       >
@@ -150,9 +164,9 @@ export function SwipeRow(p: {
           </Svg>
         </View>
       </Animated.View>
-      <Animated.View style={{ transform: [{ translateX: x }] }} {...pan.panHandlers}>
-        {p.children}
-      </Animated.View>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={rowStyle}>{p.children}</Animated.View>
+      </GestureDetector>
     </View>
   );
 }

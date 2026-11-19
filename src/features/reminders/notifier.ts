@@ -21,13 +21,9 @@ export function drainTaken(): PillSlot[] {
   return pendingTaken.splice(0, pendingTaken.length);
 }
 
-/** Dalla risposta a una notifica alla presa che segna, se è il pulsante «Presa» di una pastiglia. */
-export function slotOfResponse(r: {
-  actionIdentifier: string;
-  notification: { request: { content: { data?: Record<string, unknown> } } };
-}): PillSlot | null {
-  if (r.actionIdentifier !== TAKEN_ACTION) return null;
-  const pill = r.notification.request.content.data?.pill as Partial<PillSlot> | undefined;
+/** La presa scritta nei dati di una notifica di pastiglia, se c'è ed è fatta bene. */
+export function slotOfPill(raw: unknown): PillSlot | null {
+  const pill = raw as Partial<PillSlot> | undefined;
   if (
     !pill ||
     typeof pill.plan !== 'string' ||
@@ -37,6 +33,15 @@ export function slotOfResponse(r: {
   )
     return null;
   return { plan: pill.plan, date: pill.date, time: pill.time, seq: pill.seq };
+}
+
+/** Dalla risposta a una notifica alla presa che segna, se è il pulsante «Presa» di una pastiglia. */
+export function slotOfResponse(r: {
+  actionIdentifier: string;
+  notification: { request: { content: { data?: Record<string, unknown> } } };
+}): PillSlot | null {
+  if (r.actionIdentifier !== TAKEN_ACTION) return null;
+  return slotOfPill(r.notification.request.content.data?.pill);
 }
 
 /** Un solo ascolto, per tutta la vita dell'app: registrato qui (all'avvio) e non in un componente. */
@@ -104,6 +109,18 @@ export function phoneNotifier(channelName: string, takenLabel = 'Taken'): Notifi
           .filter((n) => !n.identifier.startsWith('pomodoro-'))
           .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
       );
+    },
+    delivered: async () => {
+      const shown = await Notifications.getPresentedNotificationsAsync();
+      const out: { id: string; pill: PillSlot }[] = [];
+      for (const n of shown) {
+        const slot = slotOfPill(n.request.content.data?.pill);
+        if (slot) out.push({ id: n.request.identifier, pill: slot });
+      }
+      return out;
+    },
+    dismiss: async (ids) => {
+      await Promise.all(ids.map((id) => Notifications.dismissNotificationAsync(id)));
     },
     schedule: async (r) => {
       await ensureChannel(channelName);

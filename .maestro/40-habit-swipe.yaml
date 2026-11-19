@@ -1,0 +1,31 @@
+appId: app.standout.mobile
+name: A habit row follows a sideways swipe and the page does not scroll
+---
+- runFlow: common/login.yaml
+- tapOn:
+    id: bar-habits
+- tapOn:
+    id: habit-add
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: habit-name
+      - eraseText: 40
+      - inputText: Swipe test
+      - assertVisible: 'Swipe test'
+- pressKey: Enter
+- takeScreenshot: 50-habit-form
+- tapOn:
+    id: habit-save
+- extendedWaitUntil:
+    visible: 'Swipe test'
+    timeout: 10000
+- takeScreenshot: 51-habit-before-swipe
+# A slow, slightly slanted drag to the right: the row must follow the finger and the page must stay where it is.
+- swipe:
+    from:
+      text: 'Swipe test'
+    direction: RIGHT
+    duration: 700
+- takeScreenshot: 52-habit-after-swipe
