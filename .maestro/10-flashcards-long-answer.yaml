@@ -41,8 +41,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - runFlow:
     when:
@@ -50,8 +50,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - runFlow:
     when:
@@ -59,8 +59,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - runFlow:
     when:
@@ -68,8 +68,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - runFlow:
     when:
@@ -77,8 +77,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - runFlow:
     when:
@@ -86,8 +86,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - runFlow:
     when:
@@ -95,8 +95,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 5.5%,85%
-          end: 5.5%,15%
+          start: 6%,85%
+          end: 6%,15%
           duration: 600
 - takeScreenshot: 12b-after-drag
 - tapOn:
