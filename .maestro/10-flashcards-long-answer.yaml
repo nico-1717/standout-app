@@ -20,9 +20,10 @@ name: A card with a very long answer scrolls in the viewer
 - tapOn:
     id: fcd-settings
 - takeScreenshot: 11b-view-settings
-# "Edit all cards" opens the page where new cards are typed.
+# "Edit all cards" opens the page where new cards are typed. The sheet is an iOS Modal that Maestro cannot
+# see by id or text, so the button is tapped by its place on the screen.
 - tapOn:
-    id: fcd-bigedit
+    point: 50%,73%
 - tapOn:
     id: fci-mode-rows
 - tapOn:
