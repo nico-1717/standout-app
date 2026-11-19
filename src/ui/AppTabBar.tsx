@@ -32,16 +32,19 @@ const ITEM_COMPACT_H = 44;
 const ITEM_FULL_H = 56;
 const LABEL_H = 13;
 const GROW_MS = 220;
-const SHRINK_AFTER_MS = 3500;
+const SHRINK_AFTER_MS = 2000;
 
 /**
- * 0 = piccola, 1 = grande. `wake()` la ingrandisce subito e ferma il conto alla rovescia; `rest()` la fa tornare
- * piccola dopo qualche secondo. All'avvio parte grande (si leggono i nomi) e si rimpicciolisce da sola.
+ * 0 = piccola, 1 = grande. In Home è sempre grande. Nelle altre pagine è grande solo mentre la si tocca o la si scorre
+ * e per 2 secondi dopo: `wake()` la ingrandisce subito e ferma il conto alla rovescia, `rest()` la fa tornare piccola
+ * dopo 2 secondi. Appena si arriva in una pagina diversa da Home parte il conto alla rovescia (la scheda appena
+ * toccata resta grande per 2 secondi).
  */
-function useBarGrow() {
+function useBarGrow(isHome: boolean) {
   const grow = useSharedValue(1);
   const reduce = useReducedMotion();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const home = useRef(isHome);
   const to = (v: number) => {
     grow.set(reduce ? v : withTiming(v, { duration: GROW_MS, easing: Easing.out(Easing.cubic) }));
   };
@@ -55,14 +58,17 @@ function useBarGrow() {
   };
   const rest = () => {
     clear();
+    if (home.current) return;
     timer.current = setTimeout(() => to(0), SHRINK_AFTER_MS);
   };
   useEffect(() => {
-    rest();
+    home.current = isHome;
+    if (isHome) wake();
+    else rest();
     return clear;
-    // solo all'avvio: la funzione `rest` cambia a ogni render ma fa sempre la stessa cosa
+    // wake/rest cambiano a ogni render ma fanno sempre la stessa cosa: conta solo cambiare pagina
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isHome]);
   return { grow, wake, rest };
 }
 
@@ -125,9 +131,9 @@ export function AppTabBar({ state, insets }: BarProps) {
   const th = useTheme();
   const { t } = useTranslation();
   const { localPrefs } = useApp();
-  const { grow, wake, rest } = useBarGrow();
   const current = state.routes[state.index]?.name;
   const currentId = (Object.keys(BAR_ITEMS) as BarId[]).find((x) => BAR_ITEMS[x].route === current);
+  const { grow, wake, rest } = useBarGrow(currentId === 'home');
   // su una pagina nascosta (Pillole, Da comprare, Lingue) si accende l'icona della pagina che la contiene
   const lit = currentId ? litBarId(localPrefs.bar, currentId) : null;
   const { pinned, scroll } = barLayout(localPrefs.bar);
