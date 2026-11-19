@@ -54,6 +54,8 @@ export function DeckCardSide(p: {
   const lock = useContext(ScrollLockContext);
   const inner = useRef<ScrollViewInstance>(null);
   const [textH, setTextH] = useState(0);
+  const [dbg, setDbg] = useState('');
+  const add = (x: string) => setDbg((d) => (d + ' ' + x).slice(-70));
   const tall = textH > TEXT_MAX + 1;
   const measure = (e: LayoutChangeEvent) => setTextH(e.nativeEvent.layout.height);
   const hasText = docToPlain(parseDoc(p.raw)).trim().length > 0;
@@ -85,6 +87,7 @@ export function DeckCardSide(p: {
         </Text>
         <View style={{ flex: 1, height: 0.5, backgroundColor: th.hairline }} />
       </View>
+      {dbg ? <Text testID={`${p.testID}-dbg`} style={{ color: 'red', fontSize: 10 }}>{dbg}</Text> : null}
       {hasText || hasImage ? (
         <View
           style={{ flexDirection: split ? 'row' : 'column', alignItems: 'flex-start', gap: 12 }}
@@ -96,9 +99,9 @@ export function DeckCardSide(p: {
               ) : (
                 <View
                   testID={`${p.testID}-scroll`}
-                  onTouchStart={() => lock(true)}
-                  onTouchEnd={() => lock(false)}
-                  onTouchCancel={() => lock(false)}
+                  onTouchStart={() => { add('S'); lock(true); }}
+                  onTouchEnd={() => { add('E'); lock(false); }}
+                  onTouchCancel={() => { add('C'); lock(false); }}
                 >
                   {tall ? (
                     // altezza FISSA (non solo massima) e contenuto alto quanto il testo misurato: così c'è sempre qualcosa
@@ -110,7 +113,11 @@ export function DeckCardSide(p: {
                       style={{ height: TEXT_MAX }}
                       contentContainerStyle={{ minHeight: textH }}
                       showsVerticalScrollIndicator
-                      onLayout={() => inner.current?.flashScrollIndicators()}
+                      onLayout={(e) => { add('L' + Math.round(e.nativeEvent.layout.height)); inner.current?.flashScrollIndicators(); }}
+                      onContentSizeChange={(_w, h) => add('c' + Math.round(h))}
+                      onScrollBeginDrag={() => add('D')}
+                      onScroll={(e) => add('y' + Math.round(e.nativeEvent.contentOffset.y))}
+                      scrollEventThrottle={50}
                     >
                       <View testID={`${p.testID}-measure`} onLayout={measure}>
                         {text}

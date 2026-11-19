@@ -7,6 +7,10 @@ name: iPhone simulator test
 on:
   workflow_dispatch:
     inputs:
+      freshjs:
+        description: 'Put the current JavaScript into the saved built app (use with cachekey; no rebuild)'
+        required: false
+        default: 'false'
       flow:
         description: 'Which flow to run (file name in .maestro, without .yaml). Empty = all of them.'
         required: false
@@ -91,6 +95,23 @@ jobs:
         with:
           path: built-app
           key: ${{ steps.appkey.outputs.key }}
+
+      # The native part of the app is the same when only src/ changed, so the JavaScript is bundled again and put
+      # inside the cached app (about 3 minutes) instead of building everything again (about 40 minutes).
+      - name: Put the current JavaScript into the built app
+        if: inputs.freshjs == 'true'
+        run: |
+          set -eo pipefail
+          APP="$(ls -d built-app/*.app | head -1)"
+          ls "$APP" | head -40
+          ENTRY="$(node -e "console.log(require('expo/scripts/resolveAppEntry'))" 2>/dev/null || true)"
+          [ -z "$ENTRY" ] && ENTRY="node_modules/expo-router/entry.js"
+          npx expo export:embed --eager --platform ios --dev false --minify false --reset-cache \
+            --entry-file "$ENTRY" --bundle-output "$RUNNER_TEMP/main.js" --assets-dest "$RUNNER_TEMP/assets"
+          HERMESC="node_modules/hermes-compiler/hermesc/osx-bin/hermesc"
+          "$HERMESC" -emit-binary -O -out "$APP/main.jsbundle" "$RUNNER_TEMP/main.js"
+          codesign --force --sign - "$APP"
+          ls -la "$APP/main.jsbundle"
 
       - name: Start an iPhone simulator and install the app
         run: |
