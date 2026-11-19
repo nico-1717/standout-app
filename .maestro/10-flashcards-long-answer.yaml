@@ -42,8 +42,8 @@ name: A card with a very long answer scrolls in the viewer
         id: fci-save
     commands:
       - swipe:
-          start: 2%,85%
-          end: 2%,15%
+          start: 5.5%,85%
+          end: 5.5%,15%
           duration: 600
 - takeScreenshot: 12b-after-drag
 - tapOn:
