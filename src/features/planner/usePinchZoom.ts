@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { PanResponder, type GestureResponderHandlers } from 'react-native';
 
 import { haptic } from '@/ui/motion';
@@ -10,6 +10,36 @@ interface Live {
   pxm: number;
   step: Zoom;
   pinching: boolean;
+}
+
+/**
+ * Dove sta il pizzico adesso. Sta fuori da React: ogni movimento delle dita cambia la densità, ma a ridisegnarsi è solo
+ * la griglia dell'ora (`usePinchPpm`); il resto della pagina si rifà soltanto quando cambia lo scatto o il gesto
+ * comincia e finisce (`coarse`).
+ */
+export class PinchStore {
+  live: Live | null = null;
+  private listeners = new Set<() => void>();
+  subscribe = (l: () => void) => {
+    this.listeners.add(l);
+    return () => void this.listeners.delete(l);
+  };
+  snapshot = () => this.live;
+  /** Le sole parti che interessano a tutta la pagina: lo scatto e se si sta pizzicando. */
+  coarse = () => (this.live ? `${this.live.step}|${this.live.pinching ? 1 : 0}` : '-');
+  set(next: Live | null) {
+    const a = this.live;
+    // stesso valore di prima (le dita fermano la densità contro il limite): niente da ridisegnare
+    if (a && next && a.pxm === next.pxm && a.step === next.step && a.pinching === next.pinching)
+      return;
+    this.live = next;
+    this.listeners.forEach((l) => l());
+  }
+}
+
+/** La densità (pixel per minuto) da usare: quella viva mentre si pizzica o finché lo scatto salvato non la raggiunge. */
+export function ppmOf(live: Live | null, zoom: Zoom): number {
+  return live && (live.pinching || live.step === zoom) ? live.pxm : pxPerMinute(zoom);
 }
 
 interface Hooks {
@@ -95,48 +125,76 @@ class PinchController {
 }
 
 /**
- * La densità degli orari: continua mentre si pizzica, e lo scatto si ricava da lei. Fuori dal gesto vale quella
+ * Lo scatto e il gesto: lo scatto si ricava dalla densità continua che segue le dita. Fuori dal gesto vale quella
  * naturale dello scatto salvato. `anchor` tiene fermo l'orario che c'era sotto le dita.
+ * La densità stessa non è qui (vedi `PinchStore`): chi la disegna la legge con `usePinchPpm`.
  */
 export function usePinchZoom(zoom: Zoom, hooks: Hooks) {
-  const [live, setLive] = useState<Live | null>(null);
-  const valid = live && (live.pinching || live.step === zoom);
-  const step: Zoom = valid ? live.step : zoom;
-  const ppm = valid ? live.pxm : pxPerMinute(zoom);
+  const [store] = useState(() => new PinchStore());
+  const key = useSyncExternalStore(store.subscribe, store.coarse);
+  const [liveStep, liveFlag] = key.split('|');
+  const pinching = liveFlag === '1';
+  const valid = key !== '-' && (pinching || liveStep === zoom);
+  const step: Zoom = valid ? (liveStep as Zoom) : zoom;
+  const zoomNow = useRef(zoom);
   const [ctl] = useState(
     () =>
       new PinchController(
         hooks,
         () => ({ step: 'm30', ppm: 0 }),
-        (l) => setLive(l),
+        (l) => store.set(l),
       ),
   );
   useEffect(() => {
-    ctl.update(hooks, () => ({ step, ppm }));
+    zoomNow.current = zoom;
+    ctl.update(hooks, () => ({ step, ppm: ppmOf(store.live, zoomNow.current) }));
   });
-  // dopo ogni cambio di densità l'orario agganciato torna dov'era (due volte: la lunghezza nuova arriva un attimo dopo)
-  useLayoutEffect(() => {
-    const a = ctl.pending;
-    if (!a) return;
-    hooks.restore(a, ppm);
-    const id = requestAnimationFrame(() => hooks.restore(a, ppm));
-    return () => cancelAnimationFrame(id);
-    // `hooks` cambia a ogni rendering: conta solo la densità
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ppm, ctl]);
+
+  /** La densità di adesso, per chi non si ridisegna con lei. */
+  const getPpm = () => ppmOf(store.live, zoomNow.current);
 
   /** Dal tastino della rotellina: si torna alla densità naturale di quello scatto. */
   const choose = (z: Zoom, anchor: Anchor) => {
     const target = pxPerMinute(z);
     ctl.hold(anchor);
-    setLive({ pxm: target, step: z === 'agenda' ? 'agenda' : stepFor(target), pinching: false });
+    store.set({ pxm: target, step: z === 'agenda' ? 'agenda' : stepFor(target), pinching: false });
     hooks.save(z);
   };
+
+  /** Dopo ogni cambio di densità l'orario agganciato torna dov'era (due volte: la lunghezza nuova arriva un attimo dopo). */
+  const afterCommit = (ppm: number) => {
+    const a = ctl.pending;
+    if (!a) return undefined;
+    hooks.restore(a, ppm);
+    const id = requestAnimationFrame(() => hooks.restore(a, ppm));
+    return () => cancelAnimationFrame(id);
+  };
+
   return {
-    ppm,
     step,
-    pinching: !!live?.pinching,
+    pinching,
+    store,
+    getPpm,
+    afterCommit,
     panHandlers: ctl.responder.panHandlers as GestureResponderHandlers,
     choose,
   };
+}
+
+export type PinchApi = ReturnType<typeof usePinchZoom>;
+
+/**
+ * La densità per la griglia dell'ora: si ridisegna a ogni movimento delle dita, da sola. Il giorno su cui sono
+ * le dita (`current`) riporta l'orario agganciato dov'era dopo ogni cambio.
+ */
+export function usePinchPpm(pinch: PinchApi, zoom: Zoom, current: boolean): number {
+  const live = useSyncExternalStore(pinch.store.subscribe, pinch.store.snapshot);
+  const ppm = ppmOf(live, zoom);
+  useLayoutEffect(
+    () => (current ? pinch.afterCommit(ppm) : undefined),
+    // `pinch` cambia a ogni rendering: conta solo la densità
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ppm, current],
+  );
+  return ppm;
 }

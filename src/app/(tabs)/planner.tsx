@@ -38,7 +38,7 @@ import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
   AgendaList,
   BandEvent,
-  DayGrid,
+  PinchedDayGrid,
   dayTitle,
   useNowMinutes,
 } from '@/features/planner/PlannerParts';
@@ -56,6 +56,11 @@ import { WxPopup } from '@/features/planner/WeatherUi';
 import { useWeather } from '@/features/planner/useWeather';
 import type { WxCtx } from '@/features/planner/weather';
 import { ZoomDial } from '@/features/planner/ZoomDial';
+
+const BAND = 400;
+const bandOf = (y: number) => Math.floor(y / BAND) * BAND;
+/** Le righe da disegnare per una pagina scesa a `band`: la finestra più un buon margine, sopra e sotto. */
+const rowsAround = (band: number) => ({ from: band - 1000, to: band + 1800 });
 
 /** Il planner: vista giorno (con le ore), settimana (un elenco per giorno) e mese (una griglia). */
 export default function PlannerScreen() {
@@ -117,6 +122,8 @@ export default function PlannerScreen() {
   // la giornata scorre dentro `day-scroll`: dove sta (in cima alla finestra e quanto è scesa) e dove comincia la
   // griglia nel contenuto, per tenere fermo l'orario sotto le dita mentre si pizzica
   const scrollY = useRef(0);
+  // quanto è scesa la pagina, a gradini: le righe delle ore si disegnano solo attorno alla parte visibile
+  const [bandY, setBandY] = useState(0);
   const viewTop = useRef(0);
   const viewH = useRef(0);
   const gridTop = useRef(0);
@@ -133,7 +140,7 @@ export default function PlannerScreen() {
     },
     save: (z) => updatePlannerSettings?.({ zoom: z }),
   });
-  const { ppm, step, pinching } = pinch;
+  const { step, pinching } = pinch;
   const agendaView = step === 'agenda';
 
   const repo = services?.planner ?? null;
@@ -227,7 +234,7 @@ export default function PlannerScreen() {
       date === today
         ? Math.max(0, d.getHours() * 60 + d.getMinutes() - 60)
         : plannerSettings.day_start_hour * 60;
-    scroller.current?.scrollTo({ y: startMin * ppm, animated: false });
+    scroller.current?.scrollTo({ y: startMin * pinch.getPpm(), animated: false });
     // solo quando cambia il giorno mostrato
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
@@ -368,7 +375,9 @@ export default function PlannerScreen() {
         onScroll={
           cur
             ? (e) => {
-                scrollY.current = e.nativeEvent.contentOffset.y;
+                const y = e.nativeEvent.contentOffset.y;
+                scrollY.current = y;
+                setBandY(bandOf(y));
               }
             : undefined
         }
@@ -444,14 +453,17 @@ export default function PlannerScreen() {
           />
         ) : (
           <View onLayout={cur ? (e) => (gridTop.current = e.nativeEvent.layout.y) : undefined}>
-            <DayGrid
+            <PinchedDayGrid
+              rows={rowsAround(cur ? bandY : bandOf(startY))}
+              pinch={pinch}
+              saved={zoom}
+              current={cur}
               pt={pt}
               categories={categories}
               calendars={calendars}
               day={d}
               events={dp.grid}
               zoom={step}
-              ppm={ppm}
               width={width}
               now={d === today ? now : null}
               onOpen={open}
@@ -671,7 +683,9 @@ export default function PlannerScreen() {
                 0,
                 Math.min(
                   1439,
-                  ppm ? (scrollY.current - gridTop.current + viewH.current / 2) / ppm : 540,
+                  pinch.getPpm()
+                    ? (scrollY.current - gridTop.current + viewH.current / 2) / pinch.getPpm()
+                    : 540,
                 ),
               ),
               y: viewH.current / 2,
@@ -864,7 +878,7 @@ export default function PlannerScreen() {
             const [hh, mm] = start.split(':').map(Number);
             const startMin = Math.max(0, hh! * 60 + mm! - 60);
             setTimeout(
-              () => scroller.current?.scrollTo({ y: startMin * ppm, animated: true }),
+              () => scroller.current?.scrollTo({ y: startMin * pinch.getPpm(), animated: true }),
               320,
             );
           }

@@ -19,6 +19,7 @@ import { minutesOf, timeOf } from './model';
 import { blockBackground, eventColor, longHex, type PlannerTheme } from './plannerTheme';
 import type { Category, Calendar } from './repo';
 import { useEventDrag } from './useEventDrag';
+import { usePinchPpm, type PinchApi } from './usePinchZoom';
 import { Text } from '@/ui/CappedText';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
@@ -283,6 +284,8 @@ export function DayGrid(
     ppm: number;
     width: number;
     now: number | null;
+    /** solo le righe delle ore che cadono in questa fascia di pixel (la parte visibile e un bel po' attorno) */
+    rows?: { from: number; to: number };
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
     onEmptyTap: (minutes: number) => void;
@@ -320,39 +323,41 @@ export function DayGrid(
             backgroundColor: pt.hair,
           }}
         />
-        {slotStarts(slotMin).map((m, i) => {
-          const major = i % every === 0;
-          return (
-            <View
-              key={m}
-              pointerEvents="none"
-              style={{ position: 'absolute', top: m * ppm, left: 0, right: 0 }}
-            >
-              <Text
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  width: 41,
-                  textAlign: 'right',
-                  top: -8,
-                  color: major ? pt.ink : pt.ink2,
-                  fontSize: 11.5,
-                  fontWeight: major ? '600' : '500',
-                  fontFamily: pt.sans,
-                }}
-              >
-                {hhmm(m)}
-              </Text>
+        {slotStarts(slotMin)
+          .filter((m) => !p.rows || (m * ppm >= p.rows.from && m * ppm <= p.rows.to))
+          .map((m) => {
+            const major = (m / slotMin) % every === 0;
+            return (
               <View
-                style={{
-                  marginLeft: gutter,
-                  height: 1,
-                  backgroundColor: major ? pt.hair2 : pt.hair,
-                }}
-              />
-            </View>
-          );
-        })}
+                key={m}
+                pointerEvents="none"
+                style={{ position: 'absolute', top: m * ppm, left: 0, right: 0 }}
+              >
+                <Text
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    width: 41,
+                    textAlign: 'right',
+                    top: -8,
+                    color: major ? pt.ink : pt.ink2,
+                    fontSize: 11.5,
+                    fontWeight: major ? '600' : '500',
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {hhmm(m)}
+                </Text>
+                <View
+                  style={{
+                    marginLeft: gutter,
+                    height: 1,
+                    backgroundColor: major ? pt.hair2 : pt.hair,
+                  }}
+                />
+              </View>
+            );
+          })}
       </Pressable>
       {blocks.map((b) => (
         <EventBlock
@@ -397,6 +402,24 @@ export function DayGrid(
       ) : null}
     </View>
   );
+}
+
+/**
+ * La griglia dell'ora con la densità viva del pizzico: si ridisegna lei sola a ogni movimento delle dita, senza
+ * rifare il resto della pagina.
+ */
+export function PinchedDayGrid(
+  p: Omit<Parameters<typeof DayGrid>[0], 'ppm'> & {
+    pinch: PinchApi;
+    /** lo scatto salvato nelle impostazioni */
+    saved: Zoom;
+    /** la pagina su cui sono le dita (non una delle vicine) */
+    current: boolean;
+  },
+) {
+  const { pinch, saved, current, ...grid } = p;
+  const ppm = usePinchPpm(pinch, saved, current);
+  return <DayGrid {...grid} ppm={ppm} />;
 }
 
 /**

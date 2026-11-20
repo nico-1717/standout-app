@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import { pxPerMinute, type Zoom } from '../layout';
-import { usePinchZoom } from '../usePinchZoom';
+import { usePinchPpm, usePinchZoom } from '../usePinchZoom';
 
 jest.mock('@/ui/motion', () => ({ haptic: { select: jest.fn(), tap: jest.fn() } }));
 
@@ -45,9 +45,14 @@ const setup = async (zoom: Zoom = 'm30') => {
   const save = jest.fn();
   const restore = jest.fn();
   const anchorAt = jest.fn((pageY: number) => ({ min: 600, y: pageY - 100 }));
-  const hook = await renderHook((z: typeof zoom) => usePinchZoom(z, { anchorAt, restore, save }), {
-    initialProps: zoom,
-  });
+  // la pagina (lo scatto) e la griglia (la densità) leggono lo stesso gesto, ognuna a modo suo
+  const hook = await renderHook(
+    (z: typeof zoom) => {
+      const pinch = usePinchZoom(z, { anchorAt, restore, save });
+      return { ...pinch, ppm: usePinchPpm(pinch, z, true) };
+    },
+    { initialProps: zoom },
+  );
   const h = () => hook.result.current.panHandlers as Record<string, (e: never) => unknown>;
   return { hook, save, restore, anchorAt, h };
 };
