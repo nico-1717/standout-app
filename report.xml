@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="iPhone 17 Pro - iOS 26.2 - 98A0BFA3-CEC3-4FD6-9916-5A2149774DBF" tests="1" failures="1" time="198.775" timestamp="2026-11-20T13:57:54">
+    <testcase id="Every zoom step draws its rows and events at the right height (static check of the UI-thread zoom)" name="Every zoom step draws its rows and events at the right height (static check of the UI-thread zoom)" classname="Every zoom step draws its rows and events at the right height (static check of the UI-thread zoom)" file=".maestro/42-zoom-steps.yaml" time="198.697" timestamp="2026-11-20T13:57:54" status="ERROR">
+      <failure>Element not found: Id matching regex: zoom-h3</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
