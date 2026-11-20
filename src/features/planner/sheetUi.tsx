@@ -121,6 +121,7 @@ export function Seg<T extends string>({
   value,
   onChange,
   small,
+  tight,
   testID,
 }: {
   pt: PlannerTheme;
@@ -128,6 +129,8 @@ export function Seg<T extends string>({
   value: T;
   onChange: (v: T) => void;
   small?: boolean;
+  /** ancora più stretta (la priorità, che deve stare a destra sulla riga del tipo) */
+  tight?: boolean;
   testID?: string;
 }) {
   return (
@@ -153,7 +156,7 @@ export function Seg<T extends string>({
             onPress={() => onChange(o.id)}
             style={{
               paddingVertical: small ? 5 : 8,
-              paddingHorizontal: small ? 11 : 6,
+              paddingHorizontal: tight ? 7 : small ? 11 : 6,
               borderRadius: 999,
               backgroundColor: on ? pt.card : 'transparent',
               boxShadow: on ? '0 1px 2px rgba(0,0,0,.08)' : undefined,
@@ -162,7 +165,7 @@ export function Seg<T extends string>({
             <Text
               style={{
                 color: on ? pt.ink : pt.ink2,
-                fontSize: small ? 12.5 : 12.5,
+                fontSize: tight ? 11.5 : 12.5,
                 fontWeight: on ? '500' : '400',
                 fontFamily: pt.sans,
               }}

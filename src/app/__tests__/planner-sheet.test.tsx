@@ -212,26 +212,31 @@ describe('Event sheet, as on the website', () => {
     expect(screen.getByTestId('sheet-enddate')).toBeTruthy();
   });
 
-  test('tapping the duration turns it into a field: typing 1h30 moves the end, no panel opens', async () => {
+  test('the duration is a time field: picking 01:30 moves the end, no panel opens', async () => {
     setup();
     await open();
-    await fireEvent.press(screen.getByTestId('sheet-duration-pill'));
     expect(screen.queryByTestId('sheet-quick')).toBeNull();
-    await fireEvent.changeText(screen.getByTestId('sheet-duration'), '1h30');
-    await fireEvent(screen.getByTestId('sheet-duration'), 'submitEditing');
+    await fireEvent(
+      screen.getByTestId('sheet-duration'),
+      'valueChange',
+      {},
+      new Date(2026, 0, 1, 1, 30),
+    );
     const at = (id: string) => new Date(screen.getByTestId(id).props.date as number).getTime();
     expect((at('sheet-end') - at('sheet-start')) / 60000).toBe(90);
-    expect(screen.queryByTestId('sheet-duration')).toBeNull();
   });
 
-  test('a duration that makes no sense leaves the end where it was', async () => {
+  test('a duration of 00:00 leaves the end where it was', async () => {
     setup();
     await open();
     const at = (id: string) => new Date(screen.getByTestId(id).props.date as number).getTime();
     const before = at('sheet-end');
-    await fireEvent.press(screen.getByTestId('sheet-duration-pill'));
-    await fireEvent.changeText(screen.getByTestId('sheet-duration'), 'abc');
-    await fireEvent(screen.getByTestId('sheet-duration'), 'blur');
+    await fireEvent(
+      screen.getByTestId('sheet-duration'),
+      'valueChange',
+      {},
+      new Date(2026, 0, 1, 0, 0),
+    );
     expect(at('sheet-end')).toBe(before);
   });
 

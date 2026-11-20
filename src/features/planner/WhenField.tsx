@@ -1,12 +1,11 @@
-import { useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { Platform, Pressable, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/ui/CappedText';
 
-import { parseDuration } from './durationInput';
-import { Pick } from './Pick';
+import { Pick, clockOf, hhmmOf } from './Pick';
 import type { PlannerTheme } from './plannerTheme';
 
 type Lock = 'auto' | 'chiuso' | 'aperto';
@@ -26,7 +25,7 @@ const GAP = 10;
 /**
  * Il «quando» del foglio, disegnato come una linea: un punto per l'inizio, uno per la fine, e sulla linea che li unisce
  * una pillola con la durata, il lucchetto e «tutto il giorno», infilata sul filo (il filo le passa in mezzo all'orologio).
- * Inizio e fine hanno la stessa forma (data + ora); la durata si scrive toccandola nella pillola.
+ * Inizio e fine hanno la stessa forma (data + ora); la durata è un campo ora (01:30) nella pillola.
  */
 export function WhenField(p: {
   pt: PlannerTheme;
@@ -49,25 +48,24 @@ export function WhenField(p: {
 }) {
   const { t } = useTranslation();
   const { pt } = p;
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState('');
-  const editingRef = useRef(false);
-  const startEdit = () => {
-    editingRef.current = true;
-    setText(String(Math.max(1, p.minutes)));
-    setEditing(true);
-  };
-  // invio e perdita del fuoco arrivano di seguito: la durata si applica una volta sola
-  const finishEdit = () => {
-    if (!editingRef.current) return;
-    editingRef.current = false;
-    setEditing(false);
-    const mins = parseDuration(text);
-    if (mins) p.onDuration(mins);
-  };
   const minLabel = (n: number) => t('planner.n_min', { n });
   const decided = p.lock !== 'auto';
   const lockColor = decided ? pt.accentInk : pt.ink3;
+  // la durata come ora (01:30): ore e minuti, mai di più di un giorno; 00:00 non è una durata
+  const durationValue = clockOf(
+    `${String(Math.floor(Math.min(1439, p.minutes) / 60)).padStart(2, '0')}:${String(Math.min(1439, p.minutes) % 60).padStart(2, '0')}`,
+  );
+  const pickDuration = (d: Date) => {
+    const mins = Number(hhmmOf(d).slice(0, 2)) * 60 + Number(hhmmOf(d).slice(3));
+    if (mins > 0) p.onDuration(mins);
+  };
+  const openAndroidDuration = () =>
+    DateTimePickerAndroid.open({
+      value: durationValue,
+      mode: 'time',
+      is24Hour: true,
+      onValueChange: (_, d) => d && pickDuration(d),
+    });
 
   const line = (
     label: string,
@@ -155,7 +153,9 @@ export function WhenField(p: {
           )}
 
           {/* sulla linea: durata · lucchetto · tutto il giorno */}
-          <View style={{ minHeight: 40, justifyContent: 'center', marginLeft: -(RAIL + GAP + 14) }}>
+          <View
+            style={{ minHeight: 40, justifyContent: 'center', marginLeft: -(RAIL + GAP + 11.5) }}
+          >
             <View
               style={{
                 alignSelf: 'flex-start',
@@ -175,16 +175,15 @@ export function WhenField(p: {
                     testID="sheet-duration-pill"
                     accessibilityRole="button"
                     accessibilityLabel={t('planner.durata')}
-                    accessibilityState={{ expanded: editing }}
-                    onPress={startEdit}
+                    disabled={Platform.OS === 'ios'}
+                    onPress={openAndroidDuration}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 7,
                       paddingVertical: 7,
-                      paddingLeft: 16,
+                      paddingLeft: 13,
                       paddingRight: 14,
-                      backgroundColor: editing ? pt.accentSoft : 'transparent',
                     }}
                   >
                     <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
@@ -196,41 +195,39 @@ export function WhenField(p: {
                         strokeLinecap="round"
                       />
                     </Svg>
-                    {editing ? (
-                      <TextInput
-                        testID="sheet-duration"
-                        autoFocus
-                        selectTextOnFocus
-                        keyboardType="numbers-and-punctuation"
-                        returnKeyType="done"
-                        value={text}
-                        onChangeText={setText}
-                        onSubmitEditing={finishEdit}
-                        onBlur={finishEdit}
-                        accessibilityLabel={t('planner.durata')}
+                    <Text
+                      style={{
+                        color: pt.ink,
+                        fontSize: 13,
+                        fontWeight: '600',
+                        fontFamily: pt.sans,
+                        fontVariant: ['tabular-nums'],
+                      }}
+                    >
+                      {durationLabel(p.minutes, minLabel)}
+                    </Text>
+                    {/* iPhone: il selettore dell'ora di sistema sta sopra alla durata, trasparente, e prende lui il tocco */}
+                    {Platform.OS === 'ios' ? (
+                      <View
                         style={{
-                          width: 54,
-                          padding: 0,
-                          color: pt.ink,
-                          fontSize: 13,
-                          fontWeight: '600',
-                          fontFamily: pt.sans,
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      />
-                    ) : (
-                      <Text
-                        style={{
-                          color: pt.ink,
-                          fontSize: 13,
-                          fontWeight: '600',
-                          fontFamily: pt.sans,
-                          fontVariant: ['tabular-nums'],
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          opacity: 0.011,
                         }}
                       >
-                        {durationLabel(p.minutes, minLabel)}
-                      </Text>
-                    )}
+                        <DateTimePicker
+                          testID="sheet-duration"
+                          value={durationValue}
+                          mode="time"
+                          display="compact"
+                          themeVariant={pt.dark ? 'dark' : 'light'}
+                          onValueChange={(_, d) => d && pickDuration(d)}
+                        />
+                      </View>
+                    ) : null}
                   </Pressable>
                   <View style={{ width: 0.5, alignSelf: 'stretch', backgroundColor: pt.hair }} />
                   <Pressable

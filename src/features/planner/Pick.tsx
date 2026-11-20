@@ -65,7 +65,10 @@ export function Pick({
     <View
       style={[
         overlay
-          ? [fieldBox(pt), { alignItems: 'center', justifyContent: 'center', minWidth: 108 }]
+          ? [
+              fieldBox(pt),
+              { alignItems: 'center', justifyContent: 'center', minWidth: 118, overflow: 'hidden' },
+            ]
           : native
             ? { flexDirection: 'row', alignItems: 'center' }
             : [fieldBox(pt), { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }],
@@ -86,7 +89,7 @@ export function Pick({
             {label}
           </Text>
           <View
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.02 }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.011 }}
           >
             <DateTimePicker
               testID={testID}

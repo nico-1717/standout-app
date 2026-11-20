@@ -600,10 +600,8 @@ export function EventSheet(p: {
               <View
                 style={{
                   flexDirection: 'row',
-                  flexWrap: 'wrap',
                   alignItems: 'center',
-                  gap: 10,
-                  rowGap: 8,
+                  gap: 8,
                   marginTop: 8,
                   marginHorizontal: 2,
                 }}
@@ -619,10 +617,11 @@ export function EventSheet(p: {
                     { id: 'task', label: t('planner.task'), testID: 'type-task' },
                   ]}
                 />
-                <View style={{ marginLeft: 'auto' }}>
+                <View style={{ marginLeft: 'auto', flexShrink: 1 }}>
                   <Seg
                     pt={pt}
                     small
+                    tight
                     testID="sheet-importance"
                     value={f.importance}
                     onChange={(v) => set('importance', v)}
