@@ -177,10 +177,15 @@ export function useZoomEngine(a: {
       setStep(z);
       setCenter(Math.round(cm / 60) * 60);
       saveRef.current(z);
-      scheduleOnUI(() => {
-        'worklet';
-        place();
-      });
+      // dalla lista la griglia nasce adesso: il punto agganciato si riporta in vista quando ha la sua altezza
+      const settle = () =>
+        scheduleOnUI(() => {
+          'worklet';
+          place();
+        });
+      settle();
+      requestAnimationFrame(() => requestAnimationFrame(settle));
+      setTimeout(settle, 120);
     },
     // `place` è un worklet creato a ogni giro: conta solo quello che legge
     // eslint-disable-next-line react-hooks/exhaustive-deps

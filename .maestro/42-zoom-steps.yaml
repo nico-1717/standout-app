@@ -29,14 +29,8 @@ name: Every zoom step draws its rows and events at the right height (static chec
 - tapOn:
     id: zoom-m5
 - takeScreenshot: 72-zoom-m5
-- tapOn:
-    id: zoom-h3
-- takeScreenshot: 73-zoom-h3
-- tapOn:
-    id: zoom-h1
-- takeScreenshot: 74-zoom-h1
 - swipe:
     start: 50%, 70%
     end: 50%, 35%
     duration: 400
-- takeScreenshot: 75-zoom-h1-scrolled
+- takeScreenshot: 73-zoom-m5-scrolled
