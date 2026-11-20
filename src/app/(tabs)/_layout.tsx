@@ -1,8 +1,11 @@
+import { useRouter } from 'expo-router';
 import { Tabs } from 'expo-router/js-tabs';
+import { useEffect } from 'react';
 import { View, type ColorValue } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { listenForAskTap } from '@/features/planner/smartPendingNotify';
 import { PomodoroBar } from '@/features/pomodoro/PomodoroBar';
 import { AppTabBar } from '@/ui/AppTabBar';
 import { BAR_ITEMS } from '@/ui/barItems';
@@ -23,6 +26,8 @@ function tabLook(kind: TabIconKind, title: string, fallback: string) {
 export default function TabsLayout() {
   const th = useTheme();
   const { t } = useTranslation();
+  const router = useRouter();
+  useEffect(() => listenForAskTap(() => router.navigate('/planner')), [router]);
   // NON usare `href: null` (= `hidden`): in questa versione di Expo Router chi ci naviga viene rimandato alla Home.
   // Le schede non hanno un bottone proprio: la barra è la nostra (AppTabBar), con tutte le pagine.
   return (

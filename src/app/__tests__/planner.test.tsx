@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { Alert, Keyboard } from 'react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
+import type { SqlDb } from '@/core/db/sqldb';
 import { migrate } from '@/core/db/migrations';
 import i18n from '@/core/i18n';
 import { upsertRow } from '@/core/sync/rows';
@@ -9,6 +10,7 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { addDaysIso, addMonths, mondayOf } from '@/features/planner/dates';
 import { weekPhraseId } from '@/features/planner/phrases';
 import { PlannerRepo } from '@/features/planner/repo';
+import { SmartPendingStore } from '@/features/planner/smartPending';
 import { localToday } from '@/features/tasks/groups';
 
 import PlannerScreen from '../(tabs)/planner';
@@ -463,6 +465,57 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
       end_time: '16:00',
     });
     expect(screen.getByTestId('smart-report')).toBeTruthy();
+  });
+
+  test('smart bar: a bare number asks day or time, closes the keyboard, and creates only after the answer', async () => {
+    const repo = setup();
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+    await renderIt();
+    await fireEvent.changeText(screen.getByTestId('smart-input'), '19 shower');
+    await fireEvent.press(screen.getByTestId('smart-go'));
+    expect(dismiss).toHaveBeenCalled();
+    expect(repo.rows()).toHaveLength(0);
+    expect(screen.getByTestId('smart-ask-title')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('smart-ask-time'));
+    expect(repo.rows()[0]).toMatchObject({
+      title: 'Shower',
+      event_date: TODAY,
+      start_time: '19:00',
+    });
+    expect(screen.queryByTestId('smart-ask-title')).toBeNull();
+    dismiss.mockRestore();
+  });
+
+  test('smart bar: an unanswered question waits in the queue and comes back when the planner opens', async () => {
+    const repo = setup();
+    // the app was closed before the answer: the phrase is still in the saved queue
+    new SmartPendingStore((mockServices as { db: SqlDb }).db).add('19 shower', TODAY);
+    await renderIt();
+    expect(screen.getByTestId('smart-ask-title')).toBeTruthy();
+    expect(repo.rows()).toHaveLength(0);
+    // "later" hides it for now but keeps the phrase
+    await fireEvent.press(screen.getByTestId('smart-ask-later'));
+    expect(screen.queryByTestId('smart-ask-title')).toBeNull();
+    expect(new SmartPendingStore((mockServices as { db: SqlDb }).db).list()).toHaveLength(1);
+  });
+
+  test('smart bar: answering "date" makes an all-day event on the next such day', async () => {
+    const repo = setup();
+    new SmartPendingStore((mockServices as { db: SqlDb }).db).add('19 shower', TODAY);
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('smart-ask-date'));
+    expect(repo.rows()[0]).toMatchObject({ title: 'Shower', is_all_day: 1 });
+    expect(new SmartPendingStore((mockServices as { db: SqlDb }).db).list()).toHaveLength(0);
+  });
+
+  test('smart bar: the report names the day once', async () => {
+    setup();
+    await renderIt();
+    await fireEvent.changeText(screen.getByTestId('smart-input'), 'dentista oggi 15');
+    await fireEvent.press(screen.getByTestId('smart-go'));
+    const line = within(screen.getByTestId('smart-report')).getByText(/November/i).props.children;
+    const text = [line].flat().join('');
+    expect(text.match(/November/gi)).toHaveLength(1);
   });
 
   test('smart bar: a phrase with no title creates nothing and keeps the text', async () => {

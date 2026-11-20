@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { dictationLang } from '@/core/speech/dictation';
@@ -17,7 +17,11 @@ export function SmartBar(p: { pt: PlannerTheme; onSubmit: (text: string) => bool
   const go = (value: string) => {
     if (!value.trim()) return;
     // se la frase non basta per un titolo, il testo resta lì per correggerlo
-    if (p.onSubmit(value)) setText('');
+    if (p.onSubmit(value)) {
+      setText('');
+      // fatto: la tastiera si chiude da sola
+      Keyboard.dismiss();
+    }
   };
   // il microfono: la frase detta riempie la barra e, finita, diventa l'evento
   const mic = useDictation({

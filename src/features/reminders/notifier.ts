@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import type { PillSlot } from './plan';
 import type { Notifier } from './scheduler';
 
-const CHANNEL = 'reminders';
+export const CHANNEL = 'reminders';
 /** Le notifiche delle pastiglie portano un pulsante «Presa» (non apre l'app). */
 export const PILL_CATEGORY = 'pill';
 export const TAKEN_ACTION = 'taken';
@@ -75,7 +75,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-async function ensureChannel(name: string): Promise<void> {
+export async function ensureChannel(name: string): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL, {
     name,
@@ -101,12 +101,14 @@ export async function registerPillCategory(label: string): Promise<void> {
 export function phoneNotifier(channelName: string, takenLabel = 'Taken'): Notifier {
   return {
     allowed: async () => (await Notifications.getPermissionsAsync()).granted,
-    // i promemoria si rifanno da zero, ma l'avviso di fine Pomodoro (id «pomodoro-…») non è un promemoria: resta
+    // i promemoria si rifanno da zero, ma l'avviso di fine Pomodoro (id «pomodoro-…») e quello della frase senza risposta («smartask-…») non sono promemoria: restano
     cancelAll: async () => {
       const all = await Notifications.getAllScheduledNotificationsAsync();
       await Promise.all(
         all
-          .filter((n) => !n.identifier.startsWith('pomodoro-'))
+          .filter(
+            (n) => !n.identifier.startsWith('pomodoro-') && !n.identifier.startsWith('smartask-'),
+          )
           .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
       );
     },

@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Animated from 'react-native-reanimated';
 import { GestureDetector } from 'react-native-gesture-handler';
-import { Alert, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Alert, AppState, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -18,7 +18,16 @@ import { ShiftSheet, SideFabs } from '@/features/planner/SideFabs';
 import { DayPager } from '@/features/planner/DayPager';
 import { useDaySwipe } from '@/features/planner/useDaySwipe';
 import { MonthPopup, PlannerTopbar, ViewMenu } from '@/features/planner/Topbar';
-import { smartEvent, smartParse } from '@/features/planner/smart';
+import { smartEvent, smartParse, type SmartParsed } from '@/features/planner/smart';
+import {
+  smartAsk,
+  smartKeepNumber,
+  smartRewrite,
+  type SmartChoice,
+} from '@/features/planner/smartAsk';
+import { SmartAskSheet } from '@/features/planner/SmartAskSheet';
+import { SmartPendingStore, type SmartPendingItem } from '@/features/planner/smartPending';
+import { cancelAsk, scheduleAsk } from '@/features/planner/smartPendingNotify';
 import { RoutineBar, routineBlocks } from '@/features/planner/DayExtras';
 import { LineIcon } from '@/features/planner/PlannerIcons';
 
@@ -85,6 +94,23 @@ export default function PlannerScreen() {
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('day');
   const [note, setNote] = useState<SmartNote | null>(null);
   const [unclear, setUnclear] = useState(false);
+  const noteSeq = useRef(0);
+  // le frasi della barra che aspettano una risposta (data o ora?): restano anche se l'app si chiude
+  const db = services?.db;
+  const pendingStore = useMemo(() => (db ? new SmartPendingStore(db) : null), [db]);
+  // `pendingTick` cresce a ogni cambiamento della coda (e quando l'app torna davanti): la coda si rilegge
+  const [pendingTick, setPendingTick] = useState(0);
+  const [laterAt, setLaterAt] = useState(-1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const pending = useMemo(() => pendingStore?.list() ?? [], [pendingStore, pendingTick]);
+  const askLater = laterAt === pendingTick;
+  useEffect(() => {
+    // ogni volta che l'app torna davanti la domanda si riapre
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') setPendingTick((n) => n + 1);
+    });
+    return () => sub.remove();
+  }, []);
   const [searching, setSearching] = useState(false);
   const [viewMenu, setViewMenu] = useState<number | null>(null);
   const [monthOpen, setMonthOpen] = useState(false);
@@ -270,14 +296,9 @@ export default function PlannerScreen() {
   );
 
   if (!repo) return null;
-  const smartSubmit = (text: string): boolean => {
+  /** Dalla frase letta all'evento: lo crea, va al suo giorno e mostra cosa ha capito. */
+  const smartCreate = (parsed: SmartParsed) => {
     const book = services?.book ?? null;
-    const parsed = smartParse(text, { today, focusDate: date, contacts: book?.contacts() });
-    if (!parsed.title) {
-      setUnclear(true);
-      return false;
-    }
-    setUnclear(false);
     const input = smartEvent(parsed, repo.eventsInRange(parsed.date, parsed.date));
     const uuid = repo.create(input);
     if (book && parsed.guests.length)
@@ -288,19 +309,73 @@ export default function PlannerScreen() {
     changed();
     setMode('day');
     setDate(parsed.date);
-    const d = new Date(`${parsed.date}T12:00:00Z`);
     setNote({
-      key: Date.now(),
+      key: (noteSeq.current += 1),
       parsed,
       start: input.start ?? '',
       end: input.end ?? '',
-      when: `${dayTitle(t, parsed.date)} ${d.getUTCDate()} ${t(`planner.mese_${d.getUTCMonth() + 1}`).toLowerCase()}`,
+      when: dayTitle(t, parsed.date),
       onOpen: () => {
         const view = repo.eventsInRange(parsed.date, parsed.date).find((v) => v.uuid === uuid);
         if (view) open(view);
       },
     });
+  };
+  const smartSubmit = (text: string): boolean => {
+    const book = services?.book ?? null;
+    const ctx = { today, focusDate: date, contacts: book?.contacts() };
+    const parsed = smartParse(text, ctx);
+    if (!parsed.title) {
+      setUnclear(true);
+      return false;
+    }
+    setUnclear(false);
+    // «19 doccia»: giorno o ora? Si chiede, e intanto la frase aspetta in coda (anche a app chiusa)
+    const ask = pendingStore ? smartAsk(text, ctx) : null;
+    if (pendingStore && ask) {
+      const item = pendingStore.add(text, date);
+      setPendingTick((n) => n + 1);
+      void scheduleAsk(item.id, {
+        channel: t('app.promemoria_t'),
+        title: t('planner.smart_attesa_t'),
+        body: t('planner.smart_attesa_b', { frase: text, n: ask.n }),
+      });
+      return true;
+    }
+    smartCreate(parsed);
     return true;
+  };
+  // la prima frase in coda che ha ancora qualcosa da chiedere (null = niente da chiedere)
+  const asked = askLater || sheet ? [] : pending;
+  let asking: SmartPendingItem | null = null;
+  let askNow: ReturnType<typeof smartAsk> = null;
+  for (const item of asked) {
+    const found = smartAsk(item.text, { today, focusDate: item.focusDate });
+    if (found) {
+      asking = item;
+      askNow = found;
+      break;
+    }
+  }
+  const askCtx = asking ? { today, focusDate: asking.focusDate } : null;
+  const answerAsk = (c: SmartChoice) => {
+    if (!asking || !askCtx || !askNow || !pendingStore) return;
+    const contacts = services?.book?.contacts();
+    const finish = (parsed: SmartParsed) => {
+      pendingStore.remove(asking.id);
+      void cancelAsk(asking.id);
+      setPendingTick((n) => n + 1);
+      smartCreate(parsed);
+    };
+    if (c === 'text') return finish(smartKeepNumber(asking.text, askNow, { ...askCtx, contacts }));
+    const text = smartRewrite(asking.text, askNow, c);
+    if (smartAsk(text, askCtx)) {
+      // c'è un altro numero da chiarire: la stessa frase torna in coda riscritta
+      pendingStore.setText(asking.id, text);
+      setPendingTick((n) => n + 1);
+      return;
+    }
+    finish(smartParse(text, { ...askCtx, contacts }));
   };
   const blocks = routineBlocks(events, routines);
   const closed = new Set(blocks.filter((b) => b.collapsed).map((b) => b.group));
@@ -807,6 +882,25 @@ export default function PlannerScreen() {
       ) : null}
 
       <SmartReport pt={pt} note={note} onHide={() => setNote(null)} />
+      {asking && askNow ? (
+        <SmartAskSheet
+          pt={pt}
+          phrase={asking.text}
+          ask={askNow}
+          labels={{
+            date: t('planner.smart_come_data', { giorno: dayTitle(t, askNow.dateIso) }),
+            time: t('planner.smart_come_ora', {
+              ora: `${String(askNow.n).padStart(2, '0')}:00`,
+              giorno:
+                asking.focusDate === today
+                  ? t('comune.oggi').toLowerCase()
+                  : dayTitle(t, asking.focusDate),
+            }),
+          }}
+          onChoose={answerAsk}
+          onLater={() => setLaterAt(pendingTick)}
+        />
+      ) : null}
 
       {viewMenu !== null ? (
         <ViewMenu

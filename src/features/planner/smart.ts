@@ -395,3 +395,9 @@ export function smartEvent(
     notify: p.allDay ? 'none' : 'h1',
   };
 }
+
+/** Le parole del file delle regole che servono a chi guarda la frase da fuori (la domanda «data o ora?»). */
+export const smartWords = () => ({
+  months: Object.keys(SMART.mesi),
+  days: Object.keys(SMART.giorni_settimana).concat(Object.keys(SMART.giorni_relativi)),
+});
