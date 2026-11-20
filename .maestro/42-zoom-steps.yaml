@@ -1,0 +1,32 @@
+appId: app.standout.mobile
+name: Every zoom step draws its rows and events at the right height (static check of the UI-thread zoom)
+---
+- runFlow: common/login.yaml
+- tapOn:
+    id: bar-planner
+- extendedWaitUntil:
+    visible:
+      id: day-scroll
+    timeout: 15000
+- takeScreenshot: 70-zoom-start
+- tapOn:
+    id: zoom-dial
+- takeScreenshot: 71-zoom-dial
+- tapOn:
+    id: zoom-m5
+- takeScreenshot: 72-zoom-m5
+- tapOn:
+    id: zoom-dial
+- tapOn:
+    id: zoom-h3
+- takeScreenshot: 73-zoom-h3
+- tapOn:
+    id: zoom-dial
+- tapOn:
+    id: zoom-h1
+- takeScreenshot: 74-zoom-h1
+- swipe:
+    start: 50%, 70%
+    end: 50%, 35%
+    duration: 400
+- takeScreenshot: 75-zoom-h1-scrolled
