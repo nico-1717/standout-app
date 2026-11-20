@@ -79,7 +79,8 @@ export function DayPager(p: {
   panHandlers: GestureResponderHandlers;
   /** di quanto è scesa la pagina adesso */
   scrollY: () => number;
-  onStep: (delta: 1 | -1) => void;
+  /** `y` è l'altezza a cui era la pagina quando il dito si è posato: a quella deve restare */
+  onStep: (delta: 1 | -1, y: number) => void;
   render: (day: string, current: boolean, startY: number) => ReactNode;
 }) {
   const [armed, setArmed] = useState<number | null>(null);
@@ -101,7 +102,11 @@ export function DayPager(p: {
     put(width, p.width);
   }, [p.date, p.width, dateIdx, width]);
 
-  const arm = useCallback(() => setArmed(latest.current.scrollY()), []);
+  const armedY = useRef(0);
+  const arm = useCallback(() => {
+    armedY.current = latest.current.scrollY();
+    setArmed(armedY.current);
+  }, []);
   const disarm = useCallback(() => {
     put(live, 0);
     setArmed(null);
@@ -109,7 +114,7 @@ export function DayPager(p: {
   const commit = useCallback(
     (delta: 1 | -1) => {
       haptic.select();
-      latest.current.onStep(delta);
+      latest.current.onStep(delta, armedY.current);
       disarm();
     },
     [disarm],
@@ -138,9 +143,11 @@ export function DayPager(p: {
       put(live, 1);
       scheduleOnRN(arm);
     },
-    onActivate: () => {
+    onActivate: (e) => {
       'worklet';
       put(moving, 1);
+      // un tratto veloce può arrivare con un solo movimento: la pagina parte già da dove è il dito
+      put(x, Math.max(-width.value, Math.min(width.value, startX.value + e.translationX)));
     },
     onUpdate: (e) => {
       'worklet';
@@ -150,7 +157,7 @@ export function DayPager(p: {
     onDeactivate: (e) => {
       'worklet';
       const w = width.value;
-      const dx = x.value;
+      const dx = Math.max(-w, Math.min(w, startX.value + e.translationX));
       if (!e.canceled && pageFires(dx, e.velocityX, w)) {
         const dir = dx < 0 ? 1 : -1;
         pending.value = dir;

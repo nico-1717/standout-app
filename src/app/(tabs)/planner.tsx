@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -223,6 +223,13 @@ export default function PlannerScreen() {
 
   // un cambio di giorno fatto strisciando tiene la pagina all'altezza a cui era (come sul sito)
   const keepScroll = useRef(false);
+  const swipeY = useRef<number | null>(null);
+  // la pagina vicina che diventa quella di adesso riparte dall'altezza di prima, prima che si veda
+  useLayoutEffect(() => {
+    if (swipeY.current === null) return;
+    scroller.current?.scrollTo({ y: swipeY.current, animated: false });
+    swipeY.current = null;
+  }, [date]);
   useEffect(() => {
     if (keepScroll.current) {
       keepScroll.current = false;
@@ -640,8 +647,9 @@ export default function PlannerScreen() {
             enabled={!dragging && !pinching && !agendaFrom}
             panHandlers={pinch.panHandlers}
             scrollY={() => scrollY.current}
-            onStep={(delta) => {
+            onStep={(delta, y) => {
               keepScroll.current = true;
+              swipeY.current = y;
               setDate((d) => addDaysIso(d, delta));
             }}
             render={renderDay}

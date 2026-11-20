@@ -19,11 +19,11 @@ name: The planner day follows a sideways swipe and settles on the next day
       id: day-scroll
     timeout: 5000
 - takeScreenshot: 61-day-next
-# A short fast flick to the right: back to today.
+# A calm swipe to the right: back to today.
 - swipe:
-    start: 30%, 55%
-    end: 62%, 56%
-    duration: 140
+    start: 15%, 55%
+    end: 80%, 55%
+    duration: 500
 - extendedWaitUntil:
     visible:
       id: day-scroll
@@ -35,3 +35,13 @@ name: The planner day follows a sideways swipe and settles on the next day
     end: 50%, 35%
     duration: 400
 - takeScreenshot: 63-day-scrolled
+# A quick flick to the left: the next day again.
+- swipe:
+    start: 70%, 55%
+    end: 35%, 56%
+    duration: 140
+- extendedWaitUntil:
+    visible:
+      id: day-scroll
+    timeout: 5000
+- takeScreenshot: 64-day-flick
