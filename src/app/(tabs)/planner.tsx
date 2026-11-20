@@ -24,7 +24,8 @@ import { LineIcon } from '@/features/planner/PlannerIcons';
 
 import { addDays, dayProgress, isoWeekday } from '@/features/habits/logic';
 import { SearchSheet } from '@/features/planner/SearchSheet';
-import { QuickAddSheet } from '@/features/planner/QuickAddSheet';
+import { ArmSheet, type ArmMode } from '@/features/planner/ArmSheet';
+import { armedMinutes, type Armed } from '@/features/planner/armed';
 import type { Habit, HabitLog } from '@/features/habits/logic';
 import type { Project } from '@/features/projects/logic';
 import { PillNotices } from '@/features/planner/PillNotices';
@@ -44,7 +45,8 @@ import { wxSceneInput } from '@/features/planner/ambient/wxScene';
 import { ambientOpacity } from '@/features/planner/ambient/scene';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthAgenda, MonthView, WeekGrid, monthGrid } from '@/features/planner/Views';
-import { isBand, windowHalfSpan } from '@/features/planner/layout';
+import { ZOOMS, isBand, windowHalfSpan } from '@/features/planner/layout';
+import { haptic } from '@/ui/motion';
 import { useZoomEngine } from '@/features/planner/zoomEngine';
 import { WxPopup } from '@/features/planner/WeatherUi';
 import { useWeather } from '@/features/planner/useWeather';
@@ -92,13 +94,14 @@ export default function PlannerScreen() {
   const [agendaFrom, setAgendaFrom] = useState<string | null>(null);
   const [topH, setTopH] = useState(0);
   const [barH, setBarH] = useState(0);
-  // «Abitudini e progetti»: i dati si leggono solo all'apertura del foglio
-  const [quick, setQuick] = useState<{
-    start: string;
+  // cosa mettere in agenda: i dati si leggono solo all'apertura del foglio; poi la voce scelta resta «armata»
+  const [arming, setArming] = useState<{
+    mode: ArmMode;
     habits: Habit[];
     logs: HabitLog[];
     projects: Project[];
   } | null>(null);
+  const [armed, setArmed] = useState<Armed | null>(null);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   // i progetti a cui si può collegare un evento: letti una volta per foglio aperto
   const sheetKey = sheet?.key;
@@ -251,6 +254,7 @@ export default function PlannerScreen() {
     (ev: EventView) => setSheet({ key: Date.now(), target: { mode: 'edit', view: ev } }),
     [],
   );
+  const openNew = useCallback((target: SheetTarget) => setSheet({ key: Date.now(), target }), []);
   const moveEvent = useCallback(
     (ev: EventView, startMin: number) => {
       if (repo?.moveTo(ev, startMin)) changed();
@@ -303,23 +307,39 @@ export default function PlannerScreen() {
   const shown = events.filter((e) => !(e.routineGroup && closed.has(e.routineGroup)));
   const bands = shown.filter(isBand);
   const grid = shown.filter((e) => !isBand(e));
-  const openQuick = () => {
+  const openArm = (armMode: ArmMode) => {
     if (!services) return;
-    const now = new Date();
-    const next = Math.min(
-      23 * 60 + 30,
-      Math.ceil((now.getHours() * 60 + now.getMinutes() + 1) / 30) * 30,
-    );
-    const start =
-      date === today
-        ? `${String(Math.floor(next / 60)).padStart(2, '0')}:${String(next % 60).padStart(2, '0')}`
-        : '09:00';
     const monday = addDays(date, -(isoWeekday(date) - 1));
-    setQuick({
-      start,
+    setArming({
+      mode: armMode,
       habits: services.habits.list(),
       logs: services.habits.logsBetween(monday, addDays(monday, 6)),
       projects: services.projects.all(),
+    });
+  };
+  // un tastino già armato si ritocca per posarlo; altrimenti apre l'elenco da cui scegliere
+  const armTap = (kind: Armed['kind'], armMode: ArmMode) => {
+    if (armed?.kind === kind) setArmed(null);
+    else openArm(armMode);
+  };
+  // si disarma uscendo dalla vista giorno (o entrando nella lista): non c'è più una griglia dove appoggiarlo
+  if (armed && (mode !== 'day' || agendaView)) setArmed(null);
+  /** il tocco su un punto libero della griglia: con un attrezzo armato si posa lì, altrimenti si apre il foglio */
+  const tapGrid = (d: string, minutes: number) => {
+    const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const m = String(minutes % 60).padStart(2, '0');
+    if (armed && armed.kind !== 'category') {
+      repo.placeLinked(armed, d, `${h}:${m}`, armedMinutes(armed, ZOOMS[step].slotMin));
+      setArmed(null);
+      haptic.tap();
+      changed();
+      return;
+    }
+    openNew({
+      mode: 'new',
+      date: d,
+      start: `${h}:${m}`,
+      category: armed?.kind === 'category' ? armed.uuid : undefined,
     });
   };
   // anticipi e ritardi: gli eventi del giorno che devono ancora cominciare (di un altro giorno: tutti) si spostano
@@ -556,14 +576,7 @@ export default function PlannerScreen() {
                   onToggle={toggle}
                   onMove={moveEvent}
                   onDragActive={setDragging}
-                  onEmptyTap={(minutes) => {
-                    const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-                    const m = String(minutes % 60).padStart(2, '0');
-                    setSheet({
-                      key: Date.now(),
-                      target: { mode: 'new', date: d, start: `${h}:${m}` },
-                    });
-                  }}
+                  onEmptyTap={(minutes) => tapGrid(d, minutes)}
                 />
               </View>
             )}
@@ -713,10 +726,12 @@ export default function PlannerScreen() {
           hasFavorites={hasFavorites}
           shiftOn={shiftOpen}
           onToggle={() => updatePlannerSettings?.({ fabs_open: !plannerSettings.fabs_open })}
-          onRing={openQuick}
+          armed={armed}
+          onDisarm={() => setArmed(null)}
+          onRing={() => armTap('habit', 'habits')}
           onRoutine={() => router.push({ pathname: '/planner-routines', params: { date } })}
-          onCategory={() => router.push('/planner-manage')}
-          onFavorites={openQuick}
+          onCategory={() => armTap('category', 'categories')}
+          onFavorites={() => armTap('project', 'projects')}
           onShift={() => setShiftOpen(true)}
         />
       ) : null}
@@ -838,19 +853,18 @@ export default function PlannerScreen() {
         <ShiftSheet pt={pt} events={grid} onApply={shiftDay} onClose={() => setShiftOpen(false)} />
       ) : null}
 
-      <QuickAddSheet
-        visible={quick !== null}
+      <ArmSheet
+        mode={arming?.mode ?? null}
         pt={pt}
         date={date}
-        habits={quick?.habits ?? []}
-        logs={quick?.logs ?? []}
-        projects={quick?.projects ?? []}
-        defaultStart={quick?.start ?? '09:00'}
-        onClose={() => setQuick(null)}
-        onPlace={(item, start, minutes) => {
-          repo.placeLinked(item, date, start, minutes);
-          setQuick(null);
-          changed();
+        habits={arming?.habits ?? []}
+        logs={arming?.logs ?? []}
+        projects={arming?.projects ?? []}
+        categories={categories}
+        onClose={() => setArming(null)}
+        onArm={(a) => {
+          setArmed(a);
+          setArming(null);
         }}
       />
 

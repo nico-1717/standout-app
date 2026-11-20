@@ -8,7 +8,7 @@ export interface QuickItem {
   name: string;
   icon: string | null;
   color: string;
-  /** durata proposta in minuti: quella scritta nell'abitudine (planner_minutes) o 30 (60 per un progetto) */
+  /** durata in minuti scritta nell'abitudine (planner_minutes); 0 = quella dello scatto, come per un progetto */
   minutes: number;
   /** per le abitudini settimanali «2/3» (fatte / obiettivo della settimana) */
   progress: string | null;
@@ -49,7 +49,7 @@ export function quickLists(input: {
     name: h.name,
     icon: h.icon || null,
     color: h.color,
-    minutes: h.planner_minutes ?? 30,
+    minutes: h.planner_minutes && h.planner_minutes > 0 ? h.planner_minutes : 0,
     progress,
   });
   const build = habits.filter((h) => !h.is_archived && h.kind === 'build');
@@ -73,7 +73,7 @@ export function quickLists(input: {
         name: p.name,
         icon: null,
         color: p.color,
-        minutes: 60,
+        minutes: 0,
         progress: null,
       }))
       .sort(byName),

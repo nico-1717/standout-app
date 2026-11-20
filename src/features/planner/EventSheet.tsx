@@ -49,7 +49,8 @@ import {
 } from './sheetUi';
 
 export type SheetTarget =
-  { mode: 'new'; date: string; start?: string } | { mode: 'edit'; view: EventView };
+  | { mode: 'new'; date: string; start?: string; category?: string }
+  | { mode: 'edit'; view: EventView };
 
 type Importance = 'normal' | 'high' | 'highest';
 type Lock = 'auto' | 'chiuso' | 'aperto';
@@ -151,7 +152,7 @@ export function EventSheet(p: {
       start,
       end: timeOf(Math.min(1439, minutesOf(start) + 60)),
       calendar: null as string | null,
-      category: null as string | null,
+      category: (fresh?.category ?? null) as string | null,
       project: null as string | null,
       color: null as string | null,
       importance: 'normal' as Importance,

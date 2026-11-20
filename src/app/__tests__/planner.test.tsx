@@ -47,6 +47,25 @@ jest.mock('@/core/app/AppProvider', () => ({
 }));
 
 const TODAY = localToday();
+const minutesBetween = (a: string, b: string) => {
+  const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  return m(b) - m(a);
+};
+const habit = {
+  uuid: 'h1',
+  name: 'Read',
+  icon: '📖',
+  color: '#3366CC',
+  kind: 'build',
+  frequency_type: 'daily',
+  weekdays: '1111111',
+  times_per_week: 7,
+  start_date: '2000-01-01',
+  end_date: null,
+  planner_minutes: 45,
+  is_archived: 0,
+};
+const project = { uuid: 'p1', name: 'Thesis', color: '#aa5500', is_favorite: 1 };
 
 function setup() {
   const db = memoryDb();
@@ -66,7 +85,12 @@ function setup() {
     created_at: null,
     updated_at: null,
   });
-  mockServices = { db, planner: repo };
+  mockServices = {
+    db,
+    planner: repo,
+    habits: { list: () => [habit], logsBetween: () => [] },
+    projects: { all: () => [project] },
+  };
   return repo;
 }
 const pickView = async (v: 'day' | 'week' | 'month') => {
@@ -322,7 +346,7 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(repo.priorities(TODAY)[0]!.is_done).toBe(1);
   });
 
-  test('the side buttons open routines and categories, the arrow hides them, the avatar opens the account', async () => {
+  test('the side buttons open routines, the arrow hides them, the avatar opens the account', async () => {
     setup();
     mockPush.mockClear();
     mockUpdateSettings.mockClear();
@@ -332,12 +356,53 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
       pathname: '/planner-routines',
       params: { date: TODAY },
     });
-    await fireEvent.press(screen.getByTestId('fab-category'));
-    expect(mockPush).toHaveBeenLastCalledWith('/planner-manage');
     await fireEvent.press(screen.getByTestId('planner-avatar'));
     expect(mockPush).toHaveBeenLastCalledWith('/account');
     await fireEvent.press(screen.getByTestId('fab-toggle'));
     expect(mockUpdateSettings).toHaveBeenCalledWith({ fabs_open: false });
+  });
+
+  test('arming a habit: pick it, tap the grid, it lands there (with its own length) and the chip goes', async () => {
+    const repo = setup();
+    await renderIt();
+    expect(screen.queryByTestId('armed-chip')).toBeNull();
+    await fireEvent.press(screen.getByTestId('planner-ring'));
+    await fireEvent.press(screen.getByTestId('quick-habit-h1'));
+    expect(screen.getByTestId('armed-chip')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('grid-empty'), { nativeEvent: { locationY: 600 } });
+    const ev = repo.eventsInRange(TODAY, TODAY).find((e) => e.title === 'Read')!;
+    expect(ev).toBeTruthy();
+    expect(ev.habitUuid).toBe('h1');
+    expect(minutesBetween(ev.start!, ev.end!)).toBe(45);
+    expect(screen.queryByTestId('armed-chip')).toBeNull();
+    expect(screen.queryByTestId('event-sheet')).toBeNull();
+  });
+
+  test('arming a project from the favourites button; tapping the chip disarms it', async () => {
+    const repo = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('fab-favorites'));
+    await fireEvent.press(screen.getByTestId('quick-project-p1'));
+    await fireEvent.press(screen.getByTestId('armed-chip'));
+    expect(screen.queryByTestId('armed-chip')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fab-favorites'));
+    await fireEvent.press(screen.getByTestId('quick-project-p1'));
+    await fireEvent.press(screen.getByTestId('grid-empty'), { nativeEvent: { locationY: 600 } });
+    expect(repo.eventsInRange(TODAY, TODAY).find((e) => e.title === 'Thesis')).toMatchObject({
+      projectUuid: 'p1',
+    });
+  });
+
+  test('arming a category: the next tap opens a new event with that category, and it stays armed', async () => {
+    const repo = setup();
+    const health = repo.addCategory('Health', '#C77D7D');
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('fab-category'));
+    await fireEvent.press(screen.getByTestId(`arm-cat-${health}`));
+    await fireEvent.press(screen.getByTestId('grid-empty'), { nativeEvent: { locationY: 600 } });
+    expect(screen.getByTestId('sheet-title')).toBeTruthy();
+    expect(screen.getByTestId('cat')).toHaveTextContent(/Health/);
+    expect(screen.getByTestId('armed-chip')).toBeTruthy();
   });
 
   test('earlier or later: moves the events of the day by the chosen minutes', async () => {

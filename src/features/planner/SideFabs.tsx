@@ -8,6 +8,7 @@ import { Text } from '@/ui/CappedText';
 import { LineIcon } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
 import type { EventView } from './events';
+import type { Armed } from './armed';
 
 type Glyph = 'routine' | 'tag' | 'star' | 'clock' | 'chevUp' | 'chevDown';
 
@@ -124,6 +125,48 @@ function HabitRing(p: { pt: PlannerTheme; progress: number; label: string; onPre
   );
 }
 
+/** Cosa si è scelto (il tastino del sito lo mostra al posto dell'icona): pallino, nome e una ×; toccandolo si posa. */
+function ArmedChip(p: { pt: PlannerTheme; armed: Armed; onPress: () => void }) {
+  const { pt, armed } = p;
+  const glass =
+    pt.style === 'standard' ? (pt.dark ? 'rgba(28,28,30,.92)' : 'rgba(255,255,255,.92)') : pt.pill;
+  return (
+    <Pressable
+      testID="armed-chip"
+      accessibilityRole="button"
+      accessibilityLabel={armed.name}
+      onPress={p.onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        maxWidth: 190,
+        paddingVertical: 7,
+        paddingLeft: 11,
+        paddingRight: 9,
+        borderRadius: 999,
+        backgroundColor: glass,
+        borderWidth: 1,
+        borderColor: armed.color,
+        transform: [{ scale: pressed ? 0.95 : 1 }],
+      })}
+    >
+      {armed.icon ? (
+        <Text style={{ fontSize: 13 }}>{armed.icon}</Text>
+      ) : (
+        <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: armed.color }} />
+      )}
+      <Text
+        numberOfLines={1}
+        style={{ flexShrink: 1, color: pt.ink, fontSize: 13, fontFamily: pt.sans }}
+      >
+        {armed.name}
+      </Text>
+      <LineIcon name="close" color={pt.ink3} size={12} />
+    </Pressable>
+  );
+}
+
 /**
  * La colonna di tastini sul bordo destro (#plFabs): in cima l'anello delle abitudini, poi routine, categoria, preferiti
  * (solo se ce ne sono) e anticipi/ritardi; l'ultima freccetta chiude e riapre la colonna.
@@ -135,6 +178,9 @@ export function SideFabs(p: {
   progress: number;
   hasFavorites: boolean;
   shiftOn: boolean;
+  /** cosa è armato adesso (si posa toccando la griglia) */
+  armed: Armed | null;
+  onDisarm: () => void;
   onToggle: () => void;
   onRing: () => void;
   onRoutine: () => void;
@@ -158,6 +204,7 @@ export function SideFabs(p: {
           onPress={p.onRing}
         />
       </View>
+      {p.armed ? <ArmedChip pt={pt} armed={p.armed} onPress={p.onDisarm} /> : null}
       {p.open ? (
         <>
           <Fab
@@ -172,6 +219,7 @@ export function SideFabs(p: {
             testID="fab-category"
             label={t('planner.categoria_predefinita')}
             icon="tag"
+            on={p.armed?.kind === 'category'}
             onPress={p.onCategory}
           />
           {p.hasFavorites ? (
@@ -180,6 +228,7 @@ export function SideFabs(p: {
               testID="fab-favorites"
               label={t('planner.progetti_preferiti')}
               icon="star"
+              on={p.armed?.kind === 'project'}
               onPress={p.onFavorites}
             />
           ) : null}
