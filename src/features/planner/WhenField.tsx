@@ -13,12 +13,12 @@ type Lock = 'auto' | 'chiuso' | 'aperto';
 
 const QUICK = [15, 30, 45, 60, 90, 120];
 
-/** «45 m», «1 h», «1 h 30»: la durata a parole brevi. */
-export function durationLabel(mins: number): string {
+/** «45 min», «1h», «1h 30»: come `durLabel` del sito. */
+export function durationLabel(mins: number, minLabel: (n: number) => string): string {
+  if (mins < 60) return minLabel(mins);
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (!h) return `${m} m`;
-  return m ? `${h} h ${m}` : `${h} h`;
+  return m ? `${h}h ${String(m).padStart(2, '0')}` : `${h}h`;
 }
 
 const LINE_H = 46;
@@ -54,6 +54,7 @@ export function WhenField(p: {
   const { t } = useTranslation();
   const { pt } = p;
   const [open, setOpen] = useState(false);
+  const minLabel = (n: number) => t('planner.n_min', { n });
   const decided = p.lock !== 'auto';
   const lockColor = decided ? pt.accentInk : pt.ink3;
 
@@ -192,7 +193,7 @@ export function WhenField(p: {
                         fontVariant: ['tabular-nums'],
                       }}
                     >
-                      {durationLabel(p.minutes)}
+                      {durationLabel(p.minutes, minLabel)}
                     </Text>
                   </Pressable>
                   <View style={{ width: 0.5, alignSelf: 'stretch', backgroundColor: pt.hair }} />
@@ -316,7 +317,7 @@ export function WhenField(p: {
                         fontFamily: pt.sans,
                       }}
                     >
-                      {durationLabel(m)}
+                      {durationLabel(m, minLabel)}
                     </Text>
                   </Pressable>
                 );
