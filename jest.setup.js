@@ -73,4 +73,5 @@ jest.mock('react-native-gesture-handler', () => ({
   GestureHandlerRootView: ({ children }) => children,
   GestureDetector: ({ children }) => children,
   usePanGesture: () => ({}),
+  usePinchGesture: () => ({}),
 }));

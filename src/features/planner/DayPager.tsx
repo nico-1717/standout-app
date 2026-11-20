@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { StyleSheet, View, type GestureResponderHandlers } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
@@ -75,8 +75,6 @@ export function DayPager(p: {
   width: number;
   /** spento mentre si trascina un evento o si pizzica */
   enabled: boolean;
-  /** il gesto a due dita del pizzico, che sta sul contenitore */
-  panHandlers: GestureResponderHandlers;
   /** di quanto è scesa la pagina adesso */
   scrollY: () => number;
   /** `y` è l'altezza a cui era la pagina quando il dito si è posato: a quella deve restare */
@@ -192,7 +190,7 @@ export function DayPager(p: {
   // una lista con le chiavi: la pagina vicina che diventa quella di adesso resta la stessa e non si ridisegna
   const days = armed === null ? [p.date] : [addDaysIso(p.date, -1), p.date, addDaysIso(p.date, 1)];
   return (
-    <View style={styles.box} {...p.panHandlers}>
+    <View style={styles.box}>
       <GestureDetector gesture={pan}>
         <View style={styles.box}>
           {days.map((d) => (

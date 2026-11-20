@@ -1,14 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-  useWindowDimensions,
-  type ScrollViewInstance,
-} from 'react-native';
+import Animated from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
+import { Alert, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -38,7 +32,7 @@ import { EventSheet, type SheetTarget } from '@/features/planner/EventSheet';
 import {
   AgendaList,
   BandEvent,
-  PinchedDayGrid,
+  DayGrid,
   dayTitle,
   useNowMinutes,
 } from '@/features/planner/PlannerParts';
@@ -50,17 +44,12 @@ import { wxSceneInput } from '@/features/planner/ambient/wxScene';
 import { ambientOpacity } from '@/features/planner/ambient/scene';
 import { plannerTheme } from '@/features/planner/plannerTheme';
 import { MonthAgenda, MonthView, WeekGrid, monthGrid } from '@/features/planner/Views';
-import { isBand } from '@/features/planner/layout';
-import { usePinchZoom } from '@/features/planner/usePinchZoom';
+import { isBand, windowHalfSpan } from '@/features/planner/layout';
+import { useZoomEngine } from '@/features/planner/zoomEngine';
 import { WxPopup } from '@/features/planner/WeatherUi';
 import { useWeather } from '@/features/planner/useWeather';
 import type { WxCtx } from '@/features/planner/weather';
 import { ZoomDial } from '@/features/planner/ZoomDial';
-
-const BAND = 400;
-const bandOf = (y: number) => Math.floor(y / BAND) * BAND;
-/** Le righe da disegnare per una pagina scesa a `band`: la finestra più un buon margine, sopra e sotto. */
-const rowsAround = (band: number) => ({ from: band - 1000, to: band + 1800 });
 
 /** Il planner: vista giorno (con le ore), settimana (un elenco per giorno) e mese (una griglia). */
 export default function PlannerScreen() {
@@ -117,30 +106,18 @@ export default function PlannerScreen() {
     () => (sheetKey === undefined ? [] : (services?.projects?.all() ?? [])),
     [sheetKey, services],
   );
-  const scroller = useRef<ScrollViewInstance>(null);
   const zoom = plannerSettings.zoom;
-  // la giornata scorre dentro `day-scroll`: dove sta (in cima alla finestra e quanto è scesa) e dove comincia la
-  // griglia nel contenuto, per tenere fermo l'orario sotto le dita mentre si pizzica
-  const scrollY = useRef(0);
-  // quanto è scesa la pagina, a gradini: le righe delle ore si disegnano solo attorno alla parte visibile
-  const [bandY, setBandY] = useState(0);
-  const viewTop = useRef(0);
-  const viewH = useRef(0);
-  const gridTop = useRef(0);
-  const pinch = usePinchZoom(zoom, {
-    anchorAt: (pageY, ppm) => {
-      const y = pageY - viewTop.current;
-      const min = ppm ? (scrollY.current - gridTop.current + y) / ppm : 0;
-      return { min: Math.max(0, Math.min(1439, min)), y };
-    },
-    restore: (a, ppm) => {
-      const max = Math.max(0, gridTop.current + 1440 * ppm - viewH.current);
-      const y = Math.max(0, Math.min(max, gridTop.current + a.min * ppm - a.y));
-      scroller.current?.scrollTo({ y, animated: false });
-    },
+  // un evento tenuto in mano e trascinato: la pagina non scorre né si pizzica finché non lo si lascia
+  const [dragging, setDragging] = useState(false);
+  // lo zoom come quello del sito: la densità è un valore solo sul thread dell'interfaccia (vedi `useZoomEngine`)
+  const zoomer = useZoomEngine({
+    zoom,
     save: (z) => updatePlannerSettings?.({ zoom: z }),
+    enabled: !dragging,
   });
-  const { step, pinching } = pinch;
+  const { step, pinching } = zoomer;
+  const scroller = zoomer.scrollRef;
+  const viewH = useRef(0);
   const agendaView = step === 'agenda';
 
   const repo = services?.planner ?? null;
@@ -228,7 +205,7 @@ export default function PlannerScreen() {
     if (swipeY.current === null) return;
     scroller.current?.scrollTo({ y: swipeY.current, animated: false });
     swipeY.current = null;
-  }, [date]);
+  }, [date, scroller]);
   // le altezze della barra in alto e della fascia di ogni giorno disegnato (anche le pagine vicine): quando una
   // pagina vicina diventa quella di adesso non rifà il suo layout, quindi le misure si ricordano per giorno
   const sizes = useRef<Record<string, { top: number; bar: number }>>({});
@@ -261,7 +238,7 @@ export default function PlannerScreen() {
       date === today
         ? Math.max(0, d.getHours() * 60 + d.getMinutes() - 60)
         : plannerSettings.day_start_hour * 60;
-    scroller.current?.scrollTo({ y: startMin * pinch.getPpm(), animated: false });
+    scroller.current?.scrollTo({ y: startMin * zoomer.getPpm(), animated: false });
     // solo quando cambia il giorno mostrato
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
@@ -274,8 +251,6 @@ export default function PlannerScreen() {
     (ev: EventView) => setSheet({ key: Date.now(), target: { mode: 'edit', view: ev } }),
     [],
   );
-  // un evento tenuto in mano e trascinato: la pagina non scorre finché non lo si lascia
-  const [dragging, setDragging] = useState(false);
   const moveEvent = useCallback(
     (ev: EventView, startMin: number) => {
       if (repo?.moveTo(ev, startMin)) changed();
@@ -470,6 +445,9 @@ export default function PlannerScreen() {
       />
     </View>
   );
+  // le righe delle ore si disegnano solo attorno alla parte visibile (in minuti: la densità cambia sotto le dita)
+  const half = windowHalfSpan(step === 'agenda' ? 'h3' : step, 900);
+  const rowWindow = { from: zoomer.center - half, to: zoomer.center + half };
   const renderDay = (d: string, cur: boolean, startY: number) => {
     const dp = partsOf(d);
     return (
@@ -481,138 +459,132 @@ export default function PlannerScreen() {
       >
         {topbarOf(d, cur)}
         {dayBarOf(d, cur)}
-        <ScrollView
-          ref={cur ? scroller : undefined}
-          testID={cur ? 'day-scroll' : `day-scroll-${d}`}
-          scrollEnabled={cur && !dragging && !pinching}
-          contentOffset={cur ? undefined : { x: 0, y: startY }}
-          scrollEventThrottle={16}
-          onScroll={
-            cur
-              ? (e) => {
-                  const y = e.nativeEvent.contentOffset.y;
-                  scrollY.current = y;
-                  setBandY(bandOf(y));
-                }
-              : undefined
-          }
-          onLayout={
-            cur
-              ? (e) => {
-                  viewH.current = e.nativeEvent.layout.height;
-                  scroller.current?.measureInWindow?.((_x, y) => {
-                    viewTop.current = y;
-                  });
-                }
-              : undefined
-          }
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
-          {dp.blocks.length ? (
-            <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
-              {dp.blocks.map((b) => (
-                <RoutineBar
-                  key={b.group}
-                  pt={pt}
-                  block={b}
-                  onToggle={(x) => {
-                    repo.setRoutineCollapsed(x.group, !x.collapsed);
-                    changed();
-                  }}
-                  onDelete={() =>
-                    Alert.alert(
-                      t('planner.elimino_tutta_la_routine'),
-                      t('planner.tutti_i_passaggi_di_questo'),
-                      [
-                        { text: t('comune.annulla'), style: 'cancel' },
-                        {
-                          text: t('planner.elimina'),
-                          style: 'destructive',
-                          onPress: () => {
-                            repo.removeRoutineBlock(b.group);
-                            changed();
-                          },
-                        },
-                      ],
-                    )
+        <GestureDetector gesture={cur ? zoomer.gesture : zoomer.idle}>
+          <Animated.ScrollView
+            ref={cur ? scroller : undefined}
+            testID={cur ? 'day-scroll' : `day-scroll-${d}`}
+            scrollEnabled={cur && !dragging && !zoomer.pinching}
+            contentOffset={cur ? undefined : { x: 0, y: startY }}
+            scrollEventThrottle={16}
+            onScroll={cur ? zoomer.onScroll : undefined}
+            onLayout={
+              cur
+                ? (e) => {
+                    viewH.current = e.nativeEvent.layout.height;
+                    zoomer.setLayout(e.nativeEvent.layout.height, null);
                   }
-                />
-              ))}
-            </View>
-          ) : null}
-          {dp.bands.length && !agendaView ? (
-            <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
-              {dp.bands.map((e) => (
-                <BandEvent
-                  key={e.uid}
-                  pt={pt}
-                  categories={categories}
-                  calendars={calendars}
-                  ev={e}
-                  day={d}
-                  onOpen={open}
-                  onToggle={toggle}
-                />
-              ))}
-            </View>
-          ) : null}
-          {agendaView ? (
-            <AgendaList
-              pt={pt}
-              categories={categories}
-              calendars={calendars}
-              day={d}
-              events={dp.shown}
-              onOpen={open}
-              onToggle={toggle}
-            />
-          ) : (
-            <View onLayout={cur ? (e) => (gridTop.current = e.nativeEvent.layout.y) : undefined}>
-              <PinchedDayGrid
-                rows={rowsAround(cur ? bandY : bandOf(startY))}
-                pinch={pinch}
-                saved={zoom}
-                current={cur}
+                : undefined
+            }
+            contentContainerStyle={{ paddingBottom: 120 }}
+          >
+            {dp.blocks.length ? (
+              <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
+                {dp.blocks.map((b) => (
+                  <RoutineBar
+                    key={b.group}
+                    pt={pt}
+                    block={b}
+                    onToggle={(x) => {
+                      repo.setRoutineCollapsed(x.group, !x.collapsed);
+                      changed();
+                    }}
+                    onDelete={() =>
+                      Alert.alert(
+                        t('planner.elimino_tutta_la_routine'),
+                        t('planner.tutti_i_passaggi_di_questo'),
+                        [
+                          { text: t('comune.annulla'), style: 'cancel' },
+                          {
+                            text: t('planner.elimina'),
+                            style: 'destructive',
+                            onPress: () => {
+                              repo.removeRoutineBlock(b.group);
+                              changed();
+                            },
+                          },
+                        ],
+                      )
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
+            {dp.bands.length && !agendaView ? (
+              <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
+                {dp.bands.map((e) => (
+                  <BandEvent
+                    key={e.uid}
+                    pt={pt}
+                    categories={categories}
+                    calendars={calendars}
+                    ev={e}
+                    day={d}
+                    onOpen={open}
+                    onToggle={toggle}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {agendaView ? (
+              <AgendaList
                 pt={pt}
                 categories={categories}
                 calendars={calendars}
                 day={d}
-                events={dp.grid}
-                zoom={step}
-                width={width}
-                now={d === today ? now : null}
+                events={dp.shown}
                 onOpen={open}
                 onToggle={toggle}
-                onMove={moveEvent}
-                onDragActive={setDragging}
-                onEmptyTap={(minutes) => {
-                  const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-                  const m = String(minutes % 60).padStart(2, '0');
-                  setSheet({
-                    key: Date.now(),
-                    target: { mode: 'new', date: d, start: `${h}:${m}` },
-                  });
-                }}
               />
-            </View>
-          )}
-          {!dp.events.length && !agendaView ? (
-            <Text
-              testID="day-empty"
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: 160,
-                alignSelf: 'center',
-                color: pt.ink3,
-                fontSize: 14,
-                fontFamily: pt.sans,
-              }}
-            >
-              {t('planner.questo_giorno_e_vuoto')}
-            </Text>
-          ) : null}
-        </ScrollView>
+            ) : (
+              <View
+                onLayout={
+                  cur ? (e) => zoomer.setLayout(viewH.current, e.nativeEvent.layout.y) : undefined
+                }
+              >
+                <DayGrid
+                  rows={rowWindow}
+                  ppm={zoomer.ppm}
+                  pt={pt}
+                  categories={categories}
+                  calendars={calendars}
+                  day={d}
+                  events={dp.grid}
+                  zoom={step}
+                  width={width}
+                  now={d === today ? now : null}
+                  onOpen={open}
+                  onToggle={toggle}
+                  onMove={moveEvent}
+                  onDragActive={setDragging}
+                  onEmptyTap={(minutes) => {
+                    const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+                    const m = String(minutes % 60).padStart(2, '0');
+                    setSheet({
+                      key: Date.now(),
+                      target: { mode: 'new', date: d, start: `${h}:${m}` },
+                    });
+                  }}
+                />
+              </View>
+            )}
+            {!dp.events.length && !agendaView ? (
+              <Text
+                testID="day-empty"
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: 160,
+                  alignSelf: 'center',
+                  color: pt.ink3,
+                  fontSize: 14,
+                  fontFamily: pt.sans,
+                }}
+              >
+                {t('planner.questo_giorno_e_vuoto')}
+              </Text>
+            ) : null}
+          </Animated.ScrollView>
+        </GestureDetector>
       </View>
     );
   };
@@ -624,8 +596,7 @@ export default function PlannerScreen() {
           date={date}
           width={width}
           enabled={!dragging && !pinching && !agendaFrom}
-          panHandlers={pinch.panHandlers}
-          scrollY={() => scrollY.current}
+          scrollY={zoomer.getScrollY}
           onStep={(delta, y) => {
             keepScroll.current = true;
             swipeY.current = y;
@@ -729,20 +700,7 @@ export default function PlannerScreen() {
           step={step}
           top={barTop + 6}
           right={56}
-          onPick={(z) =>
-            pinch.choose(z, {
-              min: Math.max(
-                0,
-                Math.min(
-                  1439,
-                  pinch.getPpm()
-                    ? (scrollY.current - gridTop.current + viewH.current / 2) / pinch.getPpm()
-                    : 540,
-                ),
-              ),
-              y: viewH.current / 2,
-            })
-          }
+          onPick={(z) => zoomer.choose(z)}
         />
       ) : null}
 
@@ -930,7 +888,7 @@ export default function PlannerScreen() {
             const [hh, mm] = start.split(':').map(Number);
             const startMin = Math.max(0, hh! * 60 + mm! - 60);
             setTimeout(
-              () => scroller.current?.scrollTo({ y: startMin * pinch.getPpm(), animated: true }),
+              () => scroller.current?.scrollTo({ y: startMin * zoomer.getPpm(), animated: true }),
               320,
             );
           }

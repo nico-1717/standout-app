@@ -32,6 +32,37 @@ export function stepFor(pxm: number): Exclude<Zoom, 'agenda'> {
   return 'h3';
 }
 
+/** Gli scatti in fila, dal più largo (la lista) al più fitto: l'indice è quello che i worklet si scambiano. */
+export const STEP_KEYS = ['agenda', 'h3', 'h1', 'm30', 'm15', 'm5'] as const;
+const NATURAL_PPM = [0, 54 / 180, 46 / 60, 44 / 30, 38 / 15, 26 / 5];
+
+/** `stepFor` come indice, scritto per girare sul thread dell'interfaccia (1 = 3 ore … 5 = 5 minuti). */
+export function stepIndexFor(pxm: number): number {
+  'worklet';
+  if (5 * pxm >= 26) return 5;
+  if (15 * pxm >= 38) return 4;
+  if (30 * pxm >= 44) return 3;
+  if (60 * pxm >= 46) return 2;
+  return 1;
+}
+
+/** La densità naturale dello scatto con questo indice. */
+export function naturalPpm(index: number): number {
+  'worklet';
+  return NATURAL_PPM[index] ?? 0;
+}
+
+/**
+ * Quanti minuti attorno al centro della parte visibile si disegnano: lo scatto più fitto che la densità può avere
+ * in quello scatto (la sua) mostra al massimo `vista / densità` minuti, e un po' di margine lascia il tempo di
+ * rifare la finestra mentre si scorre o si pizzica.
+ */
+export function windowHalfSpan(step: Zoom, viewHeight: number): number {
+  const lo = pxPerMinute(step);
+  if (!lo) return 1440;
+  return Math.min(1440, Math.ceil((viewHeight || 900) / lo) * 1.5);
+}
+
 /** Quanti passi ci sono fra due etichette «maggiori» (quelle in grassetto): 1 ora → ogni riga, 30' → ogni 2… */
 export const majorEvery = (z: Zoom) => {
   const m = ZOOMS[z].slotMin;
@@ -108,6 +139,7 @@ export function dropMinute(
   ppm: number,
   snap: number,
 ): number {
+  'worklet';
   const raw = startMin + dyPx / ppm;
   const snapped = Math.round(raw / snap) * snap;
   return Math.max(0, Math.min(1439 - durationMin, snapped));

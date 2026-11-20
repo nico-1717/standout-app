@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, View, type GestureResponderEvent } from 'react-native';
+import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { mix } from '@/features/buy/buyTheme';
@@ -9,6 +10,7 @@ import type { EventView } from './events';
 import {
   ZOOMS,
   dropMinute,
+  pxPerMinute,
   layoutDay,
   majorEvery,
   snapMinutes,
@@ -19,7 +21,6 @@ import { minutesOf, timeOf } from './model';
 import { blockBackground, eventColor, longHex, type PlannerTheme } from './plannerTheme';
 import type { Category, Calendar } from './repo';
 import { useEventDrag } from './useEventDrag';
-import { usePinchPpm, type PinchApi } from './usePinchZoom';
 import { Text } from '@/ui/CappedText';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
@@ -88,11 +89,17 @@ export function CheckBox({
   );
 }
 
-/** Un blocco nella griglia del giorno. */
+/**
+ * Un blocco nella griglia del giorno. La posizione e l'altezza seguono la densità viva (`ppm`, un valore condiviso)
+ * sul thread dell'interfaccia, come `top: calc(var(--pxm) * minuti)` del sito: pizzicando non si ridisegna niente.
+ * Cosa scrivere dentro (una riga o più, l'orario) si decide dallo scatto: con la densità più bassa di quello scatto.
+ */
 export function EventBlock(
   p: Look & {
     block: Block;
-    ppm: number;
+    ppm: SharedValue<number>;
+    /** lo scatto di adesso (le etichette e la forma del blocco cambiano solo con lui) */
+    zoom: Exclude<Zoom, 'agenda'>;
     gutter: number;
     width: number;
     snap: number;
@@ -104,101 +111,124 @@ export function EventBlock(
   },
 ) {
   const { pt, block, ppm } = p;
+  // la densità di quando si è preso il blocco in mano: serve a scegliere dove cade, e non cambia durante il trascinamento
+  const [dragPpm, setDragPpm] = useState(0);
   const drag = useEventDrag({
     onDrop: (dy) => {
-      if (dy !== 0) p.onMove?.(block.ev, dropMinute(block.top, block.height, dy, ppm, p.snap));
+      if (dy !== 0)
+        p.onMove?.(block.ev, dropMinute(block.top, block.height, dy, dragPpm || ppm.value, p.snap));
     },
-    onActive: (a) => p.onDragActive?.(a),
+    onActive: (a) => {
+      if (a) setDragPpm(ppm.value);
+      p.onDragActive?.(a);
+    },
   });
   const dragging = drag.dy !== null;
-  const top = dragging ? dropMinute(block.top, block.height, drag.dy ?? 0, ppm, p.snap) : block.top;
+  const top = dragging
+    ? dropMinute(block.top, block.height, drag.dy ?? 0, dragPpm || 1, p.snap)
+    : block.top;
   const ev = block.ev;
   const color = eventColor(pt, ev, catOf(p, ev));
   const cal = calColor(p, ev);
   const colW = p.width / block.cols;
-  const height = Math.max(18, block.height * ppm - 1);
-  const tall = height >= 40 || dragging;
+  // la forma si decide con la densità più bassa dello scatto: dentro lo scatto il blocco può solo crescere
+  const base = Math.max(18, block.height * pxPerMinute(p.zoom) - 1);
+  const tall = base >= 40 || dragging;
   const showBox = ev.type === 'task' || !!ev.habitUuid;
+  const frame = useAnimatedStyle(() => ({
+    transform: [{ translateY: top * ppm.value }],
+    height: Math.max(18, block.height * ppm.value - 1),
+  }));
   return (
-    <Pressable
-      testID={`ev-${ev.uid}`}
-      accessibilityRole="button"
-      onPress={() => p.onOpen(ev)}
-      onLongPress={p.onMove ? drag.arm : undefined}
-      onPressOut={p.onMove ? drag.release : undefined}
-      delayLongPress={300}
-      {...drag.panHandlers}
-      style={{
-        position: 'absolute',
-        zIndex: dragging ? 20 : 0,
-        // un evento già finito (oggi) si fa più leggero, come `.pl-is-past` del sito
-        opacity: dragging ? 0.92 : p.now != null && block.top + block.height < p.now ? 0.52 : 1,
-        top: top * ppm,
-        left: p.gutter + colW * block.col,
-        width: colW - 3,
-        height,
-        borderRadius: 12,
-        paddingVertical: height < 28 ? 2 : 5,
-        paddingHorizontal: 8,
-        overflow: 'hidden',
-        backgroundColor: blockBackground(pt, color, ev.importance),
-        borderWidth: cal ? 1.6 : 0.5,
-        borderColor: cal
-          ? mix(cal, blockBackground(pt, color, ev.importance), 0.45)
-          : mix(color, pt.card.startsWith('#') ? pt.card : '#FFFDFA', 0.55),
-      }}
-    >
-      <View
-        style={{
+    <Animated.View
+      style={[
+        {
           position: 'absolute',
-          left: 0,
           top: 0,
-          bottom: 0,
-          width: 3,
-          backgroundColor:
-            pt.style === 'standard' ? (cal ?? color) : mix(cal ?? color, '#FFFFFF', 0.82),
+          zIndex: dragging ? 20 : 0,
+          // un evento già finito (oggi) si fa più leggero, come `.pl-is-past` del sito
+          opacity: dragging ? 0.92 : p.now != null && block.top + block.height < p.now ? 0.52 : 1,
+          left: p.gutter + colW * block.col,
+          width: colW - 3,
+          borderRadius: 12,
+          overflow: 'hidden',
+          backgroundColor: blockBackground(pt, color, ev.importance),
+          borderWidth: cal ? 1.6 : 0.5,
+          borderColor: cal
+            ? mix(cal, blockBackground(pt, color, ev.importance), 0.45)
+            : mix(color, pt.card.startsWith('#') ? pt.card : '#FFFDFA', 0.55),
+        },
+        frame,
+      ]}
+    >
+      <Pressable
+        testID={`ev-${ev.uid}`}
+        accessibilityRole="button"
+        onPress={() => p.onOpen(ev)}
+        onLongPress={p.onMove ? drag.arm : undefined}
+        onPressOut={p.onMove ? drag.release : undefined}
+        delayLongPress={300}
+        {...drag.panHandlers}
+        style={{
+          flex: 1,
+          paddingVertical: base < 28 ? 2 : 5,
+          paddingHorizontal: 8,
         }}
-      />
-      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
-        {showBox ? (
-          <CheckBox
-            testID={`box-${ev.uid}`}
-            color={color}
-            done={ev.done}
-            pt={pt}
-            onPress={() => p.onToggle(ev)}
-          />
+      >
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 3,
+            backgroundColor:
+              pt.style === 'standard' ? (cal ?? color) : mix(cal ?? color, '#FFFFFF', 0.82),
+          }}
+        />
+        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+          {showBox ? (
+            <CheckBox
+              testID={`box-${ev.uid}`}
+              color={color}
+              done={ev.done}
+              pt={pt}
+              onPress={() => p.onToggle(ev)}
+            />
+          ) : null}
+          <Text
+            numberOfLines={tall ? 3 : 1}
+            style={{
+              flex: 1,
+              color: ev.done ? pt.ink2 : pt.ink,
+              fontSize: base < 28 ? 11 : 13,
+              lineHeight: base < 28 ? 13 : 16,
+              fontFamily: pt.sans,
+              fontWeight: pt.style === 'standard' || ev.importance === 'highest' ? '600' : '400',
+              textDecorationLine: ev.done ? 'line-through' : 'none',
+            }}
+          >
+            {ev.title}
+          </Text>
+        </View>
+        {tall ? (
+          <Text
+            style={{
+              color: pt.ink2,
+              fontSize: 10.5,
+              fontWeight: '500',
+              letterSpacing: 0.42,
+              marginTop: 1,
+              fontFamily: pt.sans,
+            }}
+          >
+            {dragging
+              ? `${timeOf(top)} – ${timeOf(top + block.height)}`
+              : `${ev.start} – ${ev.end}`}
+          </Text>
         ) : null}
-        <Text
-          numberOfLines={tall ? 3 : 1}
-          style={{
-            flex: 1,
-            color: ev.done ? pt.ink2 : pt.ink,
-            fontSize: height < 28 ? 11 : 13,
-            lineHeight: height < 28 ? 13 : 16,
-            fontFamily: pt.sans,
-            fontWeight: pt.style === 'standard' || ev.importance === 'highest' ? '600' : '400',
-            textDecorationLine: ev.done ? 'line-through' : 'none',
-          }}
-        >
-          {ev.title}
-        </Text>
-      </View>
-      {tall ? (
-        <Text
-          style={{
-            color: pt.ink2,
-            fontSize: 10.5,
-            fontWeight: '500',
-            letterSpacing: 0.42,
-            marginTop: 1,
-            fontFamily: pt.sans,
-          }}
-        >
-          {dragging ? `${timeOf(top)} – ${timeOf(top + block.height)}` : `${ev.start} – ${ev.end}`}
-        </Text>
-      ) : null}
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -271,20 +301,97 @@ const slotStarts = (slotMin: number) =>
 const hhmm = (m: number) =>
   `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
+/** Una riga d'ora: sta al suo minuto per mezzo della densità viva (`translateY`), senza passare da React. */
+function HourRow(p: {
+  m: number;
+  major: boolean;
+  ppm: SharedValue<number>;
+  gutter: number;
+  pt: PlannerTheme;
+}) {
+  const { m, ppm, pt } = p;
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: m * ppm.value }] }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: 'absolute', top: 0, left: 0, right: 0 }, style]}
+    >
+      <Text
+        style={{
+          position: 'absolute',
+          left: 0,
+          width: 41,
+          textAlign: 'right',
+          top: -8,
+          color: p.major ? pt.ink : pt.ink2,
+          fontSize: 11.5,
+          fontWeight: p.major ? '600' : '500',
+          fontFamily: pt.sans,
+        }}
+      >
+        {hhmm(m)}
+      </Text>
+      <View
+        style={{
+          marginLeft: p.gutter,
+          height: 1,
+          backgroundColor: p.major ? pt.hair2 : pt.hair,
+        }}
+      />
+    </Animated.View>
+  );
+}
+
+/** La riga dell'ora corrente. */
+function NowLine(p: { now: number; ppm: SharedValue<number>; gutter: number; pt: PlannerTheme }) {
+  const { now, ppm, pt } = p;
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: now * ppm.value }] }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          top: 0,
+          left: p.gutter - 3,
+          right: 0,
+          height: 1.2,
+          backgroundColor: pt.accentInk,
+          opacity: 0.7,
+        },
+        style,
+      ]}
+    >
+      <View
+        style={{
+          position: 'absolute',
+          left: -2,
+          top: -2.5,
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: pt.accentInk,
+        }}
+      />
+    </Animated.View>
+  );
+}
+
 /**
  * La griglia di un giorno: gli orari del passo scelto a sinistra, le righe, i blocchi, la riga dell'ora corrente.
- * `ppm` è la densità (pixel per minuto) e segue le dita mentre si pizzica; `zoom` è il passo che ne risulta
- * (3 h, 1 h, 30', 15', 5'): come `renderGutter` del sito, ogni passo scrive i suoi orari.
+ * `ppm` è la densità (pixel per minuto), un valore condiviso che segue le dita mentre si pizzica: righe, blocchi e
+ * altezza della giornata si posizionano da lei sul thread dell'interfaccia (come `--pxm` del sito). `zoom` è lo scatto
+ * che ne risulta (3 h, 1 h, 30', 15', 5'): solo quando cambia si scrivono altri orari (`renderGutter` del sito).
  */
 export function DayGrid(
   p: Look & {
     day: string;
     events: EventView[];
     zoom: Exclude<Zoom, 'agenda'>;
-    ppm: number;
+    ppm: SharedValue<number>;
     width: number;
     now: number | null;
-    /** solo le righe delle ore che cadono in questa fascia di pixel (la parte visibile e un bel po' attorno) */
+    /** solo le righe che cadono in questa fascia di minuti (la parte visibile e un bel po' attorno) */
     rows?: { from: number; to: number };
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
@@ -301,11 +408,12 @@ export function DayGrid(
   const every = majorEvery(p.zoom);
   const tapSlot = Math.min(slotMin, 60);
   const tap = (e: GestureResponderEvent) => {
-    const m = e.nativeEvent.locationY / ppm;
+    const m = e.nativeEvent.locationY / (ppm.value || 1);
     p.onEmptyTap(Math.max(0, Math.min(1440 - tapSlot, Math.floor(m / tapSlot) * tapSlot)));
   };
+  const height = useAnimatedStyle(() => ({ height: 1440 * ppm.value }));
   return (
-    <View style={{ height: 1440 * ppm, width: p.width }}>
+    <Animated.View style={[{ width: p.width }, height]}>
       <Pressable
         testID="grid-empty"
         accessibilityRole="button"
@@ -324,40 +432,17 @@ export function DayGrid(
           }}
         />
         {slotStarts(slotMin)
-          .filter((m) => !p.rows || (m * ppm >= p.rows.from && m * ppm <= p.rows.to))
-          .map((m) => {
-            const major = (m / slotMin) % every === 0;
-            return (
-              <View
-                key={m}
-                pointerEvents="none"
-                style={{ position: 'absolute', top: m * ppm, left: 0, right: 0 }}
-              >
-                <Text
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    width: 41,
-                    textAlign: 'right',
-                    top: -8,
-                    color: major ? pt.ink : pt.ink2,
-                    fontSize: 11.5,
-                    fontWeight: major ? '600' : '500',
-                    fontFamily: pt.sans,
-                  }}
-                >
-                  {hhmm(m)}
-                </Text>
-                <View
-                  style={{
-                    marginLeft: gutter,
-                    height: 1,
-                    backgroundColor: major ? pt.hair2 : pt.hair,
-                  }}
-                />
-              </View>
-            );
-          })}
+          .filter((m) => !p.rows || (m >= p.rows.from && m <= p.rows.to))
+          .map((m) => (
+            <HourRow
+              key={m}
+              m={m}
+              major={(m / slotMin) % every === 0}
+              ppm={ppm}
+              gutter={gutter}
+              pt={pt}
+            />
+          ))}
       </Pressable>
       {blocks.map((b) => (
         <EventBlock
@@ -374,52 +459,9 @@ export function DayGrid(
           onDragActive={p.onDragActive}
         />
       ))}
-      {p.now !== null ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: p.now * ppm,
-            left: gutter - 3,
-            right: 0,
-            height: 1.2,
-            backgroundColor: pt.accentInk,
-            opacity: 0.7,
-          }}
-        >
-          <View
-            style={{
-              position: 'absolute',
-              left: -2,
-              top: -2.5,
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: pt.accentInk,
-            }}
-          />
-        </View>
-      ) : null}
-    </View>
+      {p.now !== null ? <NowLine now={p.now} ppm={ppm} gutter={gutter} pt={pt} /> : null}
+    </Animated.View>
   );
-}
-
-/**
- * La griglia dell'ora con la densità viva del pizzico: si ridisegna lei sola a ogni movimento delle dita, senza
- * rifare il resto della pagina.
- */
-export function PinchedDayGrid(
-  p: Omit<Parameters<typeof DayGrid>[0], 'ppm'> & {
-    pinch: PinchApi;
-    /** lo scatto salvato nelle impostazioni */
-    saved: Zoom;
-    /** la pagina su cui sono le dita (non una delle vicine) */
-    current: boolean;
-  },
-) {
-  const { pinch, saved, current, ...grid } = p;
-  const ppm = usePinchPpm(pinch, saved, current);
-  return <DayGrid {...grid} ppm={ppm} />;
 }
 
 /**
