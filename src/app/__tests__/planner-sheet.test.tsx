@@ -207,6 +207,40 @@ describe('Event sheet, as on the website', () => {
     expect(screen.getByTestId('sheet-enddate')).toBeTruthy();
   });
 
+  test('the duration pill opens quick durations and moves the end', async () => {
+    setup();
+    await open();
+    expect(screen.queryByTestId('sheet-quick')).toBeNull();
+    await fireEvent.press(screen.getByTestId('sheet-duration-pill'));
+    await fireEvent.press(screen.getByTestId('sheet-quick-45'));
+    const at = (id: string) => new Date(screen.getByTestId(id).props.date as number).getTime();
+    expect((at('sheet-end') - at('sheet-start')) / 60000).toBe(45);
+  });
+
+  test('the category menu has a "none" entry and the picks next to it follow the title', async () => {
+    const { planner } = setup();
+    const health = planner.addCategory('Health', '#C77D7D');
+    const sport = planner.addCategory('Sport', '#A9C3AE');
+    for (const t of ['Dentist visit', 'Dentist check', 'Dentist cleaning'])
+      planner.create({ title: t, date: TODAY, categoryUuid: health });
+    planner.create({ title: 'Gym chest', date: TODAY, categoryUuid: sport });
+    await open();
+    // the last saved category is always offered; the title adds its own suggestions
+    expect(screen.getByTestId(`cat-${sport}`)).toBeTruthy();
+    expect(screen.queryByTestId(`cat-${health}`)).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('sheet-title'), 'Dentist again');
+    expect(screen.getByTestId(`cat-${health}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`cat-${health}`));
+    expect(screen.getByTestId(`cat-${health}`).props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    await fireEvent.press(screen.getByTestId('cat'));
+    await fireEvent.press(screen.getByTestId('cat-__none'));
+    expect(screen.getByTestId(`cat-${health}`).props.accessibilityState).toMatchObject({
+      selected: false,
+    });
+  });
+
   test('tapping outside with nothing written just closes; with a title it saves', async () => {
     const { planner } = setup();
     await open();

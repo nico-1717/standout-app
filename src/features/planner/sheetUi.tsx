@@ -351,6 +351,8 @@ const ICONS = {
   book: 'M7 4h11a1 1 0 011 1v14a1 1 0 01-1 1H7zM4 8h3M4 12h3M4 16h3M9.5 16c.4-1.6 1.6-2.5 3-2.5s2.6.9 3 2.5',
   trash: 'M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13M10.5 11v6M13.5 11v6',
   chevron: 'M6 9l6 6 6-6',
+  clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
+  spark: 'M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8z',
   close: 'M6 6l12 12M18 6L6 18',
 } as const;
 export type SheetIcon = keyof typeof ICONS;
@@ -455,17 +457,22 @@ export function SelectField<T extends string>({
   testID,
   title,
   wide,
+  compact,
 }: {
   pt: PlannerTheme;
-  options: { id: T; label: string }[];
+  /** `dot`: il pallino colorato davanti (le categorie) */
+  options: { id: T; label: string; dot?: string }[];
   value: T;
   onChange: (v: T) => void;
   testID: string;
   title?: string;
   wide?: boolean;
+  /** si stringe quanto serve (niente larghezza minima), per stare accanto ad altro */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const current = options.find((o) => o.id === value)?.label ?? '';
+  const currentOpt = options.find((o) => o.id === value);
+  const current = currentOpt?.label ?? '';
   return (
     <>
       <Pressable
@@ -483,14 +490,24 @@ export function SelectField<T extends string>({
             gap: 8,
             paddingHorizontal: 12,
             minHeight: 38,
-            minWidth: wide ? undefined : 120,
+            minWidth: wide || compact ? 0 : 120,
           },
           wide ? { alignSelf: 'stretch' } : null,
         ]}
       >
-        <Text style={{ color: pt.ink, fontSize: 14, fontFamily: pt.sans }} numberOfLines={1}>
-          {current}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+          {currentOpt?.dot ? (
+            <View
+              style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}
+            />
+          ) : null}
+          <Text
+            style={{ color: pt.ink, fontSize: 14, fontFamily: pt.sans, flexShrink: 1 }}
+            numberOfLines={1}
+          >
+            {current}
+          </Text>
+        </View>
         <SheetGlyph name="chevron" color={pt.ink2} size={14} />
       </Pressable>
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -538,16 +555,23 @@ export function SelectField<T extends string>({
                       backgroundColor: on ? pt.accentSoft : 'transparent',
                     }}
                   >
-                    <Text
-                      style={{
-                        color: on ? pt.accentInk : pt.ink,
-                        fontSize: 15.5,
-                        fontWeight: on ? '600' : '400',
-                        fontFamily: pt.sans,
-                      }}
-                    >
-                      {o.label}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      {o.dot ? (
+                        <View
+                          style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: o.dot }}
+                        />
+                      ) : null}
+                      <Text
+                        style={{
+                          color: on ? pt.accentInk : pt.ink,
+                          fontSize: 15.5,
+                          fontWeight: on ? '600' : '400',
+                          fontFamily: pt.sans,
+                        }}
+                      >
+                        {o.label}
+                      </Text>
+                    </View>
                     {on ? <Text style={{ color: pt.accentInk, fontWeight: '700' }}>✓</Text> : null}
                   </Pressable>
                 );
