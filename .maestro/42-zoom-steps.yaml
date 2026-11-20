@@ -17,8 +17,7 @@ name: Every zoom step draws its rows and events at the right height (static chec
       id: ps-zoom
 - tapOn:
     id: ps-zoom
-- tapOn:
-    id: ps-zoom-agenda
+- tapOn: 'Events only'
 - tapOn:
     id: ps-done
 - extendedWaitUntil:
