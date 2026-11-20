@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type GestureResponderHandlers } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -107,10 +107,12 @@ export function DayPager(p: {
     armedY.current = latest.current.scrollY();
     setArmed(armedY.current);
   }, []);
-  const disarm = useCallback(() => {
-    put(live, 0);
-    setArmed(null);
-  }, [live]);
+  const disarm = useCallback(() => setArmed(null), []);
+  // Le pagine tornano ferme solo quando quella nuova è già stata disegnata: azzerare `live` prima le farebbe
+  // sovrapporre tutte e tre al loro posto, con sopra quella del giorno dopo (un lampo dei giorni sbagliati).
+  useLayoutEffect(() => {
+    if (armed === null) put(live, 0);
+  }, [armed, p.date, live]);
   const commit = useCallback(
     (delta: 1 | -1) => {
       haptic.select();
