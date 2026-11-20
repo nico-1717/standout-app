@@ -1,5 +1,4 @@
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,6 +14,9 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@/ui/CappedText';
 import type { Project } from '@/features/projects/logic';
 
+import { Pick, dayDiff } from './Pick';
+import { categoryHints } from './categoryHints';
+import { WhenField } from './WhenField';
 import { GuestsField, type PickedPlace } from './BookParts';
 import { mapsUrl, PlaceHits, PlaceStatus, usePlaceSearch, type PlacesApi } from './PlaceSearch';
 import { ContactsSheet, ProjectSheet, SavedPlacesSheet } from './SheetSubs';
@@ -36,7 +38,6 @@ import {
   Field,
   fieldBox,
   IconBtn,
-  LockBtn,
   RowSB,
   SelectField,
   SheetGlyph,
@@ -44,7 +45,6 @@ import {
   Seg,
   Swatch,
   Tag,
-  Toggle,
   TxtBtn,
 } from './sheetUi';
 
@@ -64,111 +64,6 @@ export const SWATCHES = [
   '#E8D5C7',
   '#DCE7C8',
 ];
-
-const dateOf = (s: string) => new Date(`${s}T12:00:00`);
-const isoOf = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const clockOf = (s: string) => {
-  const [h, m] = s.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h ?? 0, m ?? 0, 0, 0);
-  return d;
-};
-const hhmmOf = (d: Date) =>
-  `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-const dayDiff = (a: string, b: string) =>
-  Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
-
-/** `.pl-pick`: data o ora. Su iPhone il selettore compatto di sistema; altrove un tocco apre quello del telefono. */
-function Pick({
-  pt,
-  kind,
-  value,
-  onChange,
-  clearable,
-  placeholder,
-  testID,
-  dim,
-  width,
-}: {
-  pt: PlannerTheme;
-  kind: 'date' | 'time';
-  value: string;
-  onChange: (v: string) => void;
-  clearable?: boolean;
-  placeholder?: string;
-  testID: string;
-  /** sbiadita (la fine nello stesso giorno dell'inizio) */
-  dim?: boolean;
-  width?: number;
-}) {
-  const { t } = useTranslation();
-  const isDate = kind === 'date';
-  const current = value ? (isDate ? dateOf(value) : clockOf(value)) : null;
-  const from = (d: Date) => (isDate ? isoOf(d) : hhmmOf(d));
-  const native = current && Platform.OS === 'ios';
-  return (
-    <View
-      style={[
-        native
-          ? { flexDirection: 'row', alignItems: 'center' }
-          : [fieldBox(pt), { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }],
-        { minHeight: 38, width },
-        dim ? { opacity: 0.42 } : null,
-      ]}
-    >
-      {native ? (
-        <DateTimePicker
-          testID={testID}
-          value={current}
-          mode={kind}
-          display="compact"
-          themeVariant={pt.dark ? 'dark' : 'light'}
-          onValueChange={(_, d) => d && onChange(from(d))}
-        />
-      ) : (
-        <Pressable
-          testID={testID}
-          accessibilityRole="button"
-          onPress={() => {
-            const base = current ?? new Date();
-            if (Platform.OS === 'ios') return onChange(from(base));
-            DateTimePickerAndroid.open({
-              value: base,
-              mode: kind,
-              is24Hour: true,
-              onValueChange: (_, d) => d && onChange(from(d)),
-            });
-          }}
-          style={{ paddingVertical: 8, justifyContent: 'center', flexGrow: 1 }}
-        >
-          <Text
-            style={{
-              color: current ? pt.ink : pt.ink3,
-              fontSize: 14,
-              fontFamily: pt.sans,
-              textAlign: width ? 'center' : 'left',
-            }}
-          >
-            {value || placeholder || '—'}
-          </Text>
-        </Pressable>
-      )}
-      {clearable && current ? (
-        <Pressable
-          testID={`${testID}-clear`}
-          accessibilityRole="button"
-          accessibilityLabel={t('comune.annulla')}
-          hitSlop={8}
-          onPress={() => onChange('')}
-          style={{ marginLeft: 8 }}
-        >
-          <Text style={{ color: pt.ink3, fontSize: 16 }}>×</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
 
 const REPEATS: { id: Repeat; key: string }[] = [
   { id: 'none', key: 'planner.mai_t' },
@@ -556,16 +451,30 @@ export function EventSheet(p: {
     void Linking.openURL(url);
   };
 
-  const tag = (
-    key: string,
-    label: string,
-    color: string,
-    on: boolean,
-    onPress: () => void,
-    testID: string,
-  ) => (
-    <Tag key={key} pt={pt} testID={testID} label={label} color={color} on={on} onPress={onPress} />
+  // le categorie nel menu, e quelle da proporre accanto: l'ultima usata (orologio) e fino a 3 suggerite dal titolo (scintilla)
+  const categoryOptions = [
+    { id: '__none', label: t('planner.nessuna') },
+    ...(project
+      ? [{ id: '__project', label: project.name, dot: projectColor ?? pt.neutralEv }]
+      : []),
+    ...[...p.categories]
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+      .map((c) => ({ id: c.uuid, label: c.name, dot: longHex(c.color, pt.accent) })),
+  ];
+  const historyRows = useMemo(() => p.repo.rows(), [p.repo]);
+  const hints = useMemo(
+    () => categoryHints(historyRows, f.title, new Set(p.categories.map((c) => c.uuid))),
+    [historyRows, f.title, p.categories],
   );
+  const picks: { uuid: string; name: string; color: string; why: 'last' | 'title' }[] = [];
+  for (const [uuid, why] of [
+    ...(hints.last ? [[hints.last, 'last'] as const] : []),
+    ...hints.suggested.map((u) => [u, 'title'] as const),
+  ]) {
+    const c = p.categories.find((x) => x.uuid === uuid);
+    if (c && !picks.some((x) => x.uuid === uuid))
+      picks.push({ uuid, name: c.name, color: c.color, why });
+  }
 
   const calChoices = p.calendars
     .filter((c) => c.role !== 'study' || f.calendar === c.uuid)
@@ -737,91 +646,28 @@ export function EventSheet(p: {
               </View>
             </Field>
 
-            {/* data, orari, durata */}
+            {/* quando: una linea dall'inizio alla fine, con la durata in mezzo */}
             <Field pt={pt} label={t('planner.quando')}>
-              <RowSB pt={pt} label={t('planner.data_t')}>
-                <Pick
-                  pt={pt}
-                  kind="date"
-                  testID="sheet-date"
-                  value={f.date}
-                  onChange={(v) => v && setDate(v)}
-                />
-              </RowSB>
-              <RowSB pt={pt} label={t('planner.tutto_il_giorno')}>
-                <Toggle pt={pt} testID="sheet-allday" on={f.allDay} onChange={setAllDay} />
-              </RowSB>
-              {!f.allDay ? (
-                <>
-                  <RowSB pt={pt} label={t('planner.inizio_t')}>
-                    <Pick
-                      pt={pt}
-                      kind="time"
-                      testID="sheet-start"
-                      value={f.start}
-                      onChange={(v) => v && setStart(v)}
-                    />
-                  </RowSB>
-                  <RowSB pt={pt}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                      <Text
-                        style={{
-                          color: pt.ink3,
-                          fontSize: 13,
-                          fontStyle: 'italic',
-                          fontFamily: pt.sans,
-                        }}
-                      >
-                        {t('planner.durata')}
-                      </Text>
-                      <LockBtn
-                        pt={pt}
-                        state={f.lock}
-                        label={lockLabel}
-                        onPress={() => set('lock', nextLock(f.lock))}
-                      />
-                      <Pick
-                        pt={pt}
-                        kind="time"
-                        testID="sheet-duration"
-                        value={duration}
-                        width={104}
-                        onChange={(v) => v && setDuration(v)}
-                      />
-                    </View>
-                  </RowSB>
-                  <RowSB pt={pt} label={t('planner.fine_t')} last>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                      <Pick
-                        pt={pt}
-                        kind="date"
-                        testID="sheet-enddate"
-                        value={f.endDate}
-                        dim={f.endDate === f.date}
-                        onChange={setEndDate}
-                      />
-                      <Pick
-                        pt={pt}
-                        kind="time"
-                        testID="sheet-end"
-                        value={f.end}
-                        onChange={(v) => v && setEnd(v)}
-                      />
-                    </View>
-                  </RowSB>
-                </>
-              ) : (
-                <RowSB pt={pt} label={t('planner.fine_t')} last>
-                  <Pick
-                    pt={pt}
-                    kind="date"
-                    testID="sheet-enddate"
-                    value={f.endDate}
-                    dim={f.endDate === f.date}
-                    onChange={setEndDate}
-                  />
-                </RowSB>
-              )}
+              <WhenField
+                pt={pt}
+                date={f.date}
+                endDate={f.endDate}
+                start={f.start}
+                end={f.end}
+                allDay={f.allDay}
+                lock={f.lock}
+                minutes={Math.max(0, minutesOf(f.end) - minutesOf(f.start))}
+                duration={duration}
+                lockLabel={lockLabel}
+                onDate={setDate}
+                onEndDate={setEndDate}
+                onStart={setStart}
+                onEnd={setEnd}
+                onDuration={(m) => setDuration(timeOf(m))}
+                onDurationText={setDuration}
+                onLock={() => set('lock', nextLock(f.lock))}
+                onAllDay={setAllDay}
+              />
             </Field>
 
             {/* ripetizione */}
@@ -883,54 +729,6 @@ export function EventSheet(p: {
               ) : null}
             </Field>
 
-            {/* calendario */}
-            {calChoices.length > 1 ? (
-              <Field pt={pt} label={t('planner.calendario')}>
-                <SelectField
-                  pt={pt}
-                  wide
-                  testID="cal"
-                  title={t('planner.calendario')}
-                  value={activeCal}
-                  options={calChoices.map((c) => ({ id: c.uuid, label: c.name }))}
-                  onChange={(v) => set('calendar', v)}
-                />
-              </Field>
-            ) : null}
-
-            {/* categoria */}
-            <Field pt={pt} label={t('planner.categoria')}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {project
-                  ? tag(
-                      'project',
-                      project.name,
-                      projectColor ?? pt.neutralEv,
-                      f.category === null,
-                      () => set('category', null),
-                      'cat-project',
-                    )
-                  : null}
-                {[...p.categories]
-                  .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-                  .map((c) =>
-                    tag(
-                      c.uuid,
-                      c.name,
-                      longHex(c.color, pt.accent),
-                      f.category === c.uuid,
-                      () =>
-                        edit((s) => ({
-                          ...s,
-                          category: s.category === c.uuid ? null : c.uuid,
-                          color: null,
-                        })),
-                      `cat-${c.uuid}`,
-                    ),
-                  )}
-              </View>
-            </Field>
-
             {/* notifica */}
             <Field pt={pt} label={t('planner.notifica')}>
               <RowSB pt={pt} label={t('planner.avvisami')} last={f.notify !== 'custom'}>
@@ -963,6 +761,77 @@ export function EventSheet(p: {
                   />
                 </RowSB>
               ) : null}
+            </Field>
+
+            {/* calendario */}
+            {calChoices.length > 1 ? (
+              <Field pt={pt} label={t('planner.calendario')}>
+                <SelectField
+                  pt={pt}
+                  wide
+                  testID="cal"
+                  title={t('planner.calendario')}
+                  value={activeCal}
+                  options={calChoices.map((c) => ({ id: c.uuid, label: c.name }))}
+                  onChange={(v) => set('calendar', v)}
+                />
+              </Field>
+            ) : null}
+
+            {/* categoria: un menu e, accanto, l'ultima usata e le suggerite dal titolo */}
+            <Field pt={pt} label={t('planner.categoria')}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexBasis: '38%', maxWidth: 190, flexShrink: 0 }}>
+                  <SelectField
+                    pt={pt}
+                    wide
+                    compact
+                    testID="cat"
+                    title={t('planner.categoria')}
+                    value={f.category ?? (project ? '__project' : '__none')}
+                    options={categoryOptions}
+                    onChange={(v) =>
+                      edit((s) => ({
+                        ...s,
+                        category: v === '__none' || v === '__project' ? null : v,
+                        color: null,
+                      }))
+                    }
+                  />
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ gap: 6, alignItems: 'center', paddingVertical: 2 }}
+                >
+                  {picks.map((c) => (
+                    <Tag
+                      key={c.uuid}
+                      pt={pt}
+                      testID={`cat-${c.uuid}`}
+                      label={c.name}
+                      color={longHex(c.color, pt.accent)}
+                      on={f.category === c.uuid}
+                      onPress={() =>
+                        edit((s) => ({
+                          ...s,
+                          category: s.category === c.uuid ? null : c.uuid,
+                          color: null,
+                        }))
+                      }
+                      trailing={
+                        <SheetGlyph
+                          name={c.why === 'last' ? 'clock' : 'spark'}
+                          color={pt.ink3}
+                          size={11}
+                        />
+                      }
+                    />
+                  ))}
+                </ScrollView>
+              </View>
             </Field>
 
             {/* colore */}
