@@ -21,6 +21,7 @@ import type { Priority, Routine } from '@/features/planner/repo';
 import { SmartBar, SmartReport, type SmartNote } from '@/features/planner/SmartBar';
 import { PriorityStrip, PrioritySheet } from '@/features/planner/DayBar';
 import { ShiftSheet, SideFabs } from '@/features/planner/SideFabs';
+import { DayPager } from '@/features/planner/DayPager';
 import { useDaySwipe } from '@/features/planner/useDaySwipe';
 import { MonthPopup, PlannerTopbar, ViewMenu } from '@/features/planner/Topbar';
 import { smartEvent, smartParse } from '@/features/planner/smart';
@@ -213,7 +214,13 @@ export default function PlannerScreen() {
     };
   }, [services, version, date, today]);
 
+  // un cambio di giorno fatto strisciando tiene la pagina all'altezza a cui era (come sul sito)
+  const keepScroll = useRef(false);
   useEffect(() => {
+    if (keepScroll.current) {
+      keepScroll.current = false;
+      return;
+    }
     // all'apertura: si parte un'ora prima di adesso (o dalle 6 se non è oggi)
     const d = new Date();
     const startMin =
@@ -228,7 +235,7 @@ export default function PlannerScreen() {
   const swipeHandlers = useDaySwipe((delta) =>
     setDate((d) => (mode === 'day' ? addDaysIso(d, delta) : addMonths(d, delta))),
   );
-  const now = useNowMinutes(date === today || mode === 'week');
+  const now = useNowMinutes(true);
   const open = useCallback(
     (ev: EventView) => setSheet({ key: Date.now(), target: { mode: 'edit', view: ev } }),
     [],
@@ -333,6 +340,155 @@ export default function PlannerScreen() {
   const barTop = topH + barH;
   const agendaH = Math.round(screenH * 0.58);
 
+  // gli eventi di un giorno, divisi come per quello scelto (la pagina vicina, durante lo scorrimento, ne disegna uno suo)
+  const partsOf = (d: string) => {
+    if (d === date) return { events, blocks, shown, bands, grid };
+    const ev = repo.visibleEventsInRange(d, d);
+    const bl = routineBlocks(ev, routines);
+    const shut = new Set(bl.filter((b) => b.collapsed).map((b) => b.group));
+    const sh = ev.filter((e) => !(e.routineGroup && shut.has(e.routineGroup)));
+    return {
+      events: ev,
+      blocks: bl,
+      shown: sh,
+      bands: sh.filter(isBand),
+      grid: sh.filter((e) => !isBand(e)),
+    };
+  };
+  const renderDay = (d: string, cur: boolean, startY: number) => {
+    const dp = partsOf(d);
+    return (
+      <ScrollView
+        ref={cur ? scroller : undefined}
+        testID={cur ? 'day-scroll' : `day-scroll-${d}`}
+        scrollEnabled={cur && !dragging && !pinching}
+        pointerEvents={cur ? 'auto' : 'none'}
+        contentOffset={cur ? undefined : { x: 0, y: startY }}
+        scrollEventThrottle={16}
+        onScroll={
+          cur
+            ? (e) => {
+                scrollY.current = e.nativeEvent.contentOffset.y;
+              }
+            : undefined
+        }
+        onLayout={
+          cur
+            ? (e) => {
+                viewH.current = e.nativeEvent.layout.height;
+                scroller.current?.measureInWindow?.((_x, y) => {
+                  viewTop.current = y;
+                });
+              }
+            : undefined
+        }
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        {dp.blocks.length ? (
+          <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
+            {dp.blocks.map((b) => (
+              <RoutineBar
+                key={b.group}
+                pt={pt}
+                block={b}
+                onToggle={(x) => {
+                  repo.setRoutineCollapsed(x.group, !x.collapsed);
+                  changed();
+                }}
+                onDelete={() =>
+                  Alert.alert(
+                    t('planner.elimino_tutta_la_routine'),
+                    t('planner.tutti_i_passaggi_di_questo'),
+                    [
+                      { text: t('comune.annulla'), style: 'cancel' },
+                      {
+                        text: t('planner.elimina'),
+                        style: 'destructive',
+                        onPress: () => {
+                          repo.removeRoutineBlock(b.group);
+                          changed();
+                        },
+                      },
+                    ],
+                  )
+                }
+              />
+            ))}
+          </View>
+        ) : null}
+        {dp.bands.length && !agendaView ? (
+          <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
+            {dp.bands.map((e) => (
+              <BandEvent
+                key={e.uid}
+                pt={pt}
+                categories={categories}
+                calendars={calendars}
+                ev={e}
+                day={d}
+                onOpen={open}
+                onToggle={toggle}
+              />
+            ))}
+          </View>
+        ) : null}
+        {agendaView ? (
+          <AgendaList
+            pt={pt}
+            categories={categories}
+            calendars={calendars}
+            day={d}
+            events={dp.shown}
+            onOpen={open}
+            onToggle={toggle}
+          />
+        ) : (
+          <View onLayout={cur ? (e) => (gridTop.current = e.nativeEvent.layout.y) : undefined}>
+            <DayGrid
+              pt={pt}
+              categories={categories}
+              calendars={calendars}
+              day={d}
+              events={dp.grid}
+              zoom={step}
+              ppm={ppm}
+              width={width}
+              now={d === today ? now : null}
+              onOpen={open}
+              onToggle={toggle}
+              onMove={moveEvent}
+              onDragActive={setDragging}
+              onEmptyTap={(minutes) => {
+                const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+                const m = String(minutes % 60).padStart(2, '0');
+                setSheet({
+                  key: Date.now(),
+                  target: { mode: 'new', date: d, start: `${h}:${m}` },
+                });
+              }}
+            />
+          </View>
+        )}
+        {!dp.events.length && !agendaView ? (
+          <Text
+            testID="day-empty"
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 160,
+              alignSelf: 'center',
+              color: pt.ink3,
+              fontSize: 14,
+              fontFamily: pt.sans,
+            }}
+          >
+            {t('planner.questo_giorno_e_vuoto')}
+          </Text>
+        ) : null}
+      </ScrollView>
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: pt.page }}>
       <View style={{ display: agendaFrom ? 'none' : 'flex' }}>
@@ -414,7 +570,7 @@ export default function PlannerScreen() {
           marginBottom: agendaFrom ? agendaH : 0,
           paddingTop: agendaFrom ? insets.top + 6 : 0,
         }}
-        {...(mode === 'week' ? {} : swipeHandlers)}
+        {...(mode === 'month' ? swipeHandlers : {})}
       >
         {mode === 'week' ? (
           <WeekGrid
@@ -466,126 +622,18 @@ export default function PlannerScreen() {
             }}
           />
         ) : (
-          <View style={{ flex: 1 }} {...pinch.panHandlers}>
-            <ScrollView
-              ref={scroller}
-              testID="day-scroll"
-              scrollEnabled={!dragging && !pinching}
-              scrollEventThrottle={16}
-              onScroll={(e) => {
-                scrollY.current = e.nativeEvent.contentOffset.y;
-              }}
-              onLayout={(e) => {
-                viewH.current = e.nativeEvent.layout.height;
-                scroller.current?.measureInWindow?.((_x, y) => {
-                  viewTop.current = y;
-                });
-              }}
-              contentContainerStyle={{ paddingBottom: 120 }}
-            >
-              {blocks.length ? (
-                <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
-                  {blocks.map((b) => (
-                    <RoutineBar
-                      key={b.group}
-                      pt={pt}
-                      block={b}
-                      onToggle={(x) => {
-                        repo.setRoutineCollapsed(x.group, !x.collapsed);
-                        changed();
-                      }}
-                      onDelete={() =>
-                        Alert.alert(
-                          t('planner.elimino_tutta_la_routine'),
-                          t('planner.tutti_i_passaggi_di_questo'),
-                          [
-                            { text: t('comune.annulla'), style: 'cancel' },
-                            {
-                              text: t('planner.elimina'),
-                              style: 'destructive',
-                              onPress: () => {
-                                repo.removeRoutineBlock(b.group);
-                                changed();
-                              },
-                            },
-                          ],
-                        )
-                      }
-                    />
-                  ))}
-                </View>
-              ) : null}
-              {bands.length && !agendaView ? (
-                <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
-                  {bands.map((e) => (
-                    <BandEvent
-                      key={e.uid}
-                      pt={pt}
-                      categories={categories}
-                      calendars={calendars}
-                      ev={e}
-                      day={date}
-                      onOpen={open}
-                      onToggle={toggle}
-                    />
-                  ))}
-                </View>
-              ) : null}
-              {agendaView ? (
-                <AgendaList
-                  pt={pt}
-                  categories={categories}
-                  calendars={calendars}
-                  day={date}
-                  events={shown}
-                  onOpen={open}
-                  onToggle={toggle}
-                />
-              ) : (
-                <View onLayout={(e) => (gridTop.current = e.nativeEvent.layout.y)}>
-                  <DayGrid
-                    pt={pt}
-                    categories={categories}
-                    calendars={calendars}
-                    day={date}
-                    events={grid}
-                    zoom={step}
-                    ppm={ppm}
-                    width={width}
-                    now={now}
-                    onOpen={open}
-                    onToggle={toggle}
-                    onMove={moveEvent}
-                    onDragActive={setDragging}
-                    onEmptyTap={(minutes) => {
-                      const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-                      const m = String(minutes % 60).padStart(2, '0');
-                      setSheet({
-                        key: Date.now(),
-                        target: { mode: 'new', date, start: `${h}:${m}` },
-                      });
-                    }}
-                  />
-                </View>
-              )}
-              {!events.length && !agendaView ? (
-                <Text
-                  testID="day-empty"
-                  pointerEvents="none"
-                  style={{
-                    position: 'absolute',
-                    top: 160,
-                    alignSelf: 'center',
-                    color: pt.ink3,
-                    fontSize: 14,
-                    fontFamily: pt.sans,
-                  }}
-                >
-                  {t('planner.questo_giorno_e_vuoto')}
-                </Text>
-              ) : null}
-            </ScrollView>
-          </View>
+          <DayPager
+            date={date}
+            width={width}
+            enabled={!dragging && !pinching && !agendaFrom}
+            panHandlers={pinch.panHandlers}
+            scrollY={() => scrollY.current}
+            onStep={(delta) => {
+              keepScroll.current = true;
+              setDate((d) => addDaysIso(d, delta));
+            }}
+            render={renderDay}
+          />
         )}
       </View>
 
