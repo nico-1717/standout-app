@@ -9,8 +9,8 @@ import { focusParams } from './todoScroll';
 
 export type TodoTab = 'todo' | 'buy' | 'pills';
 
-const TABS: { id: TodoTab; label: string; href: '/' | '/buy' | '/pills' }[] = [
-  { id: 'todo', label: 'planner.to_do', href: '/' },
+const TABS: { id: TodoTab; label: string; href: '/todo' | '/buy' | '/pills' }[] = [
+  { id: 'todo', label: 'planner.to_do', href: '/todo' },
   { id: 'buy', label: 'planner.to_buy', href: '/buy' },
   { id: 'pills', label: 'todo.tipo_pills', href: '/pills' },
 ];

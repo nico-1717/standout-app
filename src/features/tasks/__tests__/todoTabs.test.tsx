@@ -41,6 +41,6 @@ describe('To do · To buy · Pills tabs', () => {
     await fireEvent.press(screen.getByTestId('todo-tab-buy'));
     expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/buy', params: focus });
     await fireEvent.press(screen.getByTestId('todo-tab-todo'));
-    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/', params: focus });
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/todo', params: focus });
   });
 });

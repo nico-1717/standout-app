@@ -10,7 +10,7 @@ import { addDaysIso, localToday } from '@/features/tasks/groups';
 import { ProjectsRepo } from '@/features/projects/repo';
 import { TasksRepo } from '@/features/tasks/repo';
 
-import TodoScreen from '../(tabs)/index';
+import TodoScreen from '../(tabs)/todo';
 
 let mockStyle: 'standard' | 'paper' = 'standard';
 let mockServices: unknown;

@@ -21,7 +21,7 @@ export function PageTop({
 }: {
   /** chiave di traduzione del nome della pagina a cui si torna */
   back?: string;
-  href?: '/planner' | '/' | '/home';
+  href?: '/planner' | '/todo' | '/home';
   color?: string;
   testID?: string;
 }) {

@@ -2,6 +2,8 @@ appId: app.standout.mobile
 name: A screenshot of every main screen
 ---
 - runFlow: common/login.yaml
+# The app opens on Home (not on To do).
+- takeScreenshot: 29-start-page
 - tapOn:
     id: bar-home
 - takeScreenshot: 30-home

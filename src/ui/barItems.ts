@@ -6,7 +6,7 @@ import type { TabIconKind } from './TabIcon';
 export const BAR_ITEMS: Record<BarId, { route: string; label: string; kind: TabIconKind }> = {
   home: { route: 'home', label: 'sidebar.home', kind: 'home' },
   planner: { route: 'planner', label: 'sidebar.planner', kind: 'planner' },
-  todo: { route: 'index', label: 'planner.to_do', kind: 'todo' },
+  todo: { route: 'todo', label: 'planner.to_do', kind: 'todo' },
   buy: { route: 'buy', label: 'planner.to_buy', kind: 'buy' },
   pills: { route: 'pills', label: 'todo.tipo_pills', kind: 'pills' },
   habits: { route: 'habits', label: 'abitudini.titolo', kind: 'habits' },

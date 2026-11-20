@@ -43,7 +43,7 @@ const SHORTCUTS: { href: string; route: string; key: string; color: string; icon
   {
     href: 'planner/todo.php',
     icon: 'check',
-    route: '/(tabs)',
+    route: '/(tabs)/todo',
     key: 'sidebar.todo',
     color: '#30D158',
   },
@@ -242,7 +242,7 @@ export default function HomeScreen() {
               }}
               onOpenPills={() => go('/(tabs)/pills')}
               onOpenEvent={() => go('/(tabs)/planner')}
-              onOpenTodo={() => go('/(tabs)')}
+              onOpenTodo={() => go('/(tabs)/todo')}
               onOpenBuy={() => go('/(tabs)/buy')}
               onOpenHabits={() => go('/(tabs)/habits')}
             />

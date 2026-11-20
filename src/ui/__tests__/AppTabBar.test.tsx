@@ -75,7 +75,7 @@ test('To do / To buy / Pills open already scrolled to the tabs; other pages do n
   });
   await fireEvent.press(screen.getByTestId('bar-todo'));
   expect(mockNavigate).toHaveBeenLastCalledWith({
-    pathname: '/',
+    pathname: '/todo',
     params: { focus: expect.any(String) },
   });
   await fireEvent.press(screen.getByTestId('bar-habits'));

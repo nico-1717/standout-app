@@ -149,7 +149,7 @@ export function AppTabBar({ state, insets }: BarProps) {
 
   const open = (id: BarId) => {
     const route = BAR_ITEMS[id].route;
-    const pathname = route === 'index' ? '/' : `/${route}`;
+    const pathname = `/${route}`;
     router.navigate({
       pathname,
       params: SCROLL_TO_TABS.includes(id) ? focusParams() : undefined,
