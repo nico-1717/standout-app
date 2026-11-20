@@ -147,7 +147,6 @@ export default function PlannerScreen() {
   const weekStart = useMemo(() => mondayOf(date), [date]);
   // la frase e l'affermazione della settimana: stesse del sito (si calcolano, non si salvano)
   const quote = t(`planner.fr_${weekPhraseId('quotes', weekStart, userId)}`);
-  const affirmation = t(`planner.fr_${weekPhraseId('affirmations', weekStart, userId)}`);
   const pillsRepo = services?.pills ?? null;
   const week = useMemo(() => {
     const m = mondayOf(date);
@@ -229,6 +228,27 @@ export default function PlannerScreen() {
     if (swipeY.current === null) return;
     scroller.current?.scrollTo({ y: swipeY.current, animated: false });
     swipeY.current = null;
+  }, [date]);
+  // le altezze della barra in alto e della fascia di ogni giorno disegnato (anche le pagine vicine): quando una
+  // pagina vicina diventa quella di adesso non rifà il suo layout, quindi le misure si ricordano per giorno
+  const sizes = useRef<Record<string, { top: number; bar: number }>>({});
+  const shownDate = useRef(date);
+  const measured = (d: string, key: 'top' | 'bar', h: number) => {
+    const s = (sizes.current[d] ??= { top: 0, bar: 0 });
+    s[key] = h;
+    if (d !== shownDate.current) return;
+    if (key === 'top') setTopH(h);
+    else setBarH(h);
+  };
+  useLayoutEffect(() => {
+    shownDate.current = date;
+    const s = sizes.current[date];
+    if (s) {
+      setTopH(s.top);
+      setBarH(s.bar);
+    }
+    for (const k of Object.keys(sizes.current))
+      if (Math.abs(Date.parse(k) - Date.parse(date)) > 2 * 86_400_000) delete sizes.current[k];
   }, [date]);
   useEffect(() => {
     if (keepScroll.current) {
@@ -350,7 +370,6 @@ export default function PlannerScreen() {
         }
       : undefined;
   // la scena racconta il tempo di *un* giorno: vale dove se ne guarda uno (non nel mese)
-  const wxScene = mode === 'month' ? null : wxSceneInput(weather.wx, date, today, new Date());
   const barTop = topH + barH;
   const agendaH = Math.round(screenH * 0.58);
 
@@ -369,293 +388,318 @@ export default function PlannerScreen() {
       grid: sh.filter((e) => !isBand(e)),
     };
   };
+  // la barra in alto di un giorno: i dati (numero, nome del giorno, mese, meteo, settimana) sono di quel giorno
+  const topbarOf = (d: string, cur: boolean) => {
+    const wk = d === date ? week : Array.from({ length: 7 }, (_, i) => addDaysIso(mondayOf(d), i));
+    const scene = mode === 'month' ? null : wxSceneInput(weather.wx, d, today, new Date());
+    return (
+      <PlannerTopbar
+        pt={pt}
+        inset={insets.top}
+        date={d}
+        today={today}
+        weekNo={d === date ? weekNo : repo.weekNumber(wk[0]!, plannerSettings)}
+        week={wk}
+        view={mode}
+        viewLabel={viewLabel}
+        letter={(userName || '?').slice(0, 1).toUpperCase()}
+        affirmation={
+          plannerSettings.show_affirmations
+            ? t(`planner.fr_${weekPhraseId('affirmations', mondayOf(d), userId)}`)
+            : null
+        }
+        weather={wxCtx}
+        ambient={
+          uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
+            <>
+              <MonthScene
+                month={monthOf(d)}
+                opacity={ambientOpacity(plannerSettings.ambient_opacity)}
+                page={pt.page}
+                sky={!pt.dark}
+                bare={scene !== null}
+              />
+              {scene ? <WeatherScene input={scene} /> : null}
+            </>
+          ) : null
+        }
+        onHeight={(h) => measured(d, 'top', h)}
+        onViewPress={(x) => setViewMenu(x)}
+        onToday={() => setDate(today)}
+        onWeek={() => router.push({ pathname: '/planner-week', params: { date } })}
+        onSettings={() => router.push('/planner-settings')}
+        onAvatar={() => router.push('/account')}
+        onSearch={() => setSearching(true)}
+        onFilter={() => router.push('/planner-manage')}
+        onMini={() => setMonthOpen(true)}
+        monthsOpen={monthsOpen}
+        onMonthName={() => setMonthsOpen((v) => !v)}
+        onMonthPick={(x) => {
+          const delta = yearOf(x) * 12 + monthOf(x) - (yearOf(date) * 12 + monthOf(date));
+          setDate(addMonths(date, delta));
+          setMonthsOpen(false);
+        }}
+      />
+    );
+  };
+  // la fascia sotto la barra (scrivi e priorità): sulla pagina vicina il campo è vuoto e le priorità sono le sue
+  const dayBarOf = (d: string, cur: boolean) => (
+    <View
+      testID={cur ? 'day-bar' : undefined}
+      onLayout={(e) => measured(d, 'bar', e.nativeEvent.layout.height)}
+      style={{ paddingHorizontal: 12, paddingBottom: 6, backgroundColor: pt.page }}
+    >
+      <SmartBar pt={pt} onSubmit={smartSubmit} />
+      {cur && unclear ? (
+        <Text
+          testID="smart-unclear"
+          style={{ color: pt.ink2, fontSize: 12, textAlign: 'center', marginTop: 4 }}
+        >
+          {t('planner.non_ho_capito_cosa_scrivere')}
+        </Text>
+      ) : null}
+      <PriorityStrip
+        pt={pt}
+        items={d === date ? priorities : repo.priorities(d)}
+        onToggle={(pos, text, done) => {
+          repo.setPriority(d, pos, text, done);
+          changed();
+        }}
+        onOpen={() => setPrioOpen(true)}
+        onLists={() => router.push({ pathname: '/planner-week', params: { date: d } })}
+      />
+    </View>
+  );
   const renderDay = (d: string, cur: boolean, startY: number) => {
     const dp = partsOf(d);
     return (
-      <ScrollView
-        ref={cur ? scroller : undefined}
-        testID={cur ? 'day-scroll' : `day-scroll-${d}`}
-        scrollEnabled={cur && !dragging && !pinching}
+      <View
+        style={{ flex: 1 }}
         pointerEvents={cur ? 'auto' : 'none'}
-        contentOffset={cur ? undefined : { x: 0, y: startY }}
-        scrollEventThrottle={16}
-        onScroll={
-          cur
-            ? (e) => {
-                const y = e.nativeEvent.contentOffset.y;
-                scrollY.current = y;
-                setBandY(bandOf(y));
-              }
-            : undefined
-        }
-        onLayout={
-          cur
-            ? (e) => {
-                viewH.current = e.nativeEvent.layout.height;
-                scroller.current?.measureInWindow?.((_x, y) => {
-                  viewTop.current = y;
-                });
-              }
-            : undefined
-        }
-        contentContainerStyle={{ paddingBottom: 120 }}
+        importantForAccessibility={cur ? 'auto' : 'no-hide-descendants'}
+        accessibilityElementsHidden={!cur}
       >
-        {dp.blocks.length ? (
-          <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
-            {dp.blocks.map((b) => (
-              <RoutineBar
-                key={b.group}
-                pt={pt}
-                block={b}
-                onToggle={(x) => {
-                  repo.setRoutineCollapsed(x.group, !x.collapsed);
-                  changed();
-                }}
-                onDelete={() =>
-                  Alert.alert(
-                    t('planner.elimino_tutta_la_routine'),
-                    t('planner.tutti_i_passaggi_di_questo'),
-                    [
-                      { text: t('comune.annulla'), style: 'cancel' },
-                      {
-                        text: t('planner.elimina'),
-                        style: 'destructive',
-                        onPress: () => {
-                          repo.removeRoutineBlock(b.group);
-                          changed();
-                        },
-                      },
-                    ],
-                  )
+        {topbarOf(d, cur)}
+        {dayBarOf(d, cur)}
+        <ScrollView
+          ref={cur ? scroller : undefined}
+          testID={cur ? 'day-scroll' : `day-scroll-${d}`}
+          scrollEnabled={cur && !dragging && !pinching}
+          contentOffset={cur ? undefined : { x: 0, y: startY }}
+          scrollEventThrottle={16}
+          onScroll={
+            cur
+              ? (e) => {
+                  const y = e.nativeEvent.contentOffset.y;
+                  scrollY.current = y;
+                  setBandY(bandOf(y));
                 }
-              />
-            ))}
-          </View>
-        ) : null}
-        {dp.bands.length && !agendaView ? (
-          <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
-            {dp.bands.map((e) => (
-              <BandEvent
-                key={e.uid}
-                pt={pt}
-                categories={categories}
-                calendars={calendars}
-                ev={e}
-                day={d}
-                onOpen={open}
-                onToggle={toggle}
-              />
-            ))}
-          </View>
-        ) : null}
-        {agendaView ? (
-          <AgendaList
-            pt={pt}
-            categories={categories}
-            calendars={calendars}
-            day={d}
-            events={dp.shown}
-            onOpen={open}
-            onToggle={toggle}
-          />
-        ) : (
-          <View onLayout={cur ? (e) => (gridTop.current = e.nativeEvent.layout.y) : undefined}>
-            <PinchedDayGrid
-              rows={rowsAround(cur ? bandY : bandOf(startY))}
-              pinch={pinch}
-              saved={zoom}
-              current={cur}
+              : undefined
+          }
+          onLayout={
+            cur
+              ? (e) => {
+                  viewH.current = e.nativeEvent.layout.height;
+                  scroller.current?.measureInWindow?.((_x, y) => {
+                    viewTop.current = y;
+                  });
+                }
+              : undefined
+          }
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
+          {dp.blocks.length ? (
+            <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8 }}>
+              {dp.blocks.map((b) => (
+                <RoutineBar
+                  key={b.group}
+                  pt={pt}
+                  block={b}
+                  onToggle={(x) => {
+                    repo.setRoutineCollapsed(x.group, !x.collapsed);
+                    changed();
+                  }}
+                  onDelete={() =>
+                    Alert.alert(
+                      t('planner.elimino_tutta_la_routine'),
+                      t('planner.tutti_i_passaggi_di_questo'),
+                      [
+                        { text: t('comune.annulla'), style: 'cancel' },
+                        {
+                          text: t('planner.elimina'),
+                          style: 'destructive',
+                          onPress: () => {
+                            repo.removeRoutineBlock(b.group);
+                            changed();
+                          },
+                        },
+                      ],
+                    )
+                  }
+                />
+              ))}
+            </View>
+          ) : null}
+          {dp.bands.length && !agendaView ? (
+            <View style={{ gap: 4, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 4 }}>
+              {dp.bands.map((e) => (
+                <BandEvent
+                  key={e.uid}
+                  pt={pt}
+                  categories={categories}
+                  calendars={calendars}
+                  ev={e}
+                  day={d}
+                  onOpen={open}
+                  onToggle={toggle}
+                />
+              ))}
+            </View>
+          ) : null}
+          {agendaView ? (
+            <AgendaList
               pt={pt}
               categories={categories}
               calendars={calendars}
               day={d}
-              events={dp.grid}
-              zoom={step}
-              width={width}
-              now={d === today ? now : null}
+              events={dp.shown}
               onOpen={open}
               onToggle={toggle}
-              onMove={moveEvent}
-              onDragActive={setDragging}
-              onEmptyTap={(minutes) => {
-                const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-                const m = String(minutes % 60).padStart(2, '0');
-                setSheet({
-                  key: Date.now(),
-                  target: { mode: 'new', date: d, start: `${h}:${m}` },
-                });
-              }}
             />
-          </View>
-        )}
-        {!dp.events.length && !agendaView ? (
-          <Text
-            testID="day-empty"
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: 160,
-              alignSelf: 'center',
-              color: pt.ink3,
-              fontSize: 14,
-              fontFamily: pt.sans,
-            }}
-          >
-            {t('planner.questo_giorno_e_vuoto')}
-          </Text>
-        ) : null}
-      </ScrollView>
+          ) : (
+            <View onLayout={cur ? (e) => (gridTop.current = e.nativeEvent.layout.y) : undefined}>
+              <PinchedDayGrid
+                rows={rowsAround(cur ? bandY : bandOf(startY))}
+                pinch={pinch}
+                saved={zoom}
+                current={cur}
+                pt={pt}
+                categories={categories}
+                calendars={calendars}
+                day={d}
+                events={dp.grid}
+                zoom={step}
+                width={width}
+                now={d === today ? now : null}
+                onOpen={open}
+                onToggle={toggle}
+                onMove={moveEvent}
+                onDragActive={setDragging}
+                onEmptyTap={(minutes) => {
+                  const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+                  const m = String(minutes % 60).padStart(2, '0');
+                  setSheet({
+                    key: Date.now(),
+                    target: { mode: 'new', date: d, start: `${h}:${m}` },
+                  });
+                }}
+              />
+            </View>
+          )}
+          {!dp.events.length && !agendaView ? (
+            <Text
+              testID="day-empty"
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: 160,
+                alignSelf: 'center',
+                color: pt.ink3,
+                fontSize: 14,
+                fontFamily: pt.sans,
+              }}
+            >
+              {t('planner.questo_giorno_e_vuoto')}
+            </Text>
+          ) : null}
+        </ScrollView>
+      </View>
     );
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: pt.page }}>
-      <View style={{ display: agendaFrom ? 'none' : 'flex' }}>
-        <PlannerTopbar
-          pt={pt}
-          inset={insets.top}
-          date={date}
-          today={today}
-          weekNo={weekNo}
-          week={week}
-          view={mode}
-          viewLabel={viewLabel}
-          letter={(userName || '?').slice(0, 1).toUpperCase()}
-          affirmation={plannerSettings.show_affirmations ? affirmation : null}
-          weather={wxCtx}
-          ambient={
-            uiStyle === 'paper' && plannerSettings.ambient_enabled ? (
-              <>
-                <MonthScene
-                  month={monthOf(date)}
-                  opacity={ambientOpacity(plannerSettings.ambient_opacity)}
-                  page={pt.page}
-                  sky={!pt.dark}
-                  bare={wxScene !== null}
-                />
-                {wxScene ? <WeatherScene input={wxScene} /> : null}
-              </>
-            ) : null
-          }
-          onHeight={setTopH}
-          onViewPress={(x) => setViewMenu(x)}
-          onToday={() => setDate(today)}
-          onWeek={() => router.push({ pathname: '/planner-week', params: { date } })}
-          onSettings={() => router.push('/planner-settings')}
-          onAvatar={() => router.push('/account')}
-          onSearch={() => setSearching(true)}
-          onFilter={() => router.push('/planner-manage')}
-          onMini={() => setMonthOpen(true)}
-          monthsOpen={monthsOpen}
-          onMonthName={() => setMonthsOpen((v) => !v)}
-          onMonthPick={(d) => {
-            const delta = yearOf(d) * 12 + monthOf(d) - (yearOf(date) * 12 + monthOf(date));
-            setDate(addMonths(date, delta));
-            setMonthsOpen(false);
-          }}
-        />
-      </View>
       {mode === 'day' ? (
-        <View
-          testID="day-bar"
-          onLayout={(e) => setBarH(e.nativeEvent.layout.height)}
-          style={{ paddingHorizontal: 12, paddingBottom: 6, backgroundColor: pt.page }}
-        >
-          <SmartBar pt={pt} onSubmit={smartSubmit} />
-          {unclear ? (
-            <Text
-              testID="smart-unclear"
-              style={{ color: pt.ink2, fontSize: 12, textAlign: 'center', marginTop: 4 }}
-            >
-              {t('planner.non_ho_capito_cosa_scrivere')}
-            </Text>
-          ) : null}
-          <PriorityStrip
-            pt={pt}
-            items={priorities}
-            onToggle={(pos, text, done) => {
-              repo.setPriority(date, pos, text, done);
-              changed();
+        <DayPager
+          date={date}
+          width={width}
+          enabled={!dragging && !pinching && !agendaFrom}
+          panHandlers={pinch.panHandlers}
+          scrollY={() => scrollY.current}
+          onStep={(delta, y) => {
+            keepScroll.current = true;
+            swipeY.current = y;
+            setDate((d) => addDaysIso(d, delta));
+          }}
+          render={renderDay}
+        />
+      ) : (
+        <>
+          <View style={{ display: agendaFrom ? 'none' : 'flex' }}>{topbarOf(date, true)}</View>
+          <View
+            style={{
+              flex: 1,
+              marginBottom: agendaFrom ? agendaH : 0,
+              paddingTop: agendaFrom ? insets.top + 6 : 0,
             }}
-            onOpen={() => setPrioOpen(true)}
-            onLists={() => router.push({ pathname: '/planner-week', params: { date } })}
-          />
-        </View>
-      ) : null}
-
-      <View
-        style={{
-          flex: 1,
-          marginBottom: agendaFrom ? agendaH : 0,
-          paddingTop: agendaFrom ? insets.top + 6 : 0,
-        }}
-        {...(mode === 'month' ? swipeHandlers : {})}
-      >
-        {mode === 'week' ? (
-          <WeekGrid
-            pt={pt}
-            categories={categories}
-            calendars={calendars}
-            date={date}
-            today={today}
-            version={version}
-            now={now}
-            load={load}
-            bottomPad={60}
-            weather={wxCtx}
-            onFocus={setDate}
-            onPickDay={(d) => {
-              setDate(d);
-              setMode('day');
-            }}
-            onOpen={open}
-            onCreate={(d, startMin) => {
-              const h = String(Math.floor(startMin / 60)).padStart(2, '0');
-              const m = String(startMin % 60).padStart(2, '0');
-              setSheet({ key: Date.now(), target: { mode: 'new', date: d, start: `${h}:${m}` } });
-            }}
-          />
-        ) : mode === 'month' ? (
-          <MonthView
-            pt={pt}
-            categories={categories}
-            calendars={calendars}
-            month={date}
-            events={span}
-            today={today}
-            diary={diaryDays}
-            bottomPad={agendaFrom ? 6 : 96}
-            pullHidden={!!agendaFrom}
-            onPickDay={(d) => {
-              if (agendaFrom) {
-                setAgendaFrom(null);
-                return;
-              }
-              setDate(d);
-              setMode('day');
-            }}
-            onOpenDiary={(d) => router.push({ pathname: '/diary', params: { data: d } })}
-            onPull={() => {
-              const first = `${date.slice(0, 7)}-01`;
-              setAgendaFrom(today.slice(0, 7) === date.slice(0, 7) ? today : first);
-            }}
-          />
-        ) : (
-          <DayPager
-            date={date}
-            width={width}
-            enabled={!dragging && !pinching && !agendaFrom}
-            panHandlers={pinch.panHandlers}
-            scrollY={() => scrollY.current}
-            onStep={(delta, y) => {
-              keepScroll.current = true;
-              swipeY.current = y;
-              setDate((d) => addDaysIso(d, delta));
-            }}
-            render={renderDay}
-          />
-        )}
-      </View>
+            {...(mode === 'month' ? swipeHandlers : {})}
+          >
+            {mode === 'week' ? (
+              <WeekGrid
+                pt={pt}
+                categories={categories}
+                calendars={calendars}
+                date={date}
+                today={today}
+                version={version}
+                now={now}
+                load={load}
+                bottomPad={60}
+                weather={wxCtx}
+                onFocus={setDate}
+                onPickDay={(d) => {
+                  setDate(d);
+                  setMode('day');
+                }}
+                onOpen={open}
+                onCreate={(d, startMin) => {
+                  const h = String(Math.floor(startMin / 60)).padStart(2, '0');
+                  const m = String(startMin % 60).padStart(2, '0');
+                  setSheet({
+                    key: Date.now(),
+                    target: { mode: 'new', date: d, start: `${h}:${m}` },
+                  });
+                }}
+              />
+            ) : mode === 'month' ? (
+              <MonthView
+                pt={pt}
+                categories={categories}
+                calendars={calendars}
+                month={date}
+                events={span}
+                today={today}
+                diary={diaryDays}
+                bottomPad={agendaFrom ? 6 : 96}
+                pullHidden={!!agendaFrom}
+                onPickDay={(d) => {
+                  if (agendaFrom) {
+                    setAgendaFrom(null);
+                    return;
+                  }
+                  setDate(d);
+                  setMode('day');
+                }}
+                onOpenDiary={(d) => router.push({ pathname: '/diary', params: { data: d } })}
+                onPull={() => {
+                  const first = `${date.slice(0, 7)}-01`;
+                  setAgendaFrom(today.slice(0, 7) === date.slice(0, 7) ? today : first);
+                }}
+              />
+            ) : null}
+          </View>
+        </>
+      )}
 
       {plannerSettings.show_motivational && mode !== 'month' ? (
         <Text
