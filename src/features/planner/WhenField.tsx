@@ -1,17 +1,15 @@
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, TextInput, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/ui/CappedText';
 
+import { parseDuration } from './durationInput';
 import { Pick } from './Pick';
 import type { PlannerTheme } from './plannerTheme';
-import { fieldBox } from './sheetUi';
 
 type Lock = 'auto' | 'chiuso' | 'aperto';
-
-const QUICK = [15, 30, 45, 60, 90, 120];
 
 /** «45 min», «1h», «1h 30»: come `durLabel` del sito. */
 export function durationLabel(mins: number, minLabel: (n: number) => string): string {
@@ -27,8 +25,8 @@ const GAP = 10;
 
 /**
  * Il «quando» del foglio, disegnato come una linea: un punto per l'inizio, uno per la fine, e sulla linea che li unisce
- * una pillola con la durata, il lucchetto e «tutto il giorno». Inizio e fine hanno la stessa forma (data + ora);
- * le durate rapide si aprono solo toccando la pillola.
+ * una pillola con la durata, il lucchetto e «tutto il giorno», infilata sul filo (il filo le passa in mezzo all'orologio).
+ * Inizio e fine hanno la stessa forma (data + ora); la durata si scrive toccandola nella pillola.
  */
 export function WhenField(p: {
   pt: PlannerTheme;
@@ -40,20 +38,33 @@ export function WhenField(p: {
   lock: Lock;
   /** durata in minuti */
   minutes: number;
-  duration: string;
   lockLabel: string;
   onDate: (v: string) => void;
   onEndDate: (v: string) => void;
   onStart: (v: string) => void;
   onEnd: (v: string) => void;
   onDuration: (mins: number) => void;
-  onDurationText: (v: string) => void;
   onLock: () => void;
   onAllDay: (on: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { pt } = p;
-  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState('');
+  const editingRef = useRef(false);
+  const startEdit = () => {
+    editingRef.current = true;
+    setText(String(Math.max(1, p.minutes)));
+    setEditing(true);
+  };
+  // invio e perdita del fuoco arrivano di seguito: la durata si applica una volta sola
+  const finishEdit = () => {
+    if (!editingRef.current) return;
+    editingRef.current = false;
+    setEditing(false);
+    const mins = parseDuration(text);
+    if (mins) p.onDuration(mins);
+  };
   const minLabel = (n: number) => t('planner.n_min', { n });
   const decided = p.lock !== 'auto';
   const lockColor = decided ? pt.accentInk : pt.ink3;
@@ -78,6 +89,7 @@ export function WhenField(p: {
         testID={date.id}
         value={date.value}
         dim={date.dim}
+        short
         onChange={(v) => v && date.onChange(v)}
       />
       {time ? (
@@ -106,7 +118,7 @@ export function WhenField(p: {
               width: 2,
               borderRadius: 1,
               backgroundColor: pt.accent,
-              opacity: 0.35,
+              opacity: 0.5,
             }}
           />
           <View
@@ -143,7 +155,7 @@ export function WhenField(p: {
           )}
 
           {/* sulla linea: durata · lucchetto · tutto il giorno */}
-          <View style={{ minHeight: 40, justifyContent: 'center', marginLeft: -(RAIL + GAP - 2) }}>
+          <View style={{ minHeight: 40, justifyContent: 'center', marginLeft: -(RAIL + GAP + 14) }}>
             <View
               style={{
                 alignSelf: 'flex-start',
@@ -163,19 +175,19 @@ export function WhenField(p: {
                     testID="sheet-duration-pill"
                     accessibilityRole="button"
                     accessibilityLabel={t('planner.durata')}
-                    accessibilityState={{ expanded: open }}
-                    onPress={() => setOpen((o) => !o)}
+                    accessibilityState={{ expanded: editing }}
+                    onPress={startEdit}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 6,
+                      gap: 7,
                       paddingVertical: 7,
-                      paddingLeft: 11,
-                      paddingRight: 9,
-                      backgroundColor: open ? pt.accentSoft : 'transparent',
+                      paddingLeft: 16,
+                      paddingRight: 14,
+                      backgroundColor: editing ? pt.accentSoft : 'transparent',
                     }}
                   >
-                    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+                    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
                       <Circle cx={12} cy={12} r={9} stroke={pt.ink3} strokeWidth={2} />
                       <Path
                         d="M12 7v5l3 2"
@@ -184,17 +196,41 @@ export function WhenField(p: {
                         strokeLinecap="round"
                       />
                     </Svg>
-                    <Text
-                      style={{
-                        color: pt.ink,
-                        fontSize: 13,
-                        fontWeight: '600',
-                        fontFamily: pt.sans,
-                        fontVariant: ['tabular-nums'],
-                      }}
-                    >
-                      {durationLabel(p.minutes, minLabel)}
-                    </Text>
+                    {editing ? (
+                      <TextInput
+                        testID="sheet-duration"
+                        autoFocus
+                        selectTextOnFocus
+                        keyboardType="numbers-and-punctuation"
+                        returnKeyType="done"
+                        value={text}
+                        onChangeText={setText}
+                        onSubmitEditing={finishEdit}
+                        onBlur={finishEdit}
+                        accessibilityLabel={t('planner.durata')}
+                        style={{
+                          width: 54,
+                          padding: 0,
+                          color: pt.ink,
+                          fontSize: 13,
+                          fontWeight: '600',
+                          fontFamily: pt.sans,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      />
+                    ) : (
+                      <Text
+                        style={{
+                          color: pt.ink,
+                          fontSize: 13,
+                          fontWeight: '600',
+                          fontFamily: pt.sans,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {durationLabel(p.minutes, minLabel)}
+                      </Text>
+                    )}
                   </Pressable>
                   <View style={{ width: 0.5, alignSelf: 'stretch', backgroundColor: pt.hair }} />
                   <Pressable
@@ -285,55 +321,6 @@ export function WhenField(p: {
               </Pressable>
             </View>
           </View>
-
-          {open && !p.allDay ? (
-            <View
-              testID="sheet-quick"
-              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 8 }}
-            >
-              {QUICK.map((m) => {
-                const on = m === p.minutes;
-                return (
-                  <Pressable
-                    key={m}
-                    testID={`sheet-quick-${m}`}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on }}
-                    onPress={() => p.onDuration(m)}
-                    style={{
-                      paddingVertical: 6,
-                      paddingHorizontal: 11,
-                      borderRadius: 999,
-                      borderWidth: on ? 0 : 0.5,
-                      borderColor: pt.hair,
-                      backgroundColor: on ? pt.accentSoft : 'transparent',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: on ? pt.accentInk : pt.ink2,
-                        fontSize: 13,
-                        fontWeight: on ? '600' : '500',
-                        fontFamily: pt.sans,
-                      }}
-                    >
-                      {durationLabel(m, minLabel)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              <View style={[fieldBox(pt), { borderRadius: 999 }]}>
-                <Pick
-                  pt={pt}
-                  kind="time"
-                  testID="sheet-duration"
-                  value={p.duration}
-                  width={84}
-                  onChange={(v) => v && p.onDurationText(v)}
-                />
-              </View>
-            </View>
-          ) : null}
 
           {line(
             t('planner.fine_t'),

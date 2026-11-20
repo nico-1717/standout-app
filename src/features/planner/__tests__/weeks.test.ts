@@ -78,6 +78,12 @@ describe('planner settings store', () => {
     expect(c.days_visible).toBe(1);
   });
 
+  test('the default notification keeps only the known choices (one hour before otherwise)', () => {
+    expect(cleanPlannerSettings({ default_notify: 'at_time' }).default_notify).toBe('at_time');
+    expect(cleanPlannerSettings({ default_notify: 'custom' }).default_notify).toBe('h1');
+    expect(cleanPlannerSettings({}).default_notify).toBe('h1');
+  });
+
   test('a change is kept on the phone and sent once, the server value wins for the rest', async () => {
     const { db } = setup();
     const store = new PlannerSettingsStore(db);

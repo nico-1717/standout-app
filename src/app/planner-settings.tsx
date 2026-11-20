@@ -12,7 +12,12 @@ import { useWeather } from '@/features/planner/useWeather';
 import { localToday } from '@/features/tasks/groups';
 import { dayTitle } from '@/features/planner/PlannerParts';
 import { PALETTES, plannerTheme, type PaletteKey } from '@/features/planner/plannerTheme';
-import { ZOOMS, type Zoom } from '@/features/planner/settings';
+import {
+  DEFAULT_NOTIFIES,
+  ZOOMS,
+  type DefaultNotify,
+  type Zoom,
+} from '@/features/planner/settings';
 import {
   Field,
   RowSB,
@@ -25,6 +30,13 @@ import {
 } from '@/features/planner/sheetUi';
 import { Text } from '@/ui/CappedText';
 
+const NOTIFY_LABEL: Record<DefaultNotify, string> = {
+  none: 'planner.nessuna',
+  at_time: 'planner.nel_momento',
+  m30: 'planner.30_minuti_prima',
+  h1: 'planner.un_ora_prima',
+  d1: 'planner.un_giorno_prima',
+};
 const ZOOM_LABEL: Record<Zoom, string> = {
   agenda: 'planner.solo_eventi',
   h3: 'planner.3_ore',
@@ -269,7 +281,7 @@ export default function PlannerSettingsScreen() {
               onChange={(z) => update({ zoom: z })}
             />
           </RowSB>
-          <RowSB pt={pt} label={t('planner.quanto_marcato')} last={width < 760}>
+          <RowSB pt={pt} label={t('planner.quanto_marcato')}>
             <PlSlider
               pt={pt}
               testID="ps-contrast"
@@ -281,7 +293,7 @@ export default function PlannerSettingsScreen() {
             />
           </RowSB>
           {width >= 760 ? (
-            <RowSB pt={pt} label={t('planner.giorni_affiancati')} last>
+            <RowSB pt={pt} label={t('planner.giorni_affiancati')}>
               <PlSlider
                 pt={pt}
                 testID="ps-days"
@@ -293,6 +305,16 @@ export default function PlannerSettingsScreen() {
               />
             </RowSB>
           ) : null}
+          <RowSB pt={pt} label={t('planner.avviso_predefinito')} last>
+            <SelectField
+              pt={pt}
+              testID="ps-notify"
+              title={t('planner.avviso_predefinito')}
+              value={s.default_notify}
+              options={DEFAULT_NOTIFIES.map((n) => ({ id: n, label: t(NOTIFY_LABEL[n]) }))}
+              onChange={(n) => update({ default_notify: n })}
+            />
+          </RowSB>
         </Field>
       </ScrollView>
       {wxDate && weather.wx?.enabled ? (

@@ -916,6 +916,7 @@ export default function PlannerScreen() {
           book={services?.book}
           places={account}
           lang={i18n.language}
+          defaultNotify={plannerSettings.default_notify}
           calendars={calendars}
           categories={categories}
           projects={sheetProjects}

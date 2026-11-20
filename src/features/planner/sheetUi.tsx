@@ -354,6 +354,8 @@ const ICONS = {
   clock: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2',
   spark: 'M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8z',
   close: 'M6 6l12 12M18 6L6 18',
+  repeat: 'M17 2l4 4-4 4M3 11V9a3 3 0 013-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 01-3 3H3',
+  bell: 'M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 004 0',
 } as const;
 export type SheetIcon = keyof typeof ICONS;
 
@@ -458,8 +460,11 @@ export function SelectField<T extends string>({
   title,
   wide,
   compact,
+  icon,
 }: {
   pt: PlannerTheme;
+  /** un disegno davanti al valore (quando la scelta non ha un titolo sopra) */
+  icon?: SheetIcon;
   /** `dot`: il pallino colorato davanti (le categorie) */
   options: { id: T; label: string; dot?: string }[];
   value: T;
@@ -496,6 +501,7 @@ export function SelectField<T extends string>({
         ]}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+          {icon ? <SheetGlyph name={icon} color={pt.ink3} size={16} /> : null}
           {currentOpt?.dot ? (
             <View
               style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}

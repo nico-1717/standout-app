@@ -16,6 +16,8 @@ import type { Project } from '@/features/projects/logic';
 
 import { Pick, dayDiff } from './Pick';
 import { categoryHints } from './categoryHints';
+import { NOTIFY_MINUTES } from './durationInput';
+import type { DefaultNotify } from './settings';
 import { WhenField } from './WhenField';
 import { GuestsField, type PickedPlace } from './BookParts';
 import { mapsUrl, PlaceHits, PlaceStatus, usePlaceSearch, type PlacesApi } from './PlaceSearch';
@@ -103,6 +105,8 @@ export function EventSheet(p: {
   categories: Category[];
   /** i progetti a cui si può collegare l'evento */
   projects?: Project[];
+  /** l'avviso con cui parte un evento nuovo (impostazioni del planner; senza, un'ora prima) */
+  defaultNotify?: DefaultNotify;
   /** crea un progetto al volo dal selettore (restituisce il suo uuid) */
   onCreateProject?: (name: string) => string | null;
   target: SheetTarget;
@@ -160,8 +164,8 @@ export function EventSheet(p: {
       interval: 1,
       unit: 'week' as Unit,
       until: '',
-      notify: 'h1' as Notify,
-      notifyMin: 60,
+      notify: (p.defaultNotify ?? 'h1') as Notify,
+      notifyMin: NOTIFY_MINUTES[p.defaultNotify ?? 'h1'],
       location: '',
       notes: '',
       lock: 'auto' as Lock,
@@ -408,11 +412,8 @@ export function EventSheet(p: {
       const end = minutesOf(v) <= minutesOf(s.start) ? timeOf(minutesOf(s.start) + 5) : v;
       return { ...s, end };
     });
-  const setDuration = (v: string) => {
-    const mins = minutesOf(v);
-    if (!mins) return;
+  const setDuration = (mins: number) =>
     edit((s) => ({ ...s, end: timeOf(minutesOf(s.start) + mins) }));
-  };
   const setAllDay = (on: boolean) =>
     edit((s) => {
       if (on || (s.start && s.start !== '00:00') || s.end !== '23:59') return { ...s, allDay: on };
@@ -427,7 +428,6 @@ export function EventSheet(p: {
       : f.lock === 'aperto'
         ? t('planner.durata_libera_spostando_un_orario')
         : t('planner.spostando_linizio_la_durata_resta');
-  const duration = timeOf(minutesOf(f.end) - minutesOf(f.start));
 
   const inputText = {
     color: pt.ink,
@@ -608,17 +608,6 @@ export function EventSheet(p: {
                   marginHorizontal: 2,
                 }}
               >
-                <Text
-                  style={{
-                    color: pt.ink3,
-                    fontSize: 9,
-                    letterSpacing: 1.3,
-                    textTransform: 'uppercase',
-                    fontFamily: pt.sans,
-                  }}
-                >
-                  {t('planner.tipo')}
-                </Text>
                 <Seg
                   pt={pt}
                   small
@@ -658,31 +647,45 @@ export function EventSheet(p: {
                 allDay={f.allDay}
                 lock={f.lock}
                 minutes={Math.max(0, minutesOf(f.end) - minutesOf(f.start))}
-                duration={duration}
                 lockLabel={lockLabel}
                 onDate={setDate}
                 onEndDate={setEndDate}
                 onStart={setStart}
                 onEnd={setEnd}
-                onDuration={(m) => setDuration(timeOf(m))}
-                onDurationText={setDuration}
+                onDuration={setDuration}
                 onLock={() => set('lock', nextLock(f.lock))}
                 onAllDay={setAllDay}
               />
             </Field>
 
-            {/* ripetizione */}
-            <Field pt={pt} label={t('planner.ripeti')}>
-              <RowSB pt={pt} label={t('planner.frequenza_t')} last={f.repeat === 'none'}>
-                <SelectField
-                  pt={pt}
-                  testID="rep"
-                  title={t('planner.ripeti')}
-                  value={f.repeat}
-                  options={REPEATS.map((r) => ({ id: r.id, label: t(r.key) }))}
-                  onChange={(v) => set('repeat', v)}
-                />
-              </RowSB>
+            {/* ripetizione e avviso: una riga sola con due scelte affiancate, senza titoli (come sul sito) */}
+            <Field pt={pt}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <SelectField
+                    pt={pt}
+                    wide
+                    icon="repeat"
+                    testID="rep"
+                    title={t('planner.ripeti')}
+                    value={f.repeat}
+                    options={REPEATS.map((r) => ({ id: r.id, label: t(r.key) }))}
+                    onChange={(v) => set('repeat', v)}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <SelectField
+                    pt={pt}
+                    wide
+                    icon="bell"
+                    testID="not"
+                    title={t('planner.notifica')}
+                    value={f.notify}
+                    options={NOTIFIES.map((n) => ({ id: n.id, label: t(n.key) }))}
+                    onChange={(v) => set('notify', v)}
+                  />
+                </View>
+              </View>
               {f.repeat === 'custom' ? (
                 <RowSB pt={pt} label={t('planner.intervallo')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
@@ -728,20 +731,6 @@ export function EventSheet(p: {
                   />
                 </RowSB>
               ) : null}
-            </Field>
-
-            {/* notifica */}
-            <Field pt={pt} label={t('planner.notifica')}>
-              <RowSB pt={pt} label={t('planner.avvisami')} last={f.notify !== 'custom'}>
-                <SelectField
-                  pt={pt}
-                  testID="not"
-                  title={t('planner.notifica')}
-                  value={f.notify}
-                  options={NOTIFIES.map((n) => ({ id: n.id, label: t(n.key) }))}
-                  onChange={(v) => set('notify', v)}
-                />
-              </RowSB>
               {f.notify === 'custom' ? (
                 <RowSB pt={pt} label={t('planner.minuti_prima')} last>
                   <TextInput

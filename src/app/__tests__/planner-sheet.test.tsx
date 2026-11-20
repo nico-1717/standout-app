@@ -12,6 +12,7 @@ import PlannerScreen from '../(tabs)/planner';
 
 let mockServices: unknown;
 let mockVersion = 0;
+let mockDefaultNotify = 'h1';
 const mockChanged = jest.fn(() => {
   mockVersion += 1;
 });
@@ -32,6 +33,7 @@ jest.mock('@/core/app/AppProvider', () => ({
       ...jest.requireActual('@/features/planner/settings').DEFAULT_PLANNER_SETTINGS,
       first_week_start: null,
       first_week_number: 1,
+      default_notify: mockDefaultNotify,
     },
   }),
 }));
@@ -120,7 +122,10 @@ describe('Event sheet, as on the website', () => {
       ],
     }),
   );
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => {
+    jest.useRealTimers();
+    mockDefaultNotify = 'h1';
+  });
 
   test('the duration lock cycles auto → locked → open → auto', async () => {
     setup();
@@ -207,14 +212,36 @@ describe('Event sheet, as on the website', () => {
     expect(screen.getByTestId('sheet-enddate')).toBeTruthy();
   });
 
-  test('the duration pill opens quick durations and moves the end', async () => {
+  test('tapping the duration turns it into a field: typing 1h30 moves the end, no panel opens', async () => {
     setup();
     await open();
-    expect(screen.queryByTestId('sheet-quick')).toBeNull();
     await fireEvent.press(screen.getByTestId('sheet-duration-pill'));
-    await fireEvent.press(screen.getByTestId('sheet-quick-45'));
+    expect(screen.queryByTestId('sheet-quick')).toBeNull();
+    await fireEvent.changeText(screen.getByTestId('sheet-duration'), '1h30');
+    await fireEvent(screen.getByTestId('sheet-duration'), 'submitEditing');
     const at = (id: string) => new Date(screen.getByTestId(id).props.date as number).getTime();
-    expect((at('sheet-end') - at('sheet-start')) / 60000).toBe(45);
+    expect((at('sheet-end') - at('sheet-start')) / 60000).toBe(90);
+    expect(screen.queryByTestId('sheet-duration')).toBeNull();
+  });
+
+  test('a duration that makes no sense leaves the end where it was', async () => {
+    setup();
+    await open();
+    const at = (id: string) => new Date(screen.getByTestId(id).props.date as number).getTime();
+    const before = at('sheet-end');
+    await fireEvent.press(screen.getByTestId('sheet-duration-pill'));
+    await fireEvent.changeText(screen.getByTestId('sheet-duration'), 'abc');
+    await fireEvent(screen.getByTestId('sheet-duration'), 'blur');
+    expect(at('sheet-end')).toBe(before);
+  });
+
+  test('dates read with a two-digit year and the sheet has no Type, Repeat or Notification titles', async () => {
+    setup();
+    await open();
+    expect(screen.getAllByText(/^\d{1,2} \p{L}{3} \d{2}$/u).length).toBe(2);
+    expect(screen.queryByText(/^Type$/i)).toBeNull();
+    expect(screen.queryByText(/^Repeat$/i)).toBeNull();
+    expect(screen.queryByText(/^Notification$/i)).toBeNull();
   });
 
   test('the category menu has a "none" entry and the picks next to it follow the title', async () => {
@@ -238,6 +265,17 @@ describe('Event sheet, as on the website', () => {
     await fireEvent.press(screen.getByTestId('cat-__none'));
     expect(screen.getByTestId(`cat-${health}`).props.accessibilityState).toMatchObject({
       selected: false,
+    });
+  });
+
+  test('a new event starts with the default notification chosen in the settings', async () => {
+    const { planner } = setup();
+    mockDefaultNotify = 'at_time';
+    await open();
+    await fireEvent.changeText(screen.getByTestId('sheet-title'), 'Soon');
+    await fireEvent.press(screen.getByTestId('sheet-save'));
+    expect(planner.rows().find((r) => r.title === 'Soon')).toMatchObject({
+      notify_type: 'at_time',
     });
   });
 

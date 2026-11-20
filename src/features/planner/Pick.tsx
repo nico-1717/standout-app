@@ -21,6 +21,12 @@ export const hhmmOf = (d: Date) =>
 export const dayDiff = (a: string, b: string) =>
   Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
+/** «20 Nov 26»: l'anno a due cifre (come `dataBreve` del sito); `month` dà il nome del mese, 1-12. */
+export const shortDate = (iso: string, month: (n: number) => string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${month(m ?? 1).slice(0, 3)} ${String(y).slice(2)}`;
+};
+
 /** `.pl-pick`: data o ora. Su iPhone il selettore compatto di sistema; altrove un tocco apre quello del telefono. */
 export function Pick({
   pt,
@@ -32,6 +38,7 @@ export function Pick({
   testID,
   dim,
   width,
+  short,
 }: {
   pt: PlannerTheme;
   kind: 'date' | 'time';
@@ -43,23 +50,55 @@ export function Pick({
   /** sbiadita (la fine nello stesso giorno dell'inizio) */
   dim?: boolean;
   width?: number;
+  /** la data si legge «20 Nov 26» (solo date) */
+  short?: boolean;
 }) {
   const { t } = useTranslation();
   const isDate = kind === 'date';
   const current = value ? (isDate ? dateOf(value) : clockOf(value)) : null;
   const from = (d: Date) => (isDate ? isoOf(d) : hhmmOf(d));
   const native = current && Platform.OS === 'ios';
+  const label = isDate && short && value ? shortDate(value, (n) => t(`planner.mese_${n}`)) : value;
+  // iOS, data breve: il selettore di sistema sta sopra al testo, trasparente, e prende lui il tocco
+  const overlay = native && isDate && short;
   return (
     <View
       style={[
-        native
-          ? { flexDirection: 'row', alignItems: 'center' }
-          : [fieldBox(pt), { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }],
+        overlay
+          ? [fieldBox(pt), { alignItems: 'center', justifyContent: 'center', minWidth: 108 }]
+          : native
+            ? { flexDirection: 'row', alignItems: 'center' }
+            : [fieldBox(pt), { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }],
         { minHeight: 38, width },
         dim ? { opacity: 0.42 } : null,
       ]}
     >
-      {native ? (
+      {overlay ? (
+        <>
+          <Text
+            style={{
+              color: pt.ink,
+              fontSize: 14,
+              fontFamily: pt.sans,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {label}
+          </Text>
+          <View
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.02 }}
+          >
+            <DateTimePicker
+              testID={testID}
+              value={current}
+              mode={kind}
+              display="compact"
+              themeVariant={pt.dark ? 'dark' : 'light'}
+              onValueChange={(_, d) => d && onChange(from(d))}
+            />
+          </View>
+        </>
+      ) : native ? (
         <DateTimePicker
           testID={testID}
           value={current}
@@ -92,7 +131,7 @@ export function Pick({
               textAlign: width ? 'center' : 'left',
             }}
           >
-            {value || placeholder || '—'}
+            {label || placeholder || '—'}
           </Text>
         </Pressable>
       )}

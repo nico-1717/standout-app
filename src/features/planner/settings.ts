@@ -4,6 +4,8 @@ import { getState, setState } from '@/core/sync/engine';
 import { PALETTES, type PaletteKey } from './plannerTheme';
 
 /** Le impostazioni del planner (tabella `planner_settings` del sito, /api/v1/planner/settings). */
+export const DEFAULT_NOTIFIES = ['none', 'at_time', 'm30', 'h1', 'd1'] as const;
+export type DefaultNotify = (typeof DEFAULT_NOTIFIES)[number];
 export const ZOOMS = ['agenda', 'h3', 'h1', 'm30', 'm15', 'm5'] as const;
 export type Zoom = (typeof ZOOMS)[number];
 
@@ -22,6 +24,8 @@ export interface PlannerSettings {
   fabs_open: boolean;
   contrast_level: number;
   days_visible: number;
+  /** l'avviso con cui parte un evento nuovo */
+  default_notify: DefaultNotify;
 }
 
 export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
@@ -38,6 +42,7 @@ export const DEFAULT_PLANNER_SETTINGS: PlannerSettings = {
   fabs_open: true,
   contrast_level: 3,
   days_visible: 3,
+  default_notify: 'h1',
 };
 
 export interface PlannerSettingsApi {
@@ -73,6 +78,9 @@ export function cleanPlannerSettings(raw: unknown): PlannerSettings {
     fabs_open: bool(r.fabs_open, D.fabs_open),
     contrast_level: num(r.contrast_level, 1, 5, D.contrast_level),
     days_visible: num(r.days_visible, 1, 7, D.days_visible),
+    default_notify: (DEFAULT_NOTIFIES as readonly unknown[]).includes(r.default_notify)
+      ? (r.default_notify as DefaultNotify)
+      : D.default_notify,
   };
 }
 
