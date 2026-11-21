@@ -1,5 +1,4 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { useRef } from 'react';
 
 import { useZoomEngine } from '../zoomEngine';
 
@@ -15,9 +14,8 @@ jest.mock('react-native-gesture-handler', () => ({
 }));
 jest.mock('react-native-reanimated', () => ({
   useSharedValue: (v: unknown) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const box = useRef({ value: v });
-    return box.current;
+    const { useRef } = jest.requireActual<typeof import('react')>('react');
+    return useRef({ value: v }).current;
   },
   useAnimatedRef: () => ({ current: null }),
   useAnimatedScrollHandler: () => () => undefined,
