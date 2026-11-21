@@ -20,7 +20,11 @@ function put<T>(sv: { value: T }, v: T) {
   sv.value = v;
 }
 
-const clampMin = (m: number) => Math.max(0, Math.min(1439, m));
+/** Dentro i gesti gira sul thread dell'interfaccia: ogni funzione chiamata lì deve essere un worklet. */
+const clampMin = (m: number) => {
+  'worklet';
+  return Math.max(0, Math.min(1439, m));
+};
 
 /**
  * Lo zoom del planner, costruito come quello del sito (`pinch()` + `--pxm`): la grandezza vera è UNA sola, la densità
