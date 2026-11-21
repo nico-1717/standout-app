@@ -143,6 +143,8 @@ export default function PlannerScreen() {
     zoom,
     save: (z) => updatePlannerSettings?.({ zoom: z }),
     enabled: !dragging,
+    // un errore dentro il gesto non chiude l'app: lo dice, e basta una foto di questo avviso per capire dov'era
+    onError: (message) => Alert.alert('Zoom', message),
   });
   const { step, pinching } = zoomer;
   const scroller = zoomer.scrollRef;

@@ -24,13 +24,27 @@ export interface PinchMove {
   kind: 'none' | 'density' | 'mode';
 }
 
+/** Un numero che non c'è (o non è un numero) non deve mai arrivare a una misura: sul telefono un NaN fa chiudere l'app. */
+export function finiteOr(v: unknown, fallback: number): number {
+  'worklet';
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
+
 export function pinchBegin(step: number, ppm: number, scale: number): PinchSt {
   'worklet';
-  return { base: scale || 1, ppm0: step === 0 ? 0 : ppm, step0: step, step, switched: false };
+  return {
+    base: finiteOr(scale, 1) || 1,
+    ppm0: step === 0 ? 0 : finiteOr(ppm, 0),
+    step0: step,
+    step,
+    switched: false,
+  };
 }
 
 export function pinchMove(st: PinchSt, scale: number): PinchMove {
   'worklet';
+  // le dita non hanno dato una scala: si resta dov'è
+  if (typeof scale !== 'number' || !Number.isFinite(scale)) return { st, ppm: 0, kind: 'none' };
   const ratio = scale / (st.base || 1);
   if (st.step === 0) {
     if (ratio > 1.05 && !st.switched) {

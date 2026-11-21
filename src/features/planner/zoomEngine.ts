@@ -12,7 +12,7 @@ import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import { haptic } from '@/ui/motion';
 
 import { STEP_KEYS, naturalPpm, pxPerMinute, type Zoom } from './layout';
-import { pinchBegin, pinchMove, type PinchSt } from './pinch';
+import { finiteOr, pinchBegin, pinchMove, type PinchSt } from './pinch';
 
 /** Scrive un valore condiviso (un'assegnazione scritta così non la rifiuta la regola sulle modifiche). */
 function put<T>(sv: { value: T }, v: T) {
@@ -37,6 +37,8 @@ export function useZoomEngine(a: {
   save: (zoom: Zoom) => void;
   /** spento mentre si trascina un evento */
   enabled: boolean;
+  /** un errore dentro il gesto (che sul thread dell'interfaccia farebbe chiudere l'app): si dice e il gesto si ferma */
+  onError?: (message: string) => void;
 }) {
   const [step, setStep] = useState<Zoom>(a.zoom);
   const [pinching, setPinching] = useState(false);
@@ -78,7 +80,9 @@ export function useZoomEngine(a: {
     const top = gridTop.value;
     const y = top + anchorMin.value * p - anchorY.value;
     const max = Math.max(0, top + 1440 * p - viewH.value);
-    scrollTo(scrollRef, 0, Math.max(0, Math.min(max, y)), false);
+    const to = Math.max(0, Math.min(max, y));
+    // mai uno scorrimento a un numero che non è un numero: iOS lo prende come un errore e chiude l'app
+    if (Number.isFinite(to)) scrollTo(scrollRef, 0, to, false);
   };
 
   const stepChanged = useCallback((idx: number, centerMin: number) => {
@@ -99,51 +103,76 @@ export function useZoomEngine(a: {
     setPinching(false);
     if (idx !== from) saveRef.current(STEP_KEYS[idx] ?? 'm30');
   }, []);
+  const errorRef = useRef(a.onError);
+  useEffect(() => {
+    errorRef.current = a.onError;
+  });
+  /** Un errore nel gesto: il gesto finisce (le dita si riprendono la pagina) e si racconta cosa è successo. */
+  const failed = useCallback((message: string) => {
+    setPinching(false);
+    errorRef.current?.(message);
+  }, []);
 
   const gesture = usePinchGesture({
     enabled: a.enabled,
     onActivate: (e) => {
       'worklet';
-      const idx = stepIdx.value;
-      put(st, pinchBegin(idx, ppm.value, e.scale));
-      put(startIdx, idx);
-      put(anchorY, e.focalY);
-      // da lista non c'è un orario sotto le dita: si riparte dalle 9, come sul sito
-      put(
-        anchorMin,
-        idx === 0 || ppm.value <= 0
-          ? 540
-          : clampMin((scrollY.value + e.focalY - gridTop.value) / ppm.value),
-      );
-      put(pinchOn, 1);
-      scheduleOnRN(started);
+      try {
+        const idx = stepIdx.value;
+        // il punto fra le dita: se manca, il centro della pagina (mai un numero che non c'è)
+        const fy = finiteOr(e.focalY, viewH.value / 2);
+        put(st, pinchBegin(idx, ppm.value, e.scale));
+        put(startIdx, idx);
+        put(anchorY, fy);
+        // da lista non c'è un orario sotto le dita: si riparte dalle 9, come sul sito
+        put(
+          anchorMin,
+          idx === 0 || ppm.value <= 0
+            ? 540
+            : clampMin((scrollY.value + fy - gridTop.value) / ppm.value),
+        );
+        put(pinchOn, 1);
+        scheduleOnRN(started);
+      } catch (err) {
+        put(pinchOn, 0);
+        scheduleOnRN(failed, `pinch start: ${String(err)}`);
+      }
     },
     onUpdate: (e) => {
       'worklet';
-      const cur = st.value;
-      if (!cur) return;
-      const m = pinchMove(cur, e.scale);
-      put(st, m.st);
-      if (m.kind === 'none') return;
-      put(ppm, m.ppm);
-      if (m.kind === 'mode') {
-        if (m.st.step === 1) put(anchorMin, 540);
-        put(stepIdx, m.st.step);
-        scheduleOnRN(modeChanged, m.st.step);
-        if (m.st.step > 0) place();
-        return;
-      }
-      place();
-      if (m.st.step !== stepIdx.value) {
-        put(stepIdx, m.st.step);
-        scheduleOnRN(stepChanged, m.st.step, anchorMin.value);
+      try {
+        const cur = st.value;
+        if (!cur) return;
+        const m = pinchMove(cur, e.scale);
+        put(st, m.st);
+        if (m.kind === 'none') return;
+        if (!Number.isFinite(m.ppm)) return;
+        put(ppm, m.ppm);
+        if (m.kind === 'mode') {
+          if (m.st.step === 1) put(anchorMin, 540);
+          put(stepIdx, m.st.step);
+          scheduleOnRN(modeChanged, m.st.step);
+          if (m.st.step > 0) place();
+          return;
+        }
+        place();
+        if (m.st.step !== stepIdx.value) {
+          put(stepIdx, m.st.step);
+          scheduleOnRN(stepChanged, m.st.step, anchorMin.value);
+        }
+      } catch (err) {
+        scheduleOnRN(failed, `pinch move: ${String(err)}`);
       }
     },
     onFinalize: () => {
       'worklet';
-      if (pinchOn.value === 0) return;
-      put(pinchOn, 0);
-      scheduleOnRN(finished, stepIdx.value, startIdx.value);
+      try {
+        if (pinchOn.value === 0) return;
+        put(pinchOn, 0);
+        scheduleOnRN(finished, stepIdx.value, startIdx.value);
+      } catch (err) {
+        scheduleOnRN(failed, `pinch end: ${String(err)}`);
+      }
     },
   });
 
