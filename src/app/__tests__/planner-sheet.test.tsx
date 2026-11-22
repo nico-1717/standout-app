@@ -178,13 +178,27 @@ describe('Event sheet, as on the website', () => {
     });
   });
 
-  test('a colour swatch is saved as the event colour; the first one clears it', async () => {
+  test('the colour circle opens a list of named colours; the choice is saved as the event colour', async () => {
     const { planner } = setup();
     await open();
     await fireEvent.changeText(screen.getByTestId('sheet-title'), 'Tinted');
-    await fireEvent.press(screen.getByTestId('sw-2'));
+    await fireEvent.press(screen.getByTestId('color-btn'));
+    expect(screen.getByText('Coral')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('color-#F58C84'));
     await fireEvent.press(screen.getByTestId('sheet-save'));
-    expect(planner.rows().find((r) => r.title === 'Tinted')!.color).toBe('#F0D3D6');
+    expect(planner.rows().find((r) => r.title === 'Tinted')!.color).toBe('#F58C84');
+  });
+
+  test('the first item of the colour list goes back to the category colour', async () => {
+    const { planner } = setup();
+    await open();
+    await fireEvent.changeText(screen.getByTestId('sheet-title'), 'Plain');
+    await fireEvent.press(screen.getByTestId('color-btn'));
+    await fireEvent.press(screen.getByTestId('color-#6DB6F2'));
+    await fireEvent.press(screen.getByTestId('color-btn'));
+    await fireEvent.press(screen.getByTestId('color-__base'));
+    await fireEvent.press(screen.getByTestId('sheet-save'));
+    expect(planner.rows().find((r) => r.title === 'Plain')!.color).toBeNull();
   });
 
   test('repeat, notify and calendar are chosen from lists', async () => {
@@ -243,7 +257,7 @@ describe('Event sheet, as on the website', () => {
   test('dates read with a two-digit year and the sheet has no Type, Repeat or Notification titles', async () => {
     setup();
     await open();
-    expect(screen.getAllByText(/^\d{1,2} \p{L}{3} \d{2}$/u).length).toBe(2);
+    expect(screen.getAllByText(/^\p{L}{3}, \d{1,2} \p{L}{3} \d{2}$/u).length).toBe(2);
     expect(screen.queryByText(/^Type$/i)).toBeNull();
     expect(screen.queryByText(/^Repeat$/i)).toBeNull();
     expect(screen.queryByText(/^Notification$/i)).toBeNull();

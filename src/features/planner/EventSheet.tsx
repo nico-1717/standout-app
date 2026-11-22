@@ -57,15 +57,18 @@ export type SheetTarget =
 type Importance = 'normal' | 'high' | 'highest';
 type Lock = 'auto' | 'chiuso' | 'aperto';
 
-/** I colori fissi del selettore «Colore» (il primo, quello della categoria, si aggiunge davanti). */
-export const SWATCHES = [
-  '#C7DED6',
-  '#F0D3D6',
-  '#D8D3E8',
-  '#F3E4C0',
-  '#CFDDEA',
-  '#E8D5C7',
-  '#DCE7C8',
+/** I colori che si scelgono per un evento (come `COLORI_EVENTO` del sito): pastello ma pieno, ognuno col suo nome. */
+export const EVENT_COLORS = [
+  { key: 'planner.col_corallo', hex: '#F58C84' },
+  { key: 'planner.col_albicocca', hex: '#F7B267' },
+  { key: 'planner.col_limone', hex: '#F2D04F' },
+  { key: 'planner.col_lime', hex: '#A9D672' },
+  { key: 'planner.col_menta', hex: '#62CDA4' },
+  { key: 'planner.col_cielo', hex: '#6DB6F2' },
+  { key: 'planner.col_pervinca', hex: '#8F9DF2' },
+  { key: 'planner.col_lavanda', hex: '#B890F0' },
+  { key: 'planner.col_rosa', hex: '#F28DBB' },
+  { key: 'planner.col_pietra', hex: '#A9B4BE' },
 ];
 
 const REPEATS: { id: Repeat; key: string }[] = [
@@ -770,6 +773,26 @@ export function EventSheet(p: {
             {/* categoria: un menu e, accanto, l'ultima usata e le suggerite dal titolo */}
             <Field pt={pt} label={t('planner.categoria')}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {/* il cerchio del colore: toccandolo si apre l'elenco dei colori con i loro nomi */}
+                <SelectField
+                  pt={pt}
+                  bigDots
+                  testID="color"
+                  title={t('planner.colore')}
+                  value={f.color ?? '__base'}
+                  options={[
+                    {
+                      id: '__base',
+                      label: `${t('planner.col_categoria')} · ${categoryOptions.find((o) => o.id === (f.category ?? (project ? '__project' : '__none')))?.label ?? ''}`,
+                      dot: baseColor,
+                    },
+                    ...EVENT_COLORS.map((c) => ({ id: c.hex, label: t(c.key), dot: c.hex })),
+                  ]}
+                  onChange={(v) => set('color', v === '__base' ? null : v)}
+                  trigger={(open) => (
+                    <Swatch pt={pt} testID="color-btn" color={tint} on onPress={open} />
+                  )}
+                />
                 <View style={{ flexBasis: '38%', maxWidth: 190, flexShrink: 0 }}>
                   <SelectField
                     pt={pt}
@@ -820,22 +843,6 @@ export function EventSheet(p: {
                     />
                   ))}
                 </ScrollView>
-              </View>
-            </Field>
-
-            {/* colore */}
-            <Field pt={pt} label={t('planner.colore')}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 4 }}>
-                {[baseColor, ...SWATCHES].map((c, i) => (
-                  <Swatch
-                    key={`${c}-${i}`}
-                    pt={pt}
-                    testID={`sw-${i}`}
-                    color={c}
-                    on={f.color === c || (i === 0 && !f.color)}
-                    onPress={() => set('color', i === 0 ? null : c)}
-                  />
-                ))}
               </View>
             </Field>
 

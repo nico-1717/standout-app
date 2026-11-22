@@ -21,10 +21,19 @@ export const hhmmOf = (d: Date) =>
 export const dayDiff = (a: string, b: string) =>
   Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 
-/** «20 Nov 26»: l'anno a due cifre (come `dataBreve` del sito); `month` dà il nome del mese, 1-12. */
-export const shortDate = (iso: string, month: (n: number) => string) => {
+/**
+ * «Ven, 20 Nov 26»: il giorno della settimana, l'anno a due cifre (come `dataBreve` del sito); `month` dà il nome del mese
+ * (1-12) e `weekday` quello del giorno (1 = lunedì, 7 = domenica), già abbreviati o no: qui si tagliano a tre lettere.
+ */
+export const shortDate = (
+  iso: string,
+  month: (n: number) => string,
+  weekday?: (n: number) => string,
+) => {
   const [y, m, d] = iso.split('-').map(Number);
-  return `${d} ${month(m ?? 1).slice(0, 3)} ${String(y).slice(2)}`;
+  const dow = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)).getUTCDay();
+  const day = weekday ? `${weekday(((dow + 6) % 7) + 1).slice(0, 3)}, ` : '';
+  return `${day}${d} ${month(m ?? 1).slice(0, 3)} ${String(y).slice(2)}`;
 };
 
 /** `.pl-pick`: data o ora. Su iPhone il selettore compatto di sistema; altrove un tocco apre quello del telefono. */
@@ -39,6 +48,7 @@ export function Pick({
   dim,
   width,
   short,
+  bare,
 }: {
   pt: PlannerTheme;
   kind: 'date' | 'time';
@@ -50,28 +60,46 @@ export function Pick({
   /** sbiadita (la fine nello stesso giorno dell'inizio) */
   dim?: boolean;
   width?: number;
-  /** la data si legge «20 Nov 26» (solo date) */
+  /** la data si legge «Ven, 20 Nov 26» (solo date) */
   short?: boolean;
+  /** senza il riquadro: sta dentro un riquadro più grande (data e ora unite); su iPhone anche l'ora è testo con il selettore sopra */
+  bare?: boolean;
 }) {
   const { t } = useTranslation();
   const isDate = kind === 'date';
   const current = value ? (isDate ? dateOf(value) : clockOf(value)) : null;
   const from = (d: Date) => (isDate ? isoOf(d) : hhmmOf(d));
   const native = current && Platform.OS === 'ios';
-  const label = isDate && short && value ? shortDate(value, (n) => t(`planner.mese_${n}`)) : value;
-  // iOS, data breve: il selettore di sistema sta sopra al testo, trasparente, e prende lui il tocco
-  const overlay = native && isDate && short;
+  const label =
+    isDate && short && value
+      ? shortDate(
+          value,
+          (n) => t(`planner.mese_${n}`),
+          (n) => t(`planner.gg_${n}`),
+        )
+      : value;
+  // iOS, data breve (o ora dentro un riquadro unito): il selettore di sistema sta sopra al testo, trasparente, e prende lui il tocco
+  const overlay = native && (isDate ? short : bare);
   return (
     <View
       style={[
         overlay
           ? [
-              fieldBox(pt),
-              { alignItems: 'center', justifyContent: 'center', minWidth: 118, overflow: 'hidden' },
+              bare ? null : fieldBox(pt),
+              {
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: isDate ? 128 : 72,
+                paddingHorizontal: bare ? 2 : 0,
+                overflow: 'hidden',
+              },
             ]
           : native
             ? { flexDirection: 'row', alignItems: 'center' }
-            : [fieldBox(pt), { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 }],
+            : [
+                bare ? null : fieldBox(pt),
+                { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
+              ],
         { minHeight: 38, width },
         dim ? { opacity: 0.42 } : null,
       ]}

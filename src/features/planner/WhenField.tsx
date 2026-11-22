@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@/ui/CappedText';
 
 import { Pick, clockOf, hhmmOf } from './Pick';
+import { fieldBox } from './sheetUi';
 import type { PlannerTheme } from './plannerTheme';
 
 type Lock = 'auto' | 'chiuso' | 'aperto';
@@ -81,24 +82,44 @@ export function WhenField(p: {
       }}
     >
       <Text style={{ flex: 1, color: pt.ink2, fontSize: 14.5, fontFamily: pt.sans }}>{label}</Text>
-      <Pick
-        pt={pt}
-        kind="date"
-        testID={date.id}
-        value={date.value}
-        dim={date.dim}
-        short
-        onChange={(v) => v && date.onChange(v)}
-      />
-      {time ? (
+      {/* data e ora in un solo riquadro: un filo in mezzo, niente spazio fra le due (`.pl-dt` del sito) */}
+      <View
+        style={[
+          time ? fieldBox(pt) : null,
+          { flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+        ]}
+      >
         <Pick
           pt={pt}
-          kind="time"
-          testID={time.id}
-          value={time.value}
-          onChange={(v) => v && time.onChange(v)}
+          kind="date"
+          testID={date.id}
+          value={date.value}
+          dim={date.dim}
+          short
+          bare={!!time}
+          onChange={(v) => v && date.onChange(v)}
         />
-      ) : null}
+        {time ? (
+          <>
+            <View
+              style={{
+                width: 0.5,
+                alignSelf: 'stretch',
+                marginVertical: 7,
+                backgroundColor: pt.hair2,
+              }}
+            />
+            <Pick
+              pt={pt}
+              kind="time"
+              bare
+              testID={time.id}
+              value={time.value}
+              onChange={(v) => v && time.onChange(v)}
+            />
+          </>
+        ) : null}
+      </View>
     </View>
   );
 

@@ -464,10 +464,16 @@ export function SelectField<T extends string>({
   wide,
   compact,
   icon,
+  trigger,
+  bigDots,
 }: {
   pt: PlannerTheme;
   /** un disegno davanti al valore (quando la scelta non ha un titolo sopra) */
   icon?: SheetIcon;
+  /** al posto del campo: un proprio tastino che apre lo stesso elenco (il cerchio del colore) */
+  trigger?: (open: () => void) => ReactNode;
+  /** i pallini colorati dell'elenco grandi (i colori con il loro nome) */
+  bigDots?: boolean;
   /** `dot`: il pallino colorato davanti (le categorie) */
   options: { id: T; label: string; dot?: string }[];
   value: T;
@@ -483,42 +489,46 @@ export function SelectField<T extends string>({
   const current = currentOpt?.label ?? '';
   return (
     <>
-      <Pressable
-        testID={testID}
-        accessibilityRole="button"
-        accessibilityLabel={title ?? current}
-        accessibilityValue={{ text: current }}
-        onPress={() => setOpen(true)}
-        style={[
-          fieldBox(pt),
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            paddingHorizontal: 12,
-            minHeight: 38,
-            minWidth: wide || compact ? 0 : 120,
-          },
-          wide ? { alignSelf: 'stretch' } : null,
-        ]}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
-          {icon ? <SheetGlyph name={icon} color={pt.ink3} size={16} /> : null}
-          {currentOpt?.dot ? (
-            <View
-              style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}
-            />
-          ) : null}
-          <Text
-            style={{ color: pt.ink, fontSize: 14, fontFamily: pt.sans, flexShrink: 1 }}
-            numberOfLines={1}
-          >
-            {current}
-          </Text>
-        </View>
-        <SheetGlyph name="chevron" color={pt.ink2} size={14} />
-      </Pressable>
+      {trigger ? (
+        trigger(() => setOpen(true))
+      ) : (
+        <Pressable
+          testID={testID}
+          accessibilityRole="button"
+          accessibilityLabel={title ?? current}
+          accessibilityValue={{ text: current }}
+          onPress={() => setOpen(true)}
+          style={[
+            fieldBox(pt),
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              paddingHorizontal: 12,
+              minHeight: 38,
+              minWidth: wide || compact ? 0 : 120,
+            },
+            wide ? { alignSelf: 'stretch' } : null,
+          ]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+            {icon ? <SheetGlyph name={icon} color={pt.ink3} size={16} /> : null}
+            {currentOpt?.dot ? (
+              <View
+                style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}
+              />
+            ) : null}
+            <Text
+              style={{ color: pt.ink, fontSize: 14, fontFamily: pt.sans, flexShrink: 1 }}
+              numberOfLines={1}
+            >
+              {current}
+            </Text>
+          </View>
+          <SheetGlyph name="chevron" color={pt.ink2} size={14} />
+        </Pressable>
+      )}
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable
           testID={`${testID}-backdrop`}
@@ -567,7 +577,12 @@ export function SelectField<T extends string>({
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       {o.dot ? (
                         <View
-                          style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: o.dot }}
+                          style={{
+                            width: bigDots ? 22 : 10,
+                            height: bigDots ? 22 : 10,
+                            borderRadius: bigDots ? 11 : 5,
+                            backgroundColor: o.dot,
+                          }}
                         />
                       ) : null}
                       <Text
