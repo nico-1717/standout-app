@@ -511,28 +511,34 @@ export function SelectField<T extends string>({
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 8,
-              paddingHorizontal: 12,
-              minHeight: 38,
+              paddingHorizontal: glass ? 11 : 12,
+              minHeight: glass ? 30 : 38,
               minWidth: wide || compact ? 0 : 120,
             },
+            glass ? { backgroundColor: pt.glass, borderColor: pt.glassEdge } : null,
             wide ? { alignSelf: 'stretch' } : null,
           ]}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
-            {icon ? <SheetGlyph name={icon} color={pt.ink3} size={glass ? 15 : 16} /> : null}
+            {icon ? <SheetGlyph name={icon} color={pt.ink3} size={glass ? 14 : 16} /> : null}
             {currentOpt?.dot ? (
               <View
                 style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}
               />
             ) : null}
             <Text
-              style={{ color: pt.ink, fontSize: 14, fontFamily: pt.sans, flexShrink: 1 }}
+              style={{
+                color: pt.ink,
+                fontSize: glass ? 13 : 14,
+                fontFamily: pt.sans,
+                flexShrink: 1,
+              }}
               numberOfLines={1}
             >
               {current}
             </Text>
           </View>
-          <SheetGlyph name="chevron" color={pt.ink2} size={14} />
+          <SheetGlyph name="chevron" color={pt.ink2} size={glass ? 12 : 14} />
         </Pressable>
       )}
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>

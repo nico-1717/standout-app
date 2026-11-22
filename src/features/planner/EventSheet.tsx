@@ -876,10 +876,10 @@ export function EventSheet(p: {
                   style={{
                     flex: 1,
                     paddingHorizontal: 13,
-                    paddingVertical: 12,
+                    paddingVertical: 10,
                     color: pt.ink,
-                    fontSize: 19,
-                    fontFamily: pt.serif,
+                    fontSize: 14.5,
+                    fontFamily: pt.sans,
                   }}
                 />
                 <IconBtn

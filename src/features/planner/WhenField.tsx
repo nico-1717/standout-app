@@ -23,8 +23,8 @@ const LINE_H = 46;
 const RAIL = 22;
 const GAP = 10;
 /** la pillola «durata · lucchetto · tutto il giorno»: bassa, e la linea si ferma sopra e sotto perché è trasparente */
-const PILL_H = 28;
-const MID_H = 40;
+const PILL_H = 24;
+const MID_H = 30;
 
 /**
  * Il «quando» del foglio, disegnato come una linea: un punto per l'inizio, uno per la fine, e sulla linea che li unisce
@@ -191,7 +191,6 @@ export function WhenField(p: {
                 height: PILL_H,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderStyle: 'dashed',
                 borderColor: pt.glassEdge,
                 backgroundColor: pt.glass,
                 overflow: 'hidden',
@@ -215,7 +214,7 @@ export function WhenField(p: {
                       paddingRight: 14,
                     }}
                   >
-                    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                       <Circle cx={12} cy={12} r={9} stroke={pt.ink3} strokeWidth={2} />
                       <Path
                         d="M12 7v5l3 2"
@@ -227,7 +226,7 @@ export function WhenField(p: {
                     <Text
                       style={{
                         color: pt.ink,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: '600',
                         fontFamily: pt.sans,
                         fontVariant: ['tabular-nums'],
@@ -270,11 +269,13 @@ export function WhenField(p: {
                       paddingHorizontal: 10,
                       paddingVertical: 0,
                       alignSelf: 'stretch',
+                      justifyContent: 'center',
+                      alignItems: 'center',
                       opacity: p.lock === 'auto' ? 0.45 : 1,
                       backgroundColor: decided ? pt.accentSoft : 'transparent',
                     }}
                   >
-                    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                       <Path
                         d="M7.2 11h9.6a2.2 2.2 0 012.2 2.2v4.6a2.2 2.2 0 01-2.2 2.2H7.2A2.2 2.2 0 015 17.8v-4.6A2.2 2.2 0 017.2 11z"
                         stroke={lockColor}
@@ -321,7 +322,7 @@ export function WhenField(p: {
                   backgroundColor: p.allDay ? pt.accentSoft : 'transparent',
                 }}
               >
-                <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                   <Circle
                     cx={12}
                     cy={12}
@@ -339,7 +340,7 @@ export function WhenField(p: {
                 <Text
                   style={{
                     color: p.allDay ? pt.accentInk : pt.ink2,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: p.allDay ? '600' : '500',
                     fontFamily: pt.sans,
                   }}
