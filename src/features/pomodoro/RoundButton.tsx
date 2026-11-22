@@ -1,10 +1,75 @@
-import { Pressable, View } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable } from 'react-native';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 import { withAlpha } from './colors';
+
+/**
+ * Il luccichio del tasto «avvia» (`pomoShine` del sito): una striscia chiara obliqua che scorre da sinistra a destra in
+ * 2,1 s, torna indietro in 1,9 s e sta ferma 1 s; ogni giro dura 5 s, all'infinito.
+ */
+function Shine({ size }: { size: number }) {
+  const x = useSharedValue(0);
+  useEffect(() => {
+    const ease = Easing.inOut(Easing.ease);
+    const run = { easing: ease, reduceMotion: ReduceMotion.System };
+    x.set(0);
+    x.set(
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2100, ...run }),
+          withTiming(0, { duration: 1900, ...run }),
+          withDelay(1000, withTiming(0, { duration: 1 })),
+        ),
+        -1,
+        false,
+        undefined,
+        ReduceMotion.System,
+      ),
+    );
+    return () => cancelAnimation(x);
+  }, [x]);
+  const style = useAnimatedStyle(() => ({
+    // da -60 % a 130 % della larghezza del tasto, come `left` nel sito
+    transform: [{ translateX: x.get() * size * 1.9 }, { rotate: '20deg' }],
+  }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          top: -size * 0.5,
+          left: -size * 0.6,
+          width: size * 0.35,
+          height: size * 2,
+        },
+        style,
+      ]}
+    >
+      <LinearGradient
+        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,.42)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ flex: 1 }}
+      />
+    </Animated.View>
+  );
+}
 
 export type RoundKind = 'play' | 'pause' | 'stop' | 'check' | 'cup';
 
@@ -57,26 +122,7 @@ export function RoundButton({
         transform: [{ scale: pressed ? 0.94 : 1 }],
       })}
     >
-      {kind === 'play' && large ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: -size * 0.5,
-            left: size * 0.12,
-            width: size * 0.3,
-            height: size * 2,
-            transform: [{ rotate: '20deg' }],
-          }}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,.34)', 'rgba(255,255,255,0)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{ flex: 1 }}
-          />
-        </View>
-      ) : null}
+      {kind === 'play' && large ? <Shine size={size} /> : null}
       <Svg width={icon} height={icon} viewBox="0 0 24 24">
         {kind === 'play' ? (
           <Path
