@@ -17,7 +17,7 @@ export const R_XL = 28;
 
 /** Il colore del campo di un foglio: la carta, con un filo sottile (`box-shadow: inset 0 0 0 .5px var(--hair)`). */
 export const fieldBox = (pt: PlannerTheme): ViewStyle => ({
-  backgroundColor: pt.paper2,
+  backgroundColor: pt.fill,
   borderRadius: R_MD,
   borderWidth: 0.5,
   borderColor: pt.hair,
@@ -139,7 +139,7 @@ export function Seg<T extends string>({
       accessibilityRole="radiogroup"
       style={{
         flexDirection: 'row',
-        backgroundColor: pt.paper2,
+        backgroundColor: pt.fill,
         borderRadius: 999,
         padding: small ? 2 : 2.5,
         gap: 2,
@@ -158,7 +158,7 @@ export function Seg<T extends string>({
               paddingVertical: small ? 5 : 8,
               paddingHorizontal: tight ? 7 : small ? 11 : 6,
               borderRadius: 999,
-              backgroundColor: on ? pt.card : 'transparent',
+              backgroundColor: on ? pt.fillOn : 'transparent',
               boxShadow: on ? '0 1px 2px rgba(0,0,0,.08)' : undefined,
             }}
           >
@@ -258,7 +258,7 @@ export function Tag({
         paddingVertical: 7,
         paddingHorizontal: 12,
         borderRadius: 999,
-        backgroundColor: on ? mix(ev, pt.card, 0.3) : pt.paper2,
+        backgroundColor: on ? mix(ev, pt.card, 0.3) : pt.fill,
         borderWidth: on ? 1 : 0.5,
         borderColor: on ? mix(ev, pt.card, 0.6) : pt.hair,
         transform: [{ scale: pressed ? 0.95 : 1 }],
@@ -339,7 +339,7 @@ export function IconBtn({
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: pt.card,
+        backgroundColor: pt.fillOn,
         borderWidth: 0.5,
         borderColor: pt.hair,
       }}

@@ -31,6 +31,9 @@ export interface PlannerTheme {
   dark: boolean;
   page: string;
   paper2: string;
+  /** il fondo dei campi dei fogli, e quello della voce scelta nei selettori: in scuro più CHIARI del foglio (a rilievo) */
+  fill: string;
+  fillOn: string;
   card: string;
   ink: string;
   ink2: string;
@@ -79,6 +82,8 @@ export function plannerTheme(
       dark: night,
       page: night ? th.bg : '#FBF9F6',
       paper2: night ? '#1A1713' : '#F5F1EA',
+      fill: night ? '#1A1713' : '#F5F1EA',
+      fillOn: night ? th.surface : '#FFFDFA',
       card: night ? th.surface : '#FFFDFA',
       ink: night ? th.text : '#4C463F',
       ink2: a(0.52 + 0.1 * k),
@@ -113,6 +118,8 @@ export function plannerTheme(
     dark,
     page: dark ? '#000000' : '#F2F2F7',
     paper2: dark ? '#000000' : '#F2F2F7',
+    fill: dark ? '#3A3A3C' : '#F2F2F7',
+    fillOn: dark ? '#4A4A4D' : '#FFFFFF',
     card: dark ? '#1C1C1E' : '#FFFFFF',
     ink: dark ? '#F5F5F7' : '#1C1C1E',
     ink2: dark ? 'rgba(235,235,245,.92)' : 'rgba(44,44,48,.92)',
