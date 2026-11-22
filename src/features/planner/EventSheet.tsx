@@ -669,6 +669,7 @@ export function EventSheet(p: {
                   <SelectField
                     pt={pt}
                     wide
+                    glass
                     icon="repeat"
                     testID="rep"
                     title={t('planner.ripeti')}
@@ -681,6 +682,7 @@ export function EventSheet(p: {
                   <SelectField
                     pt={pt}
                     wide
+                    glass
                     icon="bell"
                     testID="not"
                     title={t('planner.notifica')}

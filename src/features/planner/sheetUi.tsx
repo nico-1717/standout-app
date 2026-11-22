@@ -469,6 +469,7 @@ export function SelectField<T extends string>({
   icon,
   trigger,
   bigDots,
+  glass,
 }: {
   pt: PlannerTheme;
   /** un disegno davanti al valore (quando la scelta non ha un titolo sopra) */
@@ -477,6 +478,8 @@ export function SelectField<T extends string>({
   trigger?: (open: () => void) => ReactNode;
   /** i pallini colorati dell'elenco grandi (i colori con il loro nome) */
   bigDots?: boolean;
+  /** campo secondario: più basso e quasi trasparente (ripetizione, avviso) */
+  glass?: boolean;
   /** `dot`: il pallino colorato davanti (le categorie) */
   options: { id: T; label: string; dot?: string }[];
   value: T;
@@ -516,7 +519,7 @@ export function SelectField<T extends string>({
           ]}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
-            {icon ? <SheetGlyph name={icon} color={pt.ink3} size={16} /> : null}
+            {icon ? <SheetGlyph name={icon} color={pt.ink3} size={glass ? 15 : 16} /> : null}
             {currentOpt?.dot ? (
               <View
                 style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}

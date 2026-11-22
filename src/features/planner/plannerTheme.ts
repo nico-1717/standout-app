@@ -34,6 +34,9 @@ export interface PlannerTheme {
   /** il fondo dei campi dei fogli, e quello della voce scelta nei selettori: in scuro più CHIARI del foglio (a rilievo) */
   fill: string;
   fillOn: string;
+  /** le cose secondarie (durata, ripetizione, avviso): un velo quasi trasparente che prende il colore del foglio */
+  glass: string;
+  glassEdge: string;
   card: string;
   ink: string;
   ink2: string;
@@ -84,6 +87,8 @@ export function plannerTheme(
       paper2: night ? '#1A1713' : '#F5F1EA',
       fill: night ? '#1A1713' : '#F5F1EA',
       fillOn: night ? th.surface : '#FFFDFA',
+      glass: night ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.45)',
+      glassEdge: night ? 'rgba(255,255,255,.12)' : 'rgba(76,70,63,.12)',
       card: night ? th.surface : '#FFFDFA',
       ink: night ? th.text : '#4C463F',
       ink2: a(0.52 + 0.1 * k),
@@ -118,8 +123,11 @@ export function plannerTheme(
     dark,
     page: dark ? '#000000' : '#F2F2F7',
     paper2: dark ? '#000000' : '#F2F2F7',
-    fill: dark ? '#3A3A3C' : '#F2F2F7',
-    fillOn: dark ? '#4A4A4D' : '#FFFFFF',
+    // in scuro un velo bianco: sul foglio neutro fa lo stesso grigio di prima, su uno colorato ne prende la tinta
+    fill: dark ? 'rgba(255,255,255,.10)' : '#F2F2F7',
+    fillOn: dark ? 'rgba(255,255,255,.18)' : '#FFFFFF',
+    glass: dark ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.5)',
+    glassEdge: dark ? 'rgba(255,255,255,.13)' : 'rgba(60,60,67,.14)',
     card: dark ? '#1C1C1E' : '#FFFFFF',
     ink: dark ? '#F5F5F7' : '#1C1C1E',
     ink2: dark ? 'rgba(235,235,245,.92)' : 'rgba(44,44,48,.92)',

@@ -22,6 +22,9 @@ export function durationLabel(mins: number, minLabel: (n: number) => string): st
 const LINE_H = 46;
 const RAIL = 22;
 const GAP = 10;
+/** la pillola «durata · lucchetto · tutto il giorno»: bassa, e la linea si ferma sopra e sotto perché è trasparente */
+const PILL_H = 28;
+const MID_H = 40;
 
 /**
  * Il «quando» del foglio, disegnato come una linea: un punto per l'inizio, uno per la fine, e sulla linea che li unisce
@@ -128,18 +131,21 @@ export function WhenField(p: {
       <View style={{ flexDirection: 'row' }}>
         {/* la linea: un punto vuoto (inizio), un punto pieno (fine) e il filo in mezzo */}
         <View style={{ width: RAIL, marginRight: GAP }} pointerEvents="none">
-          <View
-            style={{
-              position: 'absolute',
-              top: LINE_H / 2,
-              bottom: LINE_H / 2,
-              left: RAIL / 2 - 1,
-              width: 2,
-              borderRadius: 1,
-              backgroundColor: pt.accent,
-              opacity: 0.5,
-            }}
-          />
+          {[{ top: LINE_H / 2 }, { bottom: LINE_H / 2 }].map((edge, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                ...edge,
+                left: RAIL / 2 - 1,
+                width: 2,
+                height: LINE_H / 2 + (MID_H - PILL_H) / 2,
+                borderRadius: 1,
+                backgroundColor: pt.accent,
+                opacity: 0.5,
+              }}
+            />
+          ))}
           <View
             style={{
               position: 'absolute',
@@ -175,18 +181,19 @@ export function WhenField(p: {
 
           {/* sulla linea: durata · lucchetto · tutto il giorno */}
           <View
-            style={{ minHeight: 40, justifyContent: 'center', marginLeft: -(RAIL + GAP + 11.5) }}
+            style={{ height: MID_H, justifyContent: 'center', marginLeft: -(RAIL + GAP + 11.5) }}
           >
             <View
               style={{
                 alignSelf: 'flex-start',
                 flexDirection: 'row',
                 alignItems: 'center',
+                height: PILL_H,
                 borderRadius: 999,
                 borderWidth: 1,
                 borderStyle: 'dashed',
-                borderColor: pt.hair2,
-                backgroundColor: pt.card,
+                borderColor: pt.glassEdge,
+                backgroundColor: pt.glass,
                 overflow: 'hidden',
               }}
             >
@@ -202,12 +209,13 @@ export function WhenField(p: {
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 7,
-                      paddingVertical: 7,
+                      paddingVertical: 0,
+                      alignSelf: 'stretch',
                       paddingLeft: 13,
                       paddingRight: 14,
                     }}
                   >
-                    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+                    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
                       <Circle cx={12} cy={12} r={9} stroke={pt.ink3} strokeWidth={2} />
                       <Path
                         d="M12 7v5l3 2"
@@ -219,7 +227,7 @@ export function WhenField(p: {
                     <Text
                       style={{
                         color: pt.ink,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: '600',
                         fontFamily: pt.sans,
                         fontVariant: ['tabular-nums'],
@@ -260,7 +268,8 @@ export function WhenField(p: {
                     hitSlop={{ top: 6, bottom: 6 }}
                     style={{
                       paddingHorizontal: 10,
-                      paddingVertical: 7,
+                      paddingVertical: 0,
+                      alignSelf: 'stretch',
                       opacity: p.lock === 'auto' ? 0.45 : 1,
                       backgroundColor: decided ? pt.accentSoft : 'transparent',
                     }}
@@ -305,13 +314,14 @@ export function WhenField(p: {
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  paddingVertical: 7,
+                  paddingVertical: 0,
+                  alignSelf: 'stretch',
                   paddingLeft: 10,
                   paddingRight: 12,
                   backgroundColor: p.allDay ? pt.accentSoft : 'transparent',
                 }}
               >
-                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
                   <Circle
                     cx={12}
                     cy={12}
@@ -329,7 +339,7 @@ export function WhenField(p: {
                 <Text
                   style={{
                     color: p.allDay ? pt.accentInk : pt.ink2,
-                    fontSize: 13,
+                    fontSize: 12.5,
                     fontWeight: p.allDay ? '600' : '500',
                     fontFamily: pt.sans,
                   }}
