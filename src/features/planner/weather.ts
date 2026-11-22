@@ -9,7 +9,12 @@ export interface WxCtx {
 }
 
 /** Il tipo di tinta di un tag del meteo (planner_griglia.css: .pl-wx-*). */
-export type WxTone = 'sun' | 'moon' | 'rain' | 'snow' | 'storm' | 'plain';
+export type WxTone = 'sun' | 'heat' | 'moon' | 'rain' | 'snow' | 'storm' | 'plain';
+
+/** Da quanti gradi il sole sereno diventa il sole rosso del gran caldo (`WX_CALDO_ICONA` del sito). */
+export const WX_HEAT_FROM = 32;
+const hot = (icon: string, temp: number | null | undefined) =>
+  icon === 'sole' && temp !== null && temp !== undefined && temp >= WX_HEAT_FROM ? 'caldo' : icon;
 
 const toMinutes = (hhmm: string): number => {
   const [h, m] = hhmm.split(':').map(Number);
@@ -25,26 +30,33 @@ export function wxIconName(
   day: WxDay | undefined,
   isToday: boolean,
   now = new Date(),
+  temp?: number | null,
 ): string {
   if (icon !== 'sole' && icon !== 'sole-nubi') return icon;
-  if (!isToday) return icon;
+  if (!isToday) return hot(icon, temp);
   const at = now.getHours() * 60 + now.getMinutes();
   const sunrise = day?.alba ? toMinutes(day.alba) : 6 * 60;
   const sunset = day?.tramonto ? toMinutes(day.tramonto) : 20 * 60;
-  if (at >= sunrise && at < sunset) return icon;
+  if (at >= sunrise && at < sunset) return hot(icon, temp);
   return icon === 'sole' ? 'luna' : 'luna-nubi';
 }
 
 /** Come `wxIconName`, ma per un'ora precisa del giorno (i tag accanto agli orari): `minutes` dalla mezzanotte. */
-export function wxHourIconName(icon: string, day: WxDay | undefined, minutes: number): string {
+export function wxHourIconName(
+  icon: string,
+  day: WxDay | undefined,
+  minutes: number,
+  temp?: number | null,
+): string {
   if (icon !== 'sole' && icon !== 'sole-nubi') return icon;
   const sunrise = day?.alba ? toMinutes(day.alba) : 6 * 60;
   const sunset = day?.tramonto ? toMinutes(day.tramonto) : 20 * 60;
-  if (minutes >= sunrise && minutes < sunset) return icon;
+  if (minutes >= sunrise && minutes < sunset) return hot(icon, temp);
   return icon === 'sole' ? 'luna' : 'luna-nubi';
 }
 
 export function wxTone(icon: string): WxTone {
+  if (icon === 'caldo') return 'heat';
   if (icon === 'sole' || icon === 'sole-nubi') return 'sun';
   if (icon === 'luna' || icon === 'luna-nubi') return 'moon';
   if (icon === 'neve') return 'snow';

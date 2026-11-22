@@ -7,6 +7,7 @@ import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 import { plannerTheme } from '../plannerTheme';
 import { WeatherCard, WxPlacePicker, WxPopup, WxTag } from '../WeatherUi';
 import { hourIcon, WxChart } from '../WxChart';
+import { WX_ICONS, wxSvg, wxTint } from '../weatherIcons';
 import { WeatherStore, wxHourIconName, wxIconName, wxTagText, wxTone, wxUvKey } from '../weather';
 
 const raw = {
@@ -298,5 +299,33 @@ describe('the icon of one hour', () => {
     expect(wxHourIconName('sole-nubi', day, 5 * 60)).toBe('luna-nubi');
     expect(wxHourIconName('pioggia', day, 23 * 60)).toBe('pioggia');
     expect(wxHourIconName('sole', undefined, 21 * 60)).toBe('luna');
+  });
+});
+
+describe('the red heat sun and the coloured icons', () => {
+  const day = wxState(raw).giorni['2026-11-17']!;
+  test('a clear sky from 32 degrees is the heat sun, other skies and cooler hours are not', () => {
+    expect(wxHourIconName('sole', day, 12 * 60, 32)).toBe('caldo');
+    expect(wxHourIconName('sole', day, 12 * 60, 31)).toBe('sole');
+    expect(wxHourIconName('sole-nubi', day, 12 * 60, 40)).toBe('sole-nubi');
+    expect(wxHourIconName('sole', day, 20 * 60, 40)).toBe('luna');
+    expect(wxIconName('sole', day, false, new Date(), 36)).toBe('caldo');
+    expect(wxIconName('sole', day, false, new Date(), 20)).toBe('sole');
+    expect(wxTone('caldo')).toBe('heat');
+  });
+  test('every icon is filled in with its own colours, light or dark, or with a single colour', () => {
+    for (const name of Object.keys(WX_ICONS)) {
+      const own = wxSvg(name);
+      expect(own).not.toMatch(/\{\w+\}/);
+      const mono = wxSvg(name, { mono: '#123456' });
+      expect(mono).not.toMatch(/#(F2A100|64748B|1C6EF2|26A0D8|7A3FE0|4B57D4|E5322D|7B8A9C)/i);
+      expect(mono).toContain('#123456');
+    }
+    expect(wxSvg('caldo')).toContain('#E5322D');
+    expect(wxSvg('caldo', { dark: true })).toContain('#FF6B5E');
+    expect(wxSvg('neve')).toContain('#26A0D8');
+    expect(wxSvg('pioggia')).toContain('#64748B');
+    expect(wxSvg('pioggia')).toContain('#1C6EF2');
+    expect(wxTint('luna-nubi')).toBe('moon');
   });
 });

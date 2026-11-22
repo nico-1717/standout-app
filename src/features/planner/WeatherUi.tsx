@@ -17,7 +17,7 @@ import { Text } from '@/ui/CappedText';
 
 import type { PlannerTheme } from './plannerTheme';
 import { wxDuration, wxIconName, wxTagText, wxTone, wxUvKey, type WxTone } from './weather';
-import { WX_ICONS } from './weatherIcons';
+import { wxSvg } from './weatherIcons';
 import { WxChart } from './WxChart';
 
 /** I colori dei tag (planner_griglia.css): sfondo e testo per tinta; al buio lo sfondo è il testo diluito. */
@@ -28,6 +28,7 @@ export function wxToneColors(pt: PlannerTheme, t: WxTone): { bg: string; fg: str
     rain: ['#DCEAF3', '#3E6B86'],
     snow: ['#EAF0F6', '#5B7284'],
     storm: ['#E7E2F0', '#5A4E76'],
+    heat: ['#FBE1DE', '#B3261E'],
     plain: [pt.paper2, pt.ink2],
   };
   const dark: Record<WxTone, string> = {
@@ -36,15 +37,17 @@ export function wxToneColors(pt: PlannerTheme, t: WxTone): { bg: string; fg: str
     rain: '#8FBAD6',
     snow: '#B4C6D6',
     storm: '#BDB1DC',
+    heat: '#FF8A80',
     plain: pt.ink2,
   };
   if (!pt.dark) return { bg: light[t][0], fg: light[t][1] };
   return { bg: t === 'plain' ? pt.paper2 : `${dark[t]}2E`, fg: dark[t] };
 }
 
-export function WxIcon(p: { name: string; size: number; color: string }) {
-  const xml = WX_ICONS[p.name] ?? WX_ICONS.nubi!;
-  return <SvgXml xml={xml} width={p.size} height={p.size} color={p.color} />;
+/** Un'icona del tempo. Con `color` è tutta d'un colore (dentro un tag colorato); senza, ha i suoi colori (`dark` = sul fondo scuro). */
+export function WxIcon(p: { name: string; size: number; color?: string; dark?: boolean }) {
+  const xml = wxSvg(p.name, { mono: p.color, dark: p.dark });
+  return <SvgXml xml={xml} width={p.size} height={p.size} />;
 }
 
 /** Il tag piccolo di un giorno (icona e gradi), che si tocca per aprire le previsioni (`wxTag` del sito). */
@@ -57,7 +60,7 @@ export function WxTag(p: {
   single: boolean;
   onPress: (date: string) => void;
 }) {
-  const icon = wxIconName(p.day.icon, p.day, p.today);
+  const icon = wxIconName(p.day.icon, p.day, p.today, new Date(), p.day.tmax);
   const c = wxToneColors(p.pt, wxTone(icon));
   const text = wxTagText(p.day, { single: p.single, today: p.today, now: p.nowTemp });
   return (
@@ -99,7 +102,7 @@ export function WeatherCard(p: {
   const { pt, wx } = p;
   const on = wx?.enabled === true;
   const day = on ? wx.giorni[p.today] : undefined;
-  const icon = day ? wxIconName(day.icon, day, true) : 'sole-nubi';
+  const icon = day ? wxIconName(day.icon, day, true, new Date(), day.tmax) : 'sole-nubi';
   const parts: string[] = [];
   if (on && wx.place) parts.push(wx.place);
   if (on && wx.adesso?.temp !== null && wx.adesso?.temp !== undefined)
@@ -297,7 +300,7 @@ export function WxPopup(p: {
   const prev = wx.giorni[addDays(p.date, -1)];
   const next = wx.giorni[addDays(p.date, 1)];
   const isToday = p.date === p.today;
-  const icon = wxIconName(g.icon, g, isToday);
+  const icon = wxIconName(g.icon, g, isToday, new Date(), g.tmax);
   const c = wxToneColors(pt, wxTone(icon));
 
   const rows: [string, string | null][] = [
@@ -435,7 +438,7 @@ export function WxPopup(p: {
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 6 }}
             >
-              <WxIcon name={icon} size={44} color={pt.ink2} />
+              <WxIcon name={icon} size={44} dark={pt.dark} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: pt.ink, fontSize: 22, fontFamily: pt.serif }}>{g.label}</Text>
                 {g.tmax !== null ? (
@@ -465,7 +468,11 @@ export function WxPopup(p: {
                   backgroundColor: c.bg,
                 }}
               >
-                <WxIcon name={wxIconName(wx.adesso.icon, g, true)} size={18} color={c.fg} />
+                <WxIcon
+                  name={wxIconName(wx.adesso.icon, g, true, new Date(), wx.adesso.temp)}
+                  size={18}
+                  color={c.fg}
+                />
                 <Text style={{ flex: 1, color: c.fg, fontSize: 13, fontFamily: pt.sans }}>
                   {[
                     wx.adesso.label,

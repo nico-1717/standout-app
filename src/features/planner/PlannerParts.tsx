@@ -30,8 +30,9 @@ import { useEventDrag } from './useEventDrag';
 import { placeRange, useGridPlace } from './useGridPlace';
 import type { WxDay, WxHour } from '@/core/account/accountApi';
 import { LineIcon } from './PlannerIcons';
-import { wxHourIconName, wxTone, type WxCtx } from './weather';
-import { WxIcon, wxToneColors } from './WeatherUi';
+import { wxHourIconName, type WxCtx } from './weather';
+import { WxIcon } from './WeatherUi';
+import { wxPalette, wxTint } from './weatherIcons';
 import { Text } from '@/ui/CappedText';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
@@ -400,9 +401,10 @@ const HourWx = memo(function HourWx(p: {
     // sotto i 34 px per ora non ci sta: meglio niente meteo che un orario illeggibile
     opacity: 60 * ppm.value < 34 ? 0 : 0.95,
   }));
-  const icon = wxHourIconName(p.hourData.i, p.day, hour * 60);
-  const color = wxToneColors(pt, wxTone(icon)).fg;
   const o = p.hourData;
+  const icon = wxHourIconName(o.i, p.day, hour * 60, o.t);
+  // i gradi hanno il colore dell'icona, un po' più verso l'inchiostro per leggersi (il giallo da solo è troppo chiaro)
+  const color = mix(pt.ink, wxPalette(pt.dark)[wxTint(icon)], 0.32);
   return (
     <Animated.View
       style={[{ position: 'absolute', top: 0, left: 1, width: 40, alignItems: 'center' }, style]}
@@ -415,7 +417,7 @@ const HourWx = memo(function HourWx(p: {
         hitSlop={7}
         style={{ alignItems: 'center' }}
       >
-        <WxIcon name={icon} size={15} color={color} />
+        <WxIcon name={icon} size={18} dark={pt.dark} />
         {p.withTemp && o.t !== null ? (
           <Text
             style={{

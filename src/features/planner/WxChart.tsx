@@ -7,7 +7,7 @@ import type { WxDay, WxHour } from '@/core/account/accountApi';
 import { Text } from '@/ui/CappedText';
 
 import type { PlannerTheme } from './plannerTheme';
-import { wxTone } from './weather';
+import { wxHourIconName } from './weather';
 import { WxIcon, wxToneColors } from './WeatherUi';
 
 /** Le misure del grafico: larghezza di una cella (un'ora), altezza della curva, margine alto e basso (WXC del sito). */
@@ -23,12 +23,7 @@ const toMin = (hhmm: string): number => {
 
 /** Fra il tramonto e l'alba il sole diventa luna, ora per ora (come wxIconaNome del sito, con l'ora di quella cella). */
 export function hourIcon(day: WxDay, hour: WxHour): string {
-  if (hour.i !== 'sole' && hour.i !== 'sole-nubi') return hour.i;
-  const at = toMin(hour.h);
-  const up = day.alba ? toMin(day.alba) : 6 * 60;
-  const down = day.tramonto ? toMin(day.tramonto) : 20 * 60;
-  if (at >= up && at < down) return hour.i;
-  return hour.i === 'sole' ? 'luna' : 'luna-nubi';
+  return wxHourIconName(hour.i, day, toMin(hour.h), hour.t);
 }
 
 /**
@@ -136,7 +131,7 @@ export function WxChart(p: { pt: PlannerTheme; day: WxDay; isToday: boolean; now
                   key={i}
                   style={{ width: CELL, height: 22, marginVertical: 4, alignItems: 'center' }}
                 >
-                  <WxIcon name={icon} size={20} color={wxToneColors(pt, wxTone(icon)).fg} />
+                  <WxIcon name={icon} size={20} dark={pt.dark} />
                 </View>
               );
             })}
