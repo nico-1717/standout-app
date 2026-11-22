@@ -1,5 +1,15 @@
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +21,8 @@ import { LineIcon } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
 import type { Armed } from './armed';
 
+const FAB_MS = 340;
+
 type Glyph = 'routine' | 'tag' | 'star' | 'clock' | 'chevUp' | 'chevDown';
 
 /** Il tondo di vetro dei tastini sul bordo destro (.pl-fab): 36px, filo sottile, ombra morbida. */
@@ -20,11 +32,16 @@ function Fab(p: {
   label: string;
   icon: Glyph;
   on?: boolean;
+  /** 0 → 1 gira l'icona di mezzo giro (la freccetta che apre e chiude la colonna) */
+  turn?: SharedValue<number>;
   onPress: () => void;
 }) {
   const { pt } = p;
   const glass =
     pt.style === 'standard' ? (pt.dark ? 'rgba(28,28,30,.82)' : 'rgba(255,255,255,.82)') : pt.pill;
+  const turned = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${(p.turn?.get() ?? 0) * 180}deg` }],
+  }));
   return (
     <Pressable
       testID={p.testID}
@@ -46,7 +63,9 @@ function Fab(p: {
         transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
-      <LineIcon name={p.icon} color={p.on ? pt.accentInk : pt.ink2} size={18} />
+      <Animated.View style={turned}>
+        <LineIcon name={p.icon} color={p.on ? pt.accentInk : pt.ink2} size={18} />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -191,8 +210,41 @@ export function SideFabs(p: {
   onFavorites: () => void;
   onShift: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const { pt } = p;
+  // la colonna si apre e si chiude scivolando, come sul sito (.pl-fab-group): altezza e trasparenza in 340 ms,
+  // e la freccetta gira di mezzo giro; a corsa finita la colonna sparisce davvero (niente tocchi fantasma)
+  const t = useSharedValue(p.open ? 1 : 0);
+  const [show, setShow] = useState(p.open);
+  const [moving, setMoving] = useState(false);
+  // aperta o chiusa da poco: la colonna c'è subito (se si apre) e resta ritagliata finché corre
+  const [seen, setSeen] = useState(p.open);
+  if (seen !== p.open) {
+    setSeen(p.open);
+    setMoving(true);
+    if (p.open) setShow(true);
+  }
+  const count = 3 + (p.hasFavorites ? 1 : 0);
+  const groupH = count * 36 + (count - 1) * 6;
+  useEffect(() => {
+    const run = {
+      duration: FAB_MS,
+      easing: Easing.bezier(0.22, 0.61, 0.36, 1),
+      reduceMotion: ReduceMotion.System,
+    };
+    t.set(withTiming(p.open ? 1 : 0, run));
+    const id = setTimeout(() => {
+      setMoving(false);
+      if (!p.open) setShow(false);
+    }, FAB_MS + 30);
+    return () => clearTimeout(id);
+  }, [p.open, t]);
+  const groupStyle = useAnimatedStyle(() => ({
+    height: groupH * t.get(),
+    opacity: t.get(),
+    // le due distanze del contenitore attorno al gruppo chiuso si annullano: la freccetta non si sposta
+    marginTop: -6 + 6 * t.get(),
+  }));
   return (
     <View
       pointerEvents="box-none"
@@ -203,53 +255,60 @@ export function SideFabs(p: {
         <HabitRing
           pt={pt}
           progress={p.progress}
-          label={t('planner.abitudini')}
+          label={tr('planner.abitudini')}
           onPress={p.onRing}
         />
       </View>
       {p.armed ? <ArmedChip pt={pt} armed={p.armed} onPress={p.onDisarm} /> : null}
-      {p.open ? (
-        <>
-          <Fab
-            pt={pt}
-            testID="fab-routine"
-            label={t('planner.routine')}
-            icon="routine"
-            onPress={p.onRoutine}
-          />
-          <Fab
-            pt={pt}
-            testID="fab-category"
-            label={t('planner.categoria_predefinita')}
-            icon="tag"
-            on={p.armed?.kind === 'category'}
-            onPress={p.onCategory}
-          />
-          {p.hasFavorites ? (
+      {show ? (
+        <Animated.View
+          testID="fab-group"
+          pointerEvents={p.open ? 'box-none' : 'none'}
+          style={[{ alignItems: 'flex-end', overflow: moving ? 'hidden' : 'visible' }, groupStyle]}
+        >
+          <View style={{ alignItems: 'flex-end', gap: 6, height: groupH }}>
             <Fab
               pt={pt}
-              testID="fab-favorites"
-              label={t('planner.progetti_preferiti')}
-              icon="star"
-              on={p.armed?.kind === 'project'}
-              onPress={p.onFavorites}
+              testID="fab-routine"
+              label={tr('planner.routine')}
+              icon="routine"
+              onPress={p.onRoutine}
             />
-          ) : null}
-          <Fab
-            pt={pt}
-            testID="fab-shift"
-            label={t('planner.anticipa_o_ritarda')}
-            icon="clock"
-            on={p.shiftOn}
-            onPress={p.onShift}
-          />
-        </>
+            <Fab
+              pt={pt}
+              testID="fab-category"
+              label={tr('planner.categoria_predefinita')}
+              icon="tag"
+              on={p.armed?.kind === 'category'}
+              onPress={p.onCategory}
+            />
+            {p.hasFavorites ? (
+              <Fab
+                pt={pt}
+                testID="fab-favorites"
+                label={tr('planner.progetti_preferiti')}
+                icon="star"
+                on={p.armed?.kind === 'project'}
+                onPress={p.onFavorites}
+              />
+            ) : null}
+            <Fab
+              pt={pt}
+              testID="fab-shift"
+              label={tr('planner.anticipa_o_ritarda')}
+              icon="clock"
+              on={p.shiftOn}
+              onPress={p.onShift}
+            />
+          </View>
+        </Animated.View>
       ) : null}
       <Fab
         pt={pt}
         testID="fab-toggle"
-        label={t('planner.mostra_o_nascondi_i_tastini')}
-        icon={p.open ? 'chevUp' : 'chevDown'}
+        label={tr('planner.mostra_o_nascondi_i_tastini')}
+        icon="chevDown"
+        turn={t}
         onPress={p.onToggle}
       />
     </View>
