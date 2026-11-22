@@ -4,6 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/ui/CappedText';
+import { haptic } from '@/ui/motion';
 
 import { Pick } from './Pick';
 import { LineIcon } from './PlannerIcons';
@@ -255,13 +256,18 @@ export function SideFabs(p: {
   );
 }
 
+const SHIFT_STEPS = [5, 10, 15, 30, 60];
+const hhmm = (min: number) =>
+  `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
 /**
- * La barra della modalità anticipi/ritardi (.pl-shift-bar): in alto, sopra la griglia, che resta toccabile — si
- * sceglie «prima» o «dopo», di quanto con un orario vero (hh:mm, qualsiasi) e si toccano gli eventi da spostare.
+ * La barra della modalità anticipi/ritardi (.pl-shift-bar): in basso, sopra la barra delle schede, con la griglia
+ * ancora toccabile. Su una riga «Annulla», «prima/dopo» e «Salva»; sotto, i tempi suggeriti (5, 10, 15, 30 minuti,
+ * 1 ora) e il campo per un orario qualsiasi (hh:mm). Gli eventi da spostare si toccano sulla griglia.
  */
 export function ShiftBar(p: {
   pt: PlannerTheme;
-  top: number;
+  bottom: number;
   dir: 'early' | 'late';
   /** di quanto, «hh:mm» come il campo del sito */
   time: string;
@@ -274,6 +280,11 @@ export function ShiftBar(p: {
   const { t } = useTranslation();
   const { pt } = p;
   const ready = p.picked > 0 && p.time !== '00:00';
+  const isStep = SHIFT_STEPS.some((m) => hhmm(m) === p.time);
+  const label = (m: number) =>
+    m >= 60 && m % 60 === 0
+      ? t(m === 60 ? 'planner.n_ora' : 'planner.n_ore', { n: m / 60 })
+      : t('planner.n_min', { n: m });
   return (
     <View
       testID="shift-bar"
@@ -281,75 +292,125 @@ export function ShiftBar(p: {
         position: 'absolute',
         left: 10,
         right: 10,
-        top: p.top,
+        bottom: p.bottom,
         zIndex: 80,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
+        gap: 10,
         paddingVertical: 10,
         paddingHorizontal: 12,
-        borderRadius: 20,
+        borderRadius: 22,
         backgroundColor: pt.card,
         boxShadow: pt.dark
-          ? '0 1px 1px rgba(0,0,0,.4), 0 10px 28px -8px rgba(0,0,0,.6)'
-          : '0 1px 1px rgba(0,0,0,.05), 0 10px 28px -10px rgba(0,0,0,.22)',
+          ? '0 1px 1px rgba(0,0,0,.4), 0 -6px 28px -8px rgba(0,0,0,.6)'
+          : '0 1px 1px rgba(0,0,0,.05), 0 -6px 28px -10px rgba(0,0,0,.22)',
       }}
     >
-      <Pressable testID="shift-cancel" accessibilityRole="button" onPress={p.onClose} hitSlop={8}>
-        <Text style={{ color: pt.ink2, fontSize: 15, fontFamily: pt.sans }}>
-          {t('comune.annulla')}
-        </Text>
-      </Pressable>
-      <View
-        style={{ flexDirection: 'row', backgroundColor: pt.field, borderRadius: 999, padding: 2 }}
-      >
-        {(['early', 'late'] as const).map((d) => (
-          <Pressable
-            key={d}
-            testID={`shift-${d}`}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: p.dir === d }}
-            onPress={() => p.onDir(d)}
-            style={{
-              paddingVertical: 6,
-              paddingHorizontal: 11,
-              borderRadius: 999,
-              backgroundColor: p.dir === d ? pt.card : 'transparent',
-            }}
-          >
-            <Text
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Pressable testID="shift-cancel" accessibilityRole="button" onPress={p.onClose} hitSlop={8}>
+          <Text style={{ color: pt.ink2, fontSize: 15, fontFamily: pt.sans }}>
+            {t('comune.annulla')}
+          </Text>
+        </Pressable>
+        <View
+          style={{ flexDirection: 'row', backgroundColor: pt.fill, borderRadius: 999, padding: 2 }}
+        >
+          {(['early', 'late'] as const).map((d) => (
+            <Pressable
+              key={d}
+              testID={`shift-${d}`}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: p.dir === d }}
+              onPress={() => p.onDir(d)}
               style={{
-                color: p.dir === d ? pt.ink : pt.ink2,
-                fontSize: 12,
-                fontFamily: pt.sans,
+                paddingVertical: 6,
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                backgroundColor: p.dir === d ? pt.fillOn : 'transparent',
               }}
             >
-              {t(d === 'early' ? 'planner.anticipo' : 'planner.ritardo')}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={{
+                  color: p.dir === d ? pt.ink : pt.ink2,
+                  fontSize: 13,
+                  fontFamily: pt.sans,
+                }}
+              >
+                {t(d === 'early' ? 'planner.anticipo' : 'planner.ritardo')}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable
+          testID="shift-save"
+          accessibilityRole="button"
+          disabled={!ready}
+          onPress={p.onApply}
+          hitSlop={8}
+        >
+          <Text
+            style={{
+              color: pt.accentInk,
+              fontSize: 15,
+              fontWeight: '600',
+              opacity: ready ? 1 : 0.4,
+              fontFamily: pt.sans,
+            }}
+          >
+            {p.picked > 0 ? `${t('comune.salva')} (${p.picked})` : t('comune.salva')}
+          </Text>
+        </Pressable>
       </View>
-      <Pick pt={pt} kind="time" testID="shift-time" value={p.time} onChange={p.onTime} width={84} />
-      <Pressable
-        testID="shift-save"
-        accessibilityRole="button"
-        disabled={!ready}
-        onPress={p.onApply}
-        hitSlop={8}
-      >
-        <Text
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        {SHIFT_STEPS.map((m) => {
+          const on = hhmm(m) === p.time;
+          return (
+            <Pressable
+              key={m}
+              testID={`shift-step-${m}`}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              onPress={() => {
+                haptic.tap();
+                p.onTime(hhmm(m));
+              }}
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                paddingVertical: 9,
+                borderRadius: 999,
+                backgroundColor: on ? pt.accentSoft : pt.fill,
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: on ? pt.accentInk : pt.ink2,
+                  fontSize: 12.5,
+                  fontWeight: on ? '600' : '400',
+                  fontFamily: pt.sans,
+                }}
+              >
+                {label(m)}
+              </Text>
+            </Pressable>
+          );
+        })}
+        {/* un valore a piacere: l'orario hh:mm, acceso quando non è uno dei suggeriti */}
+        <View
           style={{
-            color: pt.accentInk,
-            fontSize: 15,
-            fontWeight: '600',
-            opacity: ready ? 1 : 0.4,
-            fontFamily: pt.sans,
+            borderRadius: 999,
+            backgroundColor: isStep ? 'transparent' : pt.accentSoft,
           }}
         >
-          {p.picked > 0 ? `${t('comune.salva')} (${p.picked})` : t('comune.salva')}
-        </Text>
-      </Pressable>
+          <Pick
+            pt={pt}
+            kind="time"
+            testID="shift-time"
+            value={p.time}
+            onChange={p.onTime}
+            width={84}
+          />
+        </View>
+      </View>
     </View>
   );
 }

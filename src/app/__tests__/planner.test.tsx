@@ -417,6 +417,7 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     await fireEvent.press(screen.getByTestId('fab-shift'));
     expect(screen.getByTestId('shift-bar')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('shift-early'));
+    await fireEvent.press(screen.getByTestId('shift-step-30'));
     const lines = repo.eventsInRange(tomorrow, tomorrow);
     // tapping selects instead of opening the event
     await fireEvent.press(screen.getByTestId(`ev-${lines.find((e) => e.uuid === lab)!.uid}`));
@@ -424,7 +425,7 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     await fireEvent.press(screen.getByTestId('shift-save'));
     const after = repo.eventsInRange(tomorrow, tomorrow);
     const labAfter = after.find((e) => e.uuid === lab)!;
-    expect([labAfter.start, labAfter.end]).toEqual(['14:50', '15:50']);
+    expect([labAfter.start, labAfter.end]).toEqual(['14:30', '15:30']);
     expect(after.find((e) => e.uuid === gym)!.start).toBe('18:00');
     expect(screen.queryByTestId('shift-bar')).toBeNull();
   });

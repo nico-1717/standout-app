@@ -1009,7 +1009,7 @@ export default function PlannerScreen() {
       {shiftOpen ? (
         <ShiftBar
           pt={pt}
-          top={insets.top + 10}
+          bottom={12}
           dir={shiftDir}
           time={shiftTime}
           picked={Object.keys(shiftPicked).length}
