@@ -1,13 +1,12 @@
-import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/ui/CappedText';
 
+import { Pick } from './Pick';
 import { LineIcon } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
-import type { EventView } from './events';
 import type { Armed } from './armed';
 
 type Glyph = 'routine' | 'tag' | 'star' | 'clock' | 'chevUp' | 'chevDown';
@@ -253,144 +252,101 @@ export function SideFabs(p: {
   );
 }
 
-/** Anticipi e ritardi (.pl-shift-bar): si sceglie «prima» o «dopo», di quanto, e gli eventi del giorno si spostano. */
-export function ShiftSheet(p: {
+/**
+ * La barra della modalità anticipi/ritardi (.pl-shift-bar): in alto, sopra la griglia, che resta toccabile — si
+ * sceglie «prima» o «dopo», di quanto con un orario vero (hh:mm, qualsiasi) e si toccano gli eventi da spostare.
+ */
+export function ShiftBar(p: {
   pt: PlannerTheme;
-  events: EventView[];
-  onApply: (minutes: number) => void;
+  top: number;
+  dir: 'early' | 'late';
+  /** di quanto, «hh:mm» come il campo del sito */
+  time: string;
+  picked: number;
+  onDir: (d: 'early' | 'late') => void;
+  onTime: (v: string) => void;
+  onApply: () => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const { pt } = p;
-  const [dir, setDir] = useState<'early' | 'late'>('late');
-  const [minutes, setMinutes] = useState(10);
-  const movable = p.events.filter((e) => !e.allDay && !e.multiday).length;
-  const steps = [5, 10, 15, 30, 60];
-  const chip = (on: boolean) => ({
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: on ? pt.accentSoft : pt.field,
-  });
+  const ready = p.picked > 0 && p.time !== '00:00';
   return (
     <View
-      testID="shift-sheet"
-      style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 60 }}
+      testID="shift-bar"
+      style={{
+        position: 'absolute',
+        left: 10,
+        right: 10,
+        top: p.top,
+        zIndex: 80,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        backgroundColor: pt.card,
+        boxShadow: pt.dark
+          ? '0 1px 1px rgba(0,0,0,.4), 0 10px 28px -8px rgba(0,0,0,.6)'
+          : '0 1px 1px rgba(0,0,0,.05), 0 10px 28px -10px rgba(0,0,0,.22)',
+      }}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('comune.annulla')}
-        onPress={p.onClose}
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,.35)',
-        }}
-      />
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <View
-          style={{
-            gap: 14,
-            padding: 18,
-            paddingBottom: 26,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            backgroundColor: pt.page,
-          }}
-        >
-          <Text
+      <Pressable testID="shift-cancel" accessibilityRole="button" onPress={p.onClose} hitSlop={8}>
+        <Text style={{ color: pt.ink2, fontSize: 15, fontFamily: pt.sans }}>
+          {t('comune.annulla')}
+        </Text>
+      </Pressable>
+      <View
+        style={{ flexDirection: 'row', backgroundColor: pt.field, borderRadius: 999, padding: 2 }}
+      >
+        {(['early', 'late'] as const).map((d) => (
+          <Pressable
+            key={d}
+            testID={`shift-${d}`}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: p.dir === d }}
+            onPress={() => p.onDir(d)}
             style={{
-              color: pt.ink,
-              fontSize: 20,
-              fontWeight: pt.style === 'standard' ? '700' : '400',
-              fontFamily: pt.serif,
+              paddingVertical: 6,
+              paddingHorizontal: 11,
+              borderRadius: 999,
+              backgroundColor: p.dir === d ? pt.card : 'transparent',
             }}
           >
-            {t('planner.anticipa_o_ritarda')}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {(['early', 'late'] as const).map((d) => (
-              <Pressable
-                key={d}
-                testID={`shift-${d}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: dir === d }}
-                onPress={() => setDir(d)}
-                style={chip(dir === d)}
-              >
-                <Text
-                  style={{
-                    color: dir === d ? pt.accentInk : pt.ink,
-                    fontSize: 15,
-                    fontFamily: pt.sans,
-                  }}
-                >
-                  {t(d === 'early' ? 'planner.anticipo' : 'planner.ritardo')}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <View
-            accessibilityLabel={t('planner.di_quanto_spostarli_ore_e')}
-            style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-          >
-            {steps.map((m) => (
-              <Pressable
-                key={m}
-                testID={`shift-min-${m}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: minutes === m }}
-                onPress={() => setMinutes(m)}
-                style={chip(minutes === m)}
-              >
-                <Text
-                  style={{
-                    color: minutes === m ? pt.accentInk : pt.ink,
-                    fontSize: 15,
-                    fontFamily: pt.sans,
-                  }}
-                >
-                  {m === 60 ? '1 h' : `${m}'`}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 4 }}>
-            <Pressable
-              testID="shift-cancel"
-              accessibilityRole="button"
-              onPress={p.onClose}
-              hitSlop={8}
+            <Text
+              style={{
+                color: p.dir === d ? pt.ink : pt.ink2,
+                fontSize: 12,
+                fontFamily: pt.sans,
+              }}
             >
-              <Text style={{ color: pt.ink2, fontSize: 16, fontFamily: pt.sans }}>
-                {t('comune.annulla')}
-              </Text>
-            </Pressable>
-            <Pressable
-              testID="shift-save"
-              accessibilityRole="button"
-              disabled={!movable}
-              onPress={() => p.onApply(dir === 'early' ? -minutes : minutes)}
-              hitSlop={8}
-            >
-              <Text
-                style={{
-                  color: pt.accentInk,
-                  fontSize: 16,
-                  fontWeight: '600',
-                  opacity: movable ? 1 : 0.4,
-                  fontFamily: pt.sans,
-                }}
-              >
-                {t('comune.salva')}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+              {t(d === 'early' ? 'planner.anticipo' : 'planner.ritardo')}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pick pt={pt} kind="time" testID="shift-time" value={p.time} onChange={p.onTime} width={84} />
+      <Pressable
+        testID="shift-save"
+        accessibilityRole="button"
+        disabled={!ready}
+        onPress={p.onApply}
+        hitSlop={8}
+      >
+        <Text
+          style={{
+            color: pt.accentInk,
+            fontSize: 15,
+            fontWeight: '600',
+            opacity: ready ? 1 : 0.4,
+            fontFamily: pt.sans,
+          }}
+        >
+          {p.picked > 0 ? `${t('comune.salva')} (${p.picked})` : t('comune.salva')}
+        </Text>
+      </Pressable>
     </View>
   );
 }

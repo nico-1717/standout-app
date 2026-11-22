@@ -14,7 +14,7 @@ import type { EventView } from '@/features/planner/events';
 import type { Priority, Routine } from '@/features/planner/repo';
 import { SmartBar, SmartReport, type SmartNote } from '@/features/planner/SmartBar';
 import { PriorityStrip, PrioritySheet } from '@/features/planner/DayBar';
-import { ShiftSheet, SideFabs } from '@/features/planner/SideFabs';
+import { ShiftBar, SideFabs } from '@/features/planner/SideFabs';
 import { DayPager } from '@/features/planner/DayPager';
 import { useDaySwipe } from '@/features/planner/useDaySwipe';
 import { MonthPopup, PlannerTopbar, ViewMenu } from '@/features/planner/Topbar';
@@ -46,7 +46,7 @@ import {
   dayTitle,
   useNowMinutes,
 } from '@/features/planner/PlannerParts';
-import { minutesOf } from '@/features/planner/model';
+import { minutesOf, timeOf } from '@/features/planner/model';
 import { weekPhraseId } from '@/features/planner/phrases';
 import { MonthScene } from '@/features/planner/ambient/MonthScene';
 import { WeatherScene } from '@/features/planner/ambient/WeatherScene';
@@ -115,7 +115,11 @@ export default function PlannerScreen() {
   const [viewMenu, setViewMenu] = useState<number | null>(null);
   const [monthOpen, setMonthOpen] = useState(false);
   const [prioOpen, setPrioOpen] = useState(false);
+  // anticipi e ritardi (`S.shift` del sito): attiva, «prima/dopo», di quanto (hh:mm) e gli eventi scelti toccandoli
   const [shiftOpen, setShiftOpen] = useState(false);
+  const [shiftDir, setShiftDir] = useState<'early' | 'late'>('late');
+  const [shiftTime, setShiftTime] = useState('00:10');
+  const [shiftPicked, setShiftPicked] = useState<Record<string, EventView>>({});
   const [monthsOpen, setMonthsOpen] = useState(false);
   const [agendaFrom, setAgendaFrom] = useState<string | null>(null);
   const [topH, setTopH] = useState(0);
@@ -419,17 +423,54 @@ export default function PlannerScreen() {
       category: armed?.kind === 'category' ? armed.uuid : undefined,
     });
   };
-  // anticipi e ritardi: gli eventi del giorno che devono ancora cominciare (di un altro giorno: tutti) si spostano
-  const shiftDay = (minutes: number) => {
-    const from = date === today ? (now ?? 0) : 0;
-    let moved = false;
-    for (const e of grid) {
-      const start = minutesOf(e.start);
-      if (start >= from && repo.moveTo(e, start + minutes)) moved = true;
+  /** tocco lungo + dito: il blocco si posa da `start` a `end` (come il rilascio del trascinamento sul sito) */
+  const placeGrid = (d: string, start: number, end: number) => {
+    if (shiftOpen) return;
+    const startAt = timeOf(start);
+    if (armed && armed.kind !== 'category') {
+      repo.placeLinked(armed, d, startAt, Math.max(1, end - start));
+      setArmed(null);
+      haptic.tap();
+      changed();
+      return;
     }
+    openNew({
+      mode: 'new',
+      date: d,
+      start: startAt,
+      end: timeOf(Math.min(1439, end)),
+      category: armed?.kind === 'category' ? armed.uuid : undefined,
+    });
+  };
+  // anticipi e ritardi: si spostano gli eventi scelti toccandoli, di quanto dice il campo (prima o dopo)
+  const pickForShift = (ev: EventView) => {
+    haptic.tap();
+    setShiftPicked((cur) => {
+      const next = { ...cur };
+      if (next[ev.uid]) delete next[ev.uid];
+      else next[ev.uid] = ev;
+      return next;
+    });
+  };
+  const closeShift = () => {
     setShiftOpen(false);
+    setShiftPicked({});
+  };
+  const shiftChosen = () => {
+    const [h, m] = shiftTime.split(':').map(Number);
+    const amount = (h ?? 0) * 60 + (m ?? 0);
+    if (!amount) return;
+    const delta = shiftDir === 'early' ? -amount : amount;
+    let moved = false;
+    for (const e of Object.values(shiftPicked)) {
+      if (repo.moveTo(e, minutesOf(e.start) + delta)) moved = true;
+    }
+    closeShift();
     if (moved) changed();
   };
+  const picksByUid: Record<string, true> = Object.fromEntries(
+    Object.keys(shiftPicked).map((k) => [k, true as const]),
+  );
   const viewLabel = t(
     mode === 'day' ? 'planner.giorno' : mode === 'week' ? 'planner.settimana_2' : 'planner.mese',
   );
@@ -654,7 +695,23 @@ export default function PlannerScreen() {
                   onToggle={toggle}
                   onMove={moveEvent}
                   onDragActive={setDragging}
-                  onEmptyTap={(minutes) => tapGrid(d, minutes)}
+                  onEmptyTap={(minutes) => (shiftOpen ? undefined : tapGrid(d, minutes))}
+                  tool={
+                    armed
+                      ? {
+                          color: armed.color,
+                          name: armed.name,
+                          icon: armed.icon,
+                          fixed:
+                            armed.kind === 'habit'
+                              ? armedMinutes(armed, ZOOMS[step].slotMin)
+                              : null,
+                        }
+                      : undefined
+                  }
+                  onPlace={(start, end) => placeGrid(d, start, end)}
+                  onShiftPick={shiftOpen ? pickForShift : undefined}
+                  picks={shiftOpen ? picksByUid : undefined}
                 />
               </View>
             )}
@@ -810,7 +867,7 @@ export default function PlannerScreen() {
           onRoutine={() => router.push({ pathname: '/planner-routines', params: { date } })}
           onCategory={() => armTap('category', 'categories')}
           onFavorites={() => armTap('project', 'projects')}
-          onShift={() => setShiftOpen(true)}
+          onShift={() => (shiftOpen ? closeShift() : setShiftOpen(true))}
         />
       ) : null}
 
@@ -947,7 +1004,17 @@ export default function PlannerScreen() {
         />
       ) : null}
       {shiftOpen ? (
-        <ShiftSheet pt={pt} events={grid} onApply={shiftDay} onClose={() => setShiftOpen(false)} />
+        <ShiftBar
+          pt={pt}
+          top={insets.top + 10}
+          dir={shiftDir}
+          time={shiftTime}
+          picked={Object.keys(shiftPicked).length}
+          onDir={setShiftDir}
+          onTime={setShiftTime}
+          onApply={shiftChosen}
+          onClose={closeShift}
+        />
       ) : null}
 
       <ArmSheet

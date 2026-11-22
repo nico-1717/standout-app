@@ -27,6 +27,8 @@ import { minutesOf, timeOf } from './model';
 import { blockBackground, eventColor, longHex, type PlannerTheme } from './plannerTheme';
 import type { Category, Calendar } from './repo';
 import { useEventDrag } from './useEventDrag';
+import { placeRange, useGridPlace } from './useGridPlace';
+import { LineIcon } from './PlannerIcons';
 import { Text } from '@/ui/CappedText';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
@@ -114,6 +116,9 @@ export function EventBlock(
     now?: number | null;
     onMove?: (ev: EventView, startMin: number) => void;
     onDragActive?: (active: boolean) => void;
+    /** modalità anticipi/ritardi: il tocco sceglie l'evento invece di aprirlo */
+    onShiftPick?: (ev: EventView) => void;
+    shiftPicked?: boolean;
   },
 ) {
   const { pt, block, ppm } = p;
@@ -159,10 +164,12 @@ export function EventBlock(
           borderRadius: 12,
           overflow: 'hidden',
           backgroundColor: blockBackground(pt, color, ev.importance),
-          borderWidth: cal ? 1.6 : 0.5,
-          borderColor: cal
-            ? mix(cal, blockBackground(pt, color, ev.importance), 0.45)
-            : mix(color, pt.card.startsWith('#') ? pt.card : '#FFFDFA', 0.55),
+          borderWidth: p.shiftPicked ? 2 : cal ? 1.6 : 0.5,
+          borderColor: p.shiftPicked
+            ? pt.accent
+            : cal
+              ? mix(cal, blockBackground(pt, color, ev.importance), 0.45)
+              : mix(color, pt.card.startsWith('#') ? pt.card : '#FFFDFA', 0.55),
         },
         frame,
       ]}
@@ -170,9 +177,9 @@ export function EventBlock(
       <Pressable
         testID={`ev-${ev.uid}`}
         accessibilityRole="button"
-        onPress={() => p.onOpen(ev)}
-        onLongPress={p.onMove ? drag.arm : undefined}
-        onPressOut={p.onMove ? drag.release : undefined}
+        onPress={() => (p.onShiftPick ? p.onShiftPick(ev) : p.onOpen(ev))}
+        onLongPress={p.onMove && !p.onShiftPick ? drag.arm : undefined}
+        onPressOut={p.onMove && !p.onShiftPick ? drag.release : undefined}
         delayLongPress={300}
         {...drag.panHandlers}
         style={{
@@ -193,7 +200,23 @@ export function EventBlock(
           }}
         />
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
-          {showBox ? (
+          {p.onShiftPick ? (
+            <View
+              testID={`pick-${ev.uid}`}
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1.5,
+                borderColor: p.shiftPicked ? pt.accent : pt.ink3,
+                backgroundColor: p.shiftPicked ? pt.accent : 'transparent',
+              }}
+            >
+              {p.shiftPicked ? <LineIcon name="check" color={pt.card} size={11} /> : null}
+            </View>
+          ) : showBox ? (
             <CheckBox
               testID={`box-${ev.uid}`}
               color={color}
@@ -410,6 +433,13 @@ export function DayGrid(
     onEmptyTap: (minutes: number) => void;
     onMove?: (ev: EventView, startMin: number) => void;
     onDragActive?: (active: boolean) => void;
+    /** modalità anticipi/ritardi: gli eventi si scelgono toccandoli (uid → scelto) */
+    onShiftPick?: (ev: EventView) => void;
+    picks?: Record<string, true>;
+    /** cosa si sta posando col tocco lungo: colore, nome e (per un'abitudine) i minuti fissi */
+    tool?: { color: string; name: string; icon: string | null; fixed: number | null };
+    /** il dito è stato alzato dopo un tocco lungo: da quando a quando (minuti dal giorno) */
+    onPlace?: (startMin: number, endMin: number) => void;
   },
 ) {
   const { pt, ppm } = p;
@@ -423,6 +453,28 @@ export function DayGrid(
     const m = e.nativeEvent.locationY / (ppm.value || 1);
     p.onEmptyTap(Math.max(0, Math.min(1440 - tapSlot, Math.floor(m / tapSlot) * tapSlot)));
   };
+  // tocco lungo su un punto libero: compare il blocco, il dito lo muove o lo allunga, e al rilascio si posa
+  const [ghostPpm, setGhostPpm] = useState(1);
+  const rangeOf = (pos: { y0: number; dy: number }, scale: number) =>
+    placeRange({
+      ...pos,
+      ppm: scale,
+      fixed: p.tool?.fixed ?? null,
+      snap: snapMinutes(p.zoom),
+      slot: slotMin,
+    });
+  const place = useGridPlace({
+    onDrop: (y0, dy) => {
+      const r = rangeOf({ y0, dy }, ghostPpm);
+      p.onPlace?.(r.start, r.end);
+    },
+    onActive: (a) => {
+      if (a) setGhostPpm(ppm.value || 1);
+      p.onDragActive?.(a);
+    },
+  });
+  const ghost = place.pos ? rangeOf(place.pos, ghostPpm) : null;
+  const ghostColor = p.tool?.color ?? pt.accent;
   const height = useAnimatedStyle(() => ({ height: 1440 * ppm.value }));
   return (
     <Animated.View style={[{ width: p.width }, height]}>
@@ -430,6 +482,10 @@ export function DayGrid(
         testID="grid-empty"
         accessibilityRole="button"
         onPress={tap}
+        onLongPress={p.onPlace ? (e) => place.arm(e.nativeEvent.locationY) : undefined}
+        onPressOut={p.onPlace ? place.release : undefined}
+        delayLongPress={250}
+        {...place.panHandlers}
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       >
         <View
@@ -470,8 +526,45 @@ export function DayGrid(
           onToggle={p.onToggle}
           onMove={p.onMove}
           onDragActive={p.onDragActive}
+          onShiftPick={p.onShiftPick}
+          shiftPicked={!!p.picks?.[b.ev.uid]}
         />
       ))}
+      {ghost ? (
+        <View
+          testID="place-ghost"
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            zIndex: 30,
+            top: ghost.start * ghostPpm,
+            height: Math.max(18, (ghost.end - ghost.start) * ghostPpm - 1),
+            left: gutter,
+            width: p.width - gutter - 11,
+            borderRadius: 12,
+            paddingVertical: 4,
+            paddingHorizontal: 9,
+            overflow: 'hidden',
+            opacity: 0.94,
+            backgroundColor: blockBackground(pt, ghostColor, 'normal'),
+            borderWidth: 1.5,
+            borderStyle: 'dashed',
+            borderColor: ghostColor,
+          }}
+        >
+          <Text
+            numberOfLines={1}
+            style={{ color: pt.ink, fontSize: 13, fontWeight: '600', fontFamily: pt.sans }}
+          >
+            {p.tool ? `${p.tool.icon ?? ''} ${p.tool.name}`.trim() : timeOf(ghost.start)}
+          </Text>
+          <Text
+            style={{ color: pt.ink2, fontSize: 10.5, letterSpacing: 0.42, fontFamily: pt.sans }}
+          >
+            {`${timeOf(ghost.start)} – ${timeOf(ghost.end)}`}
+          </Text>
+        </View>
+      ) : null}
       {p.now !== null ? <NowLine now={p.now} ppm={ppm} gutter={gutter} pt={pt} /> : null}
     </Animated.View>
   );

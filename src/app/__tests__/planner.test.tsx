@@ -407,19 +407,71 @@ describe.each(['standard', 'paper'] as const)('Planner day screen (%s)', (style)
     expect(screen.getByTestId('armed-chip')).toBeTruthy();
   });
 
-  test('earlier or later: moves the events of the day by the chosen minutes', async () => {
+  test('earlier or later: moves only the events you tap, by the chosen time', async () => {
+    const repo = setup();
+    const tomorrow = addDaysIso(TODAY, 1);
+    const lab = repo.create({ title: 'Lab', date: tomorrow, start: '15:00', end: '16:00' });
+    const gym = repo.create({ title: 'Gym', date: tomorrow, start: '18:00', end: '19:00' });
+    await renderIt();
+    await goTo(tomorrow);
+    await fireEvent.press(screen.getByTestId('fab-shift'));
+    expect(screen.getByTestId('shift-bar')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('shift-early'));
+    const lines = repo.eventsInRange(tomorrow, tomorrow);
+    // tapping selects instead of opening the event
+    await fireEvent.press(screen.getByTestId(`ev-${lines.find((e) => e.uuid === lab)!.uid}`));
+    expect(screen.queryByTestId('sheet-title')).toBeNull();
+    await fireEvent.press(screen.getByTestId('shift-save'));
+    const after = repo.eventsInRange(tomorrow, tomorrow);
+    const labAfter = after.find((e) => e.uuid === lab)!;
+    expect([labAfter.start, labAfter.end]).toEqual(['14:50', '15:50']);
+    expect(after.find((e) => e.uuid === gym)!.start).toBe('18:00');
+    expect(screen.queryByTestId('shift-bar')).toBeNull();
+  });
+
+  test('earlier or later: nothing happens until at least one event is picked', async () => {
     const repo = setup();
     const tomorrow = addDaysIso(TODAY, 1);
     const id = repo.create({ title: 'Lab', date: tomorrow, start: '15:00', end: '16:00' });
     await renderIt();
     await goTo(tomorrow);
     await fireEvent.press(screen.getByTestId('fab-shift'));
-    await fireEvent.press(screen.getByTestId('shift-early'));
-    await fireEvent.press(screen.getByTestId('shift-min-15'));
     await fireEvent.press(screen.getByTestId('shift-save'));
-    const ev = repo.eventsInRange(tomorrow, tomorrow).find((e) => e.uuid === id)!;
-    expect([ev.start, ev.end]).toEqual(['14:45', '15:45']);
-    expect(screen.queryByTestId('shift-sheet')).toBeNull();
+    expect(repo.eventsInRange(tomorrow, tomorrow).find((e) => e.uuid === id)!.start).toBe('15:00');
+    expect(screen.getByTestId('shift-bar')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('shift-cancel'));
+    expect(screen.queryByTestId('shift-bar')).toBeNull();
+  });
+
+  test('press and hold with an armed habit: a ghost block appears, and on release the habit lands there', async () => {
+    const repo = setup();
+    await renderIt();
+    await fireEvent.press(screen.getByTestId('planner-ring'));
+    await fireEvent.press(screen.getByTestId('quick-habit-h1'));
+    const grid = screen.getByTestId('grid-empty');
+    await fireEvent(grid, 'longPress', { nativeEvent: { locationY: 600 } });
+    expect(screen.getByTestId('place-ghost')).toHaveTextContent(/Read/);
+    await fireEvent(grid, 'pressOut');
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 5));
+    });
+    expect(screen.queryByTestId('place-ghost')).toBeNull();
+    const ev = repo.eventsInRange(TODAY, TODAY).find((e) => e.title === 'Read')!;
+    expect(ev.habitUuid).toBe('h1');
+    expect(minutesBetween(ev.start!, ev.end!)).toBe(45);
+    expect(screen.queryByTestId('armed-chip')).toBeNull();
+  });
+
+  test('press and hold with nothing armed: on release the new-event sheet opens at that time', async () => {
+    setup();
+    await renderIt();
+    const grid = screen.getByTestId('grid-empty');
+    await fireEvent(grid, 'longPress', { nativeEvent: { locationY: 600 } });
+    await fireEvent(grid, 'pressOut');
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 5));
+    });
+    expect(screen.getByTestId('sheet-title')).toBeTruthy();
   });
 
   test('a closed routine is one bar; opening it shows its steps; deleting asks first', async () => {

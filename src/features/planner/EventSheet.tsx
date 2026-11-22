@@ -51,7 +51,7 @@ import {
 } from './sheetUi';
 
 export type SheetTarget =
-  | { mode: 'new'; date: string; start?: string; category?: string }
+  | { mode: 'new'; date: string; start?: string; end?: string; category?: string }
   | { mode: 'edit'; view: EventView };
 
 type Importance = 'normal' | 'high' | 'highest';
@@ -154,7 +154,7 @@ export function EventSheet(p: {
       date: fresh?.date ?? '',
       endDate: fresh?.date ?? '',
       start,
-      end: timeOf(Math.min(1439, minutesOf(start) + 60)),
+      end: fresh?.end ?? timeOf(Math.min(1439, minutesOf(start) + 60)),
       calendar: null as string | null,
       category: (fresh?.category ?? null) as string | null,
       project: null as string | null,
