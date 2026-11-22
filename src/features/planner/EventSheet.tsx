@@ -771,7 +771,7 @@ export function EventSheet(p: {
                   options={calChoices.map((c) => ({
                     id: c.uuid,
                     label: c.name,
-                    dot: c.color ?? undefined,
+                    dot: c.color ?? pt.accent,
                   }))}
                   tintBorder
                   onChange={(v) => set('calendar', v)}
