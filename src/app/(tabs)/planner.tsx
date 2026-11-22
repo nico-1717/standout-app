@@ -691,6 +691,7 @@ export default function PlannerScreen() {
                   calendars={calendars}
                   day={d}
                   events={dp.grid}
+                  weather={mode === 'day' ? wxCtx : undefined}
                   zoom={step}
                   width={width}
                   now={d === today ? now : null}

@@ -11,7 +11,7 @@ export interface WxCtx {
 /** Il tipo di tinta di un tag del meteo (planner_griglia.css: .pl-wx-*). */
 export type WxTone = 'sun' | 'moon' | 'rain' | 'snow' | 'storm' | 'plain';
 
-const minutes = (hhmm: string): number => {
+const toMinutes = (hhmm: string): number => {
   const [h, m] = hhmm.split(':').map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
 };
@@ -29,9 +29,18 @@ export function wxIconName(
   if (icon !== 'sole' && icon !== 'sole-nubi') return icon;
   if (!isToday) return icon;
   const at = now.getHours() * 60 + now.getMinutes();
-  const sunrise = day?.alba ? minutes(day.alba) : 6 * 60;
-  const sunset = day?.tramonto ? minutes(day.tramonto) : 20 * 60;
+  const sunrise = day?.alba ? toMinutes(day.alba) : 6 * 60;
+  const sunset = day?.tramonto ? toMinutes(day.tramonto) : 20 * 60;
   if (at >= sunrise && at < sunset) return icon;
+  return icon === 'sole' ? 'luna' : 'luna-nubi';
+}
+
+/** Come `wxIconName`, ma per un'ora precisa del giorno (i tag accanto agli orari): `minutes` dalla mezzanotte. */
+export function wxHourIconName(icon: string, day: WxDay | undefined, minutes: number): string {
+  if (icon !== 'sole' && icon !== 'sole-nubi') return icon;
+  const sunrise = day?.alba ? toMinutes(day.alba) : 6 * 60;
+  const sunset = day?.tramonto ? toMinutes(day.tramonto) : 20 * 60;
+  if (minutes >= sunrise && minutes < sunset) return icon;
   return icon === 'sole' ? 'luna' : 'luna-nubi';
 }
 

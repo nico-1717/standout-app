@@ -28,7 +28,10 @@ import { blockBackground, eventColor, longHex, type PlannerTheme } from './plann
 import type { Category, Calendar } from './repo';
 import { useEventDrag } from './useEventDrag';
 import { placeRange, useGridPlace } from './useGridPlace';
+import type { WxDay, WxHour } from '@/core/account/accountApi';
 import { LineIcon } from './PlannerIcons';
+import { wxHourIconName, wxTone, type WxCtx } from './weather';
+import { WxIcon, wxToneColors } from './WeatherUi';
 import { Text } from '@/ui/CappedText';
 
 /** La riga d'ora corrente: si aggiorna ogni minuto (null se non è il giorno mostrato). */
@@ -376,6 +379,61 @@ const HourRow = memo(function HourRow(p: {
   );
 });
 
+/**
+ * Il tempo di un'ora accanto al suo orario (`renderGutterMeteo` del sito): icona e gradi sotto il numero, uno ogni
+ * tanto quanto ci sta (almeno 26 px fra due, e mai più fitti degli orari scritti); sotto i 34 px per ora si toglie
+ * tutto, e con gli scatti da 5 minuti restano le sole icone.
+ */
+const HourWx = memo(function HourWx(p: {
+  hour: number;
+  hourData: WxHour;
+  day: WxDay | undefined;
+  date: string;
+  ppm: SharedValue<number>;
+  pt: PlannerTheme;
+  withTemp: boolean;
+  onOpen: (date: string) => void;
+}) {
+  const { hour, ppm, pt } = p;
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateY: hour * 60 * ppm.value + 6 }],
+    // sotto i 34 px per ora non ci sta: meglio niente meteo che un orario illeggibile
+    opacity: 60 * ppm.value < 34 ? 0 : 0.95,
+  }));
+  const icon = wxHourIconName(p.hourData.i, p.day, hour * 60);
+  const color = wxToneColors(pt, wxTone(icon)).fg;
+  const o = p.hourData;
+  return (
+    <Animated.View
+      style={[{ position: 'absolute', top: 0, left: 1, width: 40, alignItems: 'center' }, style]}
+    >
+      <Pressable
+        testID={`wx-hour-${hour}`}
+        accessibilityRole="button"
+        accessibilityLabel={`${o.l} · ${hour}:00`}
+        onPress={() => p.onOpen(p.date)}
+        hitSlop={7}
+        style={{ alignItems: 'center' }}
+      >
+        <WxIcon name={icon} size={15} color={color} />
+        {p.withTemp && o.t !== null ? (
+          <Text
+            style={{
+              color,
+              fontSize: 9,
+              marginTop: 1,
+              fontVariant: ['tabular-nums'],
+              fontFamily: pt.sans,
+            }}
+          >
+            {o.t}°
+          </Text>
+        ) : null}
+      </Pressable>
+    </Animated.View>
+  );
+});
+
 /** La riga dell'ora corrente. */
 function NowLine(p: { now: number; ppm: SharedValue<number>; gutter: number; pt: PlannerTheme }) {
   const { now, ppm, pt } = p;
@@ -429,6 +487,8 @@ export function DayGrid(
     rows?: { from: number; to: number };
     /** si sta pizzicando: le righe del nuovo scatto sfumano dentro */
     pinching?: boolean;
+    /** il meteo acceso: le icone dell'ora accanto agli orari */
+    weather?: WxCtx;
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
     onEmptyTap: (minutes: number) => void;
@@ -476,6 +536,15 @@ export function DayGrid(
   });
   const ghost = place.pos ? rangeOf(place.pos, ghostPpm) : null;
   const ghostColor = p.tool?.color ?? pt.accent;
+  // il tempo di un'ora, ogni `step` ore (mai più fitto degli orari scritti, né di 26 px)
+  const wxDay = p.weather?.wx.giorni[p.day];
+  const wxStep = Math.max(1, Math.ceil(26 / (60 * (ppm.value || 1))), Math.ceil(slotMin / 60));
+  const byHour = new Map((wxDay?.ore ?? []).map((o) => [parseInt(o.h, 10), o] as const));
+  const hourWx = p.weather
+    ? Array.from({ length: 24 }, (_, h) => h)
+        .filter((h) => h % wxStep === 0 && byHour.has(h))
+        .map((h) => ({ hour: h, data: byHour.get(h)! }))
+    : [];
   const height = useAnimatedStyle(() => ({ height: 1440 * ppm.value }));
   return (
     <Animated.View {...place.panHandlers} style={[{ width: p.width }, height]}>
@@ -513,6 +582,19 @@ export function DayGrid(
             />
           ))}
       </Pressable>
+      {hourWx.map((h) => (
+        <HourWx
+          key={h.hour}
+          hour={h.hour}
+          hourData={h.data}
+          day={wxDay}
+          date={p.day}
+          ppm={ppm}
+          pt={pt}
+          withTemp={slotMin > 5}
+          onOpen={p.weather!.onOpen}
+        />
+      ))}
       {blocks.map((b) => (
         <EventBlock
           key={b.ev.uid}

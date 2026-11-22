@@ -7,7 +7,7 @@ import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 import { plannerTheme } from '../plannerTheme';
 import { WeatherCard, WxPlacePicker, WxPopup, WxTag } from '../WeatherUi';
 import { hourIcon, WxChart } from '../WxChart';
-import { WeatherStore, wxIconName, wxTagText, wxTone, wxUvKey } from '../weather';
+import { WeatherStore, wxHourIconName, wxIconName, wxTagText, wxTone, wxUvKey } from '../weather';
 
 const raw = {
   enabled: true,
@@ -287,5 +287,16 @@ describe('weather UI', () => {
     await fireEvent.press(screen.getByTestId('wx-place-0'));
     expect(onPick).toHaveBeenCalledWith({ nome: 'Lisbon', dove: 'Portugal', lat: 38.7, lon: -9.1 });
     jest.useRealTimers();
+  });
+});
+
+describe('the icon of one hour', () => {
+  test('the sun turns into the moon outside sunrise-sunset of that day, rain stays rain', () => {
+    const day = wxState(raw).giorni['2026-11-17']!;
+    expect(wxHourIconName('sole', day, 12 * 60)).toBe('sole');
+    expect(wxHourIconName('sole', day, 17 * 60)).toBe('luna');
+    expect(wxHourIconName('sole-nubi', day, 5 * 60)).toBe('luna-nubi');
+    expect(wxHourIconName('pioggia', day, 23 * 60)).toBe('pioggia');
+    expect(wxHourIconName('sole', undefined, 21 * 60)).toBe('luna');
   });
 });

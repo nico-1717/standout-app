@@ -46,3 +46,55 @@ describe('hour rows of the day grid', () => {
     expect(props.onEmptyTap).toHaveBeenCalledWith(600);
   });
 });
+
+describe('the weather beside the hours', () => {
+  const ore = (h: number, i: string, t: number) => ({
+    h: `${String(h).padStart(2, '0')}:00`,
+    i,
+    l: 'Label',
+    t,
+    ap: null,
+    p: null,
+    v: null,
+    u: null,
+  });
+  const weather = (onOpen = jest.fn()) =>
+    ({
+      onOpen,
+      nowTemp: null,
+      wx: {
+        enabled: true,
+        giorni: {
+          '2026-11-20': {
+            alba: '07:20',
+            tramonto: '16:55',
+            ore: [ore(9, 'pioggia', 8), ore(10, 'sole', 9), ore(21, 'sole', 4)],
+          },
+        },
+      },
+    }) as never;
+
+  test('an icon and the degrees under each hour that has a forecast, one tap opens the day', async () => {
+    const props = { ...base(), zoom: 'h1' as never, ppm: { value: 1 } as never };
+    const onOpen = jest.fn();
+    await render(<DayGrid {...props} weather={weather(onOpen)} />);
+    expect(screen.getByTestId('wx-hour-9')).toBeTruthy();
+    expect(screen.getByTestId('wx-hour-10')).toBeTruthy();
+    expect(screen.getByText('8°')).toBeTruthy();
+    expect(screen.queryByTestId('wx-hour-11')).toBeNull();
+    await fireEvent.press(screen.getByTestId('wx-hour-9'));
+    expect(onOpen).toHaveBeenCalledWith('2026-11-20');
+  });
+
+  test('with the 5 minute step only the icons stay, and nothing without the weather', async () => {
+    const props = { ...base(), zoom: 'm5' as never, ppm: { value: 26 / 5 } as never };
+    await render(<DayGrid {...props} weather={weather()} />);
+    expect(screen.getByTestId('wx-hour-9')).toBeTruthy();
+    expect(screen.queryByText('8°')).toBeNull();
+  });
+
+  test('no weather, no tags', async () => {
+    await render(<DayGrid {...base()} />);
+    expect(screen.queryByTestId('wx-hour-9')).toBeNull();
+  });
+});
