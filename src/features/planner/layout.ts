@@ -60,7 +60,7 @@ export function naturalPpm(index: number): number {
 export function windowHalfSpan(step: Zoom, viewHeight: number): number {
   const lo = pxPerMinute(step);
   if (!lo) return 1440;
-  return Math.min(1440, Math.ceil((viewHeight || 900) / lo) * 1.5);
+  return Math.min(1440, Math.ceil((viewHeight || 900) / lo) * 1.1);
 }
 
 /** Quanti passi ci sono fra due etichette «maggiori» (quelle in grassetto): 1 ora → ogni riga, 30' → ogni 2… */

@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Pressable, View, type GestureResponderEvent } from 'react-native';
-import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { mix } from '@/features/buy/buyTheme';
@@ -302,18 +308,22 @@ const hhmm = (m: number) =>
   `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
 /** Una riga d'ora: sta al suo minuto per mezzo della densità viva (`translateY`), senza passare da React. */
-function HourRow(p: {
+const HourRow = memo(function HourRow(p: {
   m: number;
   major: boolean;
   ppm: SharedValue<number>;
   gutter: number;
   pt: PlannerTheme;
+  /** mentre si pizzica le righe che nascono o spariscono per il cambio di scatto sfumano, invece di comparire di colpo */
+  fade: boolean;
 }) {
   const { m, ppm, pt } = p;
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: m * ppm.value }] }));
   return (
     <Animated.View
       pointerEvents="none"
+      entering={p.fade ? FadeIn.duration(140).reduceMotion(ReduceMotion.System) : undefined}
+      exiting={p.fade ? FadeOut.duration(110).reduceMotion(ReduceMotion.System) : undefined}
       style={[{ position: 'absolute', top: 0, left: 0, right: 0 }, style]}
     >
       <Text
@@ -340,7 +350,7 @@ function HourRow(p: {
       />
     </Animated.View>
   );
-}
+});
 
 /** La riga dell'ora corrente. */
 function NowLine(p: { now: number; ppm: SharedValue<number>; gutter: number; pt: PlannerTheme }) {
@@ -393,6 +403,8 @@ export function DayGrid(
     now: number | null;
     /** solo le righe che cadono in questa fascia di minuti (la parte visibile e un bel po' attorno) */
     rows?: { from: number; to: number };
+    /** si sta pizzicando: le righe del nuovo scatto sfumano dentro */
+    pinching?: boolean;
     onOpen: (ev: EventView) => void;
     onToggle: (ev: EventView) => void;
     onEmptyTap: (minutes: number) => void;
@@ -441,6 +453,7 @@ export function DayGrid(
               ppm={ppm}
               gutter={gutter}
               pt={pt}
+              fade={!!p.pinching}
             />
           ))}
       </Pressable>

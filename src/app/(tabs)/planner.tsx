@@ -640,6 +640,7 @@ export default function PlannerScreen() {
               >
                 <DayGrid
                   rows={rowWindow}
+                  pinching={pinching}
                   ppm={zoomer.ppm}
                   pt={pt}
                   categories={categories}
