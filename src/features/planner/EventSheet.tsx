@@ -574,8 +574,8 @@ export function EventSheet(p: {
                     paddingHorizontal: 13,
                     paddingVertical: 12,
                     color: pt.ink,
-                    fontSize: 19,
-                    fontFamily: pt.serif,
+                    fontSize: 15,
+                    fontFamily: pt.sans,
                   }}
                 />
                 <IconBtn
