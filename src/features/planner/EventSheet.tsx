@@ -768,7 +768,12 @@ export function EventSheet(p: {
                   testID="cal"
                   title={t('planner.calendario')}
                   value={activeCal}
-                  options={calChoices.map((c) => ({ id: c.uuid, label: c.name }))}
+                  options={calChoices.map((c) => ({
+                    id: c.uuid,
+                    label: c.name,
+                    dot: c.color ?? undefined,
+                  }))}
+                  tintBorder
                   onChange={(v) => set('calendar', v)}
                 />
               </Field>
@@ -988,64 +993,64 @@ export function EventSheet(p: {
             ) : null}
           </ScrollView>
         </KeyboardAvoidingView>
-      </SheetPanel>
 
-      {subSheet === 'project' ? (
-        <ProjectSheet
-          pt={pt}
-          projects={projects}
-          onCreate={p.onCreateProject}
-          value={f.project}
-          onClose={() => setSubSheet(null)}
-          onPick={(uuid) => {
-            const chosen = uuid ? projects.find((x) => x.uuid === uuid) : null;
-            edit((s) => ({
-              ...s,
-              project: uuid,
-              // un progetto scelto su un evento senza titolo gli dà il suo nome
-              title: chosen && !s.title.trim() ? chosen.name : s.title,
-            }));
-            setSubSheet(null);
-          }}
-        />
-      ) : null}
-      {subSheet === 'places' && book ? (
-        <SavedPlacesSheet
-          pt={pt}
-          book={book}
-          places={places}
-          onPlaces={setPlaces}
-          canSave={!!shownPlace && shownPlace.lat !== null && shownPlace.lon !== null}
-          placeName={shownPlace?.name ?? null}
-          address={f.location}
-          lat={shownPlace?.lat ?? null}
-          lon={shownPlace?.lon ?? null}
-          placeRef={shownPlace?.ref ?? null}
-          onClose={() => setSubSheet(null)}
-          onPick={(pl) => {
-            pickPlace(pl);
-            setSubSheet(null);
-          }}
-        />
-      ) : null}
-      {subSheet === 'contacts' && book ? (
-        <ContactsSheet
-          pt={pt}
-          book={book}
-          contacts={contacts}
-          onContacts={setContacts}
-          onClose={() => setSubSheet(null)}
-          onInvite={(c) => {
-            setDirty(true);
-            setGuests((cur) =>
-              cur.some((g) => g.email === c.email)
-                ? cur
-                : [...cur, { email: c.email, name: c.name, contactUuid: c.uuid }],
-            );
-            setSubSheet(null);
-          }}
-        />
-      ) : null}
+        {subSheet === 'project' ? (
+          <ProjectSheet
+            pt={pt}
+            projects={projects}
+            onCreate={p.onCreateProject}
+            value={f.project}
+            onClose={() => setSubSheet(null)}
+            onPick={(uuid) => {
+              const chosen = uuid ? projects.find((x) => x.uuid === uuid) : null;
+              edit((s) => ({
+                ...s,
+                project: uuid,
+                // un progetto scelto su un evento senza titolo gli dà il suo nome
+                title: chosen && !s.title.trim() ? chosen.name : s.title,
+              }));
+              setSubSheet(null);
+            }}
+          />
+        ) : null}
+        {subSheet === 'places' && book ? (
+          <SavedPlacesSheet
+            pt={pt}
+            book={book}
+            places={places}
+            onPlaces={setPlaces}
+            canSave={!!shownPlace && shownPlace.lat !== null && shownPlace.lon !== null}
+            placeName={shownPlace?.name ?? null}
+            address={f.location}
+            lat={shownPlace?.lat ?? null}
+            lon={shownPlace?.lon ?? null}
+            placeRef={shownPlace?.ref ?? null}
+            onClose={() => setSubSheet(null)}
+            onPick={(pl) => {
+              pickPlace(pl);
+              setSubSheet(null);
+            }}
+          />
+        ) : null}
+        {subSheet === 'contacts' && book ? (
+          <ContactsSheet
+            pt={pt}
+            book={book}
+            contacts={contacts}
+            onContacts={setContacts}
+            onClose={() => setSubSheet(null)}
+            onInvite={(c) => {
+              setDirty(true);
+              setGuests((cur) =>
+                cur.some((g) => g.email === c.email)
+                  ? cur
+                  : [...cur, { email: c.email, name: c.name, contactUuid: c.uuid }],
+              );
+              setSubSheet(null);
+            }}
+          />
+        ) : null}
+      </SheetPanel>
     </>
   );
 }

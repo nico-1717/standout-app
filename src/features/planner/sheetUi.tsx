@@ -470,6 +470,7 @@ export function SelectField<T extends string>({
   trigger,
   bigDots,
   glass,
+  tintBorder,
 }: {
   pt: PlannerTheme;
   /** un disegno davanti al valore (quando la scelta non ha un titolo sopra) */
@@ -480,6 +481,8 @@ export function SelectField<T extends string>({
   bigDots?: boolean;
   /** campo secondario: più basso e quasi trasparente (ripetizione, avviso) */
   glass?: boolean;
+  /** il bordo prende il colore della voce scelta (i calendari) */
+  tintBorder?: boolean;
   /** `dot`: il pallino colorato davanti (le categorie) */
   options: { id: T; label: string; dot?: string }[];
   value: T;
@@ -516,6 +519,9 @@ export function SelectField<T extends string>({
               minWidth: wide || compact ? 0 : 120,
             },
             glass ? { backgroundColor: pt.glass, borderColor: pt.glassEdge } : null,
+            tintBorder && currentOpt?.dot
+              ? { borderColor: currentOpt.dot, borderWidth: 1.5 }
+              : null,
             wide ? { alignSelf: 'stretch' } : null,
           ]}
         >
@@ -523,7 +529,7 @@ export function SelectField<T extends string>({
             {icon ? <SheetGlyph name={icon} color={pt.ink3} size={glass ? 14 : 16} /> : null}
             {currentOpt?.dot ? (
               <View
-                style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentOpt.dot }}
+                style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: currentOpt.dot }}
               />
             ) : null}
             <Text
