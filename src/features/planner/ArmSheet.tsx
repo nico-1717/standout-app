@@ -31,7 +31,10 @@ export function ArmSheet({
   categories,
   onClose,
   onArm,
+  instantClose,
 }: {
+  /** la scelta di una voce chiude il foglio di colpo, senza farlo scendere: si vuole subito la griglia */
+  instantClose?: boolean;
   /** null = chiuso */
   mode: ArmMode | null;
   pt: PlannerTheme;
@@ -133,7 +136,14 @@ export function ArmSheet({
   );
 
   return (
-    <Sheet visible={mode !== null} title={title} th={ht} onClose={onClose} testID="quick-sheet">
+    <Sheet
+      visible={mode !== null}
+      title={title}
+      th={ht}
+      onClose={onClose}
+      testID="quick-sheet"
+      instantClose={instantClose}
+    >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         style={{ maxHeight: 460 }}

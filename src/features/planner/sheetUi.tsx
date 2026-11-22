@@ -283,12 +283,14 @@ export function Swatch({
   on,
   onPress,
   testID,
+  size = 34,
 }: {
   pt: PlannerTheme;
   color: string;
   on: boolean;
   onPress: () => void;
   testID: string;
+  size?: number;
 }) {
   return (
     <Pressable
@@ -296,10 +298,11 @@ export function Swatch({
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
       onPress={onPress}
+      hitSlop={8}
       style={{
-        width: 34,
-        height: 34,
-        borderRadius: 17,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
         backgroundColor: color,
         borderWidth: 0.5,
         borderColor: pt.hair2,

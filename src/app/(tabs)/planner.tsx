@@ -132,6 +132,8 @@ export default function PlannerScreen() {
     projects: Project[];
   } | null>(null);
   const [armed, setArmed] = useState<Armed | null>(null);
+  // dopo una scelta il foglio sparisce subito (senza la discesa), alla riapertura torna a salire
+  const [armPicked, setArmPicked] = useState(false);
   const [sheet, setSheet] = useState<{ key: number; target: SheetTarget } | null>(null);
   // i progetti a cui si può collegare un evento: letti una volta per foglio aperto
   const sheetKey = sheet?.key;
@@ -391,6 +393,7 @@ export default function PlannerScreen() {
   const openArm = (armMode: ArmMode) => {
     if (!services) return;
     const monday = addDays(date, -(isoWeekday(date) - 1));
+    setArmPicked(false);
     setArming({
       mode: armMode,
       habits: services.habits.list(),
@@ -1026,7 +1029,9 @@ export default function PlannerScreen() {
         projects={arming?.projects ?? []}
         categories={categories}
         onClose={() => setArming(null)}
+        instantClose={armPicked}
         onArm={(a) => {
+          setArmPicked(true);
           setArmed(a);
           setArming(null);
         }}

@@ -28,6 +28,8 @@ export function Sheet(p: {
   /** uno strato sopra al foglio che non prende i tocchi (i coriandoli) */
   overlay?: ReactNode;
   testID?: string;
+  /** chiudersi senza far scendere il foglio (quando una scelta fatta lo chiude e si vuole vedere subito il resto) */
+  instantClose?: boolean;
 }) {
   const { th } = p;
   const { t } = useTranslation();
@@ -35,7 +37,12 @@ export function Sheet(p: {
   const { width, height } = useWindowDimensions();
   const wide = width >= 700;
   return (
-    <Modal visible={p.visible} transparent animationType="slide" onRequestClose={p.onClose}>
+    <Modal
+      visible={p.visible}
+      transparent
+      animationType={p.instantClose ? 'none' : 'slide'}
+      onRequestClose={p.onClose}
+    >
       {p.visible && (
         <View style={[styles.backdrop, wide && { justifyContent: 'center', alignItems: 'center' }]}>
           <Pressable

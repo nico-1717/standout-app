@@ -152,6 +152,8 @@ export function EventBlock(
   }));
   return (
     <Animated.View
+      // il responder del trascinamento sta qui, sul contenitore: il Pressable sovrascrive i suoi gestori di movimento
+      {...drag.panHandlers}
       style={[
         {
           position: 'absolute',
@@ -181,7 +183,6 @@ export function EventBlock(
         onLongPress={p.onMove && !p.onShiftPick ? drag.arm : undefined}
         onPressOut={p.onMove && !p.onShiftPick ? drag.release : undefined}
         delayLongPress={300}
-        {...drag.panHandlers}
         style={{
           flex: 1,
           paddingVertical: base < 28 ? 2 : 5,
@@ -477,7 +478,7 @@ export function DayGrid(
   const ghostColor = p.tool?.color ?? pt.accent;
   const height = useAnimatedStyle(() => ({ height: 1440 * ppm.value }));
   return (
-    <Animated.View style={[{ width: p.width }, height]}>
+    <Animated.View {...place.panHandlers} style={[{ width: p.width }, height]}>
       <Pressable
         testID="grid-empty"
         accessibilityRole="button"
@@ -485,7 +486,6 @@ export function DayGrid(
         onLongPress={p.onPlace ? (e) => place.arm(e.nativeEvent.locationY) : undefined}
         onPressOut={p.onPlace ? place.release : undefined}
         delayLongPress={250}
-        {...place.panHandlers}
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       >
         <View

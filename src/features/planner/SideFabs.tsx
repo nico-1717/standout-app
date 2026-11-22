@@ -1,4 +1,5 @@
 import { Pressable, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
@@ -130,39 +131,41 @@ function ArmedChip(p: { pt: PlannerTheme; armed: Armed; onPress: () => void }) {
   const glass =
     pt.style === 'standard' ? (pt.dark ? 'rgba(28,28,30,.92)' : 'rgba(255,255,255,.92)') : pt.pill;
   return (
-    <Pressable
-      testID="armed-chip"
-      accessibilityRole="button"
-      accessibilityLabel={armed.name}
-      onPress={p.onPress}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        maxWidth: 190,
-        paddingVertical: 7,
-        paddingLeft: 11,
-        paddingRight: 9,
-        borderRadius: 999,
-        backgroundColor: glass,
-        borderWidth: 1,
-        borderColor: armed.color,
-        transform: [{ scale: pressed ? 0.95 : 1 }],
-      })}
-    >
-      {armed.icon ? (
-        <Text style={{ fontSize: 13 }}>{armed.icon}</Text>
-      ) : (
-        <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: armed.color }} />
-      )}
-      <Text
-        numberOfLines={1}
-        style={{ flexShrink: 1, color: pt.ink, fontSize: 13, fontFamily: pt.sans }}
+    <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(90)}>
+      <Pressable
+        testID="armed-chip"
+        accessibilityRole="button"
+        accessibilityLabel={armed.name}
+        onPress={p.onPress}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          maxWidth: 190,
+          paddingVertical: 7,
+          paddingLeft: 11,
+          paddingRight: 9,
+          borderRadius: 999,
+          backgroundColor: glass,
+          borderWidth: 1,
+          borderColor: armed.color,
+          transform: [{ scale: pressed ? 0.95 : 1 }],
+        })}
       >
-        {armed.name}
-      </Text>
-      <LineIcon name="close" color={pt.ink3} size={12} />
-    </Pressable>
+        {armed.icon ? (
+          <Text style={{ fontSize: 13 }}>{armed.icon}</Text>
+        ) : (
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: armed.color }} />
+        )}
+        <Text
+          numberOfLines={1}
+          style={{ flexShrink: 1, color: pt.ink, fontSize: 13, fontFamily: pt.sans }}
+        >
+          {armed.name}
+        </Text>
+        <LineIcon name="close" color={pt.ink3} size={12} />
+      </Pressable>
+    </Animated.View>
   );
 }
 

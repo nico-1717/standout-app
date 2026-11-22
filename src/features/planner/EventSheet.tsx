@@ -542,6 +542,8 @@ export function EventSheet(p: {
         >
           <ScrollView
             keyboardShouldPersistTaps="handled"
+            // scorrendo il foglio la tastiera si chiude da sé
+            keyboardDismissMode="on-drag"
             contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 40 }}
           >
             {/* titolo + progetto, tipo e priorità */}
@@ -790,7 +792,7 @@ export function EventSheet(p: {
                   ]}
                   onChange={(v) => set('color', v === '__base' ? null : v)}
                   trigger={(open) => (
-                    <Swatch pt={pt} testID="color-btn" color={tint} on onPress={open} />
+                    <Swatch pt={pt} testID="color-btn" color={tint} on size={22} onPress={open} />
                   )}
                 />
                 <View style={{ flexBasis: '38%', maxWidth: 190, flexShrink: 0 }}>
