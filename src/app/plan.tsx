@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { DockHost } from '@/features/plan/dockHost';
 import { PlanPanel, isPlanTab } from '@/features/plan/PlanPanel';
 import { Header } from '@/ui/kit';
 
@@ -55,7 +56,7 @@ export default function PlanScreen() {
         }
       />
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 90 }}
         keyboardShouldPersistTaps="handled"
       >
         <PlanPanel
@@ -67,6 +68,7 @@ export default function PlanScreen() {
           onTimeClose={() => setShowTime(false)}
         />
       </ScrollView>
+      <DockHost bottom={insets.bottom + 12} />
     </View>
   );
 }

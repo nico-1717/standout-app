@@ -26,10 +26,31 @@ export type PjIconName =
   | 'trash'
   | 'close'
   | 'back'
-  | 'bolt';
+  | 'bolt'
+  | 'brush'
+  | 'erase'
+  | 'eye'
+  | 'events'
+  | 'undo'
+  | 'spark'
+  | 'fold'
+  | 'unfold';
 
 const GEAR =
   'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z';
+/** Gli strumenti del calendario e il tasto apri/chiudi rami: gli stessi tratti del sito (piano.js, progetti.php). */
+const PATHS: Partial<Record<PjIconName, string>> = {
+  brush: 'M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z',
+  erase: 'M8 20h11M5.5 14.5l7-8a2 2 0 013 0l2.5 2.5a2 2 0 010 3L12 18H8z',
+  eye: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 14.8a2.8 2.8 0 100-5.6 2.8 2.8 0 000 5.6z',
+  events:
+    'M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM12 12.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.5 2.2-.3z',
+  undo: 'M9 14L4 9l5-5M4 9h9.5a6 6 0 010 12H11',
+  spark:
+    'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z',
+  fold: 'M8 4.5l4 4 4-4M8 19.5l4-4 4 4M4 12h16',
+  unfold: 'M8 8l4-4 4 4M8 16l4 4 4-4M4 12h16',
+};
 const STAR = 'M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z';
 
 export function PjIcon({
@@ -142,6 +163,7 @@ export function PjIcon({
       {name === 'close' && <Path d="M6.5 6.5l11 11M17.5 6.5l-11 11" {...line} />}
       {name === 'back' && <Path d="M14.5 6l-6 6 6 6" {...line} />}
       {name === 'bolt' && <Path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" {...line} />}
+      {PATHS[name] ? <Path d={PATHS[name]} {...line} /> : null}
     </Svg>
   );
 }

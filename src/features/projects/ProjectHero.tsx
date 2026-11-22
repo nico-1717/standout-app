@@ -149,12 +149,6 @@ export function ProjectHero(p: {
           marginTop: 2,
         }}
       >
-        {p.total ? (
-          <Text style={{ color: th.text2, fontSize: 14 }}>
-            {t('progetti.n_di_m_fatti', { n: p.done, m: p.total })}
-          </Text>
-        ) : null}
-        {p.total && date ? <Text style={{ color: th.text3, fontSize: 14 }}>·</Text> : null}
         {date ? (
           <Pressable
             testID="proj-date-meta"
@@ -173,7 +167,7 @@ export function ProjectHero(p: {
             hitSlop={6}
           >
             <Text style={{ color: th.text2, fontSize: 14 }}>
-              {p.total || date ? '· ' : ''}
+              {date ? '· ' : ''}
               {t('progetti.durata_totale', { durata: human(p.secs) })}
             </Text>
           </Pressable>

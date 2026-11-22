@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -8,21 +9,27 @@ import { Card, TextButton } from '@/ui/kit';
 import { haptic } from '@/ui/motion';
 
 import {
-  ROW_H,
   branchOf,
   chipRows,
   gridRange,
   inkOn,
   isAncestorOfSel,
+  legendDays,
+  lineSegments,
   shiftMonth,
 } from './calendarGrid';
+import { dayMarks } from './calendarMarks';
+import { CalendarLegend, CalendarLines } from './CalendarLines';
+import { DayCell } from './DayCell';
+import { useFloatingDock } from './dockHost';
 import { addDays } from './engine';
 import { hours, monthLabel, shortHours, weekdayName } from './format';
+import { usePaintGesture } from './paintGesture';
+import { PlanDock, type Tool } from './PlanDock';
 import type { PlanRepo } from './repo';
-import { PaintGesture } from './paintGesture';
 import { calendarView, type CalendarNode } from './view';
 
-export type Tool = 'paint' | 'erase' | 'look';
+export type { Tool };
 
 interface Undo {
   project: string;
@@ -56,7 +63,6 @@ export function PlanCalendar(p: {
   const [tool, setTool] = useState<Tool>('paint');
   const [showEv, setShowEv] = useState(false);
   const [undo, setUndo] = useState<Undo[]>([]);
-  const [drag, setDrag] = useState<{ mode: 'add' | 'remove'; days: string[] } | null>(null);
   const [scope, setScope] = useState<string | null>(p.scope);
 
   const range = gridRange(month);
@@ -116,27 +122,31 @@ export function PlanCalendar(p: {
     apply(current, on ? 'remove' : 'add', [day]);
   };
 
-  /* ---- il trascinamento in orizzontale: il primo giorno decide se si accende o si spegne, vale per tutto il gesto ---- */
-  const [gesture] = useState(() => new PaintGesture());
+  /* ---- il trascinamento in orizzontale: sul thread dell'interfaccia, il primo giorno decide se si accende o si spegne ---- */
+  const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(range.from, i)), [range.from]);
   const painted = current ? view.paint.get(current) : undefined;
+  const noDays = useMemo(() => new Set<string>(), []);
   const { repo, changed } = p;
-  useEffect(() => {
-    gesture.update(
-      { project: current, tool, today, from: range.from, painted: painted ?? new Set() },
-      {
-        onPreview: setDrag,
-        onCommit: (project, mode, days) => {
-          haptic.tap();
-          repo.paint(project, mode, days);
-          setUndo((u) => [
-            ...u.slice(-29),
-            { project, mode: mode === 'add' ? 'remove' : 'add', days },
-          ]);
-          changed();
-        },
-      },
-    );
-  }, [gesture, current, tool, today, range.from, painted, repo, changed]);
+  const onCommit = useCallback(
+    (mode: 'add' | 'remove', days: string[]) => {
+      if (!current || !days.length) return;
+      repo.paint(current, mode, days);
+      setUndo((u) => [
+        ...u.slice(-29),
+        { project: current, mode: mode === 'add' ? 'remove' : 'add', days },
+      ]);
+      changed();
+    },
+    [repo, changed, current],
+  );
+  const paint = usePaintGesture({
+    enabled: tool !== 'look' && !!current,
+    erase: tool === 'erase',
+    cells,
+    painted: painted ?? noDays,
+    today,
+    onCommit,
+  });
 
   const estimate = (() => {
     if (!selNode) return 0;
@@ -191,8 +201,48 @@ export function PlanCalendar(p: {
     );
   };
 
-  const cells = Array.from({ length: 42 }, (_, i) => addDays(range.from, i));
-  const dragSet = new Set(drag?.days ?? []);
+  // React Compiler memoizza da solo: niente useMemo a mano (la sua regola lo vieta
+  // quando una dipendenza deriva da un array ricostruito a ogni render)
+  const marks = dayMarks({
+    cells,
+    nodes,
+    current,
+    rowIds: rows.flatMap((r) => r.ids),
+    paint: view.paint,
+    plan: view.plan,
+  });
+  const segs = lineSegments(marks);
+  const names = new Map(nodes.map((n) => [n.project, n]));
+  const legend = [...legendDays(marks, cells, month)].map(([id, v]) => ({
+    id,
+    name: names.get(id)?.name ?? '',
+    color: v.color,
+    days: v.days,
+  }));
+  const me = current ? names.get(current) : undefined;
+  if (current && me) {
+    const n = cells.filter(
+      (d) => d.slice(0, 7) === month.slice(0, 7) && (view.paint.get(current)?.has(d) ?? false),
+    ).length;
+    if (n) legend.unshift({ id: current, name: me.name, color: me.color, days: n });
+  }
+  const tapRef = useRef<(day: string) => void>(() => undefined);
+  useEffect(() => {
+    tapRef.current = tapDay;
+  });
+  const pressDay = useCallback((day: string) => tapRef.current(day), []);
+
+  useFloatingDock(
+    <PlanDock
+      tool={tool}
+      onTool={setTool}
+      showEvents={showEv}
+      onEvents={() => setShowEv(!showEv)}
+      canUndo={undo.length > 0}
+      onUndo={doUndo}
+      onAutoplan={p.onAutoplan}
+    />,
+  );
 
   return (
     <View style={{ gap: 14 }}>
@@ -284,160 +334,61 @@ export function PlanCalendar(p: {
             </Text>
           ))}
         </View>
-        <View
-          ref={(n) => {
-            gesture.attach(n);
-          }}
-          testID="cal-grid"
-          onLayout={(e: LayoutChangeEvent) => {
-            gesture.setWidth(e.nativeEvent.layout.width);
-            gesture.measure();
-          }}
-          style={{ flexDirection: 'row', flexWrap: 'wrap' }}
-          {...gesture.responder.panHandlers}
-        >
-          {cells.map((d) => {
-            const inMonth = d.slice(0, 7) === month.slice(0, 7);
-            const painted = (current ? view.paint.get(current)?.has(d) : false) ?? false;
-            const shown = drag && dragSet.has(d) ? drag.mode === 'add' : painted;
-            const cp = view.cap.get(d);
-            const rest = !!cp && cp.cap === 0 && d >= today;
-            const planned = dayMinutes(d, focusIds);
-            const done = (() => {
-              const m = view.done.get(d);
-              if (!m) return false;
-              for (const id of focusIds) if ((m.get(id) ?? 0) > 0) return true;
-              return false;
-            })();
-            // i pallini: nessun progetto scelto = tutto quello che c'è; altrimenti gli altri progetti della fila
-            const dots: { color: string; soft: boolean }[] = [];
-            if (!current) {
-              const seen = new Map<string, number>();
-              for (const n of nodes) {
-                const pa = view.paint.get(n.project)?.has(d) ?? false;
-                const pl = view.plan.some(
-                  (b) =>
-                    b.day === d && b.project === n.project && b.kind === 'study' && b.minutes > 0,
-                );
-                if (!pa && !pl) continue;
-                const prev = seen.get(n.color);
-                if (prev !== undefined && (prev === 2 || !pa)) continue;
-                if (seen.size >= 6 && prev === undefined) continue;
-                seen.set(n.color, pa ? 2 : 1);
-              }
-              for (const [color, v] of seen) dots.push({ color, soft: v === 1 });
-            } else {
-              for (const id of rows.flatMap((r) => r.ids)) {
-                if (id === current || isAncestorOfSel(nodes, current, id)) continue;
-                const pa = view.paint.get(id)?.has(d) ?? false;
-                const ids = new Set(branchOf(nodes, id));
-                const pl = view.plan.some(
-                  (b) => b.day === d && ids.has(b.project) && b.kind === 'study' && b.minutes > 0,
-                );
-                if (pa || pl) dots.push({ color: byId.get(id)!.color, soft: !pa });
-              }
-            }
-            const evs = events.filter((e) => e.day === d);
-            const label =
-              planned > 0
-                ? shortHours(planned)
-                : shown && estimate && d >= today
-                  ? `~${shortHours(estimate)}`
-                  : '';
-            return (
-              <Pressable
-                key={d}
-                testID={`cal-day-${d}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: shown }}
-                accessibilityLabel={d}
-                onPress={() => tapDay(d)}
-                style={{
-                  width: `${100 / 7}%`,
-                  height: ROW_H,
-                  padding: 2,
-                }}
-              >
-                <View
-                  style={{
-                    flex: 1,
-                    borderRadius: 12,
-                    alignItems: 'center',
-                    paddingTop: 4,
-                    gap: 1,
-                    backgroundColor: shown ? selColor : rest ? th.surface2 : 'transparent',
-                    borderWidth: d === today ? 1.5 : 0,
-                    borderColor: th.brand,
-                    opacity: !inMonth ? 0.35 : d < today ? 0.6 : 1,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: shown ? inkOn(selColor) : th.text,
-                      fontWeight: d === today ? '800' : '600',
-                      fontSize: 14,
-                    }}
-                  >
-                    {Number(d.slice(8, 10))}
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 2, height: 6 }}>
-                    {dots.map((x) => (
-                      <View
-                        key={x.color}
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: x.color,
-                          opacity: x.soft ? 0.45 : 1,
-                        }}
-                      />
-                    ))}
-                  </View>
-                  <Text
-                    style={{
-                      color: shown ? inkOn(selColor) : th.text2,
-                      fontSize: 10,
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    {label}
-                  </Text>
-                  {evs.length ? (
-                    <View
-                      testID={`cal-ev-${d}`}
-                      style={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 6,
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: evs.some((e) => e.importance === 'highest')
-                          ? '#FF453A'
-                          : '#FFD60A',
-                      }}
-                    />
-                  ) : null}
-                  {done ? (
-                    <Text
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        left: 6,
-                        color: shown ? inkOn(selColor) : th.green,
-                        fontSize: 10,
-                        fontWeight: '800',
-                      }}
-                    >
-                      ✓
-                    </Text>
-                  ) : null}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+        <GestureDetector gesture={paint.gesture}>
+          <View
+            testID="cal-grid"
+            onLayout={(e: LayoutChangeEvent) => paint.setWidth(e.nativeEvent.layout.width)}
+            style={{ flexDirection: 'row', flexWrap: 'wrap' }}
+          >
+            {cells.map((d, i) => {
+              const inMonth = d.slice(0, 7) === month.slice(0, 7);
+              const saved = (current ? view.paint.get(current)?.has(d) : false) ?? false;
+              const cp = view.cap.get(d);
+              const rest = !!cp && cp.cap === 0 && d >= today;
+              const planned = dayMinutes(d, focusIds);
+              const done = (() => {
+                const m = view.done.get(d);
+                if (!m) return false;
+                for (const id of focusIds) if ((m.get(id) ?? 0) > 0) return true;
+                return false;
+              })();
+              const evs = events.filter((e) => e.day === d);
+              const label =
+                planned > 0
+                  ? shortHours(planned)
+                  : saved && estimate && d >= today
+                    ? `~${shortHours(estimate)}`
+                    : '';
+              return (
+                <DayCell
+                  key={d}
+                  index={i}
+                  day={d}
+                  saved={saved}
+                  selColor={selColor}
+                  ink={inkOn(selColor)}
+                  textColor={th.text}
+                  labelColor={th.text2}
+                  restColor={th.surface2}
+                  edgeColor={th.brand}
+                  checkColor={saved ? inkOn(selColor) : th.green}
+                  eventColor={
+                    evs.length ? (evs.some((e) => e.importance === 'highest') ? '#FF453A' : '#FFD60A') : null
+                  }
+                  isToday={d === today}
+                  fade={!inMonth ? 0.35 : d < today ? 0.6 : 1}
+                  rest={rest}
+                  label={label}
+                  done={done}
+                  preview={paint.preview}
+                  onPress={pressDay}
+                />
+              );
+            })}
+            <CalendarLines segs={segs} />
+          </View>
+        </GestureDetector>
+        <CalendarLegend rows={legend} />
         <Text style={{ color: th.text2, fontSize: 12 }}>{t(`piano.tip_${tool}`)}</Text>
       </Card>
 
@@ -532,85 +483,6 @@ export function PlanCalendar(p: {
         </Card>
       ) : null}
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        {(['paint', 'erase', 'look'] as Tool[]).map((k) => (
-          <Pressable
-            key={k}
-            testID={`cal-tool-${k}`}
-            accessibilityRole="button"
-            accessibilityState={{ selected: tool === k }}
-            onPress={() => setTool(k)}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 999,
-              minHeight: 40,
-              justifyContent: 'center',
-              backgroundColor: tool === k ? th.brand : th.surface,
-            }}
-          >
-            <Text style={{ color: tool === k ? '#fff' : th.text, fontWeight: '600' }}>
-              {t(
-                k === 'paint'
-                  ? 'piano.evidenzia'
-                  : k === 'erase'
-                    ? 'piano.cancella'
-                    : 'piano.guarda',
-              )}
-            </Text>
-          </Pressable>
-        ))}
-        <Pressable
-          testID="cal-events"
-          accessibilityRole="button"
-          accessibilityState={{ selected: showEv }}
-          accessibilityLabel={t('piano.eventi_btn')}
-          onPress={() => setShowEv(!showEv)}
-          style={{
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderRadius: 999,
-            minHeight: 40,
-            justifyContent: 'center',
-            backgroundColor: showEv ? th.brand : th.surface,
-          }}
-        >
-          <Text style={{ color: showEv ? '#fff' : th.text, fontWeight: '600' }}>★</Text>
-        </Pressable>
-        <Pressable
-          testID="cal-undo"
-          accessibilityRole="button"
-          accessibilityLabel={t('piano.annulla')}
-          disabled={!undo.length}
-          onPress={doUndo}
-          style={{
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderRadius: 999,
-            minHeight: 40,
-            justifyContent: 'center',
-            backgroundColor: th.surface,
-            opacity: undo.length ? 1 : 0.4,
-          }}
-        >
-          <Text style={{ color: th.text, fontWeight: '600' }}>↶ {t('piano.annulla')}</Text>
-        </Pressable>
-        <Pressable
-          testID="cal-autoplan"
-          accessibilityRole="button"
-          onPress={p.onAutoplan}
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: 999,
-            minHeight: 40,
-            justifyContent: 'center',
-            backgroundColor: th.brand,
-          }}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>✦ {t('piano.pianifica_breve')}</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }

@@ -4,9 +4,12 @@ import {
   gridRange,
   inkOn,
   isAncestorOfSel,
+  legendDays,
+  lineSegments,
   shiftMonth,
   ROW_H,
 } from '../calendarGrid';
+import { addDays } from '../engine';
 import type { CalendarNode } from '../view';
 
 const node = (
@@ -72,5 +75,44 @@ describe('calendar grid', () => {
     expect(inkOn('#FFFFFF')).toBe('#1C1C1E');
     expect(inkOn('#000000')).toBe('#FFFFFF');
     expect(inkOn('boh')).toBe('#1C1C1E');
+  });
+});
+
+describe('lineSegments', () => {
+  const mark = (id: string, soft = false) => ({ id, color: `#${id}`, soft });
+  const empty = () => Array.from({ length: 42 }, () => [] as ReturnType<typeof mark>[]);
+
+  it('cinque giorni di fila di un progetto sono UNA linea con gli estremi arrotondati', () => {
+    const d = empty();
+    for (let i = 8; i <= 12; i++) d[i].push(mark('a'));
+    const s = lineSegments(d);
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ row: 1, from: 1, to: 5, capL: true, capR: true, lane: 0 });
+  });
+
+  it('va a capo con la settimana: due tratti, senza estremo dove continua', () => {
+    const d = empty();
+    for (let i = 5; i <= 9; i++) d[i].push(mark('a'));
+    const s = lineSegments(d).sort((x, y) => x.row - y.row);
+    expect(s).toHaveLength(2);
+    expect(s[0]).toMatchObject({ row: 0, from: 5, to: 6, capL: true, capR: false });
+    expect(s[1]).toMatchObject({ row: 1, from: 0, to: 2, capL: false, capR: true });
+  });
+
+  it('due progetti nello stesso giorno stanno su corsie diverse', () => {
+    const d = empty();
+    for (let i = 7; i <= 10; i++) d[i].push(mark('a'));
+    for (let i = 9; i <= 12; i++) d[i].push(mark('b'));
+    const s = lineSegments(d);
+    expect(new Set(s.map((x) => x.lane)).size).toBe(2);
+  });
+
+  it('un giorno vuoto spezza la linea e la legenda conta i giorni del mese', () => {
+    const d = empty();
+    d[8].push(mark('a'));
+    d[10].push(mark('a'));
+    expect(lineSegments(d)).toHaveLength(2);
+    const cells = Array.from({ length: 42 }, (_, i) => addDays('2026-10-26', i));
+    expect(legendDays(d, cells, '2026-11-01').get('a')?.days).toBe(2);
   });
 });

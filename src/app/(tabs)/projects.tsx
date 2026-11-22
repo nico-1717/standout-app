@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
+import { DockHost } from '@/features/plan/dockHost';
 import { PlanPanel } from '@/features/plan/PlanPanel';
 import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
 import { Crumbs, ProjectsHeader, Seg } from '@/features/projects/PjParts';
@@ -244,6 +245,14 @@ export default function ProjectsScreen() {
                     parent={me}
                     rows={flatten(all, { ...treeOpts, collapsed, root: me.uuid })}
                     collapsed={collapsed}
+                    onFoldAll={(ids, collapse) => {
+                      const n = new Set(collapsed);
+                      for (const id of ids) {
+                        if (collapse) n.add(id);
+                        else n.delete(id);
+                      }
+                      setCollapsed(n);
+                    }}
                     onToggleBranch={(uuid) => {
                       const n = new Set(collapsed);
                       if (n.has(uuid)) n.delete(uuid);
@@ -321,6 +330,7 @@ export default function ProjectsScreen() {
         {showDates ? (
           <DatesSheet all={all} onOpen={open} onClose={() => setShowDates(false)} />
         ) : null}
+        <DockHost bottom={12} />
       </View>
     </DropZonesContext.Provider>
   );

@@ -99,3 +99,84 @@ export function inkOn(color: string): string {
   const b = n & 255;
   return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#1C1C1E' : '#FFFFFF';
 }
+
+/** Quello che c'è in un giorno per un progetto: il suo colore, e se è solo pianificato (soft) o evidenziato a mano. */
+export interface DayMark {
+  id: string;
+  color: string;
+  soft: boolean;
+}
+
+/** Un tratto di linea dentro UNA settimana (riga 0..5, colonne 0..6). */
+export interface LineSeg extends DayMark {
+  row: number;
+  from: number;
+  to: number;
+  /** il tratto comincia / finisce davvero qui (non continua dalla settimana prima / dopo): estremo arrotondato */
+  capL: boolean;
+  capR: boolean;
+  lane: number;
+}
+
+const markKey = (m: DayMark) => `${m.id}|${m.soft ? 1 : 0}`;
+
+/**
+ * Dalle caselle del mese alle linee: per ogni progetto, i giorni di fila diventano UNA linea, spezzata solo dove va a
+ * capo la settimana. Due progetti nello stesso giorno stanno su corsie diverse (come le barre della linea del tempo del
+ * sito). Oltre `maxLanes` corsie un tratto non si disegna: la legenda sotto il calendario dice comunque tutto.
+ */
+export function lineSegments(days: DayMark[][], maxLanes = 3): LineSeg[] {
+  const out: LineSeg[] = [];
+  const has = (i: number, m: DayMark) =>
+    i >= 0 && i < days.length && (days[i] ?? []).some((x) => markKey(x) === markKey(m));
+  for (let row = 0; row < 6; row++) {
+    const keys = new Map<string, DayMark>();
+    for (let c = 0; c < 7; c++) for (const m of days[row * 7 + c] ?? []) keys.set(markKey(m), m);
+    const segs: Omit<LineSeg, 'lane'>[] = [];
+    for (const m of keys.values()) {
+      for (let c = 0; c < 7; c++) {
+        if (!has(row * 7 + c, m)) continue;
+        const from = c;
+        while (c + 1 < 7 && has(row * 7 + c + 1, m)) c++;
+        segs.push({
+          ...m,
+          row,
+          from,
+          to: c,
+          capL: !has(row * 7 + from - 1, m),
+          capR: !has(row * 7 + c + 1, m),
+        });
+      }
+    }
+    segs.sort((a, b) => a.from - b.from || a.to - b.to || a.id.localeCompare(b.id));
+    const laneEnd: number[] = [];
+    for (const s of segs) {
+      let lane = 0;
+      while (laneEnd[lane] !== undefined && laneEnd[lane] >= s.from) lane++;
+      laneEnd[lane] = s.to;
+      if (lane < maxLanes) out.push({ ...s, lane });
+    }
+  }
+  return out;
+}
+
+/** Quanti giorni DEL MESE mostrato ha ogni progetto (la legenda): ogni giorno conta una volta, anche se ha più segni. */
+export function legendDays(
+  days: DayMark[][],
+  cells: string[],
+  month: string,
+): Map<string, { color: string; days: number }> {
+  const out = new Map<string, { color: string; days: number }>();
+  cells.forEach((d, i) => {
+    if (d.slice(0, 7) !== month.slice(0, 7)) return;
+    const seen = new Set<string>();
+    for (const m of days[i] ?? []) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      const cur = out.get(m.id) ?? { color: m.color, days: 0 };
+      cur.days += 1;
+      out.set(m.id, cur);
+    }
+  });
+  return out;
+}

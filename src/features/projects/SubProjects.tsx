@@ -38,6 +38,8 @@ export function SubProjects(p: {
   rows: TreeRow[];
   collapsed: ReadonlySet<string>;
   onToggleBranch: (uuid: string) => void;
+  /** apre o chiude tutti i rami insieme (il tasto con le frecce del sito, `prFoldAll`) */
+  onFoldAll?: (ids: string[], collapse: boolean) => void;
   swatches: string[];
   onOpen: (project: Project) => void;
   onStart: (project: Project) => void;
@@ -57,7 +59,6 @@ export function SubProjects(p: {
   const { t } = useTranslation();
   const today = localToday();
   const kids = p.all.filter((x) => x.parent_uuid === p.parent.uuid);
-  const doneKids = kids.filter((k) => k.status === 'completed').length;
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [panel, setPanel] = useState<Panel>(null);
@@ -167,6 +168,12 @@ export function SubProjects(p: {
     done();
   };
 
+  // i rami che hanno dei figli, a ogni livello: il tasto con le frecce li apre o li chiude tutti insieme
+  const branchIds = subtreeIds(p.all, p.parent.uuid).filter(
+    (id) => id !== p.parent.uuid && p.all.some((x) => x.parent_uuid === id),
+  );
+  const anyOpen = branchIds.some((id) => !p.collapsed.has(id));
+
   return (
     <View>
       <View ref={(v) => drag.attachZone(p.parent.uuid, p.parent.name)(v)} collapsable={false}>
@@ -202,20 +209,17 @@ export function SubProjects(p: {
                   <PjIcon name={grid ? 'list' : 'grid'} color={th.text3} size={17} />
                 </Pressable>
               ) : null}
-              {kids.length ? (
-                <Text
-                  style={{
-                    color: th.text2,
-                    fontSize: 12.5,
-                    fontWeight: '600',
-                    minWidth: 34,
-                    textAlign: 'right',
-                    marginLeft: 8,
-                    fontVariant: ['tabular-nums'],
-                  }}
+              {p.onFoldAll && !grid && !selecting && branchIds.length ? (
+                <Pressable
+                  testID="sub-fold-all"
+                  accessibilityRole="button"
+                  accessibilityLabel={anyOpen ? t('progetti.chiudi_tutto') : t('progetti.apri_tutto')}
+                  onPress={() => p.onFoldAll?.(branchIds, anyOpen)}
+                  hitSlop={4}
+                  style={labTool(null)}
                 >
-                  {doneKids} / {kids.length}
-                </Text>
+                  <PjIcon name={anyOpen ? 'fold' : 'unfold'} color={th.text3} size={17} />
+                </Pressable>
               ) : null}
             </View>
           }
