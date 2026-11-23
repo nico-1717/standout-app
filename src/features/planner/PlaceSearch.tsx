@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Platform, Pressable, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useTranslation } from 'react-i18next';
 
 import type { PlaceHit, PlacePoint } from '@/core/account/accountApi';
 
 import type { PickedPlace } from './BookParts';
+import { LineIcon } from './PlannerIcons';
 import type { PlannerTheme } from './plannerTheme';
 
 /**
@@ -192,6 +193,16 @@ export function PlaceHits({
   );
 }
 
+/** La tessera OpenStreetMap che contiene il punto (come nel sito): serve da sfondo piccolo dei blocchi con un posto. */
+export function osmTile(lat: number, lon: number, z: number): string {
+  const n = 2 ** z;
+  const rad = (lat * Math.PI) / 180;
+  const x = Math.floor(((lon + 180) / 360) * n);
+  const y = Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n);
+  const c = (v: number) => Math.min(n - 1, Math.max(0, v));
+  return `https://tile.openstreetmap.org/${z}/${c(x)}/${c(y)}.png`;
+}
+
 /** Il posto nella app Mappe del telefono (Apple Mappe su iPhone, Google Maps o quello che c'è su Android). */
 export function mapsUrl(lat: number, lon: number, name: string | null, os: string): string {
   const label = encodeURIComponent(name ?? '');
@@ -274,11 +285,13 @@ export function PlaceMap({
   lat,
   lon,
   name,
+  height = 150,
 }: {
   pt: PlannerTheme;
   lat: number;
   lon: number;
   name: string | null;
+  height?: number;
 }) {
   const { t } = useTranslation();
   return (
@@ -286,7 +299,7 @@ export function PlaceMap({
       testID="place-map"
       accessibilityLabel={t('planner.mappa_del_luogo')}
       style={{
-        height: 150,
+        height,
         borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 0.5,
@@ -308,5 +321,104 @@ export function PlaceMap({
         <Marker coordinate={{ latitude: lat, longitude: lon }} title={name ?? undefined} />
       </MapView>
     </View>
+  );
+}
+
+/**
+ * Il posto di un evento in un piccolo popup: nome, mappa e «Apri nella mappa». Senza coordinate (solo testo scritto
+ * a mano) niente mappa: il tasto cerca per testo, come nel foglio dell'evento.
+ */
+export function PlacePopup({
+  pt,
+  name,
+  address,
+  lat,
+  lon,
+  onClose,
+}: {
+  pt: PlannerTheme;
+  name: string;
+  address: string;
+  lat: number | null;
+  lon: number | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const has = lat !== null && lon !== null;
+  const open = () => {
+    const url = has
+      ? mapsUrl(lat, lon, name || null, Platform.OS)
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || name)}`;
+    void Linking.openURL(url);
+  };
+  return (
+    <Modal transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        testID="place-popup-backdrop"
+        accessibilityRole="button"
+        accessibilityLabel={t('comune.chiudi')}
+        onPress={onClose}
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        }}
+      >
+        <Pressable
+          testID="place-popup"
+          accessible={false}
+          onPress={() => undefined}
+          style={{
+            width: '100%',
+            maxWidth: 460,
+            borderRadius: 20,
+            backgroundColor: pt.card,
+            padding: 16,
+            gap: 12,
+            borderWidth: 0.5,
+            borderColor: pt.hair2,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: pt.ink, fontSize: 17, fontWeight: '600', fontFamily: pt.sans }}>
+                {name}
+              </Text>
+              {address && address !== name ? (
+                <Text style={{ color: pt.ink2, fontSize: 13, fontFamily: pt.sans }}>{address}</Text>
+              ) : null}
+            </View>
+            <Pressable
+              testID="place-popup-close"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.chiudi')}
+              hitSlop={10}
+              onPress={onClose}
+            >
+              <LineIcon name="close" color={pt.ink3} size={20} />
+            </Pressable>
+          </View>
+          {has ? <PlaceMap pt={pt} lat={lat} lon={lon} name={name} height={220} /> : null}
+          <Pressable
+            testID="place-popup-open"
+            accessibilityRole="button"
+            onPress={open}
+            style={{
+              minHeight: 44,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: pt.accent,
+            }}
+          >
+            <Text style={{ color: pt.card, fontWeight: '600', fontFamily: pt.sans }}>
+              {t('planner.apri_nella_mappa')}
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }

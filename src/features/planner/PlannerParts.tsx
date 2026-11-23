@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import { Pressable, View, type GestureResponderEvent } from 'react-native';
+import { Image, Pressable, View, type GestureResponderEvent } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -30,6 +30,7 @@ import { useEventDrag } from './useEventDrag';
 import { placeRange, useGridPlace } from './useGridPlace';
 import type { WxDay, WxHour } from '@/core/account/accountApi';
 import { LineIcon } from './PlannerIcons';
+import { osmTile, PlacePopup } from './PlaceSearch';
 import { wxHourIconName, type WxCtx } from './weather';
 import { WxIcon } from './WeatherUi';
 import { wxPalette, wxTint } from './weatherIcons';
@@ -126,6 +127,8 @@ export function EventBlock(
   },
 ) {
   const { pt, block, ppm } = p;
+  const { t } = useTranslation();
+  const [placeOpen, setPlaceOpen] = useState(false);
   // la densità di quando si è preso il blocco in mano: serve a scegliere dove cade, e non cambia durante il trascinamento
   const [dragPpm, setDragPpm] = useState(0);
   const drag = useEventDrag({
@@ -150,6 +153,11 @@ export function EventBlock(
   const base = Math.max(18, block.height * pxPerMinute(p.zoom) - 1);
   const tall = base >= 40 || dragging;
   const showBox = ev.type === 'task' || !!ev.habitUuid;
+  // un posto: il tastino con il popup; con le coordinate anche la mappa di sfondo
+  const placeText = ev.placeName || ev.location;
+  const hasPlace = !!placeText && !p.onShiftPick;
+  const hasPoint = ev.placeLat !== null && ev.placeLon !== null;
+  const pinSize = base < 28 ? 16 : 22;
   const frame = useAnimatedStyle(() => ({
     transform: [{ translateY: top * ppm.value }],
     height: Math.max(18, block.height * ppm.value - 1),
@@ -180,6 +188,19 @@ export function EventBlock(
         frame,
       ]}
     >
+      {hasPoint && hasPlace ? (
+        <View
+          testID={`ev-mapbg-${ev.uid}`}
+          pointerEvents="none"
+          style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, opacity: 0.26 }}
+        >
+          <Image
+            source={{ uri: osmTile(ev.placeLat!, ev.placeLon!, 15) }}
+            resizeMode="cover"
+            style={{ width: '100%', height: '100%' }}
+          />
+        </View>
+      ) : null}
       <Pressable
         testID={`ev-${ev.uid}`}
         accessibilityRole="button"
@@ -204,7 +225,14 @@ export function EventBlock(
               pt.style === 'standard' ? (cal ?? color) : mix(cal ?? color, '#FFFFFF', 0.82),
           }}
         />
-        <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: 6,
+            alignItems: 'flex-start',
+            paddingRight: hasPlace ? pinSize + 4 : 0,
+          }}
+        >
           {p.onShiftPick ? (
             <View
               testID={`pick-${ev.uid}`}
@@ -262,6 +290,40 @@ export function EventBlock(
           </Text>
         ) : null}
       </Pressable>
+      {hasPlace ? (
+        <Pressable
+          testID={`ev-pin-${ev.uid}`}
+          accessibilityRole="button"
+          accessibilityLabel={t('planner.portami_a', { posto: placeText })}
+          hitSlop={8}
+          onPress={() => setPlaceOpen(true)}
+          style={{
+            position: 'absolute',
+            top: base < 28 ? 1 : 4,
+            right: 4,
+            width: pinSize,
+            height: pinSize,
+            borderRadius: pinSize / 2,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: pt.card,
+            borderWidth: 0.5,
+            borderColor: pt.hair2,
+          }}
+        >
+          <LineIcon name="pin" color={pt.ink2} size={pinSize < 20 ? 10 : 13} />
+        </Pressable>
+      ) : null}
+      {placeOpen ? (
+        <PlacePopup
+          pt={pt}
+          name={placeText}
+          address={ev.location}
+          lat={ev.placeLat}
+          lon={ev.placeLon}
+          onClose={() => setPlaceOpen(false)}
+        />
+      ) : null}
     </Animated.View>
   );
 }
