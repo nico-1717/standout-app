@@ -219,6 +219,28 @@ describe('weather UI', () => {
     await fireEvent.press(screen.getByTestId('ps-weather-open'));
     expect(onOpen).toHaveBeenCalled();
   });
+  test('the big forecast tile previews today: place, degrees, sky and the rain chance when high', async () => {
+    const rainy = wxState({
+      ...raw,
+      adesso: { ...raw.adesso, temp: 6 },
+      giorni: { '2026-11-18': raw.giorni['2026-11-18'] },
+    });
+    await render(
+      wrap((pt) => (
+        <WeatherCard
+          pt={pt}
+          wx={rainy}
+          today="2026-11-18"
+          busy={false}
+          onToggle={() => undefined}
+          onOpen={() => undefined}
+        />
+      )),
+    );
+    expect(screen.getByText('TODAY IN MILANO')).toBeTruthy();
+    expect(screen.getByText(/Rain · 80% chance of rain/)).toBeTruthy();
+    expect(screen.getByText("See today's forecast →")).toBeTruthy();
+  });
   test('a switched-off card shows the hint and no forecast button', async () => {
     await render(
       wrap((pt) => (

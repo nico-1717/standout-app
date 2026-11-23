@@ -90,6 +90,10 @@ export function WxTag(p: {
 }
 
 /** La scheda del meteo in cima alle impostazioni del planner: acceso/spento, dove, che tempo fa, previsioni. */
+/** Il segnaposto del tasto «Cambia luogo» (lo stesso disegno del sito). */
+const pinSvg = (color: string) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>`;
+
 export function WeatherCard(p: {
   pt: PlannerTheme;
   wx: WxState | null;
@@ -118,6 +122,20 @@ export function WeatherCard(p: {
       : t('planner.wx_acceso')
     : t('planner.wx_spento_sub');
   const c = wxToneColors(pt, on ? wxTone(icon) : 'plain');
+  // l'anteprima del tasto grande: gradi di adesso (o la massima) e com'è il tempo
+  const now = wx?.adesso?.temp ?? day?.tmax ?? null;
+  const degrees = now === null ? '' : `${now}°`;
+  const teaser = day
+    ? [
+        day.label,
+        day.pioggia !== null && day.pioggia >= 30
+          ? t('planner.wx_pioggia_pct', { n: Math.round(day.pioggia) })
+          : '',
+      ]
+        .filter(Boolean)
+        .map((x, i) => (i === 0 ? `  ${x}` : ` · ${x}`))
+        .join('')
+    : '';
   return (
     <View
       testID="ps-weather"
@@ -206,36 +224,38 @@ export function WeatherCard(p: {
               </Pressable>
             ))}
           </View>
-          <Text
-            testID="ps-weather-mode-sub"
-            style={{ color: pt.ink3, fontSize: 12.5, fontFamily: pt.sans }}
-          >
-            {wx.auto ? t('planner.wx_auto_sub_app') : t('planner.wx_a_mano_sub')}
-          </Text>
-          {!wx.auto && p.onChangePlace ? (
-            <Pressable
-              testID="ps-weather-change-place"
-              accessibilityRole="button"
-              onPress={p.onChangePlace}
-              style={{
-                paddingVertical: 9,
-                borderRadius: 12,
-                alignItems: 'center',
-                backgroundColor: pt.accentSoft,
-              }}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text
+              testID="ps-weather-mode-sub"
+              style={{ flex: 1, color: pt.ink3, fontSize: 12.5, fontFamily: pt.sans }}
             >
-              <Text
+              {wx.auto ? t('planner.wx_auto_sub_app') : t('planner.wx_a_mano_sub')}
+            </Text>
+            {!wx.auto && p.onChangePlace ? (
+              <Pressable
+                testID="ps-weather-change-place"
+                accessibilityRole="button"
+                onPress={p.onChangePlace}
+                hitSlop={8}
                 style={{
-                  color: pt.accentInk,
-                  fontSize: 14,
-                  fontWeight: '600',
-                  fontFamily: pt.sans,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  paddingVertical: 6,
+                  paddingHorizontal: 11,
+                  borderRadius: 999,
+                  backgroundColor: pt.accentSoft,
                 }}
               >
-                {t('planner.wx_cambia_posto')}
-              </Text>
-            </Pressable>
-          ) : null}
+                <SvgXml xml={pinSvg(pt.ink)} width={14} height={14} />
+                <Text
+                  style={{ color: pt.ink, fontSize: 12, fontWeight: '600', fontFamily: pt.sans }}
+                >
+                  {t('planner.wx_cambia_posto')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </>
       ) : null}
       {on && day ? (
@@ -243,19 +263,63 @@ export function WeatherCard(p: {
           testID="ps-weather-open"
           accessibilityRole="button"
           onPress={p.onOpen}
-          style={{
-            alignSelf: 'flex-start',
-            paddingVertical: 7,
-            paddingHorizontal: 14,
-            borderRadius: 999,
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            padding: 14,
+            borderRadius: 16,
             backgroundColor: pt.accentSoft,
-          }}
+            borderWidth: 0.5,
+            borderColor: pt.accent,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+          })}
         >
-          <Text
-            style={{ color: pt.accentInk, fontSize: 13, fontWeight: '600', fontFamily: pt.sans }}
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: pt.card,
+            }}
           >
-            {t('planner.wx_previsioni')}
-          </Text>
+            <WxIcon name={icon} size={34} color={c.fg} />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text
+              style={{
+                color: pt.accentInk,
+                fontSize: 11,
+                fontWeight: '700',
+                letterSpacing: 0.7,
+                fontFamily: pt.sans,
+              }}
+            >
+              {(wx.place
+                ? t('planner.wx_oggi_a', { posto: wx.place })
+                : t('planner.wx_previsioni')
+              ).toUpperCase()}
+            </Text>
+            <Text
+              testID="ps-weather-teaser"
+              style={{ color: pt.ink, fontSize: 26, fontWeight: '700', fontFamily: pt.sans }}
+            >
+              {degrees}
+              <Text style={{ color: pt.ink3, fontSize: 13, fontWeight: '500' }}>{teaser}</Text>
+            </Text>
+            <Text
+              style={{
+                color: pt.accentInk,
+                fontSize: 13.5,
+                fontWeight: '700',
+                fontFamily: pt.sans,
+              }}
+            >
+              {t('planner.wx_vedi_previsioni')} →
+            </Text>
+          </View>
         </Pressable>
       ) : null}
     </View>
