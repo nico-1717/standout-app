@@ -95,7 +95,7 @@ export default function PlannerSettingsScreen() {
     const known = weather.wx;
     if (known && known.lat !== null && known.lon !== null) {
       setWxBusy(true);
-      void weather.enable(known.lat, known.lon).finally(() => setWxBusy(false));
+      void weather.enable(known.lat, known.lon, known.auto).finally(() => setWxBusy(false));
     } else setPicking(true);
   };
   const row = (label: string, onPress: () => void, color: string, testID: string) => (
@@ -167,6 +167,11 @@ export default function PlannerSettingsScreen() {
           busy={wxBusy}
           onToggle={toggleWeather}
           onOpen={() => setWxDate(today)}
+          onMode={(auto) => {
+            setWxBusy(true);
+            void weather.setAuto(auto).finally(() => setWxBusy(false));
+          }}
+          onChangePlace={() => setPicking(true)}
         />
         {picking ? (
           <View style={{ marginBottom: 12 }}>
@@ -178,7 +183,7 @@ export default function PlannerSettingsScreen() {
               onPick={(pl) => {
                 setPicking(false);
                 setWxBusy(true);
-                void weather.enable(pl.lat, pl.lon).finally(() => setWxBusy(false));
+                void weather.setPlace(pl.lat, pl.lon, pl.nome).finally(() => setWxBusy(false));
               }}
             />
           </View>

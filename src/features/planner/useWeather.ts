@@ -14,7 +14,11 @@ export function useWeather() {
     loading: weatherStore.loading,
     failed: weatherStore.failed,
     load,
-    enable: (lat: number, lon: number) => weatherStore.enable(account, lat, lon),
+    enable: (lat: number, lon: number, auto?: boolean) =>
+      weatherStore.enable(account, lat, lon, auto),
+    setPlace: (lat: number, lon: number, place: string) =>
+      weatherStore.setPlace(account, lat, lon, place),
+    setAuto: (auto: boolean) => weatherStore.setAuto(account, auto),
     disable: () => weatherStore.disable(account),
     preview: (lat: number, lon: number, place: string) =>
       weatherStore.preview(account, lat, lon, place),

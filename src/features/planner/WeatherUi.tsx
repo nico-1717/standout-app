@@ -97,6 +97,10 @@ export function WeatherCard(p: {
   busy: boolean;
   onToggle: (on: boolean) => void;
   onOpen: () => void;
+  /** automatico (segue la posizione viva) o a mano (resta il posto scelto) */
+  onMode?: (auto: boolean) => void;
+  /** apre la scelta del luogo («Cambia luogo», solo a mano) */
+  onChangePlace?: () => void;
 }) {
   const { t } = useTranslation();
   const { pt, wx } = p;
@@ -160,6 +164,80 @@ export function WeatherCard(p: {
           trackColor={{ true: pt.accent }}
         />
       </View>
+      {on && p.onMode ? (
+        <>
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 4,
+              padding: 3,
+              borderRadius: 12,
+              backgroundColor: pt.accentSoft,
+            }}
+          >
+            {([true, false] as const).map((auto) => (
+              <Pressable
+                key={String(auto)}
+                testID={auto ? 'ps-weather-mode-auto' : 'ps-weather-mode-manual'}
+                accessibilityRole="button"
+                accessibilityState={{ selected: wx.auto === auto }}
+                disabled={p.busy}
+                onPress={() => {
+                  if (wx.auto !== auto) p.onMode?.(auto);
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 9,
+                  alignItems: 'center',
+                  backgroundColor: wx.auto === auto ? pt.card : 'transparent',
+                }}
+              >
+                <Text
+                  style={{
+                    color: wx.auto === auto ? pt.ink : pt.ink3,
+                    fontSize: 13.5,
+                    fontWeight: '600',
+                    fontFamily: pt.sans,
+                  }}
+                >
+                  {auto ? t('planner.wx_auto') : t('planner.wx_a_mano')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text
+            testID="ps-weather-mode-sub"
+            style={{ color: pt.ink3, fontSize: 12.5, fontFamily: pt.sans }}
+          >
+            {wx.auto ? t('planner.wx_auto_sub_app') : t('planner.wx_a_mano_sub')}
+          </Text>
+          {!wx.auto && p.onChangePlace ? (
+            <Pressable
+              testID="ps-weather-change-place"
+              accessibilityRole="button"
+              onPress={p.onChangePlace}
+              style={{
+                paddingVertical: 9,
+                borderRadius: 12,
+                alignItems: 'center',
+                backgroundColor: pt.accentSoft,
+              }}
+            >
+              <Text
+                style={{
+                  color: pt.accentInk,
+                  fontSize: 14,
+                  fontWeight: '600',
+                  fontFamily: pt.sans,
+                }}
+              >
+                {t('planner.wx_cambia_posto')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
+      ) : null}
       {on && day ? (
         <Pressable
           testID="ps-weather-open"

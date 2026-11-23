@@ -95,6 +95,8 @@ describe('WeatherStore', () => {
       weather: jest.fn(async () => wxState(raw)),
       weatherEnable: jest.fn(async () => wxState(raw)),
       weatherDisable: jest.fn(async () => undefined),
+      weatherPlace: jest.fn(async () => wxState({ ...raw, place: 'Roma', auto: false })),
+      weatherMode: jest.fn(async (auto: boolean) => auto),
       weatherPreview: jest.fn(async () => wxState({ ...raw, manual: true, place: 'Roma' })),
       ...over,
     }) as unknown as AccountApi;
@@ -120,6 +122,18 @@ describe('WeatherStore', () => {
     await pending;
     expect(a.weatherDisable).toHaveBeenCalled();
   });
+  test('a chosen place stays (manual mode); the mode can be flipped without moving the place', async () => {
+    const store = new WeatherStore();
+    const a = api();
+    await store.load(a, true);
+    await store.setPlace(a, 41.9, 12.5, 'Roma');
+    expect(a.weatherPlace).toHaveBeenCalledWith(41.9, 12.5, 'Roma');
+    expect(store.state?.place).toBe('Roma');
+    expect(store.state?.auto).toBe(false);
+    await store.setAuto(a, true);
+    expect(store.state?.auto).toBe(true);
+    expect(store.state?.place).toBe('Roma');
+  });
   test('previewing another place keeps the answer as manual', async () => {
     const store = new WeatherStore();
     await store.preview(api(), 41.9, 12.5, 'Roma');
@@ -143,6 +157,47 @@ const wrap = (ui: (pt: ReturnType<typeof plannerTheme>) => React.ReactNode) => (
 );
 
 describe('weather UI', () => {
+  test('the card offers Automatic or Chosen place, and Change place only in manual mode', async () => {
+    const onMode = jest.fn();
+    const onChangePlace = jest.fn();
+    const view = await render(
+      wrap((pt) => (
+        <WeatherCard
+          pt={pt}
+          wx={{ ...wxState(raw), auto: false }}
+          today="2026-11-17"
+          busy={false}
+          onToggle={jest.fn()}
+          onOpen={jest.fn()}
+          onMode={onMode}
+          onChangePlace={onChangePlace}
+        />
+      )),
+    );
+    await fireEvent.press(screen.getByTestId('ps-weather-change-place'));
+    expect(onChangePlace).toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('ps-weather-mode-auto'));
+    expect(onMode).toHaveBeenCalledWith(true);
+    // già a mano: toccare «a mano» non fa niente
+    await fireEvent.press(screen.getByTestId('ps-weather-mode-manual'));
+    expect(onMode).toHaveBeenCalledTimes(1);
+    await view.rerender(
+      wrap((pt) => (
+        <WeatherCard
+          pt={pt}
+          wx={{ ...wxState(raw), auto: true }}
+          today="2026-11-17"
+          busy={false}
+          onToggle={jest.fn()}
+          onOpen={jest.fn()}
+          onMode={onMode}
+          onChangePlace={onChangePlace}
+        />
+      )),
+    );
+    expect(screen.queryByTestId('ps-weather-change-place')).toBeNull();
+  });
+
   test('the card says where and how warm, and toggles', async () => {
     const onToggle = jest.fn();
     const onOpen = jest.fn();

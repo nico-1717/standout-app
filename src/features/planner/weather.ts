@@ -138,9 +138,23 @@ export class WeatherStore {
   }
 
   /** Accende il meteo per un punto: lo stato nuovo arriva con le previsioni. */
-  async enable(api: AccountApi, lat: number, lon: number): Promise<void> {
-    this.state = await api.weatherEnable(lat, lon);
+  async enable(api: AccountApi, lat: number, lon: number, auto?: boolean): Promise<void> {
+    this.state = await api.weatherEnable(lat, lon, auto);
     this.loadedAt = Date.now();
+    this.bump();
+  }
+
+  /** Un luogo scelto a mano che resta (modalità «a mano»). */
+  async setPlace(api: AccountApi, lat: number, lon: number, place: string): Promise<void> {
+    this.state = await api.weatherPlace(lat, lon, place);
+    this.loadedAt = Date.now();
+    this.bump();
+  }
+
+  /** Automatico (segue la posizione viva) o a mano: cambia la modalità, il posto resta com'è. */
+  async setAuto(api: AccountApi, auto: boolean): Promise<void> {
+    const saved = await api.weatherMode(auto);
+    if (this.state) this.state = { ...this.state, auto: saved };
     this.bump();
   }
 

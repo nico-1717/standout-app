@@ -141,6 +141,8 @@ export interface WxState {
   lon: number | null;
   /** il luogo è stato scelto a mano per una sbirciata (non è salvato) */
   manual: boolean;
+  /** true = il luogo segue la posizione viva; false = resta il posto scelto («a mano») */
+  auto: boolean;
   fonte: string;
   fonteUrl: string;
   nota: string;
@@ -310,11 +312,32 @@ export class AccountApi {
     return wxState(await this.json(await this.send('GET', '/api/v1/weather')));
   }
 
-  /** Accende il meteo per un punto. */
-  async weatherEnable(lat: number, lon: number): Promise<WxState> {
+  /** Accende il meteo per un punto. `auto` dice se da ora segue la posizione viva (assente = sì, come il sito). */
+  async weatherEnable(lat: number, lon: number, auto?: boolean): Promise<WxState> {
     return wxState(
-      await this.json(await this.send('POST', '/api/v1/weather/enable', { lat, lon })),
+      await this.json(
+        await this.send(
+          'POST',
+          '/api/v1/weather/enable',
+          auto === undefined ? { lat, lon } : { lat, lon, auto },
+        ),
+      ),
     );
+  }
+
+  /** Un luogo scelto a mano che RESTA («a mano»): a differenza dell'anteprima, questo si salva. */
+  async weatherPlace(lat: number, lon: number, place: string): Promise<WxState> {
+    return wxState(
+      await this.json(await this.send('POST', '/api/v1/weather/place', { lat, lon, place })),
+    );
+  }
+
+  /** Solo la modalità: automatico (segue la posizione viva) o a mano. Il posto salvato non cambia. */
+  async weatherMode(auto: boolean): Promise<boolean> {
+    const r = await this.json<{ auto?: boolean }>(
+      await this.send('POST', '/api/v1/weather/mode', { auto }),
+    );
+    return r.auto === true;
   }
 
   async weatherDisable(): Promise<void> {
@@ -505,6 +528,7 @@ export function wxState(r: Record<string, unknown>): WxState {
     lat: num(r.lat),
     lon: num(r.lon),
     manual: r.manual === true,
+    auto: r.auto === true,
     fonte: String(r.fonte ?? 'Open-Meteo'),
     fonteUrl: String(r.fonte_url ?? 'https://open-meteo.com'),
     nota: String(r.nota_affidabilita ?? ''),
