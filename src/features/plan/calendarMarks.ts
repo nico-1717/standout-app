@@ -19,7 +19,8 @@ export function dayMarks(a: {
 }): DayMark[][] {
   // «giorno|progetto» con ore di studio: una volta sola, invece di rileggere tutto il piano per ogni casella
   const studied = new Set<string>();
-  for (const b of a.plan) if (b.kind === 'study' && b.minutes > 0) studied.add(`${b.day}|${b.project}`);
+  for (const b of a.plan)
+    if (b.kind === 'study' && b.minutes > 0) studied.add(`${b.day}|${b.project}`);
   const byId = new Map(a.nodes.map((n) => [n.project, n]));
   const branches = new Map<string, string[]>();
   const branch = (id: string) => {

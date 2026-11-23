@@ -123,7 +123,10 @@ export function PlanCalendar(p: {
   };
 
   /* ---- il trascinamento in orizzontale: sul thread dell'interfaccia, il primo giorno decide se si accende o si spegne ---- */
-  const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(range.from, i)), [range.from]);
+  const cells = useMemo(
+    () => Array.from({ length: 42 }, (_, i) => addDays(range.from, i)),
+    [range.from],
+  );
   const painted = current ? view.paint.get(current) : undefined;
   const noDays = useMemo(() => new Set<string>(), []);
   const { repo, changed } = p;
@@ -373,7 +376,11 @@ export function PlanCalendar(p: {
                   edgeColor={th.brand}
                   checkColor={saved ? inkOn(selColor) : th.green}
                   eventColor={
-                    evs.length ? (evs.some((e) => e.importance === 'highest') ? '#FF453A' : '#FFD60A') : null
+                    evs.length
+                      ? evs.some((e) => e.importance === 'highest')
+                        ? '#FF453A'
+                        : '#FFD60A'
+                      : null
                   }
                   isToday={d === today}
                   fade={!inMonth ? 0.35 : d < today ? 0.6 : 1}
@@ -482,7 +489,6 @@ export function PlanCalendar(p: {
           })()}
         </Card>
       ) : null}
-
     </View>
   );
 }

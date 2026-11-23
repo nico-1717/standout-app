@@ -76,7 +76,12 @@ export function PlanDock(p: {
             }}
             style={round(p.tool === x.id)}
           >
-            <PjIcon name={x.icon} color={p.tool === x.id ? th.text : th.text2} size={18} width={2} />
+            <PjIcon
+              name={x.icon}
+              color={p.tool === x.id ? th.text : th.text2}
+              size={18}
+              width={2}
+            />
           </Pressable>
         ))}
       </View>

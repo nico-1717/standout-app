@@ -83,9 +83,7 @@ export const DayCell = memo(function DayCell(p: DayCellProps) {
             fill,
           ]}
         />
-        <Animated.Text
-          style={[{ fontWeight: p.isToday ? '800' : '600', fontSize: 14 }, num]}
-        >
+        <Animated.Text style={[{ fontWeight: p.isToday ? '800' : '600', fontSize: 14 }, num]}>
           {Number(p.day.slice(8, 10))}
         </Animated.Text>
         {p.label ? (

@@ -78,7 +78,9 @@ export function CalendarLegend({ rows }: { rows: LegendRow[] }) {
           testID={`cal-legend-${r.id}`}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 30 }}
         >
-          <View style={{ width: 22, height: LINE_H + 1, borderRadius: 3, backgroundColor: r.color }} />
+          <View
+            style={{ width: 22, height: LINE_H + 1, borderRadius: 3, backgroundColor: r.color }}
+          />
           <Text style={{ flex: 1, color: th.text, fontSize: 14 }} numberOfLines={1}>
             {r.name}
           </Text>

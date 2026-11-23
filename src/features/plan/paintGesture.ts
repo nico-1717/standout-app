@@ -114,7 +114,8 @@ export function usePaintGesture(o: PaintOptions) {
     const dist = Math.sqrt((x - from.x) * (x - from.x) + (y - from.y) * (y - from.y));
     const step = Math.max(8, width.value / 21);
     const n = Math.max(1, Math.ceil(dist / step));
-    for (let k = 1; k <= n; k++) mark(from.x + ((x - from.x) * k) / n, from.y + ((y - from.y) * k) / n);
+    for (let k = 1; k <= n; k++)
+      mark(from.x + ((x - from.x) * k) / n, from.y + ((y - from.y) * k) / n);
     put(last, { x, y });
   }
 

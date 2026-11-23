@@ -213,7 +213,9 @@ export function SubProjects(p: {
                 <Pressable
                   testID="sub-fold-all"
                   accessibilityRole="button"
-                  accessibilityLabel={anyOpen ? t('progetti.chiudi_tutto') : t('progetti.apri_tutto')}
+                  accessibilityLabel={
+                    anyOpen ? t('progetti.chiudi_tutto') : t('progetti.apri_tutto')
+                  }
                   onPress={() => p.onFoldAll?.(branchIds, anyOpen)}
                   hitSlop={4}
                   style={labTool(null)}
