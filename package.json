@@ -91,7 +91,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "i18n:sync": "node scripts/i18n-sync.mjs",
-    "i18n:check": "node scripts/i18n-sync.mjs --check"
+    "i18n:check": "node scripts/i18n-sync.mjs --check",
+    "build:web-tracker": "esbuild src/features/tracker/web.ts --bundle --minify --format=iife --global-name=StandoutTrackerCore --target=es2018 --outfile=../standout/public/projects/tracker_core.js"
   },
   "private": true,
   "jest": {
