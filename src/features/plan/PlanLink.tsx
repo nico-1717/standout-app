@@ -20,7 +20,6 @@ export function PlanLink(p: { onPress: () => void }) {
       accessibilityRole="button"
       onPress={p.onPress}
       style={({ pressed }) => ({
-        alignSelf: 'flex-end',
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next';
@@ -54,6 +54,8 @@ export function PlanCalendar(p: {
   onDay: (day: string, sel: string | null) => void;
   onEditHours: (project: string) => void;
   onAutoplan: () => void;
+  /** a destra della prima riga di pastiglie */
+  headRight?: ReactNode;
 }) {
   const th = useTheme();
   const { t } = useTranslation();
@@ -261,7 +263,7 @@ export function PlanCalendar(p: {
       ) : null}
       {rows.map((r, i) => (
         <View key={r.parent ?? 'root'} style={{ gap: 4 }}>
-          {r.parent && byId.get(r.parent) ? (
+          {r.parent && byId.get(r.parent) && !p.scope ? (
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 }}
             >
@@ -278,8 +280,14 @@ export function PlanCalendar(p: {
               </Text>
             </View>
           ) : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} testID={`cal-row-${i}`}>
-            {r.ids.map(chip)}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <View
+              style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+              testID={`cal-row-${i}`}
+            >
+              {r.ids.map(chip)}
+            </View>
+            {i === 0 ? p.headRight : null}
           </View>
         </View>
       ))}

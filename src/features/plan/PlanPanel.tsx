@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -45,6 +45,7 @@ export function PlanPanel({
   timeOpen,
   onTimeOpen,
   onTimeClose,
+  headRight,
 }: {
   scope: string | null;
   initialTab?: PlanTab;
@@ -52,6 +53,8 @@ export function PlanPanel({
   timeOpen: boolean;
   onTimeOpen: () => void;
   onTimeClose: () => void;
+  /** a destra della prima riga di pastiglie del calendario (nella pagina del progetto: il tasto «Piano») */
+  headRight?: ReactNode;
 }) {
   const th = useTheme();
   const { t, i18n } = useTranslation();
@@ -208,6 +211,7 @@ export function PlanPanel({
           onDay={(d, sel) => setDay({ day: d, sel })}
           onEditHours={(project) => setEditor({ mode: 'goal', project })}
           onAutoplan={preview}
+          headRight={headRight}
         />
       ) : null}
       {current === 'line' ? (

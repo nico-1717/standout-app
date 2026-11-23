@@ -303,11 +303,11 @@ export default function ProjectsScreen() {
                     canReorder={opts.ordine === 'manuale'}
                   />
                 ) : null}
-                {projectTab === 'cal' ? <PlanLink onPress={() => setProjectTab('plan')} /> : null}
                 {projectTab === 'cal' ? (
                   <PlanPanel
                     scope={me.uuid}
                     initialSel={me.uuid}
+                    headRight={<PlanLink onPress={() => setProjectTab('plan')} />}
                     timeOpen={timeOpen}
                     onTimeOpen={() => setTimeOpen(true)}
                     onTimeClose={() => setTimeOpen(false)}
