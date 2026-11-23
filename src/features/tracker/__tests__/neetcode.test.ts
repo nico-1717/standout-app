@@ -189,6 +189,12 @@ describe('problemi nuovi', () => {
     const three: Items = { 0: rec(0), 1: rec(1), 2: rec(2) };
     expect(learnPattern(three)).toEqual({ id: 10, cat: 'Two Pointers' });
   });
+  it('«impara un nuovo schema» salta lo schema già proposto', () => {
+    const three: Items = { 0: rec(0), 1: rec(1), 2: rec(2) };
+    const next = learnPattern(three, ['Two Pointers']);
+    expect(next?.cat).toBe('Sliding Window');
+    expect(learnPattern({}, ['Arrays & Hashing'])?.cat).toBe('Two Pointers');
+  });
 });
 
 describe('etichette', () => {

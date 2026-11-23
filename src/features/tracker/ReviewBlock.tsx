@@ -143,9 +143,11 @@ export function ReviewBlock({ block, onSave }: BlockProps) {
     });
   };
   const doLearn = () => {
-    const l = learnPattern(items);
+    // a pattern already on screen is skipped, so pressing again (or Swap) gives a different one
+    const shown = picks.news.flatMap((e) => (e.note.startsWith('learn:') ? [e.note.slice(6)] : []));
+    const l = learnPattern(items, shown);
     if (!l) {
-      setMsg(t('tracker.r_all_patterns'));
+      setMsg(shown.length ? t('tracker.r_no_other') : t('tracker.r_all_patterns'));
       return;
     }
     setMsg(null);
@@ -263,14 +265,12 @@ export function ReviewBlock({ block, onSave }: BlockProps) {
               onPress={() => setSheet(e.id)}
               testID={`nc-solve-${e.id}`}
             />
-            {e.note.startsWith('learn:') ? null : (
-              <Btn
-                small
-                label={t('tracker.r_swap')}
-                onPress={() => doSwap(index)}
-                testID={`nc-swap-${index}`}
-              />
-            )}
+            <Btn
+              small
+              label={t('tracker.r_swap')}
+              onPress={() => (e.note.startsWith('learn:') ? doLearn() : doSwap(index))}
+              testID={`nc-swap-${index}`}
+            />
           </View>
         )}
       </>,

@@ -291,11 +291,15 @@ export function swapNew(
 /**
  * «Impara un nuovo schema»: la prima categoria (nell'ordine della roadmap) con meno di 3 risolti e ancora un problema
  * da fare; il suo primo Medium da fare, o il primo da fare se Medium non ce ne sono più.
+ * `skip` = categorie da saltare (quella già proposta), così il pulsante passa allo schema successivo.
  */
-export function learnPattern(items: Items): { id: number; cat: string } | null {
+export function learnPattern(
+  items: Items,
+  skip: readonly string[] = [],
+): { id: number; cat: string } | null {
   const m = solvedCountByCat(items);
   for (const cat of CATEGORIES) {
-    if ((m[cat] ?? 0) >= STARTED_AT) continue;
+    if ((m[cat] ?? 0) >= STARTED_AT || skip.includes(cat)) continue;
     const todo = PROBLEMS.filter((p) => p.cat === cat && !items[p.id]);
     const first = todo.find((p) => p.diff === 'M') ?? todo[0];
     if (first) return { id: first.id, cat };
