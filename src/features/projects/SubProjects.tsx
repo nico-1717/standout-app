@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Fragment, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -5,7 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { human } from '@/features/pomodoro/logic';
 import { localToday } from '@/features/tasks/groups';
-import { PrimaryButton, TextButton } from '@/ui/kit';
+import { useFloatingDock } from '@/features/plan/dockHost';
+import { haptic } from '@/ui/motion';
+import { TextButton } from '@/ui/kit';
 
 import { ActionSwipe } from '@/ui/ActionSwipe';
 import { AddInput } from './AddInput';
@@ -13,7 +16,9 @@ import { projectSwipeActions } from './swipeActions';
 import { DragItem } from './DragItem';
 import { PjIcon, StatusRing } from './PjIcons';
 import { Lab, ListCard, RowLine } from './PjParts';
-import { ProjectPicker } from './ProjectPicker';
+import { BulkDialogs, type BulkAction } from './BulkDialogs';
+import { SubSelectBar } from './SubSelectBar';
+import { lockedIds, toggleAll, toggleSelection } from './selection';
 import { RowDialogs, type RowAction } from './RowDialogs';
 import type { SubView } from './options';
 import { subtreeIds, type Project, type TreeRow } from './logic';
@@ -21,8 +26,6 @@ import { dateLabel, shortDate } from './pjFormat';
 import type { ProjectsRepo } from './repo';
 import { GRAB_MS, type DropPlan } from './dragLogic';
 import { useRowDrag } from './useRowDrag';
-
-type Panel = 'color' | 'parent' | 'delete' | null;
 
 /**
  * Il blocco «Sotto-progetti» della scheda di un progetto (progetti.php): l'elenco con il pallino di stato, la data e il
@@ -61,7 +64,8 @@ export function SubProjects(p: {
   const kids = p.all.filter((x) => x.parent_uuid === p.parent.uuid);
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
-  const [panel, setPanel] = useState<Panel>(null);
+  const [action, setAction] = useState<BulkAction>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   // lo scorrimento della riga: quale è aperta, a chi si sta aggiungendo, e cosa si sposta/elimina
@@ -69,6 +73,7 @@ export function SubProjects(p: {
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [rowAction, setRowAction] = useState<RowAction>(null);
   const grid = (p.view ?? 'list') === 'grid' && !selecting;
+  const router = useRouter();
   const accent = p.parent.color;
   const addSub = useMemo(
     () => new Set(addingTo ? subtreeIds(p.all, addingTo) : []),
@@ -132,18 +137,31 @@ export function SubProjects(p: {
   const stop = () => {
     setSelecting(false);
     setPicked([]);
-    setPanel(null);
+    setAction(null);
+    setHint(null);
   };
-  const toggle = (uuid: string) =>
-    setPicked((cur) => (cur.includes(uuid) ? cur.filter((x) => x !== uuid) : [...cur, uuid]));
-  const allOn = picked.length === kids.length && kids.length > 0;
+  // le righe spuntate perché è scelto un loro padre: si vedono scelte ma non si toccano
+  const locked = lockedIds(p.all, picked);
+  const toggle = (uuid: string) => {
+    const next = toggleSelection(p.all, picked, uuid);
+    if (!next) {
+      haptic.tap();
+      return;
+    }
+    haptic.select();
+    setHint(null);
+    setPicked(next);
+  };
   const done = () => {
     stop();
     p.changed();
   };
-  const open = (which: Panel) => {
-    if (!picked.length) return;
-    setPanel(panel === which ? null : which);
+  const bulk = (which: Exclude<BulkAction, null>) => {
+    if (!picked.length) {
+      setHint(t('progetti.seleziona_almeno_un_sotto'));
+      return;
+    }
+    setAction(which);
   };
   const submit = () => {
     if (p.onAdd(draft, addingTo ?? undefined)) {
@@ -159,20 +177,32 @@ export function SubProjects(p: {
     setAddingTo(id);
   };
 
-  const subtree = picked.flatMap((id) => subtreeIds(p.all, id));
-  const sessions = panel === 'delete' ? p.repo.sessionCount(subtree) : 0;
-  const hasChildren = picked.some((id) => p.all.some((x) => x.parent_uuid === id));
-  const targets = p.all.filter((x) => !subtree.includes(x.uuid));
-  const remove = (withSessions: boolean) => {
-    for (const id of picked) p.repo.remove(id, withSessions);
-    done();
-  };
-
   // i rami che hanno dei figli, a ogni livello: il tasto con le frecce li apre o li chiude tutti insieme
   const branchIds = subtreeIds(p.all, p.parent.uuid).filter(
     (id) => id !== p.parent.uuid && p.all.some((x) => x.parent_uuid === id),
   );
   const anyOpen = branchIds.some((id) => !p.collapsed.has(id));
+
+  // la barra della selezione sta ferma in basso (come .pr-sub-bulkbar): si consegna allo scaffale della schermata
+  useFloatingDock(
+    selecting ? (
+      <SubSelectBar
+        count={picked.length}
+        hint={hint}
+        onClose={stop}
+        onAll={() => {
+          setHint(null);
+          setPicked(
+            toggleAll(
+              picked,
+              kids.map((k) => k.uuid),
+            ),
+          );
+        }}
+        onAction={bulk}
+      />
+    ) : null,
+  );
 
   return (
     <View>
@@ -180,7 +210,7 @@ export function SubProjects(p: {
         <Lab
           right={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              {kids.length ? (
+              {kids.length >= 2 ? (
                 <Pressable
                   testID="sub-select-toggle"
                   accessibilityRole="button"
@@ -190,9 +220,9 @@ export function SubProjects(p: {
                   accessibilityState={{ selected: selecting }}
                   onPress={() => (selecting ? stop() : setSelecting(true))}
                   hitSlop={4}
-                  style={labTool(selecting ? accent : null)}
+                  style={labTool(selecting ? th.blue : null)}
                 >
-                  <PjIcon name="select" color={selecting ? accent : th.text3} size={17} />
+                  <PjIcon name="select" color={selecting ? th.blue : th.text3} size={17} />
                 </Pressable>
               ) : null}
               {p.onView && kids.length && !selecting ? (
@@ -279,6 +309,7 @@ export function SubProjects(p: {
             {p.rows.map((r, i) => {
               const k = r.project;
               const on = picked.includes(k.uuid);
+              const isLocked = locked.has(k.uuid);
               const closed = p.collapsed.has(k.uuid);
               const doneRow = k.status === 'completed';
               const secs = p.totals?.get(k.uuid) ?? 0;
@@ -327,10 +358,12 @@ export function SubProjects(p: {
                           paddingVertical: 8,
                           paddingRight: 8,
                           paddingLeft: r.depth * 22,
+                          backgroundColor: on ? `${th.blue}12` : undefined,
+                          opacity: isLocked ? 0.85 : 1,
                         }}
                       >
                         <View style={{ width: 40, alignItems: 'center' }}>
-                          {selecting ? null : r.hasChildren ? (
+                          {r.hasChildren ? (
                             <Pressable
                               testID={`proj-toggle-${k.uuid}`}
                               accessibilityRole="button"
@@ -350,34 +383,53 @@ export function SubProjects(p: {
                           <Pressable
                             testID={`kid-${k.uuid}`}
                             accessibilityRole="checkbox"
-                            accessibilityState={{ checked: on }}
+                            accessibilityState={{ checked: on || isLocked, disabled: isLocked }}
                             onPress={() => toggle(k.uuid)}
                             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
                           >
                             <View
                               style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 12,
+                                width: 22,
+                                height: 22,
+                                borderRadius: 11,
                                 borderWidth: 2,
-                                borderColor: k.color,
-                                backgroundColor: on ? k.color : 'transparent',
+                                borderColor: on
+                                  ? th.blue
+                                  : isLocked
+                                    ? `${th.blue}73`
+                                    : th.hairline2,
+                                backgroundColor: on
+                                  ? th.blue
+                                  : isLocked
+                                    ? `${th.blue}73`
+                                    : 'transparent',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                               }}
                             >
-                              {on ? (
+                              {on || isLocked ? (
                                 <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
                                   ✓
                                 </Text>
                               ) : null}
                             </View>
-                            <Text
-                              numberOfLines={1}
-                              style={{ color: th.text, fontSize: 16, fontWeight: '500', flex: 1 }}
-                            >
-                              {k.name}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text
+                                style={{
+                                  color: doneRow ? th.text3 : th.text,
+                                  fontSize: 16,
+                                  fontWeight: '500',
+                                  textDecorationLine: doneRow ? 'line-through' : 'none',
+                                }}
+                              >
+                                {k.name}
+                              </Text>
+                              {meta ? (
+                                <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
+                                  {meta}
+                                </Text>
+                              ) : null}
+                            </View>
                           </Pressable>
                         ) : (
                           <>
@@ -401,7 +453,6 @@ export function SubProjects(p: {
                               style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
                             >
                               <Text
-                                numberOfLines={2}
                                 style={{
                                   color: doneRow ? th.text3 : th.text,
                                   fontSize: 16,
@@ -520,129 +571,22 @@ export function SubProjects(p: {
         </View>
       ) : null}
 
-      {selecting ? (
-        <View style={{ gap: 10, marginTop: 12 }}>
-          <Text testID="sub-count" style={{ color: th.text2 }}>
-            {picked.length === 0
-              ? t('progetti.0_selezionati')
-              : t(picked.length === 1 ? 'progetti.n_selezionato' : 'progetti.n_selezionati', {
-                  n: picked.length,
-                })}
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
-            <TextButton
-              testID="sub-all"
-              label={allOn ? t('progetti.deseleziona_tutti') : t('progetti.seleziona_tutti')}
-              onPress={() => setPicked(allOn ? [] : kids.map((k) => k.uuid))}
-            />
-            <TextButton
-              testID="sub-bulk-color"
-              label={t('progetti.colore')}
-              onPress={() => open('color')}
-            />
-            <TextButton
-              testID="sub-bulk-parent"
-              label={t('progetti.progetto_padre')}
-              onPress={() => open('parent')}
-            />
-            <TextButton
-              testID="sub-bulk-delete"
-              danger
-              label={t('comune.elimina')}
-              onPress={() => open('delete')}
-            />
-          </View>
-
-          {panel === 'color' ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              <Pressable
-                hitSlop={5}
-                testID="sub-color-auto"
-                accessibilityRole="button"
-                accessibilityLabel={t('progetti.colore_auto_padre')}
-                onPress={() => {
-                  for (const id of picked) p.repo.update(id, { color: null });
-                  done();
-                }}
-                style={{
-                  height: 34,
-                  borderRadius: 17,
-                  paddingHorizontal: 12,
-                  justifyContent: 'center',
-                  backgroundColor: th.surface2,
-                }}
-              >
-                <Text style={{ color: th.text }}>{t('progetti.colore_auto_padre')}</Text>
-              </Pressable>
-              {p.swatches.map((c) => (
-                <Pressable
-                  hitSlop={5}
-                  key={c}
-                  testID={`sub-color-${c.slice(1)}`}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    for (const id of picked) p.repo.update(id, { color: c });
-                    done();
-                  }}
-                  style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c }}
-                />
-              ))}
-            </View>
-          ) : null}
-
-          {panel === 'parent' ? (
-            <ProjectPicker
-              projects={targets}
-              value="none"
-              hideNone
-              extras={[{ id: 'root', label: t('progetti.livello_principale') }]}
-              onPick={(target) => {
-                const to = target === 'root' || !target ? null : target;
-                for (const id of picked) p.repo.move(id, to);
-                done();
-              }}
-            />
-          ) : null}
-
-          {panel === 'delete' ? (
-            <View style={{ gap: 10 }}>
-              <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-                {picked.length === 1
-                  ? t('progetti.eliminare_n_sotto_1')
-                  : t('progetti.eliminare_n_sotto', { n: picked.length })}
-              </Text>
-              <Text style={{ color: th.text2 }}>
-                {hasChildren ? t('progetti.alcuni_hanno_sotto') : ''}
-                {sessions ? t('progetti.eliminare_anche_pomodori') : ''}
-                {!sessions ? t('progetti.questa_azione_non_puo_essere') : ''}
-              </Text>
-              {sessions ? (
-                <>
-                  <PrimaryButton
-                    testID="sub-del-all"
-                    danger
-                    label={t('progetti.elimina_anche_pomodori')}
-                    onPress={() => remove(true)}
-                  />
-                  <PrimaryButton
-                    testID="sub-del-keep"
-                    danger
-                    label={t('progetti.mantieni_pomodori')}
-                    onPress={() => remove(false)}
-                  />
-                </>
-              ) : (
-                <PrimaryButton
-                  testID="sub-del-yes"
-                  danger
-                  label={t('comune.elimina')}
-                  onPress={() => remove(false)}
-                />
-              )}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
+      {selecting ? <View style={{ height: 84 }} /> : null}
+      <BulkDialogs
+        repo={p.repo}
+        all={p.all}
+        picked={picked}
+        action={action}
+        swatches={p.swatches}
+        onClose={() => setAction(null)}
+        onDone={done}
+        onGoPomodoros={() =>
+          router.push({
+            pathname: '/pomodoro-history',
+            params: { project: picked.length === 1 ? (picked[0] ?? p.parent.uuid) : p.parent.uuid },
+          })
+        }
+      />
     </View>
   );
 }

@@ -91,7 +91,10 @@ export function ProjectHero(p: {
             placeholder={t('progetti.nome')}
             placeholderTextColor={th.text3}
             returnKeyType="done"
-            multiline={false}
+            // il titolo va a capo invece di tagliarsi con «…» (sul sito è un testo che si allarga)
+            multiline
+            scrollEnabled={false}
+            submitBehavior="blurAndSubmit"
             style={{
               flexShrink: 1,
               color: th.text,

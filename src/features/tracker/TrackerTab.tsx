@@ -6,7 +6,7 @@ import { Sheet } from '@/features/habits/Sheet';
 import { usePlanTheme } from '@/features/plan/ui';
 import { haptic } from '@/ui/motion';
 
-import { BUILDABLE, MAX_BLOCKS, type Block, type BlockKind } from './blocks';
+import { MAX_BLOCKS, type Block, type BlockKind } from './blocks';
 import { ReviewBlock } from './ReviewBlock';
 import {
   ChecklistBlock,
@@ -18,6 +18,14 @@ import {
 } from './SimpleBlocks';
 import { Btn } from './parts';
 import type { TrackerRepo } from './repo';
+
+type Page = 'root' | 'advanced' | 'programming';
+const SIMPLE: BlockKind[] = ['table', 'counter', 'progress', 'checklist', 'note'];
+const TITLES: Record<Page, string> = {
+  root: 'tracker.pick_block',
+  advanced: 'tracker.k_advanced',
+  programming: 'tracker.k_programming',
+};
 
 const BODY: Partial<Record<BlockKind, (p: BlockProps) => React.ReactElement>> = {
   table: (p) => <TableBlock {...p} />,
@@ -41,6 +49,8 @@ export function TrackerTab({
   const ht = usePlanTheme();
   const { t } = useTranslation();
   const [picking, setPicking] = useState(false);
+  // il foglio «Aggiungi un blocco» ha tre pagine: i blocchi semplici, «Avanzate» e dentro «Programmazione»
+  const [page, setPage] = useState<Page>('root');
   const [msg, setMsg] = useState<string | null>(null);
   const blocks = repo.blocks(project);
 
@@ -48,8 +58,12 @@ export function TrackerTab({
     if (!repo.update(b.uuid, change)) setMsg(t('tracker.full', { n: MAX_BLOCKS }));
     changed();
   };
-  const add = (kind: BlockKind) => {
+  const closePicker = () => {
     setPicking(false);
+    setPage('root');
+  };
+  const add = (kind: BlockKind) => {
+    closePicker();
     const id = repo.add(project, kind, kind === 'review' ? t('tracker.k_review') : '');
     setMsg(id ? null : t('tracker.full', { n: MAX_BLOCKS }));
     changed();
@@ -86,6 +100,32 @@ export function TrackerTab({
       }}
     >
       <Text style={{ color: ht.text2, fontSize: 18 }}>{glyph}</Text>
+    </Pressable>
+  );
+
+  const choice = (id: string, name: string, text: string, run: () => void, more = false) => (
+    <Pressable
+      key={id}
+      testID={`tr-pick-${id}`}
+      accessibilityRole="button"
+      onPress={run}
+      style={({ pressed }) => ({
+        minHeight: 60,
+        padding: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: ht.hairline2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: ht.text, fontWeight: '700', fontSize: 16 }}>{name}</Text>
+        <Text style={{ color: ht.text2, fontSize: 13 }}>{text}</Text>
+      </View>
+      {more ? <Text style={{ color: ht.text3, fontSize: 22 }}>›</Text> : null}
     </Pressable>
   );
 
@@ -170,39 +210,52 @@ export function TrackerTab({
         tone={blocks.length ? 'plain' : 'primary'}
         label={t('tracker.add_block')}
         disabled={blocks.length >= MAX_BLOCKS}
-        onPress={() => setPicking(true)}
+        onPress={() => {
+          setPage('root');
+          setPicking(true);
+        }}
         testID="tr-add-block"
       />
       <Sheet
         visible={picking}
-        title={t('tracker.pick_block')}
+        title={t(TITLES[page])}
         th={ht}
-        onClose={() => setPicking(false)}
+        onClose={closePicker}
         testID="tr-pick-sheet"
       >
         <View style={{ padding: 20, gap: 10 }}>
-          {BUILDABLE.map((k) => (
-            <Pressable
-              key={k}
-              testID={`tr-pick-${k}`}
-              accessibilityRole="button"
-              onPress={() => add(k)}
-              style={({ pressed }) => ({
-                minHeight: 60,
-                padding: 12,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: ht.hairline2,
-                gap: 2,
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <Text style={{ color: ht.text, fontWeight: '700', fontSize: 16 }}>
-                {t(`tracker.k_${k}`)}
-              </Text>
-              <Text style={{ color: ht.text2, fontSize: 13 }}>{t(`tracker.d_${k}`)}</Text>
-            </Pressable>
-          ))}
+          {page !== 'root' ? (
+            <Btn
+              small
+              label={`‹ ${t('tracker.back')}`}
+              onPress={() => setPage(page === 'programming' ? 'advanced' : 'root')}
+              testID="tr-pick-back"
+            />
+          ) : null}
+          {page === 'root'
+            ? SIMPLE.map((k) => choice(k, t(`tracker.k_${k}`), t(`tracker.d_${k}`), () => add(k)))
+            : null}
+          {page === 'root'
+            ? choice(
+                'advanced',
+                t('tracker.k_advanced'),
+                t('tracker.d_advanced'),
+                () => setPage('advanced'),
+                true,
+              )
+            : null}
+          {page === 'advanced'
+            ? choice(
+                'programming',
+                t('tracker.k_programming'),
+                t('tracker.d_programming'),
+                () => setPage('programming'),
+                true,
+              )
+            : null}
+          {page === 'programming'
+            ? choice('review', t('tracker.k_review'), t('tracker.d_review'), () => add('review'))
+            : null}
         </View>
       </Sheet>
     </View>

@@ -68,6 +68,8 @@ describe('TrackerTab', () => {
   it('NeetCode: aggiunge un problema da fare, lo registra, e compare fra i risolti', async () => {
     const repo = await setup();
     await fireEvent.press(screen.getByTestId('tr-add-block'));
+    await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+    await fireEvent.press(screen.getByTestId('tr-pick-programming'));
     await fireEvent.press(screen.getByTestId('tr-pick-review'));
     expect(screen.getByTestId('nc-sub').props.children).toContain('0');
     await fireEvent.press(screen.getByTestId('nc-tab-todo'));
@@ -84,6 +86,8 @@ describe('TrackerTab', () => {
   it("NeetCode: scegli 3 da ripassare e l'esito resta salvato per oggi", async () => {
     const repo = await setup();
     await fireEvent.press(screen.getByTestId('tr-add-block'));
+    await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+    await fireEvent.press(screen.getByTestId('tr-pick-programming'));
     await fireEvent.press(screen.getByTestId('tr-pick-review'));
     await fireEvent.press(screen.getByTestId('nc-tab-todo'));
     await fireEvent.press(screen.getByTestId('nc-select'));

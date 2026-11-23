@@ -232,7 +232,11 @@ describe('Projects › page', () => {
     mockParams = { id: a };
     await renderPage();
     await fireEvent.press(screen.getByTestId('proj-start'));
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/pomodoro', params: { project: a } });
+    // il timer apre prima l'elenco dei Pomodoro del progetto, che ha il tasto «Avvia su questo»
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/pomodoro-history',
+      params: { project: a },
+    });
     await fireEvent.press(screen.getByTestId('proj-time'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/pomodoro-history',
@@ -511,11 +515,13 @@ describe('Projects › sub-projects', () => {
     const k1 = projects.create({ name: 'Kid 1', parent: a })!;
     const k2 = projects.create({ name: 'Kid 2', parent: a })!;
     const k3 = projects.create({ name: 'Kid 3', parent: a })!;
+    projects.create({ name: 'Kid 4', parent: a });
     mockParams = { id: a };
     const view = await renderPage();
 
     await fireEvent.press(screen.getByTestId('sub-select-toggle'));
     await fireEvent.press(screen.getByTestId('sub-bulk-color'));
+    expect(screen.getByTestId('sub-count')).toHaveTextContent(/at least one/i); // niente scelti: un avviso
     expect(screen.queryByTestId('sub-color-FF3B30')).toBeNull(); // niente scelti: niente pannello
     await fireEvent.press(screen.getByTestId(`kid-${k1}`));
     await fireEvent.press(screen.getByTestId(`kid-${k2}`));
@@ -551,6 +557,31 @@ describe('Projects › sub-projects', () => {
     await fireEvent.press(screen.getByTestId('sub-del-all'));
     expect(projects.get(k3)).toBeNull();
     expect(projects.sessionCount([k3])).toBe(0);
+  });
+
+  test('selecting works at every level: a chosen parent locks its children', async () => {
+    const { projects } = setup();
+    const a = projects.create({ name: 'Alpha' })!;
+    const k1 = projects.create({ name: 'Kid 1', parent: a })!;
+    projects.create({ name: 'Kid 2', parent: a });
+    const g1 = projects.create({ name: 'Grandkid', parent: k1 })!;
+    mockParams = { id: a };
+    await renderPage();
+    if (!screen.queryByTestId(`kid-${g1}`))
+      await fireEvent.press(screen.getByTestId(`proj-toggle-${k1}`));
+    await fireEvent.press(screen.getByTestId('sub-select-toggle'));
+    await fireEvent.press(screen.getByTestId(`kid-${g1}`)); // un figlio di un figlio si sceglie da solo
+    expect(screen.getByTestId('sub-count')).toHaveTextContent(/1 selected/);
+    await fireEvent.press(screen.getByTestId(`kid-${k1}`)); // scegliendo il padre, il figlio non conta due volte
+    expect(screen.getByTestId('sub-count')).toHaveTextContent(/1 selected/);
+    await fireEvent.press(screen.getByTestId(`kid-${g1}`)); // ora è bloccato: il tocco non fa niente
+    expect(screen.getByTestId('sub-count')).toHaveTextContent(/1 selected/);
+    expect(screen.getByTestId(`kid-${g1}`).props.accessibilityState).toMatchObject({
+      checked: true,
+      disabled: true,
+    });
+    await fireEvent.press(screen.getByTestId('sub-select-close'));
+    expect(screen.queryByTestId('sub-count')).toBeNull(); // la barra se ne va
   });
 });
 

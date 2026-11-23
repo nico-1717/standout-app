@@ -142,8 +142,9 @@ export default function ProjectsScreen() {
     setSel(uuid);
     setProjectTab('list');
   };
+  // il tasto col timer apre prima l'elenco dei Pomodoro del progetto (il popup del sito), che ha «Avvia su questo»
   const startPomodoro = (uuid: string) =>
-    router.push({ pathname: '/pomodoro', params: { project: uuid } });
+    router.push({ pathname: '/pomodoro-history', params: { project: uuid } });
 
   const lang = i18n.language || 'it';
   const showTags = opts.mostra_tag;
