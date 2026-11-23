@@ -98,10 +98,16 @@ export function ProjectHero(p: {
             // il titolo va a capo invece di tagliarsi con «…» (sul sito è un testo che si allarga)
             multiline
             scrollEnabled={false}
-            onContentSizeChange={(e) => setTitleH(Math.ceil(e.nativeEvent.contentSize.height))}
+            onContentSizeChange={(e) => {
+              // la misura di iOS già comprende i margini del campo: niente da aggiungere, e un salto piccolo
+              // non si riprende, così l'altezza non può crescere a ogni misura
+              const h = Math.ceil(e.nativeEvent.contentSize.height);
+              setTitleH((cur) => (cur === 0 || Math.abs(h - cur) > 6 ? h : cur));
+            }}
             submitBehavior="blurAndSubmit"
             style={{
-              height: titleH > 0 ? titleH + 4 : undefined,
+              height: titleH > 0 ? titleH : undefined,
+              maxHeight: 120,
               // flex: 1 (non flexShrink): una larghezza certa, altrimenti iOS misura il titolo troppo stretto e lo taglia
               flex: 1,
               color: th.text,
