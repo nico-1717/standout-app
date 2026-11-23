@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -38,6 +38,8 @@ export function ProjectHero(p: {
   onDates: () => void;
   onNote: () => void;
   changed: () => void;
+  /** sotto la nota, dentro la scheda: la riga List · Calendar · Tracker */
+  footer?: ReactNode;
 }) {
   const th = useTheme();
   const { t } = useTranslation();
@@ -229,6 +231,7 @@ export function ProjectHero(p: {
           </Text>
         </Pressable>
       ) : null}
+      {p.footer}
     </View>
   );
 }

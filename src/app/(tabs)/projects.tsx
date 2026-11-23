@@ -7,10 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { DockHost } from '@/features/plan/dockHost';
+import { PlanLink } from '@/features/plan/PlanLink';
 import { PlanPanel } from '@/features/plan/PlanPanel';
 import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
 import { TrackerTab } from '@/features/tracker/TrackerTab';
-import { Crumbs, ProjectsHeader, Seg } from '@/features/projects/PjParts';
+import { CalmTabs, Crumbs, ProjectsHeader, Seg } from '@/features/projects/PjParts';
 import { DropZones, DropZonesContext } from '@/features/projects/DropZones';
 import { ProjectHero } from '@/features/projects/ProjectHero';
 import { SWATCHES, ProjectMenu } from '@/features/projects/ProjectMenu';
@@ -251,18 +252,18 @@ export default function ProjectsScreen() {
                   onDates={() => setMenu('due')}
                   onNote={() => setMenu('note')}
                   changed={changed}
-                />
-                <Seg<ProjectTab>
-                  testID="proj-tab"
-                  compact
-                  value={projectTab}
-                  onChange={setProjectTab}
-                  items={[
-                    { id: 'list', label: t('progetti.elenco') },
-                    { id: 'cal', label: t('piano.v_calendario') },
-                    { id: 'plan', label: t('piano.v_piano') },
-                    { id: 'tracker', label: t('tracker.tab') },
-                  ]}
+                  footer={
+                    <CalmTabs<ProjectTab>
+                      testID="proj-tab"
+                      value={projectTab === 'plan' ? 'cal' : projectTab}
+                      onChange={setProjectTab}
+                      items={[
+                        { id: 'list', label: t('progetti.elenco') },
+                        { id: 'cal', label: t('piano.v_calendario') },
+                        { id: 'tracker', label: t('tracker.tab') },
+                      ]}
+                    />
+                  }
                 />
                 {projectTab === 'list' ? (
                   <SubProjects
@@ -302,6 +303,7 @@ export default function ProjectsScreen() {
                     canReorder={opts.ordine === 'manuale'}
                   />
                 ) : null}
+                {projectTab === 'cal' ? <PlanLink onPress={() => setProjectTab('plan')} /> : null}
                 {projectTab === 'cal' ? (
                   <PlanPanel
                     scope={me.uuid}

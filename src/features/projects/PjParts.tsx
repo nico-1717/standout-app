@@ -419,3 +419,75 @@ function Crumb({
     </Pressable>
   );
 }
+
+/**
+ * La riga delle viste dentro la scheda del progetto, come sul sito (`.pp-views`): solo testo, un filo sopra, e la voce
+ * attiva si riconosce da un tratto breve sotto. Niente riquadri, per tenere lo schermo calmo.
+ */
+export function CalmTabs<T extends string>({
+  items,
+  value,
+  onChange,
+  testID,
+}: {
+  items: { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  testID: string;
+}) {
+  const th = useTheme();
+  return (
+    <View
+      accessibilityRole="tablist"
+      style={{
+        flexDirection: 'row',
+        gap: 22,
+        marginTop: 14,
+        paddingTop: 10,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: th.hairline,
+      }}
+    >
+      {items.map((it) => {
+        const on = it.id === value;
+        return (
+          <Pressable
+            key={it.id}
+            testID={`${testID}-${it.id}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            onPress={() => {
+              if (on) return;
+              haptic.tap();
+              onChange(it.id);
+            }}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+            style={{ minHeight: 30, paddingBottom: 6, justifyContent: 'center' }}
+          >
+            <Text
+              style={{
+                color: on ? th.text : th.text3,
+                fontSize: 13.5,
+                fontWeight: '600',
+              }}
+            >
+              {it.label}
+            </Text>
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 2,
+                borderRadius: 2,
+                backgroundColor: th.brand,
+                opacity: on ? 1 : 0,
+              }}
+            />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -207,28 +207,42 @@ describe('plan screen', () => {
 });
 
 describe('project Plan card', () => {
-  test('shows no time yet, then saves hours from the sheet and shows the summary', async () => {
-    const { projects, plan } = setup();
-    const a = projects.create({ name: 'Fisica' })!;
-    mockParams = { id: a };
-    const view = await render(tree(<ProjectScreen />));
-    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
-    expect(screen.getByTestId('plan-card-empty')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('plan-card-edit'));
-    expect(screen.getByTestId('goal-sheet')).toBeTruthy();
-    for (let i = 0; i < 4; i++) await fireEvent.press(screen.getByTestId('goal-hours-plus'));
-    await fireEvent.press(screen.getByTestId('goal-save'));
-    expect(plan.goals().get(a)?.minutes).toBe(60);
-    await view.rerender(tree(<ProjectScreen />));
-    expect(screen.getByTestId('plan-card-summary')).toBeTruthy();
-  });
+  const openPlan = async () => {
+    await fireEvent.press(screen.getByTestId('proj-tab-cal'));
+    await fireEvent.press(screen.getByTestId('plan-link'));
+  };
 
-  test('the calendar button switches to the project calendar tab', async () => {
+  test('Plan opens from a button inside Calendar, with only three tabs', async () => {
     const { projects } = setup();
     const a = projects.create({ name: 'Fisica' })!;
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
-    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
+    expect(screen.queryByTestId('proj-tab-plan')).toBeNull();
+    expect(screen.getByTestId('proj-tab-tracker')).toBeTruthy();
+    await openPlan();
+    expect(screen.getByTestId('plan-goal-input')).toBeTruthy();
+  });
+
+  test('typing the hours saves them by themselves, and the type and priority pills too', async () => {
+    const { projects, plan } = setup();
+    const a = projects.create({ name: 'Fisica' })!;
+    mockParams = { id: a };
+    await render(tree(<ProjectScreen />));
+    await openPlan();
+    await fireEvent.changeText(screen.getByTestId('plan-goal-input'), '1.5');
+    await fireEvent.press(screen.getByTestId('plan-kind-exam'));
+    await fireEvent.press(screen.getByTestId('plan-prio-must'));
+    await waitFor(() => expect(plan.goals().get(a)?.minutes).toBe(90));
+    expect(plan.goals().get(a)?.kind).toBe('exam');
+    expect(plan.goals().get(a)?.priority).toBe('must');
+  });
+
+  test('the back chip returns to the calendar tab', async () => {
+    const { projects } = setup();
+    const a = projects.create({ name: 'Fisica' })!;
+    mockParams = { id: a };
+    await render(tree(<ProjectScreen />));
+    await openPlan();
     await fireEvent.press(screen.getByTestId('plan-card-calendar'));
     expect(screen.queryByTestId('plan-card-calendar')).toBeNull();
     expect(screen.getByTestId('cal-title')).toBeTruthy();
@@ -243,7 +257,7 @@ describe('project Plan card', () => {
     plan.resplit(a, 240);
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
-    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
+    await openPlan();
     expect(screen.getByTestId('plan-card-split')).toBeTruthy();
     expect((plan.goals().get(k1)?.minutes ?? 0) + (plan.goals().get(k2)?.minutes ?? 0)).toBe(240);
   });
@@ -254,7 +268,7 @@ describe('project Plan card', () => {
     plan.saveGoal(a, { kind: 'daily', minutes: 10 });
     mockParams = { id: a };
     await render(tree(<ProjectScreen />));
-    await fireEvent.press(screen.getByTestId('proj-tab-plan'));
+    await openPlan();
     await fireEvent.press(screen.getByTestId('plan-card-focus'));
     await fireEvent.press(screen.getByTestId('daily-start'));
     expect(mockPush).toHaveBeenCalledWith({
