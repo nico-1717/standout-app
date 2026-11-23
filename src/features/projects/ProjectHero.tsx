@@ -183,7 +183,7 @@ export function ProjectHero(p: {
             onPress={p.onHistory}
             hitSlop={6}
           >
-            <Text style={{ color: th.text2, fontSize: 14 }}>
+            <Text style={{ color: th.text3, fontSize: 12.5 }}>
               {date ? '· ' : ''}
               {t('progetti.tempo_concentrazione', { t: durationShort(p.secs) })}
             </Text>
@@ -221,7 +221,7 @@ export function ProjectHero(p: {
           onPress={p.onNote}
           style={{ marginTop: 4 }}
         >
-          <Text style={{ color: th.text3, fontSize: 15, lineHeight: 21 }}>
+          <Text style={{ color: th.text3, fontSize: 13.5, lineHeight: 19, opacity: 0.7 }}>
             {t('progetti.aggiungi_nota')}
           </Text>
         </Pressable>

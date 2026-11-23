@@ -442,8 +442,8 @@ export function CalmTabs<T extends string>({
       style={{
         flexDirection: 'row',
         gap: 22,
-        marginTop: 14,
-        paddingTop: 10,
+        marginTop: 8,
+        paddingTop: 6,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: th.hairline,
       }}
