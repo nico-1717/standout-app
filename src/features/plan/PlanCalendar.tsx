@@ -61,7 +61,7 @@ export function PlanCalendar(p: {
   const [month, setMonth] = useState(`${today.slice(0, 7)}-01`);
   const [sel, setSel] = useState<string | null>(p.initialSel ?? null);
   const [tool, setTool] = useState<Tool>('paint');
-  const [showEv, setShowEv] = useState(false);
+  const [showEv, setShowEv] = useState(true);
   const [undo, setUndo] = useState<Undo[]>([]);
   const [scope, setScope] = useState<string | null>(p.scope);
 

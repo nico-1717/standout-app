@@ -31,9 +31,9 @@ export function PlanDock(p: {
   const { t } = useTranslation();
   const dark = th.scheme === 'dark';
   const round = (on: boolean) => ({
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     backgroundColor: on ? th.surface : 'transparent',
@@ -44,15 +44,14 @@ export function PlanDock(p: {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        padding: 5,
+        alignSelf: 'center',
+        gap: 2,
+        padding: 4,
         borderRadius: 999,
-        maxWidth: 440,
-        width: '100%',
         backgroundColor: dark ? 'rgba(44,44,46,.94)' : 'rgba(255,255,255,.92)',
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: th.hairline2,
-        boxShadow: '0 8px 24px -8px rgba(0,0,0,.30)',
+        boxShadow: '0 6px 18px -8px rgba(0,0,0,.24)',
       }}
     >
       <View
@@ -85,15 +84,23 @@ export function PlanDock(p: {
           </Pressable>
         ))}
       </View>
+      <View
+        style={{
+          width: StyleSheet.hairlineWidth,
+          height: 16,
+          marginHorizontal: 5,
+          backgroundColor: th.hairline2,
+        }}
+      />
       <Pressable
         testID="cal-events"
         accessibilityRole="button"
         accessibilityState={{ selected: p.showEvents }}
         accessibilityLabel={t('piano.eventi_btn')}
         onPress={p.onEvents}
-        style={round(p.showEvents)}
+        style={[round(false), p.showEvents ? { backgroundColor: 'rgba(255,159,10,.24)' } : null]}
       >
-        <PjIcon name="events" color={p.showEvents ? th.brand : th.text} size={18} width={1.8} />
+        <PjIcon name="events" color={p.showEvents ? '#FF9F0A' : th.text} size={18} width={1.8} />
       </Pressable>
       <Pressable
         testID="cal-undo"
@@ -108,24 +115,11 @@ export function PlanDock(p: {
       <Pressable
         testID="cal-autoplan"
         accessibilityRole="button"
+        accessibilityLabel={t('piano.pianifica_breve')}
         onPress={p.onAutoplan}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          height: 36,
-          borderRadius: 18,
-          paddingHorizontal: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          backgroundColor: th.brand,
-        }}
+        style={[round(false), { marginLeft: 2, backgroundColor: th.blueSoft }]}
       >
-        <PjIcon name="spark" color="#FFFFFF" size={16} width={1.9} />
-        <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '600' }} numberOfLines={1}>
-          {t('piano.pianifica_breve')}
-        </Text>
+        <PjIcon name="spark" color={th.brand} size={18} width={1.9} />
       </Pressable>
     </View>
   );
