@@ -7,6 +7,7 @@ import { usePlanTheme } from '@/features/plan/ui';
 import { haptic } from '@/ui/motion';
 
 import { MAX_BLOCKS, type Block, type BlockKind } from './blocks';
+import { ConnectionBlock } from './ConnectionBlock';
 import { ReviewBlock } from './ReviewBlock';
 import {
   ChecklistBlock,
@@ -64,7 +65,11 @@ export function TrackerTab({
   };
   const add = (kind: BlockKind) => {
     closePicker();
-    const id = repo.add(project, kind, kind === 'review' ? t('tracker.k_review') : '');
+    const id = repo.add(
+      project,
+      kind,
+      kind === 'review' || kind === 'connection' ? t(`tracker.k_${kind}`) : '',
+    );
     setMsg(id ? null : t('tracker.full', { n: MAX_BLOCKS }));
     changed();
   };
@@ -200,7 +205,17 @@ export function TrackerTab({
                 <Text style={{ color: ht.text3, fontSize: 18 }}>✕</Text>
               </Pressable>
             </View>
-            {body ? body({ block: b, all: blocks, onSave: (c) => save(b, c) }) : null}
+            {b.kind === 'connection' ? (
+              <ConnectionBlock
+                block={b}
+                repo={repo}
+                project={project}
+                changed={changed}
+                onSave={(c) => save(b, c)}
+              />
+            ) : body ? (
+              body({ block: b, all: blocks, onSave: (c) => save(b, c) })
+            ) : null}
           </View>
         );
       })}
@@ -242,6 +257,11 @@ export function TrackerTab({
                 t('tracker.d_advanced'),
                 () => setPage('advanced'),
                 true,
+              )
+            : null}
+          {page === 'advanced'
+            ? choice('connection', t('tracker.k_connection'), t('tracker.d_connection'), () =>
+                add('connection'),
               )
             : null}
           {page === 'advanced'

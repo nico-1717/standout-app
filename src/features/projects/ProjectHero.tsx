@@ -171,7 +171,7 @@ export function ProjectHero(p: {
           >
             <Text style={{ color: th.text2, fontSize: 14 }}>
               {date ? '· ' : ''}
-              {t('progetti.durata_totale', { durata: human(p.secs) })}
+              {t('progetti.tempo_concentrazione', { t: human(p.secs) })}
             </Text>
           </Pressable>
         ) : null}

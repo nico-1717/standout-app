@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { PrimaryButton, TextButton } from '@/ui/kit';
 
+import { CustomColor } from './CustomColor';
 import { subtreeIds, type Project } from './logic';
 import { ProjectSheet } from './ProjectSheet';
 import type { ProjectsRepo } from './repo';
@@ -103,28 +104,31 @@ export function BulkDialogs(p: {
           </Text>
 
           {p.action === 'color' ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              <Pressable
-                testID="sub-color-auto"
-                accessibilityRole="button"
-                accessibilityLabel={t('progetti.automatico_dal_padre_2')}
-                hitSlop={5}
-                onPress={() => paint(null)}
-                style={[styles.swatch, { backgroundColor: th.surface2 }]}
-              >
-                <Text style={{ color: th.text2, fontWeight: '800' }}>A</Text>
-              </Pressable>
-              {p.swatches.map((c) => (
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                 <Pressable
-                  key={c}
-                  testID={`sub-color-${c.slice(1)}`}
+                  testID="sub-color-auto"
                   accessibilityRole="button"
+                  accessibilityLabel={t('progetti.automatico_dal_padre_2')}
                   hitSlop={5}
-                  onPress={() => paint(c)}
-                  style={[styles.swatch, { backgroundColor: c }]}
-                />
-              ))}
-            </View>
+                  onPress={() => paint(null)}
+                  style={[styles.swatch, { backgroundColor: th.surface2 }]}
+                >
+                  <Text style={{ color: th.text2, fontWeight: '800' }}>A</Text>
+                </Pressable>
+                {p.swatches.map((c) => (
+                  <Pressable
+                    key={c}
+                    testID={`sub-color-${c.slice(1)}`}
+                    accessibilityRole="button"
+                    hitSlop={5}
+                    onPress={() => paint(c)}
+                    style={[styles.swatch, { backgroundColor: c }]}
+                  />
+                ))}
+              </View>
+              <CustomColor value={p.swatches[0] ?? '#8E8E93'} onPick={(hex) => paint(hex)} />
+            </>
           ) : keeping || !sessions ? (
             <>
               {keeping ? (

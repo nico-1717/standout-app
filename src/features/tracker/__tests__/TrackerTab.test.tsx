@@ -98,4 +98,24 @@ describe('TrackerTab', () => {
     const data = repo.blocks(P)[0]?.data as { picks: { review: number[] } | null };
     expect(data.picks?.review).toEqual([1]);
   });
+
+  it('Connection: an address plus pasted data builds a table, and pasting again updates it', async () => {
+    const repo = await setup();
+    await fireEvent.press(screen.getByTestId('tr-add-block'));
+    await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+    await fireEvent.press(screen.getByTestId('tr-pick-connection'));
+    await fireEvent(screen.getByTestId('cx-url'), 'endEditing', {
+      nativeEvent: { text: 'https://neetcode.io/practice' },
+    });
+    await fireEvent.changeText(screen.getByTestId('cx-paste'), 'name,n\nTwo Sum,1');
+    await fireEvent.press(screen.getByTestId('cx-build'));
+    let blocks = repo.blocks(P);
+    expect(blocks.map((b) => b.kind)).toEqual(['connection', 'table']);
+    expect(blocks[1]?.title).toBe('neetcode.io');
+    await fireEvent.changeText(screen.getByTestId('cx-paste'), 'name,n\nTwo Sum,1\nLRU,2');
+    await fireEvent.press(screen.getByTestId('cx-build'));
+    blocks = repo.blocks(P);
+    expect(blocks).toHaveLength(2); // la stessa tabella, aggiornata
+    expect((blocks[1]?.config as { rows: number }).rows).toBe(3);
+  });
 });

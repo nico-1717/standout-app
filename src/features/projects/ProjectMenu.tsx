@@ -26,6 +26,7 @@ import { PrimaryButton, TextButton } from '@/ui/kit';
 import { useAutosave } from '@/ui/useAutosave';
 
 import { PjIcon, type PjIconName } from './PjIcons';
+import { CustomColor } from './CustomColor';
 import { ProjectPicker } from './ProjectPicker';
 import { childrenOf, type Project } from './logic';
 import { isRichNote, noteText } from './notes';
@@ -360,6 +361,11 @@ export function ProjectMenu(p: {
                       />
                     ))}
                   </View>
+                  <CustomColor
+                    value={me.color}
+                    active={!!me.color_edited && !SWATCHES.includes(me.color.toUpperCase())}
+                    onPick={(hex) => patch({ color: hex })}
+                  />
                 </View>
               ) : null}
 
