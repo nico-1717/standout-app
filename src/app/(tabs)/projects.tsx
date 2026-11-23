@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, type ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,9 @@ const toProjectTab = (pp: string | undefined): ProjectTab =>
  * progetti con la barra di avanzamento) o il calendario del Piano; un progetto mostra la sua scheda grande e sotto
  * Elenco (i sotto-progetti), Calendario e Piano. I tre puntini aprono colore, date, nota, attività, spostamento, eliminazione.
  */
+/** quanto resta in vista un progetto appena completato prima di sparire (ms) */
+const LINGER_MS = 4000;
+
 export default function ProjectsScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
@@ -48,6 +51,15 @@ export default function ProjectsScreen() {
   const [showDates, setShowDates] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [collapsedState, setCollapsedState] = useState<Set<string> | null>(null);
+  // un progetto appena completato resta in vista qualche secondo prima di nascondersi (se i completati sono nascosti)
+  const [lingering, setLingering] = useState<ReadonlySet<string>>(new Set());
+  const lingerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (lingerTimer.current) clearTimeout(lingerTimer.current);
+    },
+    [],
+  );
   // lo stato di prima dei figli, per tornare indietro quando si toglie «completato»
   const snapshots = useRef(new Map<string, StatusSnapshot[]>());
   // la pagina scorre da sola ai bordi mentre una riga è in mano, e sta ferma sotto il dito
@@ -105,6 +117,7 @@ export default function ProjectsScreen() {
     if (opts.ricorda_rami) services.projectOptions.saveCollapsed(next);
   };
   const treeOpts = {
+    keep: lingering,
     showCompleted: opts.completati,
     onlyWorked: opts.solo_attivi ? data.worked : null,
     order: opts.ordine,
@@ -132,6 +145,16 @@ export default function ProjectsScreen() {
   };
   const cycle = (uuid: string) => {
     const r = repo.cycleStatus(uuid, snapshots.current.get(uuid));
+    if (r && !opts.completati) {
+      const ids = subtreeIds(all, uuid);
+      if (r.status === 'completed') {
+        setLingering((cur) => new Set([...cur, ...ids]));
+        if (lingerTimer.current) clearTimeout(lingerTimer.current);
+        lingerTimer.current = setTimeout(() => setLingering(new Set()), LINGER_MS);
+      } else {
+        setLingering((cur) => new Set([...cur].filter((x) => !ids.includes(x))));
+      }
+    }
     if (r) {
       if (r.status === 'completed') snapshots.current.set(uuid, r.snapshot);
       else snapshots.current.delete(uuid);
@@ -248,6 +271,7 @@ export default function ProjectsScreen() {
                     parent={me}
                     rows={flatten(all, { ...treeOpts, collapsed, root: me.uuid })}
                     collapsed={collapsed}
+                    fading={lingering}
                     onFoldAll={(ids, collapse) => {
                       const n = new Set(collapsed);
                       for (const id of ids) {

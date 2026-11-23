@@ -81,6 +81,7 @@ export function ProjectHero(p: {
           <StatusRing status={me.status} color={me.color} size={26} />
         </Pressable>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          {me.is_favorite ? <PjIcon name="star" color="#E0B84A" size={17} /> : null}
           <TextInput
             testID="proj-name"
             value={name ?? me.name}
@@ -95,7 +96,8 @@ export function ProjectHero(p: {
             scrollEnabled={false}
             submitBehavior="blurAndSubmit"
             style={{
-              flexShrink: 1,
+              // flex: 1 (non flexShrink): una larghezza certa, altrimenti iOS misura il titolo troppo stretto e lo taglia
+              flex: 1,
               color: th.text,
               fontSize: 24,
               fontWeight: th.display ? undefined : '800',
@@ -106,7 +108,6 @@ export function ProjectHero(p: {
               paddingRight: 8,
             }}
           />
-          {me.is_favorite ? <PjIcon name="star" color="#E0B84A" size={17} /> : null}
         </View>
         <Pressable
           testID="proj-start"

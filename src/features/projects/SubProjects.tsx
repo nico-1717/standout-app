@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { human } from '@/features/pomodoro/logic';
@@ -32,6 +33,17 @@ import { useRowDrag } from './useRowDrag';
  * tasto del Pomodoro, la griglia a schede, la selezione multipla (colore, sposta, elimina insieme) e in fondo
  * «Aggiungi un sotto-progetto».
  */
+/** Sbiadisce piano piano un progetto appena completato: ha qualche secondo per ripensarci prima che sparisca. */
+const FADE_MS = 3600;
+function FadeAway({ children }: { children: ReactNode }) {
+  const o = useSharedValue(1);
+  useEffect(() => {
+    o.value = withTiming(0.25, { duration: FADE_MS });
+  }, [o]);
+  const style = useAnimatedStyle(() => ({ opacity: o.value }));
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+
 export function SubProjects(p: {
   repo: ProjectsRepo;
   all: Project[];
@@ -43,6 +55,8 @@ export function SubProjects(p: {
   onToggleBranch: (uuid: string) => void;
   /** apre o chiude tutti i rami insieme (il tasto con le frecce del sito, `prFoldAll`) */
   onFoldAll?: (ids: string[], collapse: boolean) => void;
+  /** progetti appena completati che stanno per nascondersi: si sbiadiscono piano (come l'annulla di Todoist) */
+  fading?: ReadonlySet<string>;
   swatches: string[];
   onOpen: (project: Project) => void;
   onStart: (project: Project) => void;
@@ -333,6 +347,7 @@ export function SubProjects(p: {
               const isLocked = locked.has(k.uuid);
               const closed = p.collapsed.has(k.uuid);
               const doneRow = k.status === 'completed';
+              const Fade = p.fading?.has(k.uuid) && doneRow ? FadeAway : Fragment;
               const secs = p.totals?.get(k.uuid) ?? 0;
               const meta = p.showTags
                 ? [
@@ -357,164 +372,173 @@ export function SubProjects(p: {
                     caption={drag.ui.active === k.uuid ? caption : null}
                   >
                     {i ? <RowLine inset={74 + r.depth * 22} /> : null}
-                    <ActionSwipe
-                      id={k.uuid}
-                      open={swiped === k.uuid}
-                      disabled={selecting || drag.ui.active !== null}
-                      onOpenChange={(on) => setSwiped(on ? k.uuid : null)}
-                      actions={projectSwipeActions({
-                        t,
-                        red: th.red,
-                        onAdd: () => addInside(k.uuid),
-                        onMove: () => setRowAction({ kind: 'move', id: k.uuid }),
-                        onDelete: () => setRowAction({ kind: 'delete', id: k.uuid }),
-                      })}
-                    >
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          minHeight: 54,
-                          paddingVertical: 8,
-                          paddingRight: 8,
-                          paddingLeft: r.depth * 22,
-                          backgroundColor: on ? `${th.blue}12` : undefined,
-                          opacity: isLocked ? 0.85 : 1,
-                        }}
+                    <Fade>
+                      <ActionSwipe
+                        id={k.uuid}
+                        open={swiped === k.uuid}
+                        disabled={selecting || drag.ui.active !== null}
+                        onOpenChange={(on) => setSwiped(on ? k.uuid : null)}
+                        actions={projectSwipeActions({
+                          t,
+                          red: th.red,
+                          onAdd: () => addInside(k.uuid),
+                          onMove: () => setRowAction({ kind: 'move', id: k.uuid }),
+                          onDelete: () => setRowAction({ kind: 'delete', id: k.uuid }),
+                        })}
                       >
-                        <View style={{ width: 40, alignItems: 'center' }}>
-                          {r.hasChildren ? (
-                            <Pressable
-                              testID={`proj-toggle-${k.uuid}`}
-                              accessibilityRole="button"
-                              accessibilityLabel={t('progetti.apri_chiudi_sotto')}
-                              accessibilityState={{ expanded: !closed }}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 0 }}
-                              onPress={() => p.onToggleBranch(k.uuid)}
-                              style={{ padding: 6 }}
-                            >
-                              <View style={{ transform: [{ rotate: closed ? '0deg' : '90deg' }] }}>
-                                <PjIcon name="chevron" color={th.text3} size={15} />
-                              </View>
-                            </Pressable>
-                          ) : null}
-                        </View>
-                        {selecting ? (
-                          <Pressable
-                            testID={`kid-${k.uuid}`}
-                            accessibilityRole="checkbox"
-                            accessibilityState={{ checked: on || isLocked, disabled: isLocked }}
-                            onPress={() => toggle(k.uuid)}
-                            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-                          >
-                            <View
-                              style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: 11,
-                                borderWidth: 2,
-                                borderColor: on
-                                  ? th.blue
-                                  : isLocked
-                                    ? `${th.blue}73`
-                                    : th.hairline2,
-                                backgroundColor: on
-                                  ? th.blue
-                                  : isLocked
-                                    ? `${th.blue}73`
-                                    : 'transparent',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {on || isLocked ? (
-                                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
-                                  ✓
-                                </Text>
-                              ) : null}
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <Text
-                                style={{
-                                  color: doneRow ? th.text3 : th.text,
-                                  fontSize: 16,
-                                  fontWeight: '500',
-                                  textDecorationLine: doneRow ? 'line-through' : 'none',
-                                }}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            minHeight: 54,
+                            paddingVertical: 8,
+                            paddingRight: 8,
+                            paddingLeft: r.depth * 22,
+                            backgroundColor: on ? `${th.blue}12` : undefined,
+                            opacity: isLocked ? 0.85 : 1,
+                          }}
+                        >
+                          <View style={{ width: 40, alignItems: 'center' }}>
+                            {r.hasChildren ? (
+                              <Pressable
+                                testID={`proj-toggle-${k.uuid}`}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('progetti.apri_chiudi_sotto')}
+                                accessibilityState={{ expanded: !closed }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 0 }}
+                                onPress={() => p.onToggleBranch(k.uuid)}
+                                style={{ padding: 6 }}
                               >
-                                {k.name}
-                              </Text>
-                              {meta ? (
-                                <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
-                                  {meta}
-                                </Text>
-                              ) : null}
-                            </View>
-                          </Pressable>
-                        ) : (
-                          <>
-                            <Pressable
-                              testID={`proj-status-${k.uuid}`}
-                              accessibilityRole="checkbox"
-                              accessibilityLabel={t('progetti.cambia_stato')}
-                              accessibilityState={{ checked: doneRow }}
-                              hitSlop={{ top: 10, bottom: 10, left: 0, right: 10 }}
-                              onPress={() => p.onCycle(k.uuid)}
-                            >
-                              <StatusRing status={k.status} color={k.color} size={24} />
-                            </Pressable>
+                                <View
+                                  style={{ transform: [{ rotate: closed ? '0deg' : '90deg' }] }}
+                                >
+                                  <PjIcon name="chevron" color={th.text3} size={15} />
+                                </View>
+                              </Pressable>
+                            ) : null}
+                          </View>
+                          {selecting ? (
                             <Pressable
                               testID={`kid-${k.uuid}`}
-                              accessibilityRole="button"
-                              onPress={() => p.onOpen(k)}
-                              delayLongPress={GRAB_MS}
-                              onLongPress={() => drag.grab(k.uuid)}
-                              onPressOut={drag.release}
-                              style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
-                            >
-                              <Text
-                                style={{
-                                  color: doneRow ? th.text3 : th.text,
-                                  fontSize: 16,
-                                  fontWeight: '500',
-                                  textDecorationLine: doneRow ? 'line-through' : 'none',
-                                }}
-                              >
-                                {k.name}
-                              </Text>
-                              {meta ? (
-                                <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
-                                  {meta}
-                                </Text>
-                              ) : null}
-                            </Pressable>
-                            <Pressable
-                              testID={`proj-start-${k.uuid}`}
-                              accessibilityRole="button"
-                              accessibilityLabel={t('progetti.concentrati')}
-                              hitSlop={6}
-                              onPress={() => p.onStart(k)}
+                              accessibilityRole="checkbox"
+                              accessibilityState={{ checked: on || isLocked, disabled: isLocked }}
+                              onPress={() => toggle(k.uuid)}
                               style={{
-                                minWidth: 56,
-                                minHeight: 36,
+                                flex: 1,
+                                flexDirection: 'row',
                                 alignItems: 'center',
-                                justifyContent: 'center',
+                                gap: 10,
                               }}
                             >
-                              <PjIcon name="timer" color={th.text3} size={19} />
-                              {secs ? (
+                              <View
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 11,
+                                  borderWidth: 2,
+                                  borderColor: on
+                                    ? th.blue
+                                    : isLocked
+                                      ? `${th.blue}73`
+                                      : th.hairline2,
+                                  backgroundColor: on
+                                    ? th.blue
+                                    : isLocked
+                                      ? `${th.blue}73`
+                                      : 'transparent',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                {on || isLocked ? (
+                                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
+                                    ✓
+                                  </Text>
+                                ) : null}
+                              </View>
+                              <View style={{ flex: 1 }}>
                                 <Text
-                                  testID={`proj-time-${k.uuid}`}
-                                  style={{ color: th.text2, fontSize: 12, marginTop: 1 }}
+                                  style={{
+                                    color: doneRow ? th.text3 : th.text,
+                                    fontSize: 16,
+                                    fontWeight: '500',
+                                    textDecorationLine: doneRow ? 'line-through' : 'none',
+                                  }}
                                 >
-                                  {durationShort(secs)}
+                                  {k.name}
                                 </Text>
-                              ) : null}
+                                {meta ? (
+                                  <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
+                                    {meta}
+                                  </Text>
+                                ) : null}
+                              </View>
                             </Pressable>
-                          </>
-                        )}
-                      </View>
-                    </ActionSwipe>
+                          ) : (
+                            <>
+                              <Pressable
+                                testID={`proj-status-${k.uuid}`}
+                                accessibilityRole="checkbox"
+                                accessibilityLabel={t('progetti.cambia_stato')}
+                                accessibilityState={{ checked: doneRow }}
+                                hitSlop={{ top: 10, bottom: 10, left: 0, right: 10 }}
+                                onPress={() => p.onCycle(k.uuid)}
+                              >
+                                <StatusRing status={k.status} color={k.color} size={24} />
+                              </Pressable>
+                              <Pressable
+                                testID={`kid-${k.uuid}`}
+                                accessibilityRole="button"
+                                onPress={() => p.onOpen(k)}
+                                delayLongPress={GRAB_MS}
+                                onLongPress={() => drag.grab(k.uuid)}
+                                onPressOut={drag.release}
+                                style={{ flex: 1, marginLeft: 10, paddingVertical: 2 }}
+                              >
+                                <Text
+                                  style={{
+                                    color: doneRow ? th.text3 : th.text,
+                                    fontSize: 16,
+                                    fontWeight: '500',
+                                    textDecorationLine: doneRow ? 'line-through' : 'none',
+                                  }}
+                                >
+                                  {k.name}
+                                </Text>
+                                {meta ? (
+                                  <Text style={{ color: th.text2, fontSize: 12.5, marginTop: 1 }}>
+                                    {meta}
+                                  </Text>
+                                ) : null}
+                              </Pressable>
+                              <Pressable
+                                testID={`proj-start-${k.uuid}`}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('progetti.concentrati')}
+                                hitSlop={6}
+                                onPress={() => p.onStart(k)}
+                                style={{
+                                  minWidth: 56,
+                                  minHeight: 36,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <PjIcon name="timer" color={th.text3} size={19} />
+                                {secs ? (
+                                  <Text
+                                    testID={`proj-time-${k.uuid}`}
+                                    style={{ color: th.text2, fontSize: 12, marginTop: 1 }}
+                                  >
+                                    {durationShort(secs)}
+                                  </Text>
+                                ) : null}
+                              </Pressable>
+                            </>
+                          )}
+                        </View>
+                      </ActionSwipe>
+                    </Fade>
                   </DragItem>
                   {addHere ? (
                     <View style={{ paddingLeft: addDepth * 22 + 14 }}>

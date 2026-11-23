@@ -109,6 +109,8 @@ export interface TreeOptions {
   collapsed: ReadonlySet<string>;
   /** da quale progetto partire (i suoi figli sono a profondità 0); mancante = dalla radice */
   root?: string | null;
+  /** progetti appena completati: restano in vista qualche secondo prima di nascondersi (come un annulla) */
+  keep?: ReadonlySet<string>;
 }
 
 /** L'albero come righe in fila, secondo le opzioni della pagina «Progetti». */
@@ -128,7 +130,9 @@ export function flatten(all: Project[], o: TreeOptions): TreeRow[] {
   const kids = new Map<string | null, Project[]>();
   for (const p of all) kids.set(p.parent_uuid, [...(kids.get(p.parent_uuid) ?? []), p]);
   const visible = (p: Project) =>
-    !(o.onlyWorked && !o.onlyWorked.has(p.uuid)) && !(!o.showCompleted && p.status === 'completed');
+    o.keep?.has(p.uuid) ||
+    (!(o.onlyWorked && !o.onlyWorked.has(p.uuid)) &&
+      !(!o.showCompleted && p.status === 'completed'));
   const out: TreeRow[] = [];
   const walk = (parent: string | null, depth: number) => {
     const list = (kids.get(parent) ?? []).sort(sorter);

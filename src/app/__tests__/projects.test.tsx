@@ -586,6 +586,33 @@ describe('Projects › sub-projects', () => {
     expect(projects.all().length).toBe(5);
   });
 
+  test('a project you just completed stays a few seconds (faded) before "show completed: off" hides it', async () => {
+    jest.useFakeTimers();
+    const { projects } = setup();
+    (mockServices as { projectOptions: ProjectOptionsStore }).projectOptions.write({
+      completati: false,
+    });
+    const top = projects.create({ name: 'Interview' })!;
+    const neet = projects.create({ name: 'NeetCode', parent: top })!;
+    projects.create({ name: 'Other', parent: top });
+    mockParams = { id: top };
+    await renderPage();
+    await fireEvent.press(screen.getByTestId(`proj-status-${neet}`));
+    expect(projects.all().find((x) => x.uuid === neet)?.status).toBe('completed');
+    // subito dopo è ancora lì, sbiadito
+    expect(screen.getByTestId(`kid-${neet}`)).toBeTruthy();
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(screen.getByTestId(`kid-${neet}`)).toBeTruthy();
+    // passati i secondi si nasconde, e l'altro resta
+    await act(async () => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(screen.queryByTestId(`kid-${neet}`)).toBeNull();
+    jest.useRealTimers();
+  });
+
   test('opening one branch keeps its parent row and does not change any status', async () => {
     const { projects } = setup();
     const top = projects.create({ name: 'Interview' })!;
