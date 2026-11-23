@@ -65,6 +65,21 @@ describe('TrackerTab', () => {
     expect(screen.getByTestId('tr-cell-B1').props.value).toBe('20');
   });
 
+  it('Programmazione: i modelli Blind 75 e sfida giornaliera si aggiungono già riempiti', async () => {
+    const repo = await setup();
+    for (const id of ['blind75', 'streak']) {
+      await fireEvent.press(screen.getByTestId('tr-add-block'));
+      await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+      await fireEvent.press(screen.getByTestId('tr-pick-programming'));
+      await fireEvent.press(screen.getByTestId(`tr-pick-${id}`));
+    }
+    const [first, second] = repo.blocks(P);
+    expect(first?.kind).toBe('checklist');
+    expect((first?.data as { items: unknown[] }).items).toHaveLength(75);
+    expect(second?.kind).toBe('table');
+    expect(first?.title).toBe('Blind 75');
+  });
+
   it('NeetCode: aggiunge un problema da fare, lo registra, e compare fra i risolti', async () => {
     const repo = await setup();
     await fireEvent.press(screen.getByTestId('tr-add-block'));

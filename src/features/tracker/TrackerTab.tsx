@@ -18,6 +18,7 @@ import {
   type BlockProps,
 } from './SimpleBlocks';
 import { Btn } from './parts';
+import { templateBlock, type TemplateId } from './templates';
 import type { TrackerRepo } from './repo';
 
 type Page = 'root' | 'advanced' | 'programming';
@@ -71,6 +72,17 @@ export function TrackerTab({
       kind === 'review' || kind === 'connection' ? t(`tracker.k_${kind}`) : '',
     );
     setMsg(id ? null : t('tracker.full', { n: MAX_BLOCKS }));
+    changed();
+  };
+  // un modello già riempito (Blind 75, sfida giornaliera): un blocco normale, che poi si cambia come gli altri
+  const addTemplate = (id: TemplateId) => {
+    closePicker();
+    const tpl = templateBlock(id);
+    const made = repo.add(project, tpl.kind, t(`tracker.k_${id}`), {
+      config: tpl.config,
+      data: tpl.data,
+    });
+    setMsg(made ? null : t('tracker.full', { n: MAX_BLOCKS }));
     changed();
   };
   const ask = (b: Block) =>
@@ -275,6 +287,16 @@ export function TrackerTab({
             : null}
           {page === 'programming'
             ? choice('review', t('tracker.k_review'), t('tracker.d_review'), () => add('review'))
+            : null}
+          {page === 'programming'
+            ? choice('blind75', t('tracker.k_blind75'), t('tracker.d_blind75'), () =>
+                addTemplate('blind75'),
+              )
+            : null}
+          {page === 'programming'
+            ? choice('streak', t('tracker.k_streak'), t('tracker.d_streak'), () =>
+                addTemplate('streak'),
+              )
             : null}
         </View>
       </Sheet>

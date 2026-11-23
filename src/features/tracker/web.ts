@@ -7,3 +7,4 @@ export * from './blocks';
 export * from './formula';
 export * from './importTable';
 export * from './neetcode';
+export * from './templates';
