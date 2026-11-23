@@ -42,6 +42,39 @@ describe('projects tree', () => {
     expect(repo.create({ name: 'x', parent: 'nope' })).toBeNull();
   });
 
+  test('moving a row works even when sibling order keys are equal or empty (projects that came from the website)', () => {
+    const { db, repo } = setup();
+    const root = repo.create({ name: 'Root' })!;
+    const ids = ['One', 'Two', 'Three'].map((name) =>
+      repo.create({ name, parent: root, position: 'last' })!,
+    );
+    // le chiavi si rovinano: tutte uguali, una vuota
+    db.run(`UPDATE projects SET sort_key = 'a0' WHERE parent_uuid = ?`, [root]);
+    db.run(`UPDATE projects SET sort_key = '' WHERE uuid = ?`, [ids[2]!]);
+    const names = () =>
+      repo
+        .all()
+        .filter((p) => p.parent_uuid === root)
+        .map((p) => p.name);
+    const idOf = (name: string) => repo.all().find((p) => p.name === name)!.uuid;
+    // «Two» sale in cima: prima di questa correzione la mossa lanciava un errore e la riga restava ferma
+    repo.reorder(ids[1]!, null, idOf(names()[0]!));
+    expect(names()[0]).toBe('Two');
+    // e poi «One» va in fondo
+    const last = repo
+      .all()
+      .filter((p) => p.parent_uuid === root)
+      .at(-1)!.uuid;
+    repo.reorder(ids[0]!, last, null);
+    expect(names().at(-1)).toBe('One');
+    // si può ancora creare e spostare dentro
+    const extra = repo.create({ name: 'Extra', parent: root, position: 'last' })!;
+    expect(names().at(-1)).toBe('Extra');
+    const other = repo.create({ name: 'Other' })!;
+    expect(repo.move(extra, other)).toBe(true);
+    expect(repo.get(extra)!.parent_uuid).toBe(other);
+  });
+
   test('changing a colour passes it down to automatic children only', () => {
     const { repo } = setup();
     const root = repo.create({ name: 'Root', color: '#111111' })!;

@@ -1,4 +1,4 @@
-import { generateKeyBetween } from 'fractional-indexing';
+import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
 import { uuidv7 } from 'uuidv7';
 
 import type { SqlDb } from '@/core/db/sqldb';
@@ -113,6 +113,42 @@ export class ProjectsRepo {
     );
   }
 
+  /**
+   * Un posto fra due chiavi d'ordine, o null se le chiavi non lo permettono (uguali, vuote, rovesciate: càpita con
+   * progetti arrivati dal sito). Chi chiama allora rinumera i fratelli con `renumber`.
+   */
+  private keyBetween(a: string | null, b: string | null): string | null {
+    if (a === '' || b === '') return null;
+    try {
+      return generateKeyBetween(a, b);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Le chiavi dei fratelli sono tutte valide e in ordine stretto? Se no, un posto «fra due» non è affidabile. */
+  private keysHealthy(keys: string[]): boolean {
+    for (let i = 0; i < keys.length; i++) {
+      if (!keys[i]) return false;
+      if (i > 0 && this.keyBetween(keys[i - 1]!, keys[i]!) === null) return false;
+    }
+    return true;
+  }
+
+  /** Dà ai fratelli di `parent` chiavi nuove e in ordine, nell'ordine di `order`; ritorna la chiave di ognuno. */
+  private renumber(order: string[]): Map<string, string> {
+    const keys = generateNKeysBetween(null, null, order.length);
+    const out = new Map<string, string>();
+    const now = this.clock();
+    order.forEach((id, i) => {
+      const k = keys[i]!;
+      out.set(id, k);
+      patchRow(this.db, 'projects', id, { sort_key: k, updated_at: now });
+      enqueue(this.db, { table: 'projects', uuid: id, op: 'upsert', patch: { sort_key: k } }, now);
+    });
+    return out;
+  }
+
   private siblingKeys(parent: string | null): string[] {
     return childrenOf(this.all(), parent).map((p) => p.sort_key);
   }
@@ -148,10 +184,22 @@ export class ProjectsRepo {
     const uuid = this.newId();
     this.db.transaction(() => {
       const keys = this.siblingKeys(parent);
-      const key =
-        input.position === 'last'
-          ? generateKeyBetween(keys[keys.length - 1] ?? null, null)
-          : generateKeyBetween(null, keys[0] ?? null);
+      let key = !this.keysHealthy(keys)
+        ? null
+        : input.position === 'last'
+          ? this.keyBetween(keys[keys.length - 1] ?? null, null)
+          : this.keyBetween(null, keys[0] ?? null);
+      if (key === null) {
+        // chiavi dei fratelli rovinate: si rinumerano e la nuova va in fondo (o in cima)
+        const ids = childrenOf(all, parent).map((p) => p.uuid);
+        const fresh = this.renumber(ids);
+        const last = ids.length ? fresh.get(ids[ids.length - 1]!)! : null;
+        const first = ids.length ? fresh.get(ids[0]!)! : null;
+        key =
+          input.position === 'last'
+            ? generateKeyBetween(last, null)
+            : generateKeyBetween(null, first);
+      }
       const edited = !!input.color;
       const color = input.color ?? inheritedColor(byId(all), parent);
       const now = this.clock();
@@ -249,8 +297,14 @@ export class ProjectsRepo {
     if (wouldCycle(all, uuid, newParent)) return false;
     if (cur.parent_uuid === newParent) return true;
     this.db.transaction(() => {
-      const keys = childrenOf(all, newParent).map((p) => p.sort_key);
-      const key = generateKeyBetween(keys[keys.length - 1] ?? null, null);
+      const sibs = childrenOf(all, newParent).filter((p) => p.uuid !== uuid);
+      let key = this.keysHealthy(sibs.map((p) => p.sort_key))
+        ? this.keyBetween(sibs[sibs.length - 1]?.sort_key ?? null, null)
+        : null;
+      if (key === null) {
+        const fresh = this.renumber([...sibs.map((p) => p.uuid), uuid]);
+        key = fresh.get(uuid)!;
+      }
       const patch: Record<string, WireValue> = { parent_uuid: newParent, sort_key: key };
       const local: Record<string, WireValue> = { ...patch };
       // un colore automatico segue il padre nuovo
@@ -270,13 +324,32 @@ export class ProjectsRepo {
   /** Mette `uuid` tra `before` e `after` (fratelli dello stesso padre; null = in cima / in fondo). */
   reorder(uuid: string, before: string | null, after: string | null): void {
     const all = this.all();
+    const me = all.find((p) => p.uuid === uuid);
+    if (!me) return;
     const key = (id: string | null) =>
       id ? (all.find((p) => p.uuid === id)?.sort_key ?? null) : null;
-    const k = generateKeyBetween(key(before), key(after));
     this.db.transaction(() => {
-      const now = this.clock();
-      patchRow(this.db, 'projects', uuid, { sort_key: k, updated_at: now });
-      enqueue(this.db, { table: 'projects', uuid, op: 'upsert', patch: { sort_key: k } }, now);
+      const sibs = childrenOf(all, me.parent_uuid);
+      const k = this.keysHealthy(sibs.map((p) => p.sort_key))
+        ? this.keyBetween(key(before), key(after))
+        : null;
+      if (k !== null) {
+        const now = this.clock();
+        patchRow(this.db, 'projects', uuid, { sort_key: k, updated_at: now });
+        enqueue(this.db, { table: 'projects', uuid, op: 'upsert', patch: { sort_key: k } }, now);
+        return;
+      }
+      // chiavi che non fanno posto: tutti i fratelli ricevono chiavi nuove, con la riga nel posto voluto
+      const others = childrenOf(all, me.parent_uuid)
+        .map((p) => p.uuid)
+        .filter((id) => id !== uuid);
+      const at = before
+        ? others.indexOf(before) + 1
+        : after
+          ? Math.max(0, others.indexOf(after))
+          : others.length;
+      others.splice(at, 0, uuid);
+      this.renumber(others);
     });
   }
 
