@@ -161,4 +161,25 @@ describe('AccountApi', () => {
     const api = new AccountApi('https://site', async () => 't', '1', 'ios', fn);
     await expect(api.diaryAiRun({}, 'en')).rejects.toBeInstanceOf(ApiError);
   });
+
+  test('trackerAiTable sends the pasted text and keeps only text cells', async () => {
+    const { api, calls } = make(() => ({
+      json: { ok: true, cols: 2, rows: 2, cells: { A1: 'Team', B1: 'Pts', A2: 'Inter', B2: 9 } },
+    }));
+    const table = await api.trackerAiTable('page text', 'table only');
+    expect(calls[0].url).toBe('https://site/api/v1/tracker/ai-table');
+    expect(calls[0].body).toEqual({ text: 'page text', request: 'table only' });
+    expect(table).toEqual({ cols: 2, rows: 2, cells: { A1: 'Team', B1: 'Pts', A2: 'Inter' } });
+  });
+
+  test('trackerAiTable turns a server refusal into an ApiError with the server text', async () => {
+    const { api } = make(() => ({
+      status: 402,
+      json: { ok: false, error: 'You reached your monthly AI limit.', code: 'quota_exceeded' },
+    }));
+    await expect(api.trackerAiTable('x', '')).rejects.toMatchObject({
+      status: 402,
+      message: 'You reached your monthly AI limit.',
+    });
+  });
 });

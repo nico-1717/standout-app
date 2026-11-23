@@ -37,6 +37,13 @@ export class FieldsError extends ApiError {
   }
 }
 
+/** Una tabella costruita dall'IA: colonne, righe e celle («A1» → testo). */
+export interface AiTable {
+  cols: number;
+  rows: number;
+  cells: Record<string, string>;
+}
+
 /** Una voce dei consumi dell'IA: usato nel mese e limite del piano (null = illimitato). */
 export interface AiMeter {
   used: number;
@@ -330,6 +337,22 @@ export class AccountApi {
     return wxState(
       await this.json(await this.send('POST', '/api/v1/weather/place', { lat, lon, place })),
     );
+  }
+
+  /**
+   * «Collegamento con l'IA»: dal testo incollato di una pagina, il server ricava una tabella già controllata e
+   * ridimensionata (non salva niente: il telefono crea o aggiorna la tabella da solo). Il server legge solo il
+   * testo, non apre nessun sito. Serve rete; un errore porta il testo del server (limite del piano, IA occupata…).
+   */
+  async trackerAiTable(text: string, request: string): Promise<AiTable> {
+    const r = await this.json<{ cols?: unknown; rows?: unknown; cells?: unknown }>(
+      await this.send('POST', '/api/v1/tracker/ai-table', { text, request }),
+    );
+    const cells: Record<string, string> = {};
+    if (r.cells && typeof r.cells === 'object')
+      for (const [k, v] of Object.entries(r.cells as Record<string, unknown>))
+        if (typeof v === 'string' && v !== '') cells[k] = v;
+    return { cols: Number(r.cols) || 1, rows: Number(r.rows) || 1, cells };
   }
 
   /** Solo la modalità: automatico (segue la posizione viva) o a mano. Il posto salvato non cambia. */

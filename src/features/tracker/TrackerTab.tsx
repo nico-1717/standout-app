@@ -7,7 +7,7 @@ import { usePlanTheme } from '@/features/plan/ui';
 import { haptic } from '@/ui/motion';
 
 import { MAX_BLOCKS, type Block, type BlockKind } from './blocks';
-import { ConnectionBlock } from './ConnectionBlock';
+import { ConnectionBlock, type AiTableFn } from './ConnectionBlock';
 import { ReviewBlock } from './ReviewBlock';
 import {
   ChecklistBlock,
@@ -43,10 +43,13 @@ export function TrackerTab({
   repo,
   project,
   changed,
+  aiTable,
 }: {
   repo: TrackerRepo;
   project: string;
   changed: () => void;
+  /** «Crea con l'IA» del Collegamento: senza questa funzione il pulsante non c'è. */
+  aiTable?: AiTableFn;
 }) {
   const ht = usePlanTheme();
   const { t } = useTranslation();
@@ -224,6 +227,7 @@ export function TrackerTab({
                 project={project}
                 changed={changed}
                 onSave={(c) => save(b, c)}
+                aiTable={aiTable}
               />
             ) : body ? (
               body({ block: b, all: blocks, onSave: (c) => save(b, c) })

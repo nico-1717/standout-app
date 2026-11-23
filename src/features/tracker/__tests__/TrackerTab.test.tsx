@@ -6,12 +6,13 @@ import '@/core/i18n';
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 
+import type { AiTableFn } from '../ConnectionBlock';
 import { TrackerRepo } from '../repo';
 import { TrackerTab } from '../TrackerTab';
 
 const P = '11111111-1111-7111-8111-111111111111';
 
-function Harness({ repo }: { repo: TrackerRepo }) {
+function Harness({ repo, aiTable }: { repo: TrackerRepo; aiTable?: AiTableFn }) {
   const [, bump] = useReducer((n: number) => n + 1, 0);
   return (
     <SafeAreaProvider
@@ -21,14 +22,14 @@ function Harness({ repo }: { repo: TrackerRepo }) {
       }}
     >
       <ThemeProvider>
-        <TrackerTab repo={repo} project={P} changed={bump} />
+        <TrackerTab repo={repo} project={P} changed={bump} aiTable={aiTable} />
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
-const setup = async () => {
+const setup = async (aiTable?: AiTableFn) => {
   const repo = new TrackerRepo(memoryDb());
-  await render(<Harness repo={repo} />);
+  await render(<Harness repo={repo} aiTable={aiTable} />);
   return repo;
 };
 
@@ -132,5 +133,47 @@ describe('TrackerTab', () => {
     blocks = repo.blocks(P);
     expect(blocks).toHaveLength(2); // la stessa tabella, aggiornata
     expect((blocks[1]?.config as { rows: number }).rows).toBe(3);
+  });
+
+  it('Connection with AI: the pasted page goes to the AI and the table it returns is saved', async () => {
+    const aiTable = jest.fn(async () => ({
+      cols: 2,
+      rows: 2,
+      cells: { A1: 'Team', B1: 'Pts', A2: 'Inter', B2: '9' },
+    }));
+    const repo = await setup(aiTable);
+    await fireEvent.press(screen.getByTestId('tr-add-block'));
+    await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+    await fireEvent.press(screen.getByTestId('tr-pick-connection'));
+    expect(screen.getByTestId('cx-ai').props.accessibilityState?.disabled).toBe(true);
+    await fireEvent.changeText(screen.getByTestId('cx-paste'), 'Standings Inter 9 points ...');
+    await fireEvent.changeText(screen.getByTestId('cx-ai-wish'), 'only the table');
+    await fireEvent.press(screen.getByTestId('cx-ai'));
+    expect(aiTable).toHaveBeenCalledWith('Standings Inter 9 points ...', 'only the table');
+    const blocks = repo.blocks(P);
+    expect(blocks.map((b) => b.kind)).toEqual(['connection', 'table']);
+    expect((blocks[1]?.data as { cells: Record<string, string> }).cells.A2).toBe('Inter');
+  });
+
+  it('Connection with AI: the server message is shown and nothing is created', async () => {
+    const aiTable = jest.fn(async () => {
+      throw new Error('The AI is busy right now. Try again in a minute.');
+    });
+    const repo = await setup(aiTable);
+    await fireEvent.press(screen.getByTestId('tr-add-block'));
+    await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+    await fireEvent.press(screen.getByTestId('tr-pick-connection'));
+    await fireEvent.changeText(screen.getByTestId('cx-paste'), 'some page');
+    await fireEvent.press(screen.getByTestId('cx-ai'));
+    expect(screen.getByTestId('cx-msg').props.children).toContain('busy');
+    expect(repo.blocks(P).map((b) => b.kind)).toEqual(['connection']);
+  });
+
+  it('Connection: without the AI function there is no AI button', async () => {
+    await setup();
+    await fireEvent.press(screen.getByTestId('tr-add-block'));
+    await fireEvent.press(screen.getByTestId('tr-pick-advanced'));
+    await fireEvent.press(screen.getByTestId('tr-pick-connection'));
+    expect(screen.queryByTestId('cx-ai')).toBeNull();
   });
 });

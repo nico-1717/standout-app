@@ -40,7 +40,7 @@ export default function ProjectsScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed, pomodoroSettings } = useApp();
+  const { services, version, changed, pomodoroSettings, account } = useApp();
   const params = useLocalSearchParams<{ id?: string; view?: string; pp?: string }>();
 
   const [sel, setSel] = useState<string | null>(typeof params.id === 'string' ? params.id : null);
@@ -333,7 +333,12 @@ export default function ProjectsScreen() {
                   />
                 ) : null}
                 {projectTab === 'tracker' ? (
-                  <TrackerTab repo={services.tracker} project={me.uuid} changed={changed} />
+                  <TrackerTab
+                    repo={services.tracker}
+                    project={me.uuid}
+                    changed={changed}
+                    aiTable={(text, request) => account.trackerAiTable(text, request)}
+                  />
                 ) : null}
               </>
             )}
