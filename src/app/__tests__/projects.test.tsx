@@ -586,6 +586,21 @@ describe('Projects › sub-projects', () => {
     expect(projects.all().length).toBe(5);
   });
 
+  test('opening one branch keeps its parent row and does not change any status', async () => {
+    const { projects } = setup();
+    const top = projects.create({ name: 'Interview' })!;
+    const neet = projects.create({ name: 'NeetCode', parent: top })!;
+    const a = projects.create({ name: 'Claude manual', parent: neet })!;
+    projects.create({ name: 'LeetCode', parent: neet });
+    mockParams = { id: top };
+    await renderPage();
+    expect(screen.getByTestId(`kid-${neet}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId(`proj-toggle-${neet}`));
+    expect(screen.getByTestId(`kid-${neet}`)).toBeTruthy();
+    expect(screen.getByTestId(`kid-${a}`)).toBeTruthy();
+    expect(projects.all().find((x) => x.uuid === neet)?.status).not.toBe('completed');
+  });
+
   test('like the website: time under the timer, "Add to" at the end of an open branch, "Add a note"', async () => {
     const { projects, pomodoro } = setup();
     const a = projects.create({ name: 'Alpha' })!;

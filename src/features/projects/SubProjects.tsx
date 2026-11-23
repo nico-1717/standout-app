@@ -389,7 +389,7 @@ export function SubProjects(p: {
                               accessibilityRole="button"
                               accessibilityLabel={t('progetti.apri_chiudi_sotto')}
                               accessibilityState={{ expanded: !closed }}
-                              hitSlop={8}
+                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 0 }}
                               onPress={() => p.onToggleBranch(k.uuid)}
                               style={{ padding: 6 }}
                             >
@@ -458,7 +458,7 @@ export function SubProjects(p: {
                               accessibilityRole="checkbox"
                               accessibilityLabel={t('progetti.cambia_stato')}
                               accessibilityState={{ checked: doneRow }}
-                              hitSlop={8}
+                              hitSlop={{ top: 10, bottom: 10, left: 0, right: 10 }}
                               onPress={() => p.onCycle(k.uuid)}
                             >
                               <StatusRing status={k.status} color={k.color} size={24} />
