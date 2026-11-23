@@ -559,6 +559,33 @@ describe('Projects › sub-projects', () => {
     expect(projects.sessionCount([k3])).toBe(0);
   });
 
+  test('fold-all only hides rows: the parent stays, a second press brings everything back', async () => {
+    const { projects } = setup();
+    const top = projects.create({ name: 'Interview' })!;
+    const neet = projects.create({ name: 'NeetCode', parent: top })!;
+    const a = projects.create({ name: 'Claude manual', parent: neet })!;
+    const leet = projects.create({ name: 'LeetCode', parent: neet })!;
+    const x = projects.create({ name: 'Two Sum', parent: leet })!;
+    mockParams = { id: top };
+    await renderPage();
+    const press = async () => fireEvent.press(screen.getByTestId('sub-fold-all'));
+    // apri tutto
+    if (!screen.queryByTestId(`kid-${x}`)) await press();
+    expect(screen.getByTestId(`kid-${neet}`)).toBeTruthy();
+    expect(screen.getByTestId(`kid-${a}`)).toBeTruthy();
+    expect(screen.getByTestId(`kid-${leet}`)).toBeTruthy();
+    expect(screen.getByTestId(`kid-${x}`)).toBeTruthy();
+    // chiudi tutto: il padre resta, i figli no
+    await press();
+    expect(screen.getByTestId(`kid-${neet}`)).toBeTruthy();
+    expect(screen.queryByTestId(`kid-${a}`)).toBeNull();
+    // riapri: tutto torna
+    await press();
+    expect(screen.getByTestId(`kid-${leet}`)).toBeTruthy();
+    expect(screen.getByTestId(`kid-${x}`)).toBeTruthy();
+    expect(projects.all().length).toBe(5);
+  });
+
   test('like the website: time under the timer, "Add to" at the end of an open branch, "Add a note"', async () => {
     const { projects, pomodoro } = setup();
     const a = projects.create({ name: 'Alpha' })!;
