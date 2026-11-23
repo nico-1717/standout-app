@@ -9,6 +9,7 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { DockHost } from '@/features/plan/dockHost';
 import { PlanPanel } from '@/features/plan/PlanPanel';
 import { ProjectPlanCard } from '@/features/plan/ProjectPlanCard';
+import { TrackerTab } from '@/features/tracker/TrackerTab';
 import { Crumbs, ProjectsHeader, Seg } from '@/features/projects/PjParts';
 import { DropZones, DropZonesContext } from '@/features/projects/DropZones';
 import { ProjectHero } from '@/features/projects/ProjectHero';
@@ -22,7 +23,9 @@ import type { ProjectOptions } from '@/features/projects/options';
 import type { StatusSnapshot } from '@/features/projects/repo';
 
 type AllTab = 'list' | 'cal';
-type ProjectTab = 'list' | 'cal' | 'plan';
+type ProjectTab = 'list' | 'cal' | 'plan' | 'tracker';
+const toProjectTab = (pp: string | undefined): ProjectTab =>
+  pp === 'plan' || pp === 'cal' || pp === 'tracker' ? pp : 'list';
 
 /**
  * Progetti (progetti.php): in alto «Tutti» e i progetti principali come schede. «Tutti» mostra l'elenco (preferiti e
@@ -39,9 +42,7 @@ export default function ProjectsScreen() {
 
   const [sel, setSel] = useState<string | null>(typeof params.id === 'string' ? params.id : null);
   const [allTab, setAllTab] = useState<AllTab>(params.view === 'cal' ? 'cal' : 'list');
-  const [projectTab, setProjectTab] = useState<ProjectTab>(
-    params.pp === 'plan' ? 'plan' : params.pp === 'cal' ? 'cal' : 'list',
-  );
+  const [projectTab, setProjectTab] = useState<ProjectTab>(toProjectTab(params.pp));
   const [menu, setMenu] = useState<null | 'menu' | 'due' | 'note'>(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showDates, setShowDates] = useState(false);
@@ -70,7 +71,7 @@ export default function ProjectsScreen() {
     setSeenId(params.id);
     if (typeof params.id === 'string') {
       setSel(params.id);
-      setProjectTab(params.pp === 'plan' ? 'plan' : params.pp === 'cal' ? 'cal' : 'list');
+      setProjectTab(toProjectTab(params.pp));
     }
   }
 
@@ -236,6 +237,7 @@ export default function ProjectsScreen() {
                     { id: 'list', label: t('progetti.elenco') },
                     { id: 'cal', label: t('piano.v_calendario') },
                     { id: 'plan', label: t('piano.v_piano') },
+                    { id: 'tracker', label: t('tracker.tab') },
                   ]}
                 />
                 {projectTab === 'list' ? (
@@ -304,6 +306,9 @@ export default function ProjectsScreen() {
                       })
                     }
                   />
+                ) : null}
+                {projectTab === 'tracker' ? (
+                  <TrackerTab repo={services.tracker} project={me.uuid} changed={changed} />
                 ) : null}
               </>
             )}

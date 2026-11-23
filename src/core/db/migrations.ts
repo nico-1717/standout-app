@@ -912,6 +912,24 @@ ALTER TABLE planner_events ADD COLUMN study_exam_uuid TEXT;
 DELETE FROM sync_state WHERE k = 'cursor';
 `,
   },
+  {
+    version: 22,
+    // il Tracker di un progetto: un blocco per riga (config e data sono JSON in testo)
+    sql: `
+CREATE TABLE tracker_blocks (
+  uuid TEXT PRIMARY KEY NOT NULL,
+  project_uuid TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  config TEXT NOT NULL DEFAULT '{}',
+  data TEXT NOT NULL DEFAULT '{}',
+  sort_key TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+CREATE INDEX idx_tracker_blocks_project ON tracker_blocks (project_uuid);
+`,
+  },
 ];
 
 export function currentVersion(db: SqlDb): number {

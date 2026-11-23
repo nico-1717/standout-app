@@ -28,6 +28,7 @@ export type SyncTable =
   | 'plan_days'
   | 'plan_settings'
   | 'plan_templates'
+  | 'tracker_blocks'
   | 'university_exam_groups'
   | 'university_exams'
   | 'university_bonuses'
@@ -506,6 +507,7 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
       { table: 'plan_goals', column: 'project_uuid' },
       { table: 'plan_paint', column: 'project_uuid' },
       { table: 'plan_days', column: 'project_uuid' },
+      { table: 'tracker_blocks', column: 'project_uuid' },
     ],
   },
   // le sessioni del Pomodoro e del cronometro: date e ore come sul sito, «AAAA-MM-GG HH:MM:SS» ora locale
@@ -596,6 +598,24 @@ export const MANIFEST: Record<SyncTable, TableDef> = {
     createOnly: [],
     booleans: [],
     columns: ['uuid', 'name', 'body', 'created_at', 'updated_at'],
+  },
+  // il Tracker di un progetto: un blocco per riga, config e data sono JSON in forma di testo (vince l'ultima modifica)
+  tracker_blocks: {
+    order: 161,
+    readOnly: ['created_at', 'updated_at'],
+    createOnly: ['project_uuid', 'kind'],
+    booleans: [],
+    columns: [
+      'uuid',
+      'project_uuid',
+      'kind',
+      'title',
+      'config',
+      'data',
+      'sort_key',
+      'created_at',
+      'updated_at',
+    ],
   },
   // i voti: gruppi di esami, esami (puntano al gruppo) e bonus di laurea
   university_exam_groups: {
