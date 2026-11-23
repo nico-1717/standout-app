@@ -87,6 +87,17 @@ export default function PlannerSettingsScreen() {
   const [picking, setPicking] = useState(false);
   const [wxBusy, setWxBusy] = useState(false);
   const [wxDate, setWxDate] = useState<string | null>(null);
+  const [wxNote, setWxNote] = useState<string | null>(null);
+  /** «Automatico» chiede la posizione viva adesso: se non c'è, si resta «a mano» e si dice perché. */
+  const chooseMode = async (auto: boolean) => {
+    if (!auto) return weather.setAuto(false);
+    const here = await weather.locate();
+    if (!here) {
+      setWxNote(t('planner.wx_auto_negato_app'));
+      return;
+    }
+    await weather.enable(here.lat, here.lon, true);
+  };
   const toggleWeather = (on: boolean) => {
     if (!on) {
       void weather.disable();
@@ -169,10 +180,16 @@ export default function PlannerSettingsScreen() {
           onOpen={() => setWxDate(today)}
           onMode={(auto) => {
             setWxBusy(true);
-            void weather.setAuto(auto).finally(() => setWxBusy(false));
+            setWxNote(null);
+            void chooseMode(auto).finally(() => setWxBusy(false));
           }}
           onChangePlace={() => setPicking(true)}
         />
+        {wxNote ? (
+          <Text testID="ps-weather-note" style={{ color: pt.ink3, fontSize: 13, marginBottom: 12 }}>
+            {wxNote}
+          </Text>
+        ) : null}
         {picking ? (
           <View style={{ marginBottom: 12 }}>
             <WxPlacePicker

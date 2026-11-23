@@ -1,4 +1,5 @@
 import type { AccountApi, WxDay, WxState } from '@/core/account/accountApi';
+import { distanceKm, livePosition, type LivePosition } from './livePosition';
 
 /** Quello che serve a una vista per mettere i tag del meteo accanto ai giorni. */
 export interface WxCtx {
@@ -98,7 +99,13 @@ export function wxDuration(min: number, minLabel: (n: number) => string): string
  * Il meteo come lo tiene il sito: acceso o no, il luogo e le previsioni. Vive in memoria (un solo esemplare per
  * app): lo leggono la pagina del planner e le impostazioni, e si ricarica quando serve.
  */
+/** Sotto questa distanza il posto salvato resta com'è (come sul sito). */
+const FOLLOW_KM = 3;
+
 export class WeatherStore {
+  /** Chi dice dove siamo: sul telefono è il GPS, nei test si sostituisce. */
+  locate: () => Promise<LivePosition | null> = livePosition;
+  private followedAt = 0;
   state: WxState | null = null;
   loading = false;
   failed = false;
@@ -149,6 +156,24 @@ export class WeatherStore {
     this.state = await api.weatherPlace(lat, lon, place);
     this.loadedAt = Date.now();
     this.bump();
+  }
+
+  /**
+   * In modalità automatica porta il luogo salvato dove si trova il telefono, se ci si è spostati di più di 3 km.
+   * Silenzioso: senza permesso o senza segnale il posto resta quello di prima. Al massimo una volta ogni 10 minuti.
+   */
+  async follow(api: AccountApi, force = false): Promise<void> {
+    const s = this.state;
+    if (!s || !s.enabled || !s.auto || s.lat === null || s.lon === null) return;
+    if (!force && Date.now() - this.followedAt < 10 * 60_000) return;
+    this.followedAt = Date.now();
+    const here = await this.locate();
+    if (!here || distanceKm(s.lat, s.lon, here.lat, here.lon) < FOLLOW_KM) return;
+    try {
+      await this.enable(api, here.lat, here.lon, true);
+    } catch {
+      /* senza rete il posto resta quello di prima */
+    }
   }
 
   /** Automatico (segue la posizione viva) o a mano: cambia la modalità, il posto resta com'è. */

@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { Alert, Linking } from 'react-native';
 
 import '@/core/i18n';
+import { wxState } from '@/core/account/accountApi';
+import { weatherStore } from '@/features/planner/weather';
 import { parseGcCalendars, parseGcStatus } from '@/features/planner/gcal';
 import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { DEFAULT_PLANNER_SETTINGS, type PlannerSettings } from '@/features/planner/settings';
@@ -38,6 +40,8 @@ const mockAccount = {
   gcPushSet: jest.fn(async () => undefined),
   gcConnectUrl: () => 'https://site.test/planner/google_calendar.php?action=connect',
   weather: jest.fn(async () => ({ enabled: false, giorni: {}, adesso: null })),
+  weatherEnable: jest.fn(),
+  weatherMode: jest.fn(),
 };
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
@@ -216,5 +220,34 @@ describe('Google Calendar card (as the website one)', () => {
     await open();
     await fireEvent.press(screen.getByTestId('ps-google-head'));
     await waitFor(() => expect(screen.getByText('Status not available.')).toBeTruthy());
+  });
+
+  describe('weather: Automatic mode', () => {
+    const manualState = () =>
+      wxState({ enabled: true, place: 'Milano', lat: 45.46, lon: 9.19, auto: false });
+    const start = async (here: { lat: number; lon: number } | null) => {
+      weatherStore.state = manualState();
+      weatherStore.locate = jest.fn(async () => here);
+      mockAccount.weather.mockImplementation(async () => weatherStore.state as never);
+      await open();
+      await fireEvent.press(screen.getByTestId('ps-weather-mode-auto'));
+    };
+
+    test('uses the live position and saves it as Automatic', async () => {
+      mockAccount.weatherEnable.mockImplementation(async () =>
+        wxState({ enabled: true, place: 'Roma', lat: 41.9, lon: 12.5, auto: true }),
+      );
+      await start({ lat: 41.9, lon: 12.5 });
+      await waitFor(() => expect(mockAccount.weatherEnable).toHaveBeenCalledWith(41.9, 12.5, true));
+      expect(screen.queryByTestId('ps-weather-note')).toBeNull();
+    });
+
+    test('without a position it stays manual and says why', async () => {
+      mockAccount.weatherEnable.mockClear();
+      await start(null);
+      await waitFor(() => expect(screen.getByTestId('ps-weather-note')).toBeTruthy());
+      expect(mockAccount.weatherEnable).not.toHaveBeenCalled();
+      expect(weatherStore.state?.auto).toBe(false);
+    });
   });
 });

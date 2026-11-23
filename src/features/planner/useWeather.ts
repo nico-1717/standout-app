@@ -8,7 +8,13 @@ import { weatherStore } from './weather';
 export function useWeather() {
   const { account } = useApp();
   useSyncExternalStore(weatherStore.subscribe, weatherStore.getSnapshot);
-  const load = useCallback((force?: boolean) => weatherStore.load(account, force), [account]);
+  const load = useCallback(
+    async (force?: boolean) => {
+      await weatherStore.load(account, force);
+      void weatherStore.follow(account);
+    },
+    [account],
+  );
   return {
     wx: weatherStore.state,
     loading: weatherStore.loading,
@@ -22,6 +28,8 @@ export function useWeather() {
     disable: () => weatherStore.disable(account),
     preview: (lat: number, lon: number, place: string) =>
       weatherStore.preview(account, lat, lon, place),
+    /** Dove si trova il telefono (null se manca il permesso o il segnale). */
+    locate: () => weatherStore.locate(),
     places: (q: string) => account.weatherPlaces(q),
   };
 }
