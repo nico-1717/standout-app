@@ -96,6 +96,9 @@ export class SyncEngine {
       for (const m of batch) {
         const r = byId.get(m.mutation_id);
         if (!r || r.status === 'error') {
+          logSync(
+            `push ${m.table} ${m.op} ${m.uuid.slice(0, 8)} failed: ${r?.detail ?? r?.code ?? 'no result'}`,
+          );
           this.db.run(
             `UPDATE outbox SET state = 'pending', attempts = attempts + 1, last_error = ? WHERE mutation_id = ?`,
             [r?.code ?? 'no_result', m.mutation_id],

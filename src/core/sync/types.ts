@@ -17,6 +17,8 @@ export interface PushResult {
   code?: string;
   field?: string;
   message?: string;
+  /** solo con status error: dove è caduto il server (classe e riga), per il registro */
+  detail?: string;
   replayed?: boolean;
   /** la riga com'è sul server (solo con status rejected): serve a rimettere a posto il telefono */
   current?: WireRow | null;

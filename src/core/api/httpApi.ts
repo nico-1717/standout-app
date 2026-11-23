@@ -100,7 +100,7 @@ export class HttpSyncApi
     logSync(
       `${what} → HTTP ${res.status} ${text.length} B in ${Date.now() - started} ms` +
         (failed || !parsed
-          ? ` (${headerSummary(res)})${parsed ? '' : ' NOT JSON: ' + text.slice(0, 160)}`
+          ? ` (${headerSummary(res)})${parsed && !failed ? '' : (parsed ? ' BODY: ' : ' NOT JSON: ') + text.slice(0, 160)}`
           : ''),
     );
     if (failed) {
