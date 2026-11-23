@@ -22,7 +22,7 @@ import { lockedIds, toggleAll, toggleSelection } from './selection';
 import { RowDialogs, type RowAction } from './RowDialogs';
 import type { SubView } from './options';
 import { subtreeIds, type Project, type TreeRow } from './logic';
-import { dateLabel, shortDate } from './pjFormat';
+import { dateLabel, durationShort, shortDate } from './pjFormat';
 import type { ProjectsRepo } from './repo';
 import { GRAB_MS, type DropPlan } from './dragLogic';
 import { useRowDrag } from './useRowDrag';
@@ -75,6 +75,26 @@ export function SubProjects(p: {
   const grid = (p.view ?? 'list') === 'grid' && !selecting;
   const router = useRouter();
   const accent = p.parent.color;
+  // «Aggiungi a …»: dopo l'ultima riga di ogni ramo aperto, come sul sito (pr-add-sub)
+  const addAfter = new Map<string, TreeRow[]>();
+  {
+    const open: TreeRow[] = [];
+    const close = (below: number, after: TreeRow | undefined) => {
+      while (open.length && (open[open.length - 1] as TreeRow).depth >= below) {
+        const parentRow = open.pop() as TreeRow;
+        if (after)
+          addAfter.set(after.project.uuid, [
+            ...(addAfter.get(after.project.uuid) ?? []),
+            parentRow,
+          ]);
+      }
+    };
+    p.rows.forEach((r, i) => {
+      close(r.depth, p.rows[i - 1]);
+      if (r.hasChildren && !p.collapsed.has(r.project.uuid)) open.push(r);
+    });
+    close(0, p.rows[p.rows.length - 1]);
+  }
   const addSub = useMemo(
     () => new Set(addingTo ? subtreeIds(p.all, addingTo) : []),
     [p.all, addingTo],
@@ -308,6 +328,7 @@ export function SubProjects(p: {
           >
             {p.rows.map((r, i) => {
               const k = r.project;
+              const addLines = selecting ? [] : (addAfter.get(k.uuid) ?? []);
               const on = picked.includes(k.uuid);
               const isLocked = locked.has(k.uuid);
               const closed = p.collapsed.has(k.uuid);
@@ -317,7 +338,6 @@ export function SubProjects(p: {
                 ? [
                     r.total ? t('progetti.n_di_m', { n: r.done, m: r.total }) : '',
                     dateLabel(k, t, today),
-                    secs ? t('progetti.tempo_concentrazione', { t: human(secs) }) : '',
                   ]
                     .filter(Boolean)
                     .join(' · ')
@@ -475,13 +495,21 @@ export function SubProjects(p: {
                               hitSlop={6}
                               onPress={() => p.onStart(k)}
                               style={{
-                                width: 34,
-                                height: 32,
+                                minWidth: 56,
+                                minHeight: 36,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                               }}
                             >
                               <PjIcon name="timer" color={th.text3} size={19} />
+                              {secs ? (
+                                <Text
+                                  testID={`proj-time-${k.uuid}`}
+                                  style={{ color: th.text2, fontSize: 12, marginTop: 1 }}
+                                >
+                                  {durationShort(secs)}
+                                </Text>
+                              ) : null}
                             </Pressable>
                           </>
                         )}
@@ -500,6 +528,30 @@ export function SubProjects(p: {
                       />
                     </View>
                   ) : null}
+                  {addLines.map((ar) => (
+                    <Pressable
+                      key={`add-${ar.project.uuid}`}
+                      testID={`proj-add-in-${ar.project.uuid}`}
+                      accessibilityRole="button"
+                      onPress={() => addInside(ar.project.uuid)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 9,
+                        minHeight: 46,
+                        paddingVertical: 10,
+                        paddingRight: 14,
+                        paddingLeft: 39 + (ar.depth + 1) * 22,
+                      }}
+                    >
+                      <View style={{ width: 26, alignItems: 'center' }}>
+                        <PjIcon name="plus" color={accent} size={20} width={2} />
+                      </View>
+                      <Text style={{ color: accent, fontSize: 15, fontWeight: '500' }}>
+                        {t('progetti.aggiungi_a', { nome: ar.project.name })}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </Fragment>
               );
             })}

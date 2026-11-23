@@ -37,3 +37,13 @@ export function progressOf(row: TreeRow): number {
   if (row.total) return row.done / row.total;
   return row.project.status === 'completed' ? 1 : 0;
 }
+
+/** Il tempo di lavoro come sul sito (prog_fmt_duration): «63h 48m», «50m», «<1m»; vuoto se non c'è. */
+export function durationShort(seconds: number): string {
+  const s = Math.floor(seconds);
+  if (s <= 0) return '';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${m}m` : '<1m';
+}

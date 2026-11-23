@@ -7,7 +7,6 @@ import { useDictation } from '@/core/speech/useDictation';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { mix } from '@/features/buy/buyTheme';
-import { human } from '@/features/pomodoro/logic';
 import { localToday, visibleTasks } from '@/features/tasks/groups';
 import type { TasksRepo } from '@/features/tasks/repo';
 import { AddBar, TodoIcon, sansOf } from '@/features/tasks/TodoParts';
@@ -16,7 +15,7 @@ import { todoTheme } from '@/features/tasks/todoTheme';
 import { PjIcon, StatusRing } from './PjIcons';
 import type { Project } from './logic';
 import { isRichNote, noteText } from './notes';
-import { shortDate } from './pjFormat';
+import { durationShort, shortDate } from './pjFormat';
 
 /**
  * La scheda grande di un progetto (.pr-hero): il pallino di stato, il nome grande (si tocca per cambiarlo), la stella
@@ -101,8 +100,10 @@ export function ProjectHero(p: {
               fontSize: 24,
               fontWeight: th.display ? undefined : '800',
               fontFamily: th.display,
-              letterSpacing: -0.5,
+              letterSpacing: 0,
               paddingVertical: 2,
+              // iOS misura un titolo su più righe un po' stretto: un respiro a destra evita che l'ultima lettera si tagli
+              paddingRight: 8,
             }}
           />
           {me.is_favorite ? <PjIcon name="star" color="#E0B84A" size={17} /> : null}
@@ -171,7 +172,7 @@ export function ProjectHero(p: {
           >
             <Text style={{ color: th.text2, fontSize: 14 }}>
               {date ? '· ' : ''}
-              {t('progetti.tempo_concentrazione', { t: human(p.secs) })}
+              {t('progetti.tempo_concentrazione', { t: durationShort(p.secs) })}
             </Text>
           </Pressable>
         ) : null}
@@ -200,6 +201,18 @@ export function ProjectHero(p: {
         <HeroTasks repo={p.tasks} project={me.uuid} version={p.version} changed={p.changed} />
       ) : null}
 
+      {!note ? (
+        <Pressable
+          testID="proj-note-add"
+          accessibilityRole="button"
+          onPress={p.onNote}
+          style={{ marginTop: 4 }}
+        >
+          <Text style={{ color: th.text3, fontSize: 15, lineHeight: 21 }}>
+            {t('progetti.aggiungi_nota')}
+          </Text>
+        </Pressable>
+      ) : null}
       {note ? (
         <Pressable
           testID="proj-note-preview"

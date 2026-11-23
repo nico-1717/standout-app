@@ -559,6 +559,26 @@ describe('Projects › sub-projects', () => {
     expect(projects.sessionCount([k3])).toBe(0);
   });
 
+  test('like the website: time under the timer, "Add to" at the end of an open branch, "Add a note"', async () => {
+    const { projects, pomodoro } = setup();
+    const a = projects.create({ name: 'Alpha' })!;
+    const k1 = projects.create({ name: 'Kid 1', parent: a })!;
+    projects.create({ name: 'Kid 2', parent: a });
+    const g1 = projects.create({ name: 'Grandkid', parent: k1 })!;
+    pomodoro.addManual({ day: '2030-01-01', from: '09:00', to: '10:30', projectUuid: g1 });
+    mockParams = { id: a };
+    await renderPage();
+    if (!screen.queryByTestId(`kid-${g1}`))
+      await fireEvent.press(screen.getByTestId(`proj-toggle-${k1}`));
+    // il tempo sta sotto il timer, anche dei rami (come prog_fmt_duration del sito)
+    expect(screen.getByTestId(`proj-time-${k1}`)).toHaveTextContent('1h 30m');
+    expect(screen.getByTestId(`proj-time-${g1}`)).toHaveTextContent('1h 30m');
+    // «Aggiungi a Kid 1» chiude il ramo aperto
+    expect(screen.getByTestId(`proj-add-in-${k1}`)).toHaveTextContent('Add to Kid 1');
+    // la scheda non ha una nota: la riga per scriverla c'è
+    expect(screen.getByTestId('proj-note-add')).toHaveTextContent('Add a note');
+  });
+
   test('selecting works at every level: a chosen parent locks its children', async () => {
     const { projects } = setup();
     const a = projects.create({ name: 'Alpha' })!;
