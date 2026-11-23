@@ -155,6 +155,22 @@ export function PlanOverview(p: {
               </Text>
             ))}
           </View>
+          <View testID="ov-legend" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            {goals
+              .filter((g) => g.minutes > 0)
+              .map((g) => (
+                <View
+                  key={g.project}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                >
+                  <View
+                    style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: g.color }}
+                  />
+                  <Text style={{ color: th.text2, fontSize: 12 }}>{g.name}</Text>
+                </View>
+              ))}
+          </View>
+          <Text style={{ color: th.text2, fontSize: 12 }}>{t('piano.ov_legenda')}</Text>
         </Card>
       ) : null}
 
@@ -171,13 +187,41 @@ export function PlanOverview(p: {
             <View style={{ flex: 1 }}>
               <Text style={{ color: th.text, fontWeight: '700', fontSize: 16 }}>{g.name}</Text>
               <Text style={{ color: th.text2, fontSize: 13 }}>{goalLine(g, t, p.lang)}</Text>
+              {g.minutes > 0 ? (
+                <>
+                  <View
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: th.surface2,
+                      overflow: 'hidden',
+                      marginTop: 6,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: `${Math.min(100, Math.round((g.done * 100) / g.minutes))}%`,
+                        height: 6,
+                        backgroundColor: g.color,
+                      }}
+                    />
+                  </View>
+                  <Text style={{ color: th.text2, fontSize: 12, marginTop: 3 }}>
+                    {t('piano.ov_fatto_di', { a: hours(g.done), b: hours(g.minutes) })}
+                  </Text>
+                </>
+              ) : null}
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ color: th.text, fontWeight: '700' }}>
                 {g.minutes ? hours(g.minutes) : '–'}
               </Text>
               {g.missing > 0 ? (
-                <Text style={{ color: th.red, fontSize: 12 }}>−{hours(g.missing)}</Text>
+                <Text style={{ color: th.red, fontSize: 12 }}>
+                  {t('piano.ov_manca', { h: hours(g.missing) })}
+                </Text>
+              ) : g.minutes > 0 && m.units > 0 ? (
+                <Text style={{ color: th.green, fontSize: 12 }}>{t('piano.ov_in_linea')}</Text>
               ) : null}
             </View>
           </Pressable>
