@@ -20,21 +20,23 @@ export function PlanLink(p: { onPress: () => void }) {
       accessibilityRole="button"
       onPress={p.onPress}
       style={({ pressed }) => ({
+        alignSelf: 'flex-end',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        borderRadius: 14,
+        gap: 6,
+        minHeight: 32,
+        paddingLeft: 11,
+        paddingRight: 8,
+        borderRadius: 999,
         backgroundColor: th.blueSoft,
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}
     >
-      <SvgXml xml={svg(SPARK, 1.9)} width={16} height={16} />
-      <Text style={{ flex: 1, color: th.brand, fontSize: 14, fontWeight: '700' }}>
+      <SvgXml xml={svg(SPARK, 1.9)} width={15} height={15} />
+      <Text style={{ color: th.brand, fontSize: 13.5, fontWeight: '700' }}>
         {t('piano.v_piano')}
       </Text>
-      <SvgXml xml={svg(RIGHT, 2.4)} width={15} height={15} />
+      <SvgXml xml={svg(RIGHT, 2.4)} width={13} height={13} />
     </Pressable>
   );
 }

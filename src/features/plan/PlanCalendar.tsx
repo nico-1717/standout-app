@@ -178,11 +178,11 @@ export function PlanCalendar(p: {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 6,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
+          gap: 5,
+          paddingHorizontal: 10,
+          paddingVertical: 3,
           borderRadius: 999,
-          minHeight: 38,
+          minHeight: 28,
           backgroundColor: on ? n.color : trail ? `${n.color}33` : th.surface,
           borderWidth: 1,
           borderColor: on || trail ? n.color : th.hairline2,
@@ -190,13 +190,16 @@ export function PlanCalendar(p: {
         }}
       >
         {on ? null : (
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: n.color }} />
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: n.color }} />
         )}
-        <Text style={{ color: on ? inkOn(n.color) : th.text, fontWeight: '600' }} numberOfLines={1}>
+        <Text
+          style={{ color: on ? inkOn(n.color) : th.text, fontSize: 13, fontWeight: '600' }}
+          numberOfLines={1}
+        >
           {n.name}
         </Text>
         {n.minutes > 0 ? (
-          <Text style={{ color: on ? inkOn(n.color) : th.text2, fontSize: 12 }}>
+          <Text style={{ color: on ? inkOn(n.color) : th.text2, fontSize: 11.5 }}>
             {hours(n.minutes)}
           </Text>
         ) : null}
@@ -248,7 +251,7 @@ export function PlanCalendar(p: {
   );
 
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 10 }}>
       {scope && scope !== p.scope ? (
         <TextButton
           testID="cal-up"
@@ -257,7 +260,7 @@ export function PlanCalendar(p: {
         />
       ) : null}
       {rows.map((r, i) => (
-        <View key={r.parent ?? 'root'} style={{ gap: 6 }}>
+        <View key={r.parent ?? 'root'} style={{ gap: 4 }}>
           {r.parent && byId.get(r.parent) ? (
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 }}
@@ -275,7 +278,7 @@ export function PlanCalendar(p: {
               </Text>
             </View>
           ) : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} testID={`cal-row-${i}`}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} testID={`cal-row-${i}`}>
             {r.ids.map(chip)}
           </View>
         </View>

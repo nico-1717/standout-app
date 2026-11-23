@@ -46,6 +46,8 @@ export function ProjectHero(p: {
   const today = localToday();
   const { me } = p;
   const [name, setName] = useState<string | null>(null);
+  // l'altezza vera del titolo: iOS a volte lo misura di due righe e la scheda si gonfia in alto e in basso
+  const [titleH, setTitleH] = useState(0);
   const saveName = () => {
     const next = (name ?? me.name).trim();
     setName(null);
@@ -96,8 +98,10 @@ export function ProjectHero(p: {
             // il titolo va a capo invece di tagliarsi con «…» (sul sito è un testo che si allarga)
             multiline
             scrollEnabled={false}
+            onContentSizeChange={(e) => setTitleH(Math.ceil(e.nativeEvent.contentSize.height))}
             submitBehavior="blurAndSubmit"
             style={{
+              height: titleH > 0 ? titleH + 4 : undefined,
               // flex: 1 (non flexShrink): una larghezza certa, altrimenti iOS misura il titolo troppo stretto e lo taglia
               flex: 1,
               color: th.text,
