@@ -518,17 +518,24 @@ export function SubProjects(p: {
                                 hitSlop={6}
                                 onPress={() => p.onStart(k)}
                                 style={{
-                                  minWidth: 56,
+                                  minWidth: 38,
                                   minHeight: 36,
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                 }}
                               >
-                                <PjIcon name="timer" color={th.text3} size={19} />
+                                <PjIcon name="timer" color={th.text3} size={17} />
                                 {secs ? (
                                   <Text
                                     testID={`proj-time-${k.uuid}`}
-                                    style={{ color: th.text2, fontSize: 12, marginTop: 1 }}
+                                    // come sul sito (.pr-pomo-t): piccolo, chiaro, cifre in colonna
+                                    style={{
+                                      color: th.text3,
+                                      fontSize: 10.5,
+                                      fontWeight: '600',
+                                      marginTop: -1,
+                                      fontVariant: ['tabular-nums'],
+                                    }}
                                   >
                                     {durationShort(secs)}
                                   </Text>

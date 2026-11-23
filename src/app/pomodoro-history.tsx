@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -27,6 +28,7 @@ import { localToday } from '@/features/tasks/groups';
 import { ActionSwipe } from '@/ui/ActionSwipe';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { HistBtn, HistBtnRow, HistChip } from '@/features/pomodoro/HistoryParts';
 import { Text } from '@/ui/CappedText';
 
 const PAGE = 20;
@@ -42,6 +44,46 @@ interface Draft {
   to: string;
   mode: 0 | 1;
   project: string | null;
+}
+
+const toMin = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+};
+const fromMin = (n: number) => {
+  const x = ((n % 1440) + 1440) % 1440;
+  return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+};
+
+/** Una voce del pannello come sul sito: etichetta piccola in maiuscolo sopra a un campo grigio. */
+function Field(p: { label: string; children: ReactNode; width?: number }) {
+  const th = useTheme();
+  return (
+    <View style={{ flex: p.width ? 0 : 1, width: p.width, gap: 4 }}>
+      <Text
+        style={{
+          color: th.text2,
+          fontSize: 11,
+          fontWeight: '700',
+          textTransform: 'uppercase',
+        }}
+      >
+        {p.label}
+      </Text>
+      <View
+        style={{
+          backgroundColor: th.surface2,
+          borderRadius: 11,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          minHeight: 40,
+          justifyContent: 'center',
+        }}
+      >
+        {p.children}
+      </View>
+    </View>
+  );
 }
 
 /** Lo storico del Pomodoro: panoramica, elenco per giorno con filtri, aggiunta e correzione a mano, azioni su più righe. */
@@ -64,6 +106,7 @@ export default function PomodoroHistory() {
   const [minText, setMinText] = useState('');
   const [sort, setSort] = useState<Sort>('recent');
   const [pickFilter, setPickFilter] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const [pages, setPages] = useState(1);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -238,74 +281,45 @@ export default function PomodoroHistory() {
   const maxWeek = Math.max(1, ...ins.week.map((d) => d.secs));
   const maxMonth = Math.max(1, ...Object.values(ins.month).map((d) => d.secs));
 
-  const chip = (label: string, on: boolean, onPress: () => void, testID: string) => (
-    <Pressable
-      key={testID}
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityState={{ selected: on }}
-      onPress={onPress}
-      style={{
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-        backgroundColor: on ? th.brand : th.surface,
-        borderWidth: 1,
-        borderColor: on ? th.brand : th.hairline2,
-      }}
-    >
-      <Text style={{ color: on ? '#fff' : th.text, fontSize: 13, fontWeight: '600' }}>{label}</Text>
-    </Pressable>
-  );
-
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       <Header
         top={insets.top}
         title={t('pomodoro.storico')}
         right={
-          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
-            <Pressable
+          <HistBtnRow>
+            <HistBtn
               testID="hist-select"
-              accessibilityRole="button"
-              accessibilityLabel={t('pomodoro.ph_seleziona')}
+              icon="select"
+              label={t('pomodoro.ph_seleziona')}
+              active={selecting}
               onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
-            >
-              <Text style={{ color: th.brand, fontSize: 17 }}>{selecting ? '✓' : '☐'}</Text>
-            </Pressable>
-            <Pressable
-              testID="hist-import"
-              accessibilityRole="button"
-              accessibilityLabel={t('import.importa')}
-              onPress={() => router.push('/pomodoro-import')}
-            >
-              <Text style={{ color: th.brand, fontSize: 17 }}>⇩</Text>
-            </Pressable>
-            <Pressable
-              testID="hist-export"
-              accessibilityRole="button"
-              accessibilityLabel={t('pomodoro.ph_esporta')}
-              onPress={() => setExporting(true)}
-            >
-              <Text style={{ color: th.brand, fontSize: 17 }}>⇧</Text>
-            </Pressable>
-            <Pressable
+            />
+            <HistBtn
               testID="hist-add"
-              accessibilityRole="button"
-              accessibilityLabel={t('pomodoro.ph_aggiungi_manuale')}
+              icon="add"
+              label={t('pomodoro.ph_aggiungi_manuale')}
               onPress={() => open(null)}
-            >
-              <Text style={{ color: th.brand, fontSize: 22 }}>+</Text>
-            </Pressable>
-            <Pressable
+            />
+            <HistBtn
+              testID="hist-import"
+              icon="import"
+              label={t('pomodoro.ph_importa')}
+              onPress={() => router.push('/pomodoro-import')}
+            />
+            <HistBtn
+              testID="hist-export"
+              icon="export"
+              label={t('pomodoro.ph_esporta')}
+              onPress={() => setExporting(true)}
+            />
+            <HistBtn
               testID="hist-close"
-              accessibilityRole="button"
-              accessibilityLabel={t('comune.chiudi')}
+              icon="close"
+              label={t('comune.chiudi')}
               onPress={() => router.back()}
-            >
-              <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
-            </Pressable>
-          </View>
+            />
+          </HistBtnRow>
         }
       />
       <ScrollView
@@ -313,91 +327,102 @@ export default function PomodoroHistory() {
         keyboardShouldPersistTaps="handled"
       >
         {draft ? (
-          <Card style={{ padding: 16, gap: 12 }}>
-            <Text style={{ color: th.text, fontWeight: '700', fontSize: 17 }}>
-              {draft.uuid
-                ? t('pomodoro.storico_modifica_titolo')
-                : t('pomodoro.ph_aggiungi_manuale')}
-            </Text>
-            {!draft.uuid ? (
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {chip(
-                  t('pomodoro.timer'),
-                  draft.mode === 0,
-                  () => setDraft({ ...draft, mode: 0 }),
-                  'draft-mode-0',
-                )}
-                {chip(
-                  t('pomodoro.cronometro'),
-                  draft.mode === 1,
-                  () => setDraft({ ...draft, mode: 1 }),
-                  'draft-mode-1',
-                )}
-              </View>
-            ) : null}
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: th.text2 }}>{t('pomodoro.storico_dal')}</Text>
-              <DateTimeField
-                kind="date"
-                testID="draft-day"
-                value={draft.day}
-                fallback={today}
-                onChange={(v) => v && setDraft({ ...draft, day: v })}
-              />
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: th.text2 }}>{t('pomodoro.storico_inizio')}</Text>
-              <DateTimeField
-                kind="time"
-                testID="draft-from"
-                value={draft.from}
-                fallback="09:00"
-                onChange={(v) => v && setDraft({ ...draft, from: v })}
-              />
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: th.text2 }}>{t('pomodoro.storico_fine')}</Text>
-              <DateTimeField
-                kind="time"
-                testID="draft-to"
-                value={draft.to}
-                fallback="09:25"
-                onChange={(v) => v && setDraft({ ...draft, to: v })}
-              />
-            </View>
-            <Pressable
-              testID="draft-project"
-              accessibilityRole="button"
-              onPress={() => setDraftPick(!draftPick)}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: th.text2 }}>{t('pomodoro.storico_progetto_opz')}</Text>
-              <Text style={{ color: th.brand }}>
-                {nameOf(draft.project) ?? t('pomodoro.storico_nessun_progetto')} ›
+          <Card style={{ padding: 16, gap: 10 }}>
+            {draft.uuid ? (
+              <Text style={{ color: th.text, fontSize: 13, fontWeight: '800' }}>
+                {t('pomodoro.storico_modifica_titolo')}
               </Text>
-            </Pressable>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <HistChip
+                  testID="draft-mode-0"
+                  label={t('pomodoro.timer')}
+                  on={draft.mode === 0}
+                  onPress={() => setDraft({ ...draft, mode: 0 })}
+                />
+                <HistChip
+                  testID="draft-mode-1"
+                  label={t('pomodoro.cronometro')}
+                  on={draft.mode === 1}
+                  onPress={() => setDraft({ ...draft, mode: 1 })}
+                />
+              </View>
+            )}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Field label={t('comune.data')}>
+                <DateTimeField
+                  kind="date"
+                  testID="draft-day"
+                  value={draft.day}
+                  fallback={today}
+                  onChange={(v) => v && setDraft({ ...draft, day: v })}
+                />
+              </Field>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Field label={t('pomodoro.storico_inizio')}>
+                <DateTimeField
+                  kind="time"
+                  testID="draft-from"
+                  value={draft.from}
+                  fallback="09:00"
+                  onChange={(v) => v && setDraft({ ...draft, from: v })}
+                />
+              </Field>
+              <Field label={t('pomodoro.storico_fine')}>
+                <DateTimeField
+                  kind="time"
+                  testID="draft-to"
+                  value={draft.to}
+                  fallback="09:25"
+                  onChange={(v) => v && setDraft({ ...draft, to: v })}
+                />
+              </Field>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+              <Field label={t('pomodoro.durata')} width={150}>
+                <DateTimeField
+                  kind="time"
+                  testID="draft-duration"
+                  value={fromMin(toMin(draft.to) - toMin(draft.from))}
+                  fallback="00:25"
+                  onChange={(v) =>
+                    v && setDraft({ ...draft, to: fromMin(toMin(draft.from) + toMin(v)) })
+                  }
+                />
+              </Field>
+            </View>
+            <View style={{ gap: 4 }}>
+              <Text
+                style={{
+                  color: th.text2,
+                  fontSize: 11,
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t('pomodoro.storico_progetto_opz')}
+              </Text>
+              <Pressable
+                testID="draft-project"
+                accessibilityRole="button"
+                onPress={() => setDraftPick(!draftPick)}
+                style={{
+                  backgroundColor: th.surface2,
+                  borderRadius: 11,
+                  paddingHorizontal: 12,
+                  minHeight: 40,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ color: th.text, fontSize: 14.5 }}>
+                  {nameOf(draft.project) ?? t('pomodoro.storico_nessun_progetto')}
+                </Text>
+                <Text style={{ color: th.text2 }}>›</Text>
+              </Pressable>
+            </View>
             {draftPick ? (
               <ProjectPicker
                 projects={data.projects}
@@ -409,15 +434,35 @@ export default function PomodoroHistory() {
               />
             ) : null}
             {error ? <Text style={{ color: th.red }}>{error}</Text> : null}
-            <PrimaryButton
-              testID="draft-save"
-              label={
-                draft.uuid
-                  ? t('pomodoro.storico_salva_modifica')
-                  : t('pomodoro.storico_salva_sessione')
-              }
-              onPress={save}
-            />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {draft.uuid ? (
+                <Pressable
+                  testID="draft-cancel"
+                  accessibilityRole="button"
+                  onPress={() => setDraft(null)}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 18,
+                    borderRadius: 12,
+                    backgroundColor: th.surface2,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: th.text2, fontWeight: '700' }}>{t('comune.annulla')}</Text>
+                </Pressable>
+              ) : null}
+              <View style={{ flex: 1 }}>
+                <PrimaryButton
+                  testID="draft-save"
+                  label={
+                    draft.uuid
+                      ? t('pomodoro.storico_salva_modifica')
+                      : t('pomodoro.storico_salva_sessione')
+                  }
+                  onPress={save}
+                />
+              </View>
+            </View>
             {draft.uuid ? (
               confirmDelete ? (
                 <PrimaryButton
@@ -438,8 +483,13 @@ export default function PomodoroHistory() {
                   onPress={() => setConfirmDelete(true)}
                 />
               )
-            ) : null}
-            <TextButton testID="draft-cancel" label="✕" onPress={() => setDraft(null)} />
+            ) : (
+              <TextButton
+                testID="draft-cancel"
+                label={t('comune.annulla')}
+                onPress={() => setDraft(null)}
+              />
+            )}
           </Card>
         ) : null}
 
@@ -600,17 +650,51 @@ export default function PomodoroHistory() {
           </View>
         </Card>
 
-        <Card style={{ padding: 14, gap: 10 }}>
-          <Pressable
-            testID="hist-filter-project"
-            accessibilityRole="button"
-            onPress={() => setPickFilter(!pickFilter)}
-            style={{ flexDirection: 'row', justifyContent: 'space-between' }}
+        <View style={{ gap: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={{ color: th.text2 }}>{t('pomodoro.storico_filtra_progetto')}</Text>
-            <Text style={{ color: th.brand }}>{filterName} ›</Text>
-          </Pressable>
-          {pickFilter ? (
+            <HistChip
+              testID="sort-recent"
+              label={t('pomodoro.storico_recenti')}
+              on={sort === 'recent'}
+              onPress={() => setSort('recent')}
+            />
+            <HistChip
+              testID="sort-oldest"
+              label={t('pomodoro.storico_vecchi')}
+              on={sort === 'oldest'}
+              onPress={() => setSort('oldest')}
+            />
+            <HistChip
+              testID="sort-duration"
+              label={t('pomodoro.durata')}
+              on={sort === 'duration'}
+              onPress={() => setSort('duration')}
+            />
+            <HistChip
+              testID="hist-period"
+              label={
+                from || to
+                  ? `${t('pomodoro.storico_periodo')} · ${from || '…'} → ${to || '…'}`
+                  : t('pomodoro.storico_periodo')
+              }
+              on={!!(from || to) || periodOpen}
+              onPress={() => setPeriodOpen(!periodOpen)}
+            />
+            {scope ? null : (
+              <HistChip
+                testID="hist-filter-project"
+                label={projectFilter === 'all' ? t('pomodoro.storico_progetto') : filterName}
+                on={projectFilter !== 'all' || pickFilter}
+                onPress={() => setPickFilter(!pickFilter)}
+              />
+            )}
+          </ScrollView>
+          {pickFilter && !scope ? (
             <ProjectPicker
               projects={data.projects}
               value={projectFilter}
@@ -626,85 +710,52 @@ export default function PomodoroHistory() {
               }}
             />
           ) : null}
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-          >
-            <Text style={{ color: th.text2 }}>{t('pomodoro.storico_dal')}</Text>
-            <DateTimeField
-              kind="date"
-              testID="hist-from"
-              value={from}
-              fallback={today}
-              placeholder="—"
-              clearable
-              onChange={(v) => {
-                setFrom(v);
-                setPages(1);
-              }}
-            />
-          </View>
-          <View
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-          >
-            <Text style={{ color: th.text2 }}>→</Text>
-            <DateTimeField
-              kind="date"
-              testID="hist-to"
-              value={to}
-              fallback={today}
-              placeholder="—"
-              clearable
-              onChange={(v) => {
-                setTo(v);
-                setPages(1);
-              }}
-            />
-          </View>
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <Text style={{ color: th.text2 }}>≥ min</Text>
-            <TextInput
-              testID="hist-min"
-              value={minText}
-              onChangeText={(v) => {
-                setMinText(v.replace(/[^0-9]/g, ''));
-                setPages(1);
-              }}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor={th.text3}
-              style={{
-                minWidth: 70,
-                textAlign: 'right',
-                color: th.text,
-                backgroundColor: th.surface2,
-                borderRadius: 10,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-              }}
-            />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {chip(
-              t('pomodoro.storico_recenti'),
-              sort === 'recent',
-              () => setSort('recent'),
-              'sort-recent',
-            )}
-            {chip(
-              t('pomodoro.storico_vecchi'),
-              sort === 'oldest',
-              () => setSort('oldest'),
-              'sort-oldest',
-            )}
-            {chip(
-              t('pomodoro.durata'),
-              sort === 'duration',
-              () => setSort('duration'),
-              'sort-duration',
-            )}
-          </View>
+          {periodOpen ? (
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
+              <Field label={t('pomodoro.storico_dal')}>
+                <DateTimeField
+                  kind="date"
+                  testID="hist-from"
+                  value={from}
+                  fallback={today}
+                  placeholder="—"
+                  clearable
+                  onChange={(v) => {
+                    setFrom(v);
+                    setPages(1);
+                  }}
+                />
+              </Field>
+              <Field label="→">
+                <DateTimeField
+                  kind="date"
+                  testID="hist-to"
+                  value={to}
+                  fallback={today}
+                  placeholder="—"
+                  clearable
+                  onChange={(v) => {
+                    setTo(v);
+                    setPages(1);
+                  }}
+                />
+              </Field>
+              <Field label="≥ min" width={74}>
+                <TextInput
+                  testID="hist-min"
+                  value={minText}
+                  onChangeText={(v) => {
+                    setMinText(v.replace(/[^0-9]/g, ''));
+                    setPages(1);
+                  }}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor={th.text3}
+                  style={{ color: th.text, fontSize: 14, padding: 0 }}
+                />
+              </Field>
+            </View>
+          ) : null}
           {scope ? (
             <View
               style={{
@@ -726,7 +777,7 @@ export default function PomodoroHistory() {
           {from || to || minText || projectFilter !== 'all' ? (
             <TextButton
               testID="hist-reset"
-              label={t('pomodoro.storico_azzera')}
+              label={t('pomodoro.ph_azzera_periodo')}
               onPress={() => {
                 setFrom('');
                 setTo('');
@@ -736,7 +787,7 @@ export default function PomodoroHistory() {
               }}
             />
           ) : null}
-        </Card>
+        </View>
 
         {selecting ? (
           <Card style={{ padding: 14, gap: 8 }}>
