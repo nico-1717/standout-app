@@ -132,8 +132,15 @@ describe('categories list', () => {
     const old = flashcards.createDeck({ name: 'Old' })!;
     flashcards.setArchived(old, true);
     const view = await render(wrap(<FlashcardsScreen />));
-    expect(screen.getByText('Algebra')).toBeTruthy();
+    // come sul sito: i rami partono chiusi
+    expect(screen.queryByText('Algebra')).toBeNull();
     expect(screen.queryByText('Old')).toBeNull();
+    await fireEvent.press(screen.getByTestId(`fc-toggle-${a}`));
+    expect(screen.getByText('Algebra')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fc-collapse'));
+    expect(screen.queryByText('Algebra')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fc-collapse'));
+    expect(screen.getByText('Algebra')).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`fc-toggle-${a}`));
     expect(screen.queryByText('Algebra')).toBeNull();
     await fireEvent.press(screen.getByTestId('fc-scope-archived'));
@@ -209,6 +216,7 @@ describe('selecting several decks', () => {
     const full = flashcards.createDeck({ name: 'Full' })!;
     flashcards.addCard(full, 'q', 'a');
     await render(wrap(<FlashcardsScreen />));
+    await fireEvent.press(screen.getByTestId(`fc-toggle-${father}`));
     await pick(father, kid, full);
     await fireEvent.press(screen.getByTestId('fc-sel-delete'));
     await fireEvent.press(screen.getByTestId('fc-sel-delete-confirm'));

@@ -24,9 +24,24 @@ import {
   searchDecks,
   type DeckScope,
 } from '@/features/flashcards/logic';
+import { ResumeCard } from '@/features/flashcards/ResumeCard';
 import { localToday } from '@/features/tasks/groups';
 import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
-import { HoIcon, hoTheme, hoTitle } from '@/features/home/HomeKit';
+import { HoIcon, hoTheme, hoTitle, type Ho } from '@/features/home/HomeKit';
+
+/** I tastini quadrati accanto alla barra (`.tool-btn` del sito): 38 px, accesi in blu quando sono attivi. */
+function toolButton(ho: Ho, on: boolean) {
+  return {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: on ? ho.blue : ho.surface2,
+    borderWidth: 0.5,
+    borderColor: on ? ho.blue : ho.hair,
+  } as const;
+}
 
 /** Le categorie delle flashcard di studio ad albero (fc_decks.php): materie, sottocategorie, archivio, ricerca. */
 export default function FlashcardsScreen() {
@@ -45,7 +60,8 @@ export default function FlashcardsScreen() {
   const [bulk, setBulk] = useState<null | 'move' | 'color' | 'delete'>(null);
   const [bulkNote, setBulkNote] = useState('');
   const [draft, setDraft] = useState('');
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // come sul sito: l'albero parte chiuso e si ricordano solo i rami aperti
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addingUnder, setAddingUnder] = useState<string | null>(null);
   const [subDraft, setSubDraft] = useState('');
 
@@ -63,7 +79,18 @@ export default function FlashcardsScreen() {
 
   const today = localToday();
   const scopes = scopeCounts(decks);
+  const withKids = new Set(
+    decks.filter((d) => decks.some((c) => c.parent_uuid === d.uuid)).map((d) => d.uuid),
+  );
+  const collapsed = new Set([...withKids].filter((id) => !expanded.has(id)));
   const rows = flattenDecks(decks, scope, collapsed);
+  // ogni materia (radice) è una carta sua, con dentro i suoi rami
+  const groups = rows.reduce<(typeof rows)[]>((acc, r) => {
+    const last = acc.at(-1);
+    if (r.depth === 0 || !last) acc.push([r]);
+    else last.push(r);
+    return acc;
+  }, []);
   const found = query.trim() ? searchDecks(decks, query) : null;
   const cardHits =
     inCards && query.trim().length >= 2 ? services.flashcards.searchText(query.trim()) : [];
@@ -87,11 +114,7 @@ export default function FlashcardsScreen() {
   const add = (parent: string | null, name: string) => {
     const id = services.flashcards.createDeck({ name, parent });
     if (!id) return false;
-    if (parent && collapsed.has(parent)) {
-      const n = new Set(collapsed);
-      n.delete(parent);
-      setCollapsed(n);
-    }
+    if (parent && !expanded.has(parent)) setExpanded(new Set(expanded).add(parent));
     changed();
     return true;
   };
@@ -191,43 +214,50 @@ export default function FlashcardsScreen() {
     depth,
     hasChildren,
     path,
+    root = false,
   }: {
     id: string;
     depth: number;
     hasChildren: boolean;
     path?: string;
+    root?: boolean;
   }) => {
     const d = decks.find((x) => x.uuid === id)!;
-    const closed = collapsed.has(id);
+    const open_ = hasChildren && expanded.has(id);
     const n = counts.get(id) ?? 0;
+    const hard = stats.get(id)?.hard ?? 0;
+    const box = root ? 40 : 34;
     return (
       <View key={id}>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 10,
-            paddingVertical: 11,
+            gap: 8,
+            paddingVertical: root ? 14 : 11,
             paddingRight: 12,
-            paddingLeft: 12 + depth * 18,
+            paddingLeft: 4 + depth * 16,
           }}
         >
           <Pressable
             testID={`fc-toggle-${id}`}
             accessibilityRole="button"
+            accessibilityState={hasChildren ? { expanded: open_ } : undefined}
             disabled={!hasChildren}
             hitSlop={8}
             onPress={() => {
-              const next = new Set(collapsed);
+              const next = new Set(expanded);
               if (next.has(id)) next.delete(id);
               else next.add(id);
-              setCollapsed(next);
+              setExpanded(next);
             }}
-            style={{ width: 16, alignItems: 'center' }}
+            style={{ width: 24, height: 34, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: th.text3, fontSize: 12 }}>
-              {hasChildren ? (closed ? '▶' : '▼') : ''}
-            </Text>
+            {hasChildren ? (
+              <View style={{ transform: [{ rotate: open_ ? '90deg' : '0deg' }] }}>
+                <HoIcon name="right" color={open_ ? d.color : ho.text3} size={20} sw={2.6} />
+              </View>
+            ) : null}
           </Pressable>
           <Pressable
             testID={`fc-row-${id}`}
@@ -238,24 +268,33 @@ export default function FlashcardsScreen() {
               flex: 1,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 12,
+              gap: 10,
               backgroundColor: selecting && picked.has(id) ? th.brandSoft : undefined,
             }}
           >
             <View
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 11,
+                width: box,
+                height: box,
+                borderRadius: root ? 12 : 10,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: d.color + '26',
+                backgroundColor: d.color,
+                opacity: scope === 'archived' ? 0.7 : 1,
               }}
             >
-              <DeckIcon name={deckIcon(d)} color={d.color} size={22} />
+              <DeckIcon name={deckIcon(d)} color="#FFFFFF" size={root ? 20 : 17} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: th.text, fontSize: 16, fontWeight: '600' }} numberOfLines={2}>
+              <Text
+                style={{
+                  color: th.text,
+                  fontSize: root ? 17 : 15.5,
+                  fontWeight: root ? '800' : '600',
+                  letterSpacing: -0.2,
+                }}
+                numberOfLines={2}
+              >
                 {selecting ? (picked.has(id) ? '☑ ' : '☐ ') : ''}
                 {d.pinned ? '📌 ' : ''}
                 {d.name}
@@ -268,11 +307,11 @@ export default function FlashcardsScreen() {
               {examChip(d.exam_date)}
               {statsLine(id)}
             </View>
-            {(stats.get(id)?.hard ?? 0) >= 2 ? (
+            {hard >= 2 ? (
               <Pressable
                 testID={`fc-hard-${id}`}
                 accessibilityRole="button"
-                accessibilityLabel={t('fc.dk_da_ripassare', { n: stats.get(id)!.hard })}
+                accessibilityLabel={t('fc.dk_da_ripassare', { n: hard })}
                 onPress={() => playHard(id)}
                 hitSlop={6}
                 style={{
@@ -284,32 +323,65 @@ export default function FlashcardsScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
-                  {stats.get(id)!.hard}
-                </Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{hard}</Text>
               </Pressable>
             ) : null}
-            <Text style={{ color: th.text2, fontSize: 13 }}>
-              {n === 1 ? t('fc.app_n_carte_1') : t('fc.app_mostra_tutte_carte', { n })}
-            </Text>
+            <View
+              accessible
+              accessibilityLabel={
+                n === 1 ? t('fc.app_n_carte_1') : t('fc.app_mostra_tutte_carte', { n })
+              }
+              style={{
+                backgroundColor: th.surface2,
+                borderRadius: 999,
+                paddingHorizontal: 9,
+                paddingVertical: 4,
+                borderWidth: 0.5,
+                borderColor: th.hairline,
+              }}
+            >
+              <Text
+                style={{
+                  color: th.text2,
+                  fontSize: 12,
+                  fontWeight: '700',
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {n}
+              </Text>
+            </View>
           </Pressable>
           {scope === 'active' && !found && !selecting ? (
             <Pressable
               testID={`fc-add-${id}`}
               accessibilityRole="button"
               accessibilityLabel={t('fc.cfc_aggiungi_sottocategoria')}
-              hitSlop={8}
+              hitSlop={6}
               onPress={() => {
                 setAddingUnder(addingUnder === id ? null : id);
                 setSubDraft('');
               }}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: addingUnder === id ? d.color + '26' : 'transparent',
+              }}
             >
-              <Text style={{ color: th.brand, fontSize: 22 }}>+</Text>
+              <HoIcon
+                name="plus"
+                color={addingUnder === id ? d.color : ho.text3}
+                size={18}
+                sw={2.4}
+              />
             </Pressable>
           ) : null}
         </View>
         {addingUnder === id ? (
-          <View style={{ paddingLeft: 54 + depth * 18, paddingRight: 12, paddingBottom: 12 }}>
+          <View style={{ paddingLeft: 40 + depth * 16, paddingRight: 12, paddingBottom: 12 }}>
             <TextInput
               testID="fc-sub-input"
               autoFocus
@@ -338,16 +410,13 @@ export default function FlashcardsScreen() {
     );
   };
 
-  const resume = services?.games.unfinished() ?? null;
-  const withKids = new Set(
-    decks.filter((d) => decks.some((c) => c.parent_uuid === d.uuid)).map((d) => d.uuid),
-  );
+  const resume = services.games.unfinished();
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       <View
         style={{
-          paddingTop: insets.top + 10,
+          paddingTop: Math.max(insets.top - 20, 12),
           paddingBottom: 12,
           paddingHorizontal: 16,
           backgroundColor: th.headerGlass,
@@ -419,26 +488,27 @@ export default function FlashcardsScreen() {
         </View>
       </View>
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 14 }}
+        contentContainerStyle={{
+          padding: 14,
+          paddingTop: 12,
+          paddingBottom: insets.bottom + 40,
+          gap: 12,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         {resume ? (
-          <Pressable
-            testID="fc-resume"
-            accessibilityRole="button"
+          <ResumeCard
+            ho={ho}
+            title={t('fc.res_continua')}
+            closed={resume.closed}
+            total={resume.total}
             onPress={() =>
               router.push({
                 pathname: '/fc-game',
                 params: { game: resume.game.uuid, position: String(resume.position) },
               })
             }
-            style={{ backgroundColor: th.surface2, borderRadius: 12, padding: 14 }}
-          >
-            <Text style={{ color: th.text, fontWeight: '700' }}>{t('fc.res_continua')}</Text>
-            <Text style={{ color: th.text2, fontSize: 13 }}>
-              {resume.closed} / {resume.total}
-            </Text>
-          </Pressable>
+          />
         ) : null}
 
         {found ? (
@@ -463,14 +533,17 @@ export default function FlashcardsScreen() {
         ) : null}
 
         {!found ? (
-          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             <View
               style={{
                 flex: 1,
                 flexDirection: 'row',
+                gap: 3,
                 backgroundColor: ho.surface2,
-                borderRadius: 14,
+                borderRadius: 12,
                 padding: 3,
+                borderWidth: 0.5,
+                borderColor: ho.hair,
               }}
             >
               {(['active', 'archived'] as const).map((s) => (
@@ -486,15 +559,16 @@ export default function FlashcardsScreen() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 6,
-                    paddingVertical: 9,
-                    borderRadius: 11,
-                    backgroundColor: scope === s ? ho.bg : 'transparent',
+                    paddingVertical: 7,
+                    borderRadius: 9,
+                    backgroundColor: scope === s ? ho.surface : 'transparent',
+                    boxShadow: scope === s ? '0 1px 3px rgba(0,0,0,.14)' : undefined,
                   }}
                 >
                   <Text
                     style={{
                       color: scope === s ? ho.text : ho.text2,
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: '700',
                     }}
                   >
@@ -502,19 +576,17 @@ export default function FlashcardsScreen() {
                   </Text>
                   <View
                     style={{
-                      minWidth: 22,
                       paddingHorizontal: 6,
                       paddingVertical: 1,
                       borderRadius: 999,
-                      alignItems: 'center',
                       backgroundColor: scope === s ? ho.blueSoft : ho.hair,
                     }}
                   >
                     <Text
                       style={{
                         color: scope === s ? ho.blueInk : ho.text2,
-                        fontSize: 13,
-                        fontWeight: '700',
+                        fontSize: 11,
+                        fontWeight: '800',
                       }}
                     >
                       {scopes[s]}
@@ -528,17 +600,10 @@ export default function FlashcardsScreen() {
                 testID="fc-collapse"
                 accessibilityRole="button"
                 accessibilityLabel={
-                  collapsed.size ? t('vocab.cat_espandi') : t('fc.cfc_comprimi_tutto')
+                  expanded.size ? t('fc.cfc_comprimi_tutto') : t('vocab.cat_espandi')
                 }
-                onPress={() => setCollapsed(collapsed.size ? new Set() : new Set(withKids))}
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 12,
-                  backgroundColor: ho.surface2,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                onPress={() => setExpanded(expanded.size ? new Set() : new Set(withKids))}
+                style={toolButton(ho, false)}
               >
                 <HoIcon name="updown" color={ho.text2} size={19} />
               </Pressable>
@@ -548,16 +613,9 @@ export default function FlashcardsScreen() {
               accessibilityRole="button"
               accessibilityLabel={selecting ? t('fc.cfc_fine') : t('fc.cfc_seleziona')}
               onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 12,
-                backgroundColor: selecting ? ho.blueSoft : ho.surface2,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              style={toolButton(ho, selecting)}
             >
-              <HoIcon name="checksq" color={selecting ? ho.blueInk : ho.text2} size={19} />
+              <HoIcon name="checksq" color={selecting ? '#FFFFFF' : ho.text2} size={19} />
             </Pressable>
           </View>
         ) : null}
@@ -770,16 +828,25 @@ export default function FlashcardsScreen() {
             </Text>
           )
         ) : rows.length ? (
-          <Card index={0}>
-            {rows.map((r, i) => (
-              <View
-                key={r.deck.uuid}
-                style={{ borderTopWidth: i ? 0.5 : 0, borderTopColor: th.hairline }}
-              >
-                {renderRow({ id: r.deck.uuid, depth: r.depth, hasChildren: r.hasChildren })}
-              </View>
+          <View style={{ gap: 14 }}>
+            {groups.map((g, gi) => (
+              <Card key={g[0]?.deck.uuid ?? gi} index={Math.min(gi, 6)}>
+                {g.map((r, i) => (
+                  <View
+                    key={r.deck.uuid}
+                    style={{ borderTopWidth: i ? 0.5 : 0, borderTopColor: th.hairline }}
+                  >
+                    {renderRow({
+                      id: r.deck.uuid,
+                      depth: r.depth,
+                      hasChildren: r.hasChildren,
+                      root: r.depth === 0,
+                    })}
+                  </View>
+                ))}
+              </Card>
             ))}
-          </Card>
+          </View>
         ) : (
           <View style={{ paddingTop: 36, paddingBottom: 12, alignItems: 'center', gap: 10 }}>
             <View
