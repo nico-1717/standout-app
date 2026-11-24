@@ -157,7 +157,7 @@ export function EventBlock(
   const placeText = ev.placeName || ev.location;
   const hasPlace = !!placeText && !p.onShiftPick;
   const hasPoint = ev.placeLat !== null && ev.placeLon !== null;
-  const pinSize = base < 28 ? 16 : 22;
+  const pinSize = base < 28 ? 14 : 18;
   const frame = useAnimatedStyle(() => ({
     transform: [{ translateY: top * ppm.value }],
     height: Math.max(18, block.height * ppm.value - 1),
@@ -230,7 +230,6 @@ export function EventBlock(
             flexDirection: 'row',
             gap: 6,
             alignItems: 'flex-start',
-            paddingRight: hasPlace ? pinSize + 4 : 0,
           }}
         >
           {p.onShiftPick ? (
@@ -261,7 +260,8 @@ export function EventBlock(
           <Text
             numberOfLines={tall ? 3 : 1}
             style={{
-              flex: 1,
+              flexGrow: hasPlace ? 0 : 1,
+              flexShrink: 1,
               color: ev.done ? pt.ink2 : pt.ink,
               fontSize: base < 28 ? 11 : 13,
               lineHeight: base < 28 ? 13 : 16,
@@ -272,6 +272,28 @@ export function EventBlock(
           >
             {ev.title}
           </Text>
+          {hasPlace ? (
+            <Pressable
+              testID={`ev-pin-${ev.uid}`}
+              accessibilityRole="button"
+              accessibilityLabel={t('planner.portami_a', { posto: placeText })}
+              hitSlop={10}
+              onPress={() => setPlaceOpen(true)}
+              style={{
+                width: pinSize,
+                height: pinSize,
+                marginTop: base < 28 ? 0 : -1,
+                borderRadius: pinSize / 2,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: pt.card,
+                borderWidth: 0.5,
+                borderColor: pt.hair2,
+              }}
+            >
+              <LineIcon name="pin" color={pt.ink2} size={pinSize < 16 ? 9 : 12} />
+            </Pressable>
+          ) : null}
         </View>
         {tall ? (
           <Text
@@ -290,30 +312,6 @@ export function EventBlock(
           </Text>
         ) : null}
       </Pressable>
-      {hasPlace ? (
-        <Pressable
-          testID={`ev-pin-${ev.uid}`}
-          accessibilityRole="button"
-          accessibilityLabel={t('planner.portami_a', { posto: placeText })}
-          hitSlop={8}
-          onPress={() => setPlaceOpen(true)}
-          style={{
-            position: 'absolute',
-            top: base < 28 ? 1 : 4,
-            right: 4,
-            width: pinSize,
-            height: pinSize,
-            borderRadius: pinSize / 2,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: pt.card,
-            borderWidth: 0.5,
-            borderColor: pt.hair2,
-          }}
-        >
-          <LineIcon name="pin" color={pt.ink2} size={pinSize < 20 ? 10 : 13} />
-        </Pressable>
-      ) : null}
       {placeOpen ? (
         <PlacePopup
           pt={pt}
