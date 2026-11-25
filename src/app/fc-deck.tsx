@@ -40,6 +40,7 @@ import {
 } from '@/features/flashcards/logic';
 import { rgba } from '@/features/grades/ui';
 import { isRichNote, noteText } from '@/features/projects/notes';
+import { HoIcon } from '@/features/home/HomeKit';
 import { localToday } from '@/features/tasks/groups';
 import { DateTimeField } from '@/ui/DateTimeField';
 import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
@@ -103,6 +104,8 @@ export default function DeckScreen() {
       childCounts: repo.childCounts(id),
       learnt: services.study.learnt(),
       questions: repo.questionCounts(),
+      branchCards: repo.branchCardCount(id),
+      games: services.games.deckStats().get(id)?.games ?? 0,
     };
   }, [services, version, id]);
 
@@ -208,7 +211,8 @@ export default function DeckScreen() {
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       <View
         style={{
-          paddingTop: insets.top + 8,
+          // la pagina è un foglio: l'area sicura in alto è già in parte coperta, non va contata due volte
+          paddingTop: Math.max(insets.top - 20, 12),
           paddingBottom: 10,
           paddingHorizontal: 14,
           gap: 10,
@@ -292,24 +296,53 @@ export default function DeckScreen() {
                   fontVariant: ['tabular-nums'],
                 }}
               >
-                {data.cards.length === 1
+                {data.branchCards === 1
                   ? t('fc.vis_una_carta_n')
-                  : t('fc.vis_n_carte', { n: data.cards.length })}
+                  : t('fc.vis_n_carte', { n: data.branchCards })}
               </Text>
             </View>
+            <Pressable
+              testID="fcd-history"
+              accessibilityRole="button"
+              accessibilityLabel={t('fc.vis_partite_mazzo')}
+              hitSlop={6}
+              onPress={() => router.push('/fc-history')}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255,255,255,.22)',
+                borderWidth: 0.5,
+                borderColor: 'rgba(255,255,255,.35)',
+              }}
+            >
+              <Glyph name="clock" size={19} color="#fff" stroke={2.2} />
+              {data.games > 0 ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: -7,
+                    right: -7,
+                    minWidth: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    paddingHorizontal: 5,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#FF9F0A',
+                    borderWidth: 1.5,
+                    borderColor: tone.color,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>
+                    {data.games > 99 ? '99+' : data.games}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
           </LinearGradient>
-          <Pressable
-            testID="fcd-pin"
-            accessibilityRole="button"
-            accessibilityLabel={t('fc.dk_fissa')}
-            hitSlop={6}
-            onPress={() => {
-              repo.setPinned(id, !deck.pinned);
-              changed();
-            }}
-          >
-            <Text style={{ fontSize: 18, opacity: deck.pinned ? 1 : 0.35 }}>📌</Text>
-          </Pressable>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -367,6 +400,19 @@ export default function DeckScreen() {
                 {deck.name}
               </Text>
             </View>
+            <Pressable
+              testID="fcd-crumb-edit"
+              accessibilityRole="button"
+              accessibilityLabel={t('fc.vis_cambia_padre')}
+              hitSlop={6}
+              onPress={() => {
+                setSettings(true);
+                setMoving(true);
+              }}
+              style={{ width: 30, height: 30, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Glyph name="pencil" size={16} color={th.text2} stroke={2.2} />
+            </Pressable>
           </ScrollView>
           <RoundBtn
             th={th}
@@ -386,7 +432,7 @@ export default function DeckScreen() {
             testID="fcd-add-card"
             label={t('fc.app_aggiungi_carta')}
             glyph="plus"
-            tone={{ from: '#4DA3FF', to: '#0A6FE0', shadow: 'rgba(10,132,255,.6)' }}
+            tone={{ from: '#FFAA4D', to: '#FF6B2C', shadow: 'rgba(255,122,26,.6)' }}
             onPress={() => router.push({ pathname: '/fc-card', params: { deck: id } })}
           />
           <RoundBtn
@@ -398,6 +444,54 @@ export default function DeckScreen() {
           >
             <Glyph name="play" size={16} color="#fff" fill="#fff" stroke={1.5} />
           </RoundBtn>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: th.surface2,
+              borderRadius: 19,
+              paddingHorizontal: 14,
+            }}
+          >
+            <Glyph name="search" size={16} color={th.text3} stroke={2.3} />
+            <TextInput
+              testID="fcd-search"
+              value={text}
+              onChangeText={setText}
+              placeholder={t('fc.vis_cerca')}
+              placeholderTextColor={th.text3}
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              style={{
+                flex: 1,
+                color: th.text,
+                fontSize: 15,
+                fontWeight: '600',
+                paddingVertical: 10,
+              }}
+            />
+          </View>
+          <RoundBtn
+            th={th}
+            testID="fcd-sort"
+            label={`${t('fc.vis_ordina')}: ${t(SORT_LABELS[sort])}`}
+            glyph="sort"
+            dot={sort !== 'position' ? tone.color : undefined}
+            onPress={() => setSort(CARD_SORTS[(CARD_SORTS.indexOf(sort) + 1) % CARD_SORTS.length]!)}
+          />
+          <RoundBtn
+            th={th}
+            testID="fcd-select"
+            label={selecting ? t('fc.vis_annulla_sel') : t('vocab.vi_seleziona')}
+            glyph="check"
+            active={selecting}
+            onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
+          />
         </View>
       </View>
 
@@ -757,7 +851,7 @@ export default function DeckScreen() {
               borderColor: rgba(deck.color, 0.4),
             }}
           >
-            <Glyph name="plus" size={17} color={deck.color} />
+            <Glyph name="note" size={18} color={deck.color} />
             <Text style={{ color: th.text2, fontSize: 13.5, fontWeight: '700' }}>
               {t('fc.dn_aggiungi')}
             </Text>
@@ -894,87 +988,6 @@ export default function DeckScreen() {
         ) : null}
 
         <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                backgroundColor: th.surface2,
-                borderRadius: 12,
-                paddingHorizontal: 12,
-              }}
-            >
-              <Glyph name="search" size={15} color={th.text3} />
-              <TextInput
-                testID="fcd-search"
-                value={text}
-                onChangeText={setText}
-                placeholder={t('fc.vis_cerca')}
-                placeholderTextColor={th.text3}
-                autoCorrect={false}
-                clearButtonMode="while-editing"
-                style={{
-                  flex: 1,
-                  color: th.text,
-                  fontSize: 14,
-                  fontWeight: '600',
-                  paddingVertical: 10,
-                }}
-              />
-            </View>
-            <Pressable
-              testID="fcd-sort"
-              accessibilityRole="button"
-              accessibilityLabel={t('fc.vis_ordina')}
-              onPress={() =>
-                setSort(CARD_SORTS[(CARD_SORTS.indexOf(sort) + 1) % CARD_SORTS.length]!)
-              }
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                maxWidth: 150,
-                paddingVertical: 10,
-                paddingHorizontal: 12,
-                borderRadius: 12,
-                backgroundColor: th.surface2,
-              }}
-            >
-              <Glyph name="sort" size={14} color={th.text2} />
-              <Text
-                numberOfLines={1}
-                style={{ color: th.text, fontSize: 13, fontWeight: '700', flexShrink: 1 }}
-              >
-                {t(SORT_LABELS[sort])}
-              </Text>
-            </Pressable>
-            <Pressable
-              testID="fcd-select"
-              accessibilityRole="button"
-              accessibilityState={{ selected: selecting }}
-              onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
-              style={{ borderRadius: 12, overflow: 'hidden' }}
-            >
-              <LinearGradient
-                colors={[tone.light, tone.dark]}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                }}
-              >
-                <Glyph name="check" size={14} color="#fff" stroke={2.6} />
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
-                  {selecting ? t('fc.vis_annulla_sel') : t('vocab.vi_seleziona')}
-                </Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1389,7 +1402,7 @@ export default function DeckScreen() {
             locations={[0, 0.55, 1]}
             style={{ flex: 1, borderRadius: 26, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Glyph name="layers" size={24} color="#fff" />
+            <HoIcon name="cards" color="#FFFFFF" size={25} sw={2.2} />
           </LinearGradient>
         </Pressable>
       ) : null}

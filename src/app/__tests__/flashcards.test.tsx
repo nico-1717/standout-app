@@ -473,11 +473,20 @@ describe('category page', () => {
     flashcards.addCard(id, 'A card', 'y');
     mockParams = { id };
     await render(wrap(<DeckScreen />));
-    expect(screen.getByTestId('fcd-sort')).toHaveTextContent(/Position/);
+    expect(screen.getByTestId('fcd-sort')).toHaveProp(
+      'accessibilityLabel',
+      expect.stringMatching(/Position/),
+    );
     await fireEvent.press(screen.getByTestId('fcd-sort'));
-    expect(screen.getByTestId('fcd-sort')).toHaveTextContent(/Newest first/);
+    expect(screen.getByTestId('fcd-sort')).toHaveProp(
+      'accessibilityLabel',
+      expect.stringMatching(/Newest first/),
+    );
     await fireEvent.press(screen.getByTestId('fcd-sort'));
-    expect(screen.getByTestId('fcd-sort')).toHaveTextContent(/Oldest first/);
+    expect(screen.getByTestId('fcd-sort')).toHaveProp(
+      'accessibilityLabel',
+      expect.stringMatching(/Oldest first/),
+    );
   });
 
   test('select mode: pick cards, move them to another category, then delete one', async () => {
@@ -528,6 +537,22 @@ describe('category page', () => {
     expect(flashcards.subcards(father).map((x) => x.question_desc)).toEqual(['Child A', 'Child B']);
     expect(flashcards.card(a)).toBeNull();
     expect(screen.getByTestId('fcd-join-note')).toHaveTextContent(/Cards merged: 2/);
+  });
+
+  test('the header counts the cards of the whole branch; the clock opens the history; the pencil moves it', async () => {
+    const { flashcards } = setup();
+    const father = flashcards.createDeck({ name: 'Maths' })!;
+    const kid = flashcards.createDeck({ name: 'Algebra', parent: father })!;
+    flashcards.addCard(father, 'q1', 'a1');
+    flashcards.addCard(kid, 'q2', 'a2');
+    flashcards.addCard(kid, 'q3', 'a3');
+    mockParams = { id: father };
+    await render(wrap(<DeckScreen />));
+    expect(screen.getByTestId('fcd-count')).toHaveTextContent(/^3 cards$/);
+    await fireEvent.press(screen.getByTestId('fcd-history'));
+    expect(mockPush).toHaveBeenCalledWith('/fc-history');
+    await fireEvent.press(screen.getByTestId('fcd-crumb-edit'));
+    expect(screen.getByTestId('fcd-parent')).toBeTruthy();
   });
 
   test('rename, colour, pin, archive and exam date are saved', async () => {

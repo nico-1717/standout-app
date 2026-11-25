@@ -27,6 +27,7 @@ const PATHS = {
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   card: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16',
   pencil: 'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z',
+  clock: 'M12 7v5l3 2',
 } as const;
 
 export type GlyphName = keyof typeof PATHS;
@@ -52,6 +53,9 @@ export function Glyph({
       ) : null}
       {name === 'gear' ? (
         <Circle cx={12} cy={12} r={3} fill="none" stroke={color} strokeWidth={stroke} />
+      ) : null}
+      {name === 'clock' ? (
+        <Circle cx={12} cy={12} r={9} fill="none" stroke={color} strokeWidth={stroke} />
       ) : null}
       <Path
         d={PATHS[name]}
