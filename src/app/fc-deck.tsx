@@ -277,8 +277,7 @@ export default function DeckScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{
-              flex: 1,
-              minWidth: 0,
+              alignSelf: 'stretch',
               flexDirection: 'row',
               alignItems: 'center',
               gap: 10,
