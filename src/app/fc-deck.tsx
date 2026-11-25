@@ -22,6 +22,10 @@ import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { DocView } from '@/features/flashcards/DocView';
 import { DeckCardSide } from '@/features/flashcards/DeckCardSide';
 import { DeckViewSheet } from '@/features/flashcards/DeckViewSheet';
+import { CONFLICT_KEY } from '@/features/flashcards/ProjectDeckCard';
+import { Sheet } from '@/features/habits/Sheet';
+import { habitsTheme } from '@/features/habits/habitsTheme';
+import { ProjectPicker } from '@/features/projects/ProjectPicker';
 import { studyView } from '@/features/flashcards/gameKit';
 import { isTitleCard } from '@/features/flashcards/game';
 import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
@@ -85,6 +89,9 @@ export default function DeckScreen() {
   const [settings, setSettings] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const ht = useMemo(() => habitsTheme(th.scheme, undefined, th.style), [th.scheme, th.style]);
+  const [linkProblem, setLinkProblem] = useState<string | null>(null);
 
   const data = useMemo(() => {
     void version;
@@ -154,6 +161,47 @@ export default function DeckScreen() {
   const today = localToday();
   const exam = daysToExam(deck.exam_date, today);
 
+  // il progetto collegato alla categoria (o al primo antenato collegato), come il sito
+  const prjChain = [id, ...[...crumbs].reverse().map((c) => c.uuid)];
+  const prjLink = prjChain
+    .map((u) => ({ via: u !== id, uuid: repo.linkedProject(u) }))
+    .find((x) => x.uuid !== null);
+  const prjRow = prjLink?.uuid ? services.projects.get(prjLink.uuid) : null;
+  const prjParent = prjRow?.parent_uuid ? services.projects.get(prjRow.parent_uuid) : null;
+  const linkedPrj = prjRow
+    ? { uuid: prjRow.uuid, leaf: prjRow.name, anc: prjParent?.name ?? '', via: !!prjLink?.via }
+    : null;
+  const chipStyle = {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
+    gap: 5,
+    marginTop: 5,
+    maxWidth: '100%' as const,
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+    borderRadius: 99,
+    backgroundColor: 'rgba(255,255,255,.24)',
+  };
+  const chipText = { color: '#fff', fontSize: 11, fontWeight: '800' as const };
+  const pickProject = (uuid: string | null) => {
+    if (!uuid) return;
+    const c = repo.deckLinkConflict(id, uuid);
+    if (c) {
+      setLinkProblem(
+        t(CONFLICT_KEY[c.kind], {
+          materia: map.get(c.deck)?.name ?? '',
+          progetto: services.projects.get(c.project)?.name ?? '',
+        }),
+      );
+      return;
+    }
+    if (repo.linkDeck(uuid, id)) {
+      changed();
+      setLinkOpen(false);
+    }
+  };
+
   const patch = (p: Parameters<typeof repo.updateDeck>[1]) => {
     repo.updateDeck(id, p);
     changed();
@@ -221,14 +269,7 @@ export default function DeckScreen() {
           borderBottomColor: th.hairline,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <RoundBtn
-            th={th}
-            testID="fcd-close"
-            label={t('comune.chiudi')}
-            glyph="close"
-            onPress={() => router.back()}
-          />
+        <View>
           <LinearGradient
             testID="fcd-hero"
             colors={[tone.light, tone.color, tone.dark]}
@@ -278,6 +319,47 @@ export default function DeckScreen() {
               >
                 {deck.name}
               </Text>
+              {linkedPrj ? (
+                <Pressable
+                  testID="fcd-project"
+                  accessibilityRole="button"
+                  accessibilityLabel={linkedPrj.leaf}
+                  onPress={() =>
+                    router.push({ pathname: '/projects', params: { id: linkedPrj.uuid } })
+                  }
+                  style={{ ...chipStyle, opacity: linkedPrj.via ? 0.85 : 1 }}
+                >
+                  <Glyph name="folder" size={11} color="#fff" stroke={2.6} />
+                  {linkedPrj.anc ? (
+                    <Text numberOfLines={1} style={{ ...chipText, opacity: 0.72, flexShrink: 1 }}>
+                      {linkedPrj.anc}
+                      {'  •'}
+                    </Text>
+                  ) : null}
+                  <Text numberOfLines={1} style={{ ...chipText, flexShrink: 1 }}>
+                    {linkedPrj.leaf}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  testID="fcd-project-link"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setLinkProblem(null);
+                    setLinkOpen(true);
+                  }}
+                  style={{
+                    ...chipStyle,
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: 'rgba(255,255,255,.55)',
+                    backgroundColor: 'rgba(255,255,255,.16)',
+                  }}
+                >
+                  <Glyph name="plus" size={11} color="#fff" stroke={2.6} />
+                  <Text style={chipText}>{t('fc.vis_collega_progetto')}</Text>
+                </Pressable>
+              )}
             </View>
             <View
               style={{
@@ -346,6 +428,13 @@ export default function DeckScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <RoundBtn
+            th={th}
+            testID="fcd-close"
+            label={t('comune.chiudi')}
+            glyph="close"
+            onPress={() => router.back()}
+          />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1405,6 +1494,29 @@ export default function DeckScreen() {
             <HoIcon name="cards" color="#FFFFFF" size={25} sw={2.2} />
           </LinearGradient>
         </Pressable>
+      ) : null}
+      {linkOpen ? (
+        <Sheet
+          visible
+          title={t('fc.vis_collega_progetto')}
+          th={ht}
+          onClose={() => setLinkOpen(false)}
+          testID="fcd-link-sheet"
+        >
+          <View style={{ padding: 20, gap: 12 }}>
+            {linkProblem ? (
+              <Text testID="fcd-link-problem" style={{ color: '#FF3B30' }}>
+                {linkProblem}
+              </Text>
+            ) : null}
+            <ProjectPicker
+              projects={services.projects.all()}
+              value={null}
+              hideNone
+              onPick={pickProject}
+            />
+          </View>
+        </Sheet>
       ) : null}
     </View>
   );

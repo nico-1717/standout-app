@@ -11,7 +11,7 @@ import { Card, SectionLabel, TextButton } from '@/ui/kit';
 import { DeckPicker } from './DeckPicker';
 import type { FlashcardsRepo } from './repo';
 
-const CONFLICT_KEY = {
+export const CONFLICT_KEY = {
   self: 'progetti.materia_gia_collegata',
   parent: 'progetti.materia_padre_gia_collegata',
   child: 'progetti.sotto_materia_gia_collegata',

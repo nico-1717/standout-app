@@ -73,11 +73,13 @@ function setup() {
   migrate(db);
   const flashcards = new FlashcardsRepo(db);
   const study = new StudyRepo(db, 7);
+  const projects = new ProjectsRepo(db);
   mockServices = {
     db,
     flashcards,
     study,
-    languages: new LanguagesRepo(db, 7, new ProjectsRepo(db)),
+    projects,
+    languages: new LanguagesRepo(db, 7, projects),
     games: new GameRepo(db, study),
     fcStats: new StatsRepo(db),
     media: new MediaQueue(
@@ -91,6 +93,7 @@ function setup() {
     db,
     flashcards,
     study,
+    projects,
     languages: (mockServices as { languages: LanguagesRepo }).languages,
   };
 }
@@ -553,6 +556,27 @@ describe('category page', () => {
     expect(mockPush).toHaveBeenCalledWith('/fc-history');
     await fireEvent.press(screen.getByTestId('fcd-crumb-edit'));
     expect(screen.getByTestId('fcd-parent')).toBeTruthy();
+  });
+
+  test('the hero shows the linked project (also from a parent) and opens it; without one it offers to link', async () => {
+    const { flashcards, projects } = setup();
+    const father = flashcards.createDeck({ name: 'Maths' })!;
+    const kid = flashcards.createDeck({ name: 'Algebra', parent: father })!;
+    const course = projects.create({ name: 'PeS' })!;
+    mockParams = { id: kid };
+    const view = await render(wrap(<DeckScreen />));
+    // senza progetto: il chip tratteggiato apre la scelta, che collega il mazzo
+    expect(screen.queryByTestId('fcd-project')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcd-project-link'));
+    expect(screen.getByTestId('fcd-link-sheet')).toBeTruthy();
+    flashcards.linkDeck(course, father);
+    await view.unmount();
+    await render(wrap(<DeckScreen />));
+    // il figlio eredita il progetto del padre
+    await fireEvent.press(screen.getByTestId('fcd-project'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/projects', params: { id: course } });
+    expect(screen.getByTestId('fcd-project')).toHaveTextContent('PeS');
+    expect(screen.getByTestId('fcd-close')).toBeTruthy();
   });
 
   test('rename, colour, pin, archive and exam date are saved', async () => {
