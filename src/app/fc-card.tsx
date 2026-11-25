@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -7,15 +8,18 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { docToPlain, parseDoc } from '@/features/flashcards/doc';
+import { Glyph, RoundBtn, catTones, type CatTones } from '@/features/flashcards/deckUi';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { DocView } from '@/features/flashcards/DocView';
 import { RichEditor } from '@/features/flashcards/RichEditor';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
+import { rgba } from '@/features/grades/ui';
+import { HoIcon } from '@/features/home/HomeKit';
 import { AudioField } from '@/features/media/AudioField';
 import { ImageField } from '@/features/media/ImageField';
-import { Card, Header, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
+import { Card, PrimaryButton, TextButton } from '@/ui/kit';
 
 type Side = 'q' | 'a';
 
@@ -169,11 +173,26 @@ export default function CardScreen() {
     changed();
   };
 
+  const deck = data.deckId ? map.get(data.deckId) : undefined;
+  const tone = catTones(deck?.color ?? th.brand);
+  const path = crumbs.map((c) => c.name).join(' › ');
+
   const field = (s: Side) => {
     const label = s === 'q' ? t('fc.ifc_domanda') : t('fc.ifc_risposta');
+    const accent = s === 'q' ? th.text3 : tone.color;
     return (
-      <Card style={{ padding: 16, gap: 8 }}>
-        <SectionLabel>{label}</SectionLabel>
+      <Card style={{ paddingVertical: 14, paddingLeft: 20, paddingRight: 16, gap: 10 }}>
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 5,
+            backgroundColor: s === 'q' ? th.hairline2 : tone.color,
+          }}
+        />
+        <Eyebrow label={label} color={accent} />
         {edit ? (
           <RichEditor
             testID={`fcc-${s}`}
@@ -231,41 +250,97 @@ export default function CardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
-      <Header
-        top={insets.top}
-        title={title}
-        right={
-          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
-            {!isNew && !editing ? (
-              <Pressable
-                testID="fcc-edit"
-                accessibilityRole="button"
-                onPress={() => setEditing(true)}
-              >
-                <Text style={{ color: th.brand, fontSize: 17 }}>{t('comune.modifica')}</Text>
-              </Pressable>
-            ) : null}
-            <Pressable
-              testID="fcc-close"
-              accessibilityRole="button"
-              accessibilityLabel={t('comune.chiudi')}
-              onPress={() => router.back()}
+      <View
+        style={{
+          // la pagina è un foglio: l'area sicura in alto è già in parte coperta, non va contata due volte
+          paddingTop: Math.max(insets.top - 20, 12),
+          paddingBottom: 12,
+          paddingHorizontal: 14,
+          backgroundColor: th.headerGlass,
+          borderBottomWidth: 0.5,
+          borderBottomColor: th.hairline,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <RoundBtn
+            th={th}
+            testID="fcc-close"
+            label={t('comune.chiudi')}
+            glyph="close"
+            onPress={() => router.back()}
+          />
+          <LinearGradient
+            testID="fcc-hero"
+            colors={[tone.light, tone.color, tone.dark]}
+            locations={[0, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 16,
+              boxShadow: `0 8px 20px -8px ${tone.line}, inset 0 1px 0 rgba(255,255,255,.25)`,
+            }}
+          >
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255,255,255,.22)',
+              }}
             >
-              <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
-            </Pressable>
-          </View>
-        }
-      />
+              <Glyph name="card" size={19} color="#fff" />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                style={{
+                  color: 'rgba(255,255,255,.78)',
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {title}
+              </Text>
+              <Text
+                testID="fcc-path"
+                numberOfLines={1}
+                style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 }}
+              >
+                {path || '—'}
+              </Text>
+            </View>
+          </LinearGradient>
+          {!isNew && !editing ? (
+            <RoundBtn
+              th={th}
+              testID="fcc-edit"
+              label={t('comune.modifica')}
+              glyph="pencil"
+              tone={{ from: '#FFAA4D', to: '#FF6B2C', shadow: 'rgba(255,122,26,.6)' }}
+              onPress={() => setEditing(true)}
+            />
+          ) : null}
+        </View>
+      </View>
+
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 48, gap: 14 }}
+        contentContainerStyle={{
+          padding: 14,
+          paddingBottom: insets.bottom + (edit ? 110 : 48),
+          gap: 14,
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        {crumbs.length ? (
-          <Text style={{ color: th.text2 }} numberOfLines={2}>
-            {crumbs.map((c) => c.name).join(' › ')}
-          </Text>
-        ) : null}
-
         {field('q')}
         {field('a')}
 
@@ -275,74 +350,61 @@ export default function CardScreen() {
           </Text>
         ) : null}
 
-        {edit ? (
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            {!isNew ? (
-              <View style={{ flex: 1 }}>
-                <TextButton
-                  testID="fcc-cancel"
-                  label={t('comune.annulla')}
-                  onPress={() => {
-                    setDraft({ q: null, a: null });
-                    setEditing(false);
-                  }}
-                />
-              </View>
-            ) : null}
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                testID="fcc-save"
-                label={t('comune.salva')}
-                disabled={!canSave}
-                onPress={save}
-              />
-            </View>
-          </View>
-        ) : null}
-
         {target && study ? (
-          <Card style={{ padding: 16, gap: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Text style={{ flex: 1, color: th.text, fontWeight: '600' }}>
-                {t('fc.gm_imparato')}
-              </Text>
-              <Switch
-                testID="fcc-learnt"
-                value={study.learnt}
-                onValueChange={(v) => {
-                  services.study.setLearnt(target, !!params.sub, v);
-                  changed();
-                }}
-                trackColor={{ true: th.brand }}
-              />
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Text style={{ flex: 1, color: th.text, fontWeight: '600' }}>
-                {t('fc.gm_preferiti')}
-              </Text>
-              <Switch
-                testID="fcc-favorite"
-                value={study.favorite}
-                onValueChange={(v) => {
-                  services.study.setFavorite(target, !!params.sub, v);
-                  changed();
-                }}
-                trackColor={{ true: th.brand }}
-              />
-            </View>
+          <Card style={{ paddingVertical: 6, paddingHorizontal: 16 }}>
+            <ToggleRow
+              testID="fcc-learnt"
+              label={t('fc.gm_imparato')}
+              value={study.learnt}
+              color={th.green}
+              icon={
+                <Glyph
+                  name="check"
+                  size={16}
+                  color={study.learnt ? th.green : th.text3}
+                  stroke={2.6}
+                />
+              }
+              onChange={(v) => {
+                services.study.setLearnt(target, !!params.sub, v);
+                changed();
+              }}
+            />
+            <View style={{ height: 0.5, backgroundColor: th.hairline, marginLeft: 44 }} />
+            <ToggleRow
+              testID="fcc-favorite"
+              label={t('fc.gm_preferiti')}
+              value={study.favorite}
+              color="#FF2D55"
+              icon={
+                <HoIcon
+                  name="heart"
+                  size={16}
+                  color={study.favorite ? '#FF2D55' : th.text3}
+                  sw={2.4}
+                />
+              }
+              onChange={(v) => {
+                services.study.setFavorite(target, !!params.sub, v);
+                changed();
+              }}
+            />
           </Card>
         ) : null}
 
         {target && study ? (
-          <View style={{ gap: 8 }}>
-            <SectionLabel>{t('fc.exm_conteggio', { n: study.examples.length })}</SectionLabel>
+          <View style={{ gap: 10 }}>
+            <SectionHead
+              icon={<HoIcon name="bulb" size={14} color={th.text3} sw={2.3} />}
+              label={t('fc.exm_conteggio', { n: study.examples.length })}
+            />
             {study.examples.length ? (
               <Card>
                 {study.examples.map((ex, i) => (
                   <View
                     key={ex.uuid}
                     style={{
-                      padding: 12,
+                      padding: 14,
                       gap: 8,
                       borderTopWidth: i ? 0.5 : 0,
                       borderTopColor: th.hairline,
@@ -385,7 +447,9 @@ export default function CardScreen() {
                       </>
                     ) : (
                       <>
-                        <Text style={{ color: th.text, fontSize: 16 }}>{ex.example_text}</Text>
+                        <Text style={{ color: th.text, fontSize: 16, lineHeight: 22 }}>
+                          {ex.example_text}
+                        </Text>
                         <CardImage
                           testID={`fcc-ex-image-${ex.uuid}`}
                           folder="example"
@@ -405,7 +469,9 @@ export default function CardScreen() {
                               setEditExample({ uuid: ex.uuid, text: ex.example_text ?? '' })
                             }
                           >
-                            <Text style={{ color: th.brand }}>{t('comune.modifica')}</Text>
+                            <Text style={{ color: tone.color, fontWeight: '700' }}>
+                              {t('comune.modifica')}
+                            </Text>
                           </Pressable>
                           <Pressable
                             testID={`fcc-ex-delete-${ex.uuid}`}
@@ -415,7 +481,9 @@ export default function CardScreen() {
                               changed();
                             }}
                           >
-                            <Text style={{ color: th.red }}>{t('comune.elimina')}</Text>
+                            <Text style={{ color: th.red, fontWeight: '700' }}>
+                              {t('comune.elimina')}
+                            </Text>
                           </Pressable>
                         </View>
                       </>
@@ -424,7 +492,16 @@ export default function CardScreen() {
                 ))}
               </Card>
             ) : null}
-            <Card style={{ padding: 12, gap: 8 }}>
+            <View
+              style={{
+                padding: 12,
+                gap: 10,
+                borderRadius: 16,
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: rgba(tone.color, 0.4),
+              }}
+            >
               <TextInput
                 testID="fcc-ex-new"
                 value={newExample}
@@ -434,9 +511,11 @@ export default function CardScreen() {
                 placeholderTextColor={th.text3}
                 style={{ color: th.text, fontSize: 16, minHeight: 44 }}
               />
-              <TextButton
+              <PillButton
                 testID="fcc-ex-add"
                 label={t('fc.exm_aggiungi_nuovo')}
+                tone={tone}
+                disabled={!newExample.trim()}
                 onPress={() => {
                   if (!newExample.trim()) return;
                   if (services.study.addExample(target, !!params.sub, newExample)) {
@@ -445,13 +524,16 @@ export default function CardScreen() {
                   }
                 }}
               />
-            </Card>
+            </View>
           </View>
         ) : null}
 
         {!isNew && !isSub ? (
-          <View style={{ gap: 8 }}>
-            <SectionLabel>{t('fc.app_carte_figlie')}</SectionLabel>
+          <View style={{ gap: 10 }}>
+            <SectionHead
+              icon={<Glyph name="card" size={14} color={th.text3} stroke={2.3} />}
+              label={t('fc.app_carte_figlie')}
+            />
             {data.subs.length ? (
               <Card>
                 {data.subs.map((s, i) => (
@@ -461,34 +543,42 @@ export default function CardScreen() {
                     accessibilityRole="button"
                     onPress={() => router.push({ pathname: '/fc-card', params: { sub: s.uuid } })}
                     style={{
-                      padding: 12,
-                      gap: 2,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: 14,
                       borderTopWidth: i ? 0.5 : 0,
                       borderTopColor: th.hairline,
                     }}
                   >
-                    <Text style={{ color: th.text, fontWeight: '600' }} numberOfLines={2}>
-                      {docToPlain(parseDoc(s.question_desc)) || '—'}
-                    </Text>
-                    <Text style={{ color: th.text2 }} numberOfLines={2}>
-                      {docToPlain(parseDoc(s.answer_desc))}
-                    </Text>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={{ color: th.text, fontWeight: '700' }} numberOfLines={2}>
+                        {docToPlain(parseDoc(s.question_desc)) || '—'}
+                      </Text>
+                      <Text style={{ color: th.text2 }} numberOfLines={2}>
+                        {docToPlain(parseDoc(s.answer_desc))}
+                      </Text>
+                    </View>
+                    <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
                   </Pressable>
                 ))}
               </Card>
             ) : null}
-            <TextButton
+            <PillButton
               testID="fcc-add-sub"
               label={t('fc.ifc_aggiungi_figlio')}
+              tone={tone}
+              glyph="plus"
               onPress={() => router.push({ pathname: '/fc-card', params: { parent: params.id } })}
             />
           </View>
         ) : null}
 
         {params.sub && data.parentCard ? (
-          <TextButton
+          <PillButton
             testID="fcc-split"
             label={t('vocab.vi_separa')}
+            tone={tone}
             onPress={() => {
               const made = repo.unjoinSubcard(params.sub!);
               if (!made) return;
@@ -499,9 +589,10 @@ export default function CardScreen() {
         ) : null}
 
         {params.sub && data.parentCard ? (
-          <TextButton
+          <PillButton
             testID="fcc-to-parent"
             label={t('fc.vis_una_carta')}
+            tone={tone}
             onPress={() =>
               router.replace({ pathname: '/fc-card', params: { id: data.parentCard! } })
             }
@@ -509,33 +600,42 @@ export default function CardScreen() {
         ) : null}
 
         {!isNew && !isSub ? (
-          <Card style={{ padding: 16, gap: 8 }}>
+          <Card>
             <Pressable
               testID="fcc-move"
               accessibilityRole="button"
               onPress={() => setMoving(!moving)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}
             >
-              <Text style={{ color: th.brand, fontSize: 16 }}>{t('fc.app_sposta_carta')} ›</Text>
+              <Glyph name="folder" size={18} color={tone.color} />
+              <Text style={{ flex: 1, color: th.text, fontSize: 16, fontWeight: '600' }}>
+                {t('fc.app_sposta_carta')}
+              </Text>
+              <View style={{ transform: [{ rotate: moving ? '90deg' : '0deg' }] }}>
+                <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
+              </View>
             </Pressable>
             {moving ? (
-              <Card style={{ backgroundColor: th.surface2 }}>
-                <DeckPicker
-                  decks={data.decks}
-                  value={data.deckId}
-                  onCreate={(name, parent) => repo.createDeck({ name, parent })}
-                  onPick={(d) => {
-                    if (d) repo.moveCard(params.id!, d);
-                    setMoving(false);
-                    changed();
-                  }}
-                />
-              </Card>
+              <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+                <Card style={{ backgroundColor: th.surface2 }}>
+                  <DeckPicker
+                    decks={data.decks}
+                    value={data.deckId}
+                    onCreate={(name, parent) => repo.createDeck({ name, parent })}
+                    onPick={(d) => {
+                      if (d) repo.moveCard(params.id!, d);
+                      setMoving(false);
+                      changed();
+                    }}
+                  />
+                </Card>
+              </View>
             ) : null}
           </Card>
         ) : null}
 
         {!isNew ? (
-          <Card style={{ padding: 16, gap: 10 }}>
+          <Card style={{ padding: 14, gap: 10 }}>
             {deleting ? (
               <>
                 <Text style={{ color: th.text, fontWeight: '700' }}>
@@ -570,7 +670,166 @@ export default function CardScreen() {
           </Card>
         ) : null}
       </ScrollView>
+
+      {edit ? (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            flexDirection: 'row',
+            gap: 12,
+            paddingHorizontal: 14,
+            paddingTop: 10,
+            paddingBottom: insets.bottom + 10,
+            backgroundColor: th.headerGlass,
+            borderTopWidth: 0.5,
+            borderTopColor: th.hairline,
+          }}
+        >
+          {!isNew ? (
+            <View style={{ flex: 1 }}>
+              <TextButton
+                testID="fcc-cancel"
+                label={t('comune.annulla')}
+                onPress={() => {
+                  setDraft({ q: null, a: null });
+                  setEditing(false);
+                }}
+              />
+            </View>
+          ) : null}
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              testID="fcc-save"
+              label={t('comune.salva')}
+              disabled={!canSave}
+              onPress={save}
+            />
+          </View>
+        </View>
+      ) : null}
     </View>
+  );
+}
+
+/** L'etichetta piccola in maiuscolo sopra a un campo («DOMANDA», «RISPOSTA»), col suo pallino. */
+function Eyebrow({ label, color }: { label: string; color: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
+      <Text
+        style={{
+          color,
+          fontSize: 11,
+          fontWeight: '800',
+          letterSpacing: 1.1,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/** L'intestazione di una sezione (esempi, carte figlie): icona e titolo piccolo in maiuscolo. */
+function SectionHead({ icon, label }: { icon: ReactNode; label: string }) {
+  const th = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 }}>
+      {icon}
+      <Text
+        style={{
+          color: th.text3,
+          fontSize: 11,
+          fontWeight: '800',
+          letterSpacing: 1,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/** Una riga con interruttore: pallino con l'icona, nome e il tasto. */
+function ToggleRow({
+  testID,
+  label,
+  value,
+  color,
+  icon,
+  onChange,
+}: {
+  testID: string;
+  label: string;
+  value: boolean;
+  color: string;
+  icon: ReactNode;
+  onChange: (v: boolean) => void;
+}) {
+  const th = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: value ? rgba(color, 0.16) : th.surface2,
+        }}
+      >
+        {icon}
+      </View>
+      <Text style={{ flex: 1, color: th.text, fontSize: 16, fontWeight: '600' }}>{label}</Text>
+      <Switch testID={testID} value={value} onValueChange={onChange} trackColor={{ true: color }} />
+    </View>
+  );
+}
+
+/** Un tasto a pillola nel colore del mazzo (aggiungi, separa…). */
+function PillButton({
+  testID,
+  label,
+  tone,
+  glyph,
+  disabled,
+  onPress,
+}: {
+  testID: string;
+  label: string;
+  tone: CatTones;
+  glyph?: 'plus';
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        alignSelf: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 9,
+        paddingHorizontal: 16,
+        borderRadius: 99,
+        backgroundColor: tone.soft,
+        opacity: disabled ? 0.5 : 1,
+        transform: [{ scale: pressed ? 0.96 : 1 }],
+      })}
+    >
+      {glyph ? <Glyph name={glyph} size={15} color={tone.color} stroke={2.6} /> : null}
+      <Text style={{ color: tone.color, fontSize: 14.5, fontWeight: '800' }}>{label}</Text>
+    </Pressable>
   );
 }
 
