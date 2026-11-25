@@ -1,14 +1,25 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { DeckIcon } from '@/features/flashcards/DeckIcon';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
+import {
+  DeckGrid,
+  DeckRowShell,
+  EmptyTree,
+  NewDeckBar,
+  ScopeBar,
+  SubDeckInput,
+  TreeHeader,
+  ViewToggle,
+  groupByRoot,
+  toolButton,
+  type GridItem,
+} from '@/features/flashcards/DeckTreeParts';
 import { whenShort } from '@/features/flashcards/format';
 import { LEVEL_COLORS, LEVELS, type Level } from '@/features/flashcards/levels';
 import {
@@ -20,6 +31,7 @@ import {
   deckPath,
   examUrgency,
   flattenDecks,
+  gridChildren,
   scopeCounts,
   searchDecks,
   type DeckScope,
@@ -27,21 +39,7 @@ import {
 import { ResumeCard } from '@/features/flashcards/ResumeCard';
 import { localToday } from '@/features/tasks/groups';
 import { Card, PrimaryButton, SectionLabel, TextButton } from '@/ui/kit';
-import { HoIcon, hoTheme, hoTitle, type Ho } from '@/features/home/HomeKit';
-
-/** I tastini quadrati accanto alla barra (`.tool-btn` del sito): 38 px, accesi in blu quando sono attivi. */
-function toolButton(ho: Ho, on: boolean) {
-  return {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: on ? ho.blue : ho.surface2,
-    borderWidth: 0.5,
-    borderColor: on ? ho.blue : ho.hair,
-  } as const;
-}
+import { HoIcon, hoTheme } from '@/features/home/HomeKit';
 
 /** Le categorie delle flashcard di studio ad albero (fc_decks.php): materie, sottocategorie, archivio, ricerca. */
 export default function FlashcardsScreen() {
@@ -50,7 +48,7 @@ export default function FlashcardsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, localPrefs, updateLocalPrefs } = useApp();
 
   const [scope, setScope] = useState<DeckScope>('active');
   const [query, setQuery] = useState('');
@@ -62,6 +60,8 @@ export default function FlashcardsScreen() {
   const [draft, setDraft] = useState('');
   // come sul sito: l'albero parte chiuso e si ricordano solo i rami aperti
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // la griglia: le cartelle in cui si è scesi (come le briciole di pane del sito)
+  const [folder, setFolder] = useState<string[]>([]);
   const [addingUnder, setAddingUnder] = useState<string | null>(null);
   const [subDraft, setSubDraft] = useState('');
 
@@ -85,12 +85,7 @@ export default function FlashcardsScreen() {
   const collapsed = new Set([...withKids].filter((id) => !expanded.has(id)));
   const rows = flattenDecks(decks, scope, collapsed);
   // ogni materia (radice) è una carta sua, con dentro i suoi rami
-  const groups = rows.reduce<(typeof rows)[]>((acc, r) => {
-    const last = acc.at(-1);
-    if (r.depth === 0 || !last) acc.push([r]);
-    else last.push(r);
-    return acc;
-  }, []);
+  const groups = groupByRoot(rows);
   const found = query.trim() ? searchDecks(decks, query) : null;
   const cardHits =
     inCards && query.trim().length >= 2 ? services.flashcards.searchText(query.trim()) : [];
@@ -209,6 +204,13 @@ export default function FlashcardsScreen() {
     );
   };
 
+  const toggleOpen = (id: string) => {
+    const next = new Set(expanded);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpanded(next);
+  };
+
   const renderRow = ({
     id,
     depth,
@@ -223,270 +225,136 @@ export default function FlashcardsScreen() {
     root?: boolean;
   }) => {
     const d = decks.find((x) => x.uuid === id)!;
-    const open_ = hasChildren && expanded.has(id);
     const n = counts.get(id) ?? 0;
     const hard = stats.get(id)?.hard ?? 0;
-    const box = root ? 40 : 34;
     return (
-      <View key={id}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingVertical: root ? 14 : 11,
-            paddingRight: 12,
-            paddingLeft: 4 + depth * 16,
-          }}
-        >
-          <Pressable
-            testID={`fc-toggle-${id}`}
-            accessibilityRole="button"
-            accessibilityState={hasChildren ? { expanded: open_ } : undefined}
-            disabled={!hasChildren}
-            hitSlop={8}
-            onPress={() => {
-              const next = new Set(expanded);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              setExpanded(next);
-            }}
-            style={{ width: 24, height: 34, alignItems: 'center', justifyContent: 'center' }}
-          >
-            {hasChildren ? (
-              <View style={{ transform: [{ rotate: open_ ? '90deg' : '0deg' }] }}>
-                <HoIcon name="right" color={open_ ? d.color : ho.text3} size={20} sw={2.6} />
-              </View>
-            ) : null}
-          </Pressable>
-          <Pressable
-            testID={`fc-row-${id}`}
-            accessibilityRole="button"
-            onPress={() => (selecting ? pickDeck(id) : open(id))}
-            accessibilityState={selecting ? { checked: picked.has(id) } : undefined}
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              backgroundColor: selecting && picked.has(id) ? th.brandSoft : undefined,
-            }}
-          >
-            <View
-              style={{
-                width: box,
-                height: box,
-                borderRadius: root ? 12 : 10,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: d.color,
-                opacity: scope === 'archived' ? 0.7 : 1,
-              }}
-            >
-              <DeckIcon name={deckIcon(d)} color="#FFFFFF" size={root ? 20 : 17} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: th.text,
-                  fontSize: root ? 17 : 15.5,
-                  fontWeight: root ? '800' : '600',
-                  letterSpacing: -0.2,
-                }}
-                numberOfLines={2}
-              >
-                {selecting ? (picked.has(id) ? '☑ ' : '☐ ') : ''}
-                {d.pinned ? '📌 ' : ''}
-                {d.name}
+      <DeckRowShell
+        key={id}
+        color={d.color}
+        name={d.name}
+        iconName={deckIcon(d)}
+        pinned={!!d.pinned}
+        depth={depth}
+        root={root}
+        hasChildren={hasChildren}
+        open={hasChildren && expanded.has(id)}
+        archived={scope === 'archived'}
+        selecting={selecting}
+        checked={picked.has(id)}
+        ids={{ toggle: `fc-toggle-${id}`, row: `fc-row-${id}`, add: `fc-add-${id}` }}
+        onToggle={() => toggleOpen(id)}
+        onPress={() => (selecting ? pickDeck(id) : open(id))}
+        badge={String(n)}
+        badgeLabel={n === 1 ? t('fc.app_n_carte_1') : t('fc.app_mostra_tutte_carte', { n })}
+        addable={scope === 'active' && !found && !selecting}
+        adding={addingUnder === id}
+        onAdd={() => {
+          setAddingUnder(addingUnder === id ? null : id);
+          setSubDraft('');
+        }}
+        addLabel={t('fc.cfc_aggiungi_sottocategoria')}
+        below={
+          <>
+            {path ? (
+              <Text style={{ color: th.text2, fontSize: 12 }} numberOfLines={1}>
+                {path}
               </Text>
-              {path ? (
-                <Text style={{ color: th.text2, fontSize: 12 }} numberOfLines={1}>
-                  {path}
-                </Text>
-              ) : null}
-              {examChip(d.exam_date)}
-              {statsLine(id)}
-            </View>
-            {hard >= 2 ? (
-              <Pressable
-                testID={`fc-hard-${id}`}
-                accessibilityRole="button"
-                accessibilityLabel={t('fc.dk_da_ripassare', { n: hard })}
-                onPress={() => playHard(id)}
-                hitSlop={6}
-                style={{
-                  minWidth: 24,
-                  paddingHorizontal: 7,
-                  paddingVertical: 3,
-                  borderRadius: 12,
-                  backgroundColor: th.red,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{hard}</Text>
-              </Pressable>
             ) : null}
-            <View
-              accessible
-              accessibilityLabel={
-                n === 1 ? t('fc.app_n_carte_1') : t('fc.app_mostra_tutte_carte', { n })
-              }
-              style={{
-                backgroundColor: th.surface2,
-                borderRadius: 999,
-                paddingHorizontal: 9,
-                paddingVertical: 4,
-                borderWidth: 0.5,
-                borderColor: th.hairline,
-              }}
-            >
-              <Text
-                style={{
-                  color: th.text2,
-                  fontSize: 12,
-                  fontWeight: '700',
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {n}
-              </Text>
-            </View>
-          </Pressable>
-          {scope === 'active' && !found && !selecting ? (
+            {examChip(d.exam_date)}
+            {statsLine(id)}
+          </>
+        }
+        beforeBadge={
+          hard >= 2 ? (
             <Pressable
-              testID={`fc-add-${id}`}
+              testID={`fc-hard-${id}`}
               accessibilityRole="button"
-              accessibilityLabel={t('fc.cfc_aggiungi_sottocategoria')}
+              accessibilityLabel={t('fc.dk_da_ripassare', { n: hard })}
+              onPress={() => playHard(id)}
               hitSlop={6}
-              onPress={() => {
-                setAddingUnder(addingUnder === id ? null : id);
-                setSubDraft('');
-              }}
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: 15,
+                minWidth: 24,
+                paddingHorizontal: 7,
+                paddingVertical: 3,
+                borderRadius: 12,
+                backgroundColor: th.red,
                 alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: addingUnder === id ? d.color + '26' : 'transparent',
               }}
             >
-              <HoIcon
-                name="plus"
-                color={addingUnder === id ? d.color : ho.text3}
-                size={18}
-                sw={2.4}
-              />
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{hard}</Text>
             </Pressable>
-          ) : null}
-        </View>
-        {addingUnder === id ? (
-          <View style={{ paddingLeft: 40 + depth * 16, paddingRight: 12, paddingBottom: 12 }}>
-            <TextInput
+          ) : null
+        }
+        footer={
+          addingUnder === id ? (
+            <SubDeckInput
               testID="fc-sub-input"
-              autoFocus
+              depth={depth}
               value={subDraft}
-              onChangeText={setSubDraft}
+              onChange={setSubDraft}
               placeholder={t('fc.cfc_aggiungi_sottocategoria')}
-              placeholderTextColor={th.text3}
-              returnKeyType="done"
-              onSubmitEditing={() => {
+              onSubmit={() => {
                 if (add(id, subDraft)) {
                   setSubDraft('');
                   setAddingUnder(null);
                 }
               }}
-              style={{
-                backgroundColor: th.surface2,
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 9,
-                color: th.text,
-              }}
             />
-          </View>
-        ) : null}
-      </View>
+          ) : null
+        }
+      />
     );
   };
+
+  // la vista a griglia: le cartelle della cartella in cui si è scesi
+  const view = localPrefs.fcTreeView;
+  const gridParent = folder.at(-1) ?? null;
+  const gridItems: GridItem[] =
+    view === 'grid' && !found
+      ? gridChildren(decks, scope, gridParent).map((d) => {
+          const st = stats.get(d.uuid);
+          return {
+            id: d.uuid,
+            name: d.name,
+            color: d.color,
+            iconName: deckIcon(d),
+            pinned: !!d.pinned,
+            cards: counts.get(d.uuid) ?? 0,
+            subs: gridChildren(decks, scope, d.uuid).length,
+            games: st?.games ?? 0,
+            levels: st ? st.levels : null,
+            knownPct: st && st.total ? Math.round((st.known / st.total) * 100) : 0,
+            hard: st?.hard ?? 0,
+            exam: examChip(d.exam_date),
+          };
+        })
+      : [];
+  const gridCrumbs = folder.map((id) => decks.find((x) => x.uuid === id)?.name ?? '');
 
   const resume = services.games.unfinished();
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
-      <View
-        style={{
-          paddingTop: Math.max(insets.top - 20, 12),
-          paddingBottom: 12,
-          paddingHorizontal: 16,
-          backgroundColor: th.headerGlass,
-          borderBottomWidth: 0.5,
-          borderBottomColor: th.hairline,
-          gap: 12,
+      <TreeHeader
+        top={insets.top}
+        title={t('vocab.cat_categorie')}
+        subtitle={t('fc.cfc_conteggio', { categorie: decks.length, carte: totalCards })}
+        onBack={() => router.back()}
+        backTestID="fc-close"
+        backLabel={t('comune.indietro')}
+        play={{
+          testID: 'fc-play',
+          label: t('fc.cg_gioca'),
+          onPress: () => router.push('/fc-setup'),
+          colors: [ho.blue, ho.indigo],
         }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Pressable
-            testID="fc-close"
-            accessibilityRole="button"
-            accessibilityLabel={t('comune.indietro')}
-            onPress={() => router.back()}
-            hitSlop={8}
-            style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <HoIcon name="back" color={ho.blue} size={26} sw={2.4} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text
-              accessibilityRole="header"
-              numberOfLines={1}
-              style={[{ color: ho.text }, hoTitle(ho, 24)]}
-            >
-              {t('vocab.cat_categorie')}
-            </Text>
-            <Text numberOfLines={1} style={{ color: ho.text2, fontSize: 15, marginTop: 1 }}>
-              {t('fc.cfc_conteggio', { categorie: decks.length, carte: totalCards })}
-            </Text>
-          </View>
-          <Pressable
-            testID="fc-play"
-            accessibilityRole="button"
-            accessibilityLabel={t('fc.cg_gioca')}
-            onPress={() => router.push('/fc-setup')}
-            style={{ width: 46, height: 46, borderRadius: 23, overflow: 'hidden' }}
-          >
-            <LinearGradient
-              colors={[ho.blue, ho.indigo]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <HoIcon name="play" color="#FFFFFF" size={20} sw={2.2} />
-            </LinearGradient>
-          </Pressable>
-        </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-            backgroundColor: ho.surface2,
-            borderRadius: 14,
-            paddingHorizontal: 14,
-          }}
-        >
-          <HoIcon name="search" color={ho.text3} size={20} />
-          <TextInput
-            testID="fc-search"
-            value={query}
-            onChangeText={setQuery}
-            placeholder={t('vocab.cat_cerca')}
-            placeholderTextColor={ho.text3}
-            autoCorrect={false}
-            style={{ flex: 1, paddingVertical: 12, color: ho.text, fontSize: 17 }}
-          />
-        </View>
-      </View>
+        search={{
+          testID: 'fc-search',
+          value: query,
+          onChange: setQuery,
+          placeholder: t('vocab.cat_cerca'),
+        }}
+      />
       <ScrollView
         contentContainerStyle={{
           padding: 14,
@@ -533,91 +401,51 @@ export default function FlashcardsScreen() {
         ) : null}
 
         {!found ? (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <View
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                gap: 3,
-                backgroundColor: ho.surface2,
-                borderRadius: 12,
-                padding: 3,
-                borderWidth: 0.5,
-                borderColor: ho.hair,
-              }}
-            >
-              {(['active', 'archived'] as const).map((s) => (
-                <Pressable
-                  key={s}
-                  testID={`fc-scope-${s}`}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: scope === s }}
-                  onPress={() => setScope(s)}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    paddingVertical: 7,
-                    borderRadius: 9,
-                    backgroundColor: scope === s ? ho.surface : 'transparent',
-                    boxShadow: scope === s ? '0 1px 3px rgba(0,0,0,.14)' : undefined,
+          <ScopeBar
+            scope={scope}
+            counts={scopes}
+            labels={{ active: t('fc.cfc_attive'), archived: t('fc.cfc_archiviate') }}
+            testIDPrefix="fc"
+            onScope={(next) => {
+              setScope(next);
+              setFolder([]);
+            }}
+            tools={
+              <>
+                <ViewToggle
+                  testID="fc-view"
+                  view={view}
+                  label={t('fc.cfc_elenco_griglia')}
+                  onToggle={() => {
+                    updateLocalPrefs({ fcTreeView: view === 'grid' ? 'list' : 'grid' });
+                    setFolder([]);
                   }}
+                />
+                {view === 'list' && withKids.size ? (
+                  <Pressable
+                    testID="fc-collapse"
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      expanded.size ? t('fc.cfc_comprimi_tutto') : t('vocab.cat_espandi')
+                    }
+                    onPress={() => setExpanded(expanded.size ? new Set() : new Set(withKids))}
+                    style={toolButton(ho, false)}
+                  >
+                    <HoIcon name="updown" color={ho.text2} size={19} />
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  testID="fc-select"
+                  accessibilityRole="button"
+                  accessibilityLabel={selecting ? t('fc.cfc_fine') : t('fc.cfc_seleziona')}
+                  onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
+                  style={toolButton(ho, selecting)}
                 >
-                  <Text
-                    style={{
-                      color: scope === s ? ho.text : ho.text2,
-                      fontSize: 13,
-                      fontWeight: '700',
-                    }}
-                  >
-                    {s === 'active' ? t('fc.cfc_attive') : t('fc.cfc_archiviate')}
-                  </Text>
-                  <View
-                    style={{
-                      paddingHorizontal: 6,
-                      paddingVertical: 1,
-                      borderRadius: 999,
-                      backgroundColor: scope === s ? ho.blueSoft : ho.hair,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: scope === s ? ho.blueInk : ho.text2,
-                        fontSize: 11,
-                        fontWeight: '800',
-                      }}
-                    >
-                      {scopes[s]}
-                    </Text>
-                  </View>
+                  <HoIcon name="checksq" color={selecting ? '#FFFFFF' : ho.text2} size={19} />
                 </Pressable>
-              ))}
-            </View>
-            {withKids.size ? (
-              <Pressable
-                testID="fc-collapse"
-                accessibilityRole="button"
-                accessibilityLabel={
-                  expanded.size ? t('fc.cfc_comprimi_tutto') : t('vocab.cat_espandi')
-                }
-                onPress={() => setExpanded(expanded.size ? new Set() : new Set(withKids))}
-                style={toolButton(ho, false)}
-              >
-                <HoIcon name="updown" color={ho.text2} size={19} />
-              </Pressable>
-            ) : null}
-            <Pressable
-              testID="fc-select"
-              accessibilityRole="button"
-              accessibilityLabel={selecting ? t('fc.cfc_fine') : t('fc.cfc_seleziona')}
-              onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
-              style={toolButton(ho, selecting)}
-            >
-              <HoIcon name="checksq" color={selecting ? '#FFFFFF' : ho.text2} size={19} />
-            </Pressable>
-          </View>
+              </>
+            }
+          />
         ) : null}
 
         {selecting ? (
@@ -827,6 +655,27 @@ export default function FlashcardsScreen() {
               {t('fc.cfc_nessun_risultato')}
             </Text>
           )
+        ) : view === 'grid' ? (
+          <DeckGrid
+            prefix="fc"
+            items={gridItems}
+            crumbs={gridCrumbs}
+            rootLabel={scope === 'archived' ? t('fc.cfc_archivio') : t('fc.cfc_tutte')}
+            emptyText={t('fc.cfc_griglia_vuota')}
+            selecting={selecting}
+            picked={picked}
+            openLabel={t('fc.cfc_apri')}
+            hardLabel={(n) => t('fc.dk_da_ripassare', { n })}
+            onCrumb={(i) => setFolder(folder.slice(0, i + 1))}
+            onCard={(id) => {
+              if (selecting) pickDeck(id);
+              else if ((gridItems.find((g) => g.id === id)?.subs ?? 0) > 0)
+                setFolder([...folder, id]);
+              else open(id);
+            }}
+            onOpen={open}
+            onHard={playHard}
+          />
         ) : rows.length ? (
           <View style={{ gap: 14 }}>
             {groups.map((g, gi) => (
@@ -848,69 +697,21 @@ export default function FlashcardsScreen() {
             ))}
           </View>
         ) : (
-          <View style={{ paddingTop: 36, paddingBottom: 12, alignItems: 'center', gap: 10 }}>
-            <View
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 22,
-                backgroundColor: ho.blueSoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 6,
-              }}
-            >
-              <HoIcon name="folder" color={ho.blue} size={30} />
-            </View>
-            <Text style={[{ color: ho.text }, hoTitle(ho, 22)]}>
-              {scope === 'active' ? t('vocab.cat_nessuna') : t('fc.cfc_archivio_vuoto')}
-            </Text>
-            <Text style={{ color: ho.text2, textAlign: 'center', fontSize: 15, lineHeight: 21 }}>
-              {scope === 'active' ? t('fc.cfc_nessuna_txt') : t('fc.cfc_archivio_vuoto_txt')}
-            </Text>
-          </View>
+          <EmptyTree
+            title={scope === 'active' ? t('vocab.cat_nessuna') : t('fc.cfc_archivio_vuoto')}
+            text={scope === 'active' ? t('fc.cfc_nessuna_txt') : t('fc.cfc_archivio_vuoto_txt')}
+          />
         )}
 
-        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-          <TextInput
-            testID="fc-new"
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={t('fc.app_nuova_materia')}
-            placeholderTextColor={ho.text3}
-            returnKeyType="done"
-            onSubmitEditing={() => add(null, draft) && setDraft('')}
-            style={{
-              flex: 1,
-              backgroundColor: ho.surface,
-              borderRadius: 16,
-              paddingHorizontal: 16,
-              paddingVertical: 13,
-              color: ho.text,
-              fontSize: 17,
-            }}
-          />
-          <Pressable
-            testID="fc-new-add"
-            accessibilityRole="button"
-            accessibilityLabel={t('vocab.cat_aggiungi')}
-            accessibilityState={{ disabled: !draft.trim() }}
-            disabled={!draft.trim()}
-            onPress={() => add(null, draft) && setDraft('')}
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: ho.blue,
-              opacity: draft.trim() ? 1 : 0.45,
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: `0 6px 16px ${ho.blueSoft}`,
-            }}
-          >
-            <HoIcon name="plus" color="#FFFFFF" size={24} sw={2.4} />
-          </Pressable>
-        </View>
+        <NewDeckBar
+          inputID="fc-new"
+          addID="fc-new-add"
+          value={draft}
+          onChange={setDraft}
+          placeholder={t('fc.app_nuova_materia')}
+          addLabel={t('vocab.cat_aggiungi')}
+          onAdd={() => add(view === 'grid' && !found ? gridParent : null, draft) && setDraft('')}
+        />
       </ScrollView>
     </View>
   );

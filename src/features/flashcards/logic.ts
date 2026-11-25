@@ -131,6 +131,17 @@ export function compareDecks(a: Deck, b: Deck): number {
   return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 }
 
+/**
+ * Le cartelle che la vista a griglia mostra dentro `parent` (`figliVisibili` del sito): quelle di primo livello se
+ * `parent` è null, altrimenti i figli diretti. Nell'archivio la radice è il mazzo su cui si è premuto «archivia».
+ */
+export function gridChildren(all: Deck[], scope: DeckScope, parent: string | null): Deck[] {
+  const rows = flattenDecks(all, scope);
+  return parent === null
+    ? rows.filter((r) => r.depth === 0).map((r) => r.deck)
+    : rows.filter((r) => r.depth > 0 && r.deck.parent_uuid === parent).map((r) => r.deck);
+}
+
 export interface DeckRow {
   deck: Deck;
   depth: number;

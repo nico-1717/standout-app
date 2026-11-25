@@ -24,6 +24,10 @@ export type FcViewStatus = (typeof FC_VIEW_STATUSES)[number];
 export const cleanViewStatus = (v: unknown): FcViewStatus =>
   (FC_VIEW_STATUSES as readonly unknown[]).includes(v) ? (v as FcViewStatus) : 'all';
 
+/** Le categorie come elenco o come griglia di riquadri (`standout_cat_vista` del sito). */
+export type TreeView = 'list' | 'grid';
+export const cleanTreeView = (v: unknown): TreeView => (v === 'grid' ? 'grid' : 'list');
+
 /** Preferenze che restano su questo telefono (il sito non le ha): non si sincronizzano. */
 export interface LocalPrefs {
   /** colori più forti e linee ben visibili (Altro › Stile) */
@@ -44,6 +48,8 @@ export interface LocalPrefs {
   fcFullCards: boolean;
   /** vista di un mazzo: anche gli esempi per intero */
   fcFullExamples: boolean;
+  /** le categorie (studio e lingue): elenco o griglia */
+  fcTreeView: TreeView;
   /** la barra in basso: ordine, schede fissate a sinistra e schede nascoste */
   bar: BarPrefs;
 }
@@ -58,6 +64,7 @@ export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
   fcViewStatus: 'all',
   fcFullCards: false,
   fcFullExamples: false,
+  fcTreeView: 'list',
   bar: DEFAULT_BAR,
 };
 
@@ -75,6 +82,7 @@ function clean(raw: unknown): LocalPrefs {
     fcViewStatus: cleanViewStatus(r.fcViewStatus),
     fcFullCards: r.fcFullCards === true,
     fcFullExamples: r.fcFullExamples === true,
+    fcTreeView: cleanTreeView(r.fcTreeView),
     bar: cleanBar(r.bar),
   };
 }

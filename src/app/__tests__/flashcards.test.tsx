@@ -159,6 +159,45 @@ describe('categories list', () => {
   });
 });
 
+describe('grid view', () => {
+  test('the toggle shows folder squares; a square with kids goes down, the arrow opens it', async () => {
+    const { flashcards } = setup();
+    const maths = flashcards.createDeck({ name: 'Maths' })!;
+    const algebra = flashcards.createDeck({ name: 'Algebra', parent: maths })!;
+    const view = await render(wrap(<FlashcardsScreen />));
+    await fireEvent.press(screen.getByTestId('fc-view'));
+    expect(mockUpdatePrefs).toHaveBeenCalledWith({ fcTreeView: 'grid' });
+    await view.rerender(wrap(<FlashcardsScreen />));
+    expect(screen.getByTestId(`fc-gcard-${maths}`)).toBeTruthy();
+    expect(screen.queryByTestId(`fc-gcard-${algebra}`)).toBeNull();
+    // the arrow opens the category itself
+    await fireEvent.press(screen.getByTestId(`fc-gopen-${maths}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-deck', params: { id: maths } });
+    // the square goes one level down; the crumb brings us back
+    await fireEvent.press(screen.getByTestId(`fc-gcard-${maths}`));
+    expect(screen.getByTestId(`fc-gcard-${algebra}`)).toBeTruthy();
+    expect(screen.queryByTestId(`fc-gcard-${maths}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('fc-crumb--1'));
+    expect(screen.getByTestId(`fc-gcard-${maths}`)).toBeTruthy();
+    // a folder with nothing inside opens straight away
+    await fireEvent.press(screen.getByTestId(`fc-gcard-${maths}`));
+    await fireEvent.press(screen.getByTestId(`fc-gcard-${algebra}`));
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/fc-deck', params: { id: algebra } });
+  });
+
+  test('a new category made inside a folder goes under that folder', async () => {
+    const { flashcards } = setup();
+    mockPrefs = { fcTreeView: 'grid' };
+    const maths = flashcards.createDeck({ name: 'Maths' })!;
+    flashcards.createDeck({ name: 'Algebra', parent: maths });
+    await render(wrap(<FlashcardsScreen />));
+    await fireEvent.press(screen.getByTestId(`fc-gcard-${maths}`));
+    await fireEvent.changeText(screen.getByTestId('fc-new'), 'Geometry');
+    await fireEvent.press(screen.getByTestId('fc-new-add'));
+    expect(flashcards.decks().find((d) => d.name === 'Geometry')!.parent_uuid).toBe(maths);
+  });
+});
+
 describe('selecting several decks', () => {
   const pick = async (...ids: string[]) => {
     await fireEvent.press(screen.getByTestId('fc-select'));

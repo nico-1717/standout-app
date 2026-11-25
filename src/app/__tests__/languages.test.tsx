@@ -34,12 +34,27 @@ jest.mock('expo-router', () => ({
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+let mockPrefs: Record<string, unknown> = {};
+const mockUpdatePrefs = jest.fn((patch: Record<string, unknown>) => {
+  mockPrefs = { ...mockPrefs, ...patch };
+  mockVersion += 1;
+});
 jest.mock('@/core/app/AppProvider', () => ({
-  useApp: () => ({ services: mockServices, version: mockVersion, changed: mockChanged }),
+  useApp: () => ({
+    services: mockServices,
+    version: mockVersion,
+    changed: mockChanged,
+    localPrefs: {
+      ...jest.requireActual('@/core/settings/localPrefs').DEFAULT_LOCAL_PREFS,
+      ...mockPrefs,
+    },
+    updateLocalPrefs: mockUpdatePrefs,
+  }),
 }));
 
 function setup() {
   mockVersion = 0;
+  mockPrefs = {};
   mockParams = {};
   mockPush.mockClear();
   mockBack.mockClear();
@@ -187,6 +202,26 @@ describe('Course page', () => {
     await again();
     await fireEvent.press(screen.getByTestId('lcourse-scope-archived'));
     expect(screen.getByTestId(`lcourse-deck-${food.uuid}`)).toBeTruthy();
+  });
+
+  test('grid view: squares per folder, one level down, the arrow opens the deck', async () => {
+    const { languages } = setup();
+    const c = languages.addCourse('it', 'de', 'en') as string;
+    mockParams = { id: c };
+    const food = languages.createDeck(c, { name: 'Food' })!;
+    const fruit = languages.createDeck(c, { name: 'Fruit', parent: food })!;
+    const view = await render(wrap(<LangCourseScreen />));
+    // the tree starts closed, like the website
+    expect(screen.queryByText('Fruit')).toBeNull();
+    await fireEvent.press(screen.getByTestId('lcourse-view'));
+    expect(mockUpdatePrefs).toHaveBeenCalledWith({ fcTreeView: 'grid' });
+    await view.rerender(wrap(<LangCourseScreen />));
+    await fireEvent.press(screen.getByTestId(`lcourse-gopen-${food}`));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/lang-deck', params: { id: food } });
+    await fireEvent.press(screen.getByTestId(`lcourse-gcard-${food}`));
+    expect(screen.getByTestId(`lcourse-gcard-${fruit}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('lcourse-crumb--1'));
+    expect(screen.getByTestId(`lcourse-gcard-${food}`)).toBeTruthy();
   });
 
   test('a missing course shows a back button', async () => {
