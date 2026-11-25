@@ -469,10 +469,10 @@ describe('category page', () => {
     expect(screen.queryByTestId('fcd-viewer')).toBeNull();
   });
 
-  test('sort button cycles through the orders', async () => {
-    const { flashcards } = setup();
+  test('the sort menu lists the orders and the level menu filters; a card star is a favourite', async () => {
+    const { flashcards, study } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;
-    flashcards.addCard(id, 'B card', 'x');
+    const first = flashcards.addCard(id, 'B card', 'x')!;
     flashcards.addCard(id, 'A card', 'y');
     mockParams = { id };
     await render(wrap(<DeckScreen />));
@@ -481,15 +481,19 @@ describe('category page', () => {
       expect.stringMatching(/Position/),
     );
     await fireEvent.press(screen.getByTestId('fcd-sort'));
+    await fireEvent.press(screen.getByTestId('fcd-sort-newest'));
     expect(screen.getByTestId('fcd-sort')).toHaveProp(
       'accessibilityLabel',
       expect.stringMatching(/Newest first/),
     );
-    await fireEvent.press(screen.getByTestId('fcd-sort'));
-    expect(screen.getByTestId('fcd-sort')).toHaveProp(
-      'accessibilityLabel',
-      expect.stringMatching(/Oldest first/),
-    );
+    // il livello è un menu a tendina, come sul sito
+    await fireEvent.press(screen.getByTestId('fcd-level'));
+    expect(screen.getByTestId('fcd-level-filter-all')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcd-level-filter-all'));
+    // la stellina è sempre visibile e mette la carta fra le preferite
+    expect(study.isFavorite(first)).toBe(false);
+    await fireEvent.press(screen.getByTestId(`fcd-fav-${first}`));
+    expect(study.isFavorite(first)).toBe(true);
   });
 
   test('select mode: pick cards, move them to another category, then delete one', async () => {
@@ -576,7 +580,7 @@ describe('category page', () => {
     await fireEvent.press(screen.getByTestId('fcd-project'));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/projects', params: { id: course } });
     expect(screen.getByTestId('fcd-project')).toHaveTextContent('PeS');
-    expect(screen.getByTestId('fcd-close')).toBeTruthy();
+    expect(screen.queryByTestId('fcd-close')).toBeNull();
   });
 
   test('rename, colour, pin, archive and exam date are saved', async () => {
@@ -700,9 +704,11 @@ describe('card page', () => {
       mime: 'image/jpeg',
     });
     const view = await render(wrap(<CardScreen />));
-    expect(screen.queryByTestId('fcc-q-imgfield')).toBeNull(); // si cambia solo in modifica
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
     expect(screen.queryByTestId('fcc-q-imgfield-remove')).toBeNull();
+    // una sola icona foto: il tocco mostra «libreria» e «scatta»
+    expect(screen.queryByTestId('fcc-q-imgfield-library')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcc-q-imgfield'));
+    expect(screen.getByTestId('fcc-q-imgfield-camera')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('fcc-q-imgfield-library'));
     expect(pickImage).toHaveBeenCalledWith('library');
     expect(db.all('SELECT tbl, row_uuid, slot, op, file FROM media_queue')).toEqual([
@@ -731,7 +737,6 @@ describe('card page', () => {
     const c = flashcards.addCard(deck, 'q', 'a')!;
     mockParams = { id: c };
     const view = await render(wrap(<CardScreen />));
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
     expect(screen.queryByTestId('fcc-a-audfield-remove')).toBeNull();
     await fireEvent.press(screen.getByTestId('fcc-a-audfield-record'));
     await screen.findByTestId('audio-stop');
@@ -761,7 +766,6 @@ describe('card page', () => {
     const audio = jest.requireMock('expo-audio');
     audio.requestRecordingPermissionsAsync.mockResolvedValueOnce({ granted: false });
     await render(wrap(<CardScreen />));
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
     await fireEvent.press(screen.getByTestId('fcc-q-audfield-record'));
     await screen.findByTestId('fcc-q-audfield-error');
     expect(db.all('SELECT * FROM media_queue')).toEqual([]);
@@ -774,10 +778,26 @@ describe('card page', () => {
     mockParams = { id: c };
     (pickImage as jest.Mock).mockResolvedValueOnce(null);
     await render(wrap(<CardScreen />));
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
+    await fireEvent.press(screen.getByTestId('fcc-a-imgfield'));
     await fireEvent.press(screen.getByTestId('fcc-a-imgfield-camera'));
     expect(pickImage).toHaveBeenCalledWith('camera');
     expect(db.all('SELECT * FROM media_queue')).toEqual([]);
+  });
+
+  test('a tap on a card opens the editor at once; the format bar sticks to the bottom while typing', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    // niente pagina di sola lettura: i campi sono già scrivibili e non c'è il tasto «modifica»
+    expect(screen.queryByTestId('fcc-edit')).toBeNull();
+    expect(screen.queryByTestId('bar-dock')).toBeNull();
+    await fireEvent(screen.getByTestId('fcc-q-block-0'), 'focus');
+    expect(screen.getByTestId('bar-dock')).toBeTruthy();
+    expect(screen.getByTestId('fcc-q-bar')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcc-cancel'));
+    expect(mockBack).toHaveBeenCalled();
   });
 
   test('new card: save needs some text, then the card goes in the deck', async () => {
@@ -803,13 +823,11 @@ describe('card page', () => {
     const c = flashcards.addCard(deck, 'plain question', rich)!;
     mockParams = { id: c };
     const view = await render(wrap(<CardScreen />));
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
     await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'new question');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     await view.rerender(wrap(<CardScreen />));
     expect(JSON.parse(flashcards.card(c)!.question_desc!).blocks[0].runs[0].s).toBe('new question');
     expect(flashcards.card(c)!.answer_desc).toBe(rich); // intatta
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
     await fireEvent.changeText(screen.getByTestId('fcc-a-block-0'), 'Bolder');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     expect(JSON.parse(flashcards.card(c)!.answer_desc!).blocks[0].runs[0]).toEqual({
@@ -829,8 +847,8 @@ describe('card page', () => {
     ]);
     mockParams = { id: c };
     await render(wrap(<CardScreen />));
-    expect(screen.getByTestId('fcc-q-image')).toBeTruthy();
-    expect(screen.getByTestId('fcc-a-image')).toBeTruthy();
+    expect(screen.getByTestId('fcc-q-imgfield-remote')).toBeTruthy();
+    expect(screen.getByTestId('fcc-a-imgfield-remote')).toBeTruthy();
   });
 
   test('recorded audio shows a play button on each side that has a file', async () => {
@@ -840,8 +858,8 @@ describe('card page', () => {
     db.run('UPDATE fc_study_cards SET question_audio = ? WHERE uuid = ?', ['q1.m4a', c]);
     mockParams = { id: c };
     await render(wrap(<CardScreen />));
-    expect(screen.getByTestId('fcc-q-audio')).toBeTruthy();
-    expect(screen.queryByTestId('fcc-a-audio')).toBeNull();
+    expect(screen.getByTestId('fcc-q-audfield-play')).toBeTruthy();
+    expect(screen.queryByTestId('fcc-a-audfield-play')).toBeNull();
   });
 
   test('clearing a side saves it as empty', async () => {
@@ -850,7 +868,6 @@ describe('card page', () => {
     const c = flashcards.addCard(deck, 'q', 'a')!;
     mockParams = { id: c };
     await render(wrap(<CardScreen />));
-    await fireEvent.press(screen.getByTestId('fcc-edit'));
     await fireEvent.changeText(screen.getByTestId('fcc-a-block-0'), '');
     await fireEvent.press(screen.getByTestId('fcc-save'));
     expect(flashcards.card(c)!.answer_desc).toBeNull();

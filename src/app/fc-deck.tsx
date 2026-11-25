@@ -6,10 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useApp } from '@/core/app/AppProvider';
-import { useTheme } from '@/core/theme/ThemeProvider';
+import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
 import { CardViewer } from '@/features/flashcards/CardViewer';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
-import { Chip, Glyph, LevelPill, RoundBtn, catTones } from '@/features/flashcards/deckUi';
+import { Glyph, LevelPill, RoundBtn, catTones, type GlyphName } from '@/features/flashcards/deckUi';
 import {
   CARD_SORTS,
   filterCards,
@@ -22,6 +22,7 @@ import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { DocView } from '@/features/flashcards/DocView';
 import { DeckCardSide } from '@/features/flashcards/DeckCardSide';
 import { DeckViewSheet } from '@/features/flashcards/DeckViewSheet';
+import { OptionMenu } from '@/features/flashcards/OptionMenu';
 import { CONFLICT_KEY } from '@/features/flashcards/ProjectDeckCard';
 import { Sheet } from '@/features/habits/Sheet';
 import { habitsTheme } from '@/features/habits/habitsTheme';
@@ -90,6 +91,7 @@ export default function DeckScreen() {
   const [subOpen, setSubOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [menu, setMenu] = useState<'level' | 'sort' | null>(null);
   const ht = useMemo(() => habitsTheme(th.scheme, undefined, th.style), [th.scheme, th.style]);
   const [linkProblem, setLinkProblem] = useState<string | null>(null);
 
@@ -110,6 +112,7 @@ export default function DeckScreen() {
       levels: services.games.cardLevels(repo.cards(id)),
       childCounts: repo.childCounts(id),
       learnt: services.study.learnt(),
+      favorites: services.study.favorites(),
       questions: repo.questionCounts(),
       branchCards: repo.branchCardCount(id),
       games: services.games.deckStats().get(id)?.games ?? 0,
@@ -129,7 +132,7 @@ export default function DeckScreen() {
       </View>
     );
   }
-  const { deck, decks, kids, counts, levels, learnt, childCounts } = data;
+  const { deck, decks, kids, counts, levels, learnt, favorites, childCounts } = data;
   const filter = localPrefs.fcViewStatus;
   const passes =
     filter === 'dup'
@@ -427,13 +430,6 @@ export default function DeckScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <RoundBtn
-            th={th}
-            testID="fcd-close"
-            label={t('comune.chiudi')}
-            glyph="close"
-            onPress={() => router.back()}
-          />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -534,6 +530,112 @@ export default function DeckScreen() {
           </RoundBtn>
         </View>
 
+        {selecting ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Pressable
+              testID="fcd-select-cancel"
+              accessibilityRole="button"
+              accessibilityLabel={t('fc.vis_annulla_sel')}
+              onPress={stopSelecting}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: th.surface2,
+              }}
+            >
+              <Glyph name="close" size={15} color={th.text2} stroke={2.6} />
+            </Pressable>
+            <Pressable
+              testID="fcd-select-all"
+              accessibilityRole="button"
+              onPress={() =>
+                setPicked(
+                  picked.size === cards.length ? new Set() : new Set(cards.map((c) => c.uuid)),
+                )
+              }
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 13,
+                borderRadius: 99,
+                backgroundColor: th.surface2,
+              }}
+            >
+              <Text style={{ color: th.text, fontSize: 12.5, fontWeight: '800' }}>
+                {t('vocab.vi_tutte')}
+              </Text>
+            </Pressable>
+            <View
+              style={{
+                paddingVertical: 7,
+                paddingHorizontal: 12,
+                borderRadius: 99,
+                backgroundColor: tone.color,
+              }}
+            >
+              <Text
+                testID="fcd-picked"
+                style={{
+                  color: '#fff',
+                  fontSize: 12.5,
+                  fontWeight: '800',
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {picked.size}
+              </Text>
+            </View>
+            {picked.size ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 6, alignItems: 'center' }}
+                style={{ flex: 1 }}
+              >
+                {(
+                  [
+                    ['move', 'fcd-bulk-move', t('vocab.cat_sposta_attr'), false],
+                    ['join', 'fcd-bulk-join', t('vocab.vi_unisci'), false],
+                    ['delete', 'fcd-bulk-delete', t('comune.elimina'), true],
+                  ] as const
+                ).map(([key, tid, label, danger]) => (
+                  <Pressable
+                    key={key}
+                    testID={tid}
+                    accessibilityRole="button"
+                    onPress={() => setBulk(bulk === key ? null : key)}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      borderRadius: 99,
+                      backgroundColor:
+                        bulk === key
+                          ? danger
+                            ? th.red
+                            : tone.color
+                          : danger
+                            ? rgba(th.red, 0.14)
+                            : rgba(th.blue, 0.14),
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: '800',
+                        color: bulk === key ? '#fff' : danger ? th.red : th.blue,
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+          </View>
+        ) : null}
+
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View
             style={{
@@ -542,11 +644,12 @@ export default function DeckScreen() {
               alignItems: 'center',
               gap: 8,
               backgroundColor: th.surface2,
-              borderRadius: 19,
-              paddingHorizontal: 14,
+              borderRadius: 18,
+              height: 36,
+              paddingHorizontal: 12,
             }}
           >
-            <Glyph name="search" size={16} color={th.text3} stroke={2.3} />
+            <Glyph name="search" size={15} color={th.text3} stroke={2.3} />
             <TextInput
               testID="fcd-search"
               value={text}
@@ -558,25 +661,64 @@ export default function DeckScreen() {
               style={{
                 flex: 1,
                 color: th.text,
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: '600',
-                paddingVertical: 10,
+                paddingVertical: 0,
               }}
             />
           </View>
-          <RoundBtn
+          {perLevel.size ? (
+            <Pressable
+              testID="fcd-level"
+              accessibilityRole="button"
+              accessibilityLabel={t('fcv.vis_livello')}
+              onPress={() => setMenu('level')}
+              style={{
+                maxWidth: 140,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 7,
+                height: 36,
+                paddingLeft: 12,
+                paddingRight: 11,
+                borderRadius: 18,
+                backgroundColor: th.surface2,
+              }}
+            >
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: level ? LEVEL_COLORS[level] : 'transparent',
+                  marginLeft: -2,
+                  display: level ? 'flex' : 'none',
+                }}
+              />
+              <Text
+                numberOfLines={1}
+                style={{ flexShrink: 1, color: th.text, fontSize: 13, fontWeight: '700' }}
+              >
+                {level ? t(`fcv.liv_${level}`) : t('fc.vis_tutti_livelli')}
+              </Text>
+              <View style={{ transform: [{ rotate: '90deg' }] }}>
+                <Glyph name="chev" size={12} color={th.text2} stroke={2.6} />
+              </View>
+            </Pressable>
+          ) : null}
+          <ToolBtn
             th={th}
             testID="fcd-sort"
             label={`${t('fc.vis_ordina')}: ${t(SORT_LABELS[sort])}`}
             glyph="sort"
             dot={sort !== 'position' ? tone.color : undefined}
-            onPress={() => setSort(CARD_SORTS[(CARD_SORTS.indexOf(sort) + 1) % CARD_SORTS.length]!)}
+            onPress={() => setMenu('sort')}
           />
-          <RoundBtn
+          <ToolBtn
             th={th}
             testID="fcd-select"
             label={selecting ? t('fc.vis_annulla_sel') : t('vocab.vi_seleziona')}
-            glyph="check"
+            glyph="checkbox"
             active={selecting}
             onPress={() => (selecting ? stopSelecting() : setSelecting(true))}
           />
@@ -1076,32 +1218,6 @@ export default function DeckScreen() {
         ) : null}
 
         <View style={{ gap: 10 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 7, alignItems: 'center' }}
-          >
-            {perLevel.size
-              ? [
-                  ['' as const, t('fc.vis_tutti_livelli'), byStatus.length] as const,
-                  ...LEVELS.filter((l) => perLevel.has(l)).map(
-                    (l) => [l, t(`fcv.liv_${l}`), perLevel.get(l) ?? 0] as const,
-                  ),
-                ].map(([v, label, n]) => (
-                  <Chip
-                    key={v || 'all'}
-                    th={th}
-                    tone={tone}
-                    testID={`fcd-level-filter-${v || 'all'}`}
-                    label={v ? `${label} (${n})` : label}
-                    dot={v ? LEVEL_COLORS[v] : undefined}
-                    on={level === v}
-                    onPress={() => setLevel(v)}
-                  />
-                ))
-              : null}
-          </ScrollView>
-
           <View
             style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}
           >
@@ -1115,56 +1231,8 @@ export default function DeckScreen() {
               }).replace(/<[^>]+>/g, '')}
             </Text>
           </View>
-          {selecting ? (
+          {selecting && bulk && picked.size ? (
             <Card style={{ padding: 12, gap: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <Pressable
-                  testID="fcd-select-all"
-                  accessibilityRole="button"
-                  onPress={() =>
-                    setPicked(
-                      picked.size === cards.length ? new Set() : new Set(cards.map((c) => c.uuid)),
-                    )
-                  }
-                >
-                  <Text style={{ color: th.brand, fontWeight: '600' }}>{t('vocab.vi_tutte')}</Text>
-                </Pressable>
-                <Text testID="fcd-picked" style={{ color: th.text, fontWeight: '700' }}>
-                  {picked.size}
-                </Text>
-                <View style={{ flex: 1 }} />
-                {picked.size ? (
-                  <>
-                    <Pressable
-                      testID="fcd-bulk-move"
-                      accessibilityRole="button"
-                      onPress={() => setBulk(bulk === 'move' ? null : 'move')}
-                    >
-                      <Text style={{ color: th.brand, fontWeight: '600' }}>
-                        {t('vocab.cat_sposta_attr')}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      testID="fcd-bulk-join"
-                      accessibilityRole="button"
-                      onPress={() => setBulk(bulk === 'join' ? null : 'join')}
-                    >
-                      <Text style={{ color: th.brand, fontWeight: '600' }}>
-                        {t('vocab.vi_unisci')}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      testID="fcd-bulk-delete"
-                      accessibilityRole="button"
-                      onPress={() => setBulk(bulk === 'delete' ? null : 'delete')}
-                    >
-                      <Text style={{ color: th.red, fontWeight: '600' }}>
-                        {t('comune.elimina')}
-                      </Text>
-                    </Pressable>
-                  </>
-                ) : null}
-              </View>
               {bulk === 'move' && picked.size ? (
                 <DeckPicker
                   decks={decks}
@@ -1274,6 +1342,7 @@ export default function DeckScreen() {
               {cards.map((c) => {
                 const title = isTitleCard(c, childCounts.get(c.uuid) ?? 0);
                 const isLearnt = learnt.has(c.uuid);
+                const isFav = favorites.has(c.uuid);
                 const isPicked = selecting && picked.has(c.uuid);
                 const lvl = levels.get(c.uuid);
                 const pressCard = () => {
@@ -1356,6 +1425,33 @@ export default function DeckScreen() {
                           )}
                         </Pressable>
                       )}
+                      {!selecting ? (
+                        <Pressable
+                          testID={`fcd-fav-${c.uuid}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('fc.gm_preferiti')}
+                          accessibilityState={{ selected: isFav }}
+                          hitSlop={6}
+                          onPress={() => {
+                            services.study.setFavorite(c.uuid, false, !isFav);
+                            changed();
+                          }}
+                          style={{
+                            width: 30,
+                            height: 30,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Glyph
+                            name="star"
+                            size={19}
+                            color={isFav ? '#FFB800' : rgba(th.text3, 0.7)}
+                            fill={isFav ? '#FFB800' : undefined}
+                            stroke={2}
+                          />
+                        </Pressable>
+                      ) : null}
                       {isLearnt ? (
                         <Text
                           testID={`fcd-learnt-${c.uuid}`}
@@ -1494,6 +1590,42 @@ export default function DeckScreen() {
           </LinearGradient>
         </Pressable>
       ) : null}
+      {menu === 'level' ? (
+        <OptionMenu
+          testID="fcd-level-menu"
+          title={t('fcv.vis_livello')}
+          value={level}
+          options={[
+            {
+              value: '',
+              label: t('fc.vis_tutti_livelli'),
+              testID: 'fcd-level-filter-all',
+            },
+            ...LEVELS.filter((l) => perLevel.has(l)).map((l) => ({
+              value: l,
+              label: `${t(`fcv.liv_${l}`)} (${perLevel.get(l) ?? 0})`,
+              dot: LEVEL_COLORS[l],
+              testID: `fcd-level-filter-${l}`,
+            })),
+          ]}
+          onPick={(v) => setLevel(v === '' ? '' : (LEVELS.find((l) => l === v) ?? ''))}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
+      {menu === 'sort' ? (
+        <OptionMenu
+          testID="fcd-sort-menu"
+          title={t('fc.vis_ordina')}
+          value={sort}
+          options={CARD_SORTS.map((k) => ({
+            value: k,
+            label: t(SORT_LABELS[k]),
+            testID: `fcd-sort-${k}`,
+          }))}
+          onPick={(v) => setSort(CARD_SORTS.find((k) => k === v) ?? 'position')}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
       {linkOpen ? (
         <Sheet
           visible
@@ -1518,5 +1650,63 @@ export default function DeckScreen() {
         </Sheet>
       ) : null}
     </View>
+  );
+}
+
+/** Il tondo accanto alla ricerca (`.tb-icon-btn` del sito): 36 px, fondo grigio, pallino se qualcosa non è come di solito. */
+function ToolBtn({
+  th,
+  glyph,
+  label,
+  testID,
+  onPress,
+  active,
+  dot,
+}: {
+  th: Theme;
+  glyph: GlyphName;
+  label: string;
+  testID: string;
+  onPress: () => void;
+  active?: boolean;
+  dot?: string;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: !!active }}
+      hitSlop={4}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: active ? th.brandSoft : th.surface2,
+        transform: [{ scale: pressed ? 0.92 : 1 }],
+      })}
+    >
+      <Glyph name={glyph} size={17} color={active ? th.brand : th.text2} stroke={2.3} />
+      {dot ? (
+        <View
+          testID={`${testID}-dot`}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 3,
+            right: 3,
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: dot,
+            borderWidth: 1.5,
+            borderColor: th.bg,
+          }}
+        />
+      ) : null}
+    </Pressable>
   );
 }

@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+  type ReactNode,
+} from 'react';
 import {
   Pressable,
   Text,
@@ -47,6 +55,7 @@ import {
   toggleMark,
   type BlockKind,
 } from './docEdit';
+import { BarDockContext } from './BarDock';
 import { FormatBar, type BarActions, type BarState, type PanelId, type Target } from './FormatBar';
 
 const MONO = 'Menlo';
@@ -113,6 +122,9 @@ export function RichEditor({
     },
     [],
   );
+  // se la pagina ha un posto per la barra, la barra va lì (ferma sopra la tastiera) invece che dentro il campo
+  const dock = useContext(BarDockContext);
+  useEffect(() => () => dock?.publish(testID, null), [dock, testID]);
 
   const commit = (next: Doc) => {
     setDoc(next);
@@ -555,18 +567,24 @@ export function RichEditor({
     );
   }
 
+  const bar = (
+    <FormatBar
+      testID={testID}
+      state={barState}
+      actions={actions}
+      onTouch={() => {
+        barTouched.current = nowMs();
+      }}
+    />
+  );
+  // dopo ogni disegno la pagina riceve la barra aggiornata (con le ultime scelte), oppure se ne va quando il campo non è attivo
+  useEffect(() => {
+    dock?.publish(testID, active ? () => bar : null);
+  });
+
   return (
     <View testID={testID} style={{ gap: 8 }}>
-      {active ? (
-        <FormatBar
-          testID={testID}
-          state={barState}
-          actions={actions}
-          onTouch={() => {
-            barTouched.current = nowMs();
-          }}
-        />
-      ) : null}
+      {active && !dock ? bar : null}
 
       <View
         style={{

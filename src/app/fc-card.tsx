@@ -10,15 +10,13 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { Glyph, RoundBtn, catTones, type CatTones } from '@/features/flashcards/deckUi';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
-import { CardAudio } from '@/features/flashcards/CardAudio';
+import { BarDockProvider } from '@/features/flashcards/BarDock';
 import { CardImage } from '@/features/flashcards/CardImage';
-import { DocView } from '@/features/flashcards/DocView';
 import { RichEditor } from '@/features/flashcards/RichEditor';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
 import { rgba } from '@/features/grades/ui';
 import { HoIcon } from '@/features/home/HomeKit';
-import { AudioField } from '@/features/media/AudioField';
-import { ImageField } from '@/features/media/ImageField';
+import { AudioPreview, MicButton, PhotoButton, PhotoPreview } from '@/features/media/MediaIcons';
 import { Card, PrimaryButton, TextButton } from '@/ui/kit';
 
 type Side = 'q' | 'a';
@@ -41,7 +39,7 @@ export default function CardScreen() {
   }>();
   const { services, version, changed } = useApp();
 
-  const [editing, setEditing] = useState(false);
+  const [micFailed, setMicFailed] = useState<{ q: boolean; a: boolean }>({ q: false, a: false });
   const [draft, setDraft] = useState<{ q: string | null; a: string | null }>({ q: null, a: null });
   const [moving, setMoving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -144,9 +142,10 @@ export default function CardScreen() {
   const { item } = data;
   const map = deckMap(data.decks);
   const crumbs = data.deckId ? [...deckPath(map, data.deckId), map.get(data.deckId)!] : [];
-  const edit = isNew || editing;
 
   const raw = (s: Side) => (s === 'q' ? item.q : item.a);
+  const row = params.sub ?? params.id ?? null;
+  const table = params.sub ? 'fc_study_subcards' : 'fc_study_cards';
   const set = (s: Side, v: string | null) => setDraft({ ...draft, [s]: v ?? '' });
 
   // la bozza è già il campo da salvare ('' = svuotato, null = non toccato)
@@ -168,9 +167,8 @@ export default function CardScreen() {
       ? repo.updateSubcard(params.sub, { question: q, answer: a })
       : repo.updateCard(params.id!, { question: q, answer: a });
     if (!ok) return;
-    setDraft({ q: null, a: null });
-    setEditing(false);
     changed();
+    router.back();
   };
 
   const deck = data.deckId ? map.get(data.deckId) : undefined;
@@ -193,40 +191,50 @@ export default function CardScreen() {
           }}
         />
         <Eyebrow label={label} color={accent} />
-        {edit ? (
-          <RichEditor
-            testID={`fcc-${s}`}
-            value={raw(s)}
-            onChange={(v) => set(s, v)}
-            placeholder={label}
-          />
-        ) : (
-          <DocView testID={`fcc-${s}-view`} raw={raw(s)} />
-        )}
-        {edit && !isNew ? (
-          <ImageField
-            testID={`fcc-${s}-imgfield`}
-            table={params.sub ? 'fc_study_subcards' : 'fc_study_cards'}
-            uuid={(params.sub ?? params.id)!}
-            slot={s === 'q' ? 'question_image' : 'answer_image'}
-            name={s === 'q' ? item.qImg : item.aImg}
-            label={s === 'q' ? t('fc.ifc_img_domanda') : t('fc.ifc_img_risposta')}
-          />
-        ) : (
-          <CardImage testID={`fcc-${s}-image`} name={s === 'q' ? item.qImg : item.aImg} />
-        )}
-        {edit && !isNew ? (
-          <AudioField
-            testID={`fcc-${s}-audfield`}
-            table={params.sub ? 'fc_study_subcards' : 'fc_study_cards'}
-            uuid={(params.sub ?? params.id)!}
-            slot={s === 'q' ? 'question_audio' : 'answer_audio'}
-            name={s === 'q' ? item.qAud : item.aAud}
-            label={s === 'q' ? t('fc.app_audio_domanda') : t('fc.app_audio_risposta')}
-          />
-        ) : (
-          <CardAudio testID={`fcc-${s}-audio`} name={s === 'q' ? item.qAud : item.aAud} />
-        )}
+        <RichEditor
+          testID={`fcc-${s}`}
+          value={raw(s)}
+          onChange={(v) => set(s, v)}
+          placeholder={label}
+        />
+        {row ? (
+          <>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <PhotoButton
+                testID={`fcc-${s}-imgfield`}
+                table={table}
+                uuid={row}
+                slot={s === 'q' ? 'question_image' : 'answer_image'}
+                name={s === 'q' ? item.qImg : item.aImg}
+                color={tone.color}
+              />
+              <MicButton
+                testID={`fcc-${s}-audfield`}
+                table={table}
+                uuid={row}
+                slot={s === 'q' ? 'question_audio' : 'answer_audio'}
+                name={s === 'q' ? item.qAud : item.aAud}
+                color={tone.color}
+                onError={(failed) => setMicFailed({ ...micFailed, [s]: failed })}
+              />
+            </View>
+            <PhotoPreview
+              testID={`fcc-${s}-imgfield`}
+              table={table}
+              uuid={row}
+              slot={s === 'q' ? 'question_image' : 'answer_image'}
+              name={s === 'q' ? item.qImg : item.aImg}
+            />
+            <AudioPreview
+              testID={`fcc-${s}-audfield`}
+              table={table}
+              uuid={row}
+              slot={s === 'q' ? 'question_audio' : 'answer_audio'}
+              name={s === 'q' ? item.qAud : item.aAud}
+              failed={micFailed[s]}
+            />
+          </>
+        ) : null}
       </Card>
     );
   };
@@ -235,11 +243,7 @@ export default function CardScreen() {
     ? isSub
       ? t('fc.app_nuova_carta_figlia')
       : t('fc.mfc_tb_nuova')
-    : edit
-      ? t('fc.mfc_tb_modifica')
-      : isSub
-        ? t('fc.app_carta_figlia')
-        : t('fc.vis_una_carta');
+    : t('fc.mfc_tb_modifica');
 
   const remove = () => {
     if (params.sub) repo.removeSubcard(params.sub);
@@ -250,428 +254,418 @@ export default function CardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
-      <View
-        style={{
-          // la pagina è un foglio: l'area sicura in alto è già in parte coperta, non va contata due volte
-          paddingTop: Math.max(insets.top - 20, 12),
-          paddingBottom: 12,
-          paddingHorizontal: 14,
-          backgroundColor: th.headerGlass,
-          borderBottomWidth: 0.5,
-          borderBottomColor: th.hairline,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <RoundBtn
-            th={th}
-            testID="fcc-close"
-            label={t('comune.chiudi')}
-            glyph="close"
-            onPress={() => router.back()}
-          />
-          <LinearGradient
-            testID="fcc-hero"
-            colors={[tone.light, tone.color, tone.dark]}
-            locations={[0, 0.55, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              paddingVertical: 8,
-              paddingHorizontal: 14,
-              borderRadius: 16,
-              boxShadow: `0 8px 20px -8px ${tone.line}, inset 0 1px 0 rgba(255,255,255,.25)`,
-            }}
-          >
-            <View
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(255,255,255,.22)',
-              }}
-            >
-              <Glyph name="card" size={19} color="#fff" />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                style={{
-                  color: 'rgba(255,255,255,.78)',
-                  fontSize: 10,
-                  fontWeight: '800',
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                }}
-              >
-                {title}
-              </Text>
-              <Text
-                testID="fcc-path"
-                numberOfLines={1}
-                style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 }}
-              >
-                {path || '—'}
-              </Text>
-            </View>
-          </LinearGradient>
-          {!isNew && !editing ? (
+      <BarDockProvider>
+        <View
+          style={{
+            // la pagina è un foglio: l'area sicura in alto è già in parte coperta, non va contata due volte
+            paddingTop: Math.max(insets.top - 20, 12),
+            paddingBottom: 12,
+            paddingHorizontal: 14,
+            backgroundColor: th.headerGlass,
+            borderBottomWidth: 0.5,
+            borderBottomColor: th.hairline,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <RoundBtn
               th={th}
-              testID="fcc-edit"
-              label={t('comune.modifica')}
-              glyph="pencil"
-              tone={{ from: '#FFAA4D', to: '#FF6B2C', shadow: 'rgba(255,122,26,.6)' }}
-              onPress={() => setEditing(true)}
+              testID="fcc-close"
+              label={t('comune.chiudi')}
+              glyph="close"
+              onPress={() => router.back()}
             />
-          ) : null}
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{
-          padding: 14,
-          paddingBottom: insets.bottom + (edit ? 110 : 48),
-          gap: 14,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {field('q')}
-        {field('a')}
-
-        {item.media ? (
-          <Text testID="fcc-media" style={{ color: th.text2, fontSize: 13 }}>
-            🔊 {t('fc.app_audio_sul_sito')}
-          </Text>
-        ) : null}
-
-        {target && study ? (
-          <Card style={{ paddingVertical: 6, paddingHorizontal: 16 }}>
-            <ToggleRow
-              testID="fcc-learnt"
-              label={t('fc.gm_imparato')}
-              value={study.learnt}
-              color={th.green}
-              icon={
-                <Glyph
-                  name="check"
-                  size={16}
-                  color={study.learnt ? th.green : th.text3}
-                  stroke={2.6}
-                />
-              }
-              onChange={(v) => {
-                services.study.setLearnt(target, !!params.sub, v);
-                changed();
-              }}
-            />
-            <View style={{ height: 0.5, backgroundColor: th.hairline, marginLeft: 44 }} />
-            <ToggleRow
-              testID="fcc-favorite"
-              label={t('fc.gm_preferiti')}
-              value={study.favorite}
-              color="#FF2D55"
-              icon={
-                <HoIcon
-                  name="heart"
-                  size={16}
-                  color={study.favorite ? '#FF2D55' : th.text3}
-                  sw={2.4}
-                />
-              }
-              onChange={(v) => {
-                services.study.setFavorite(target, !!params.sub, v);
-                changed();
-              }}
-            />
-          </Card>
-        ) : null}
-
-        {target && study ? (
-          <View style={{ gap: 10 }}>
-            <SectionHead
-              icon={<HoIcon name="bulb" size={14} color={th.text3} sw={2.3} />}
-              label={t('fc.exm_conteggio', { n: study.examples.length })}
-            />
-            {study.examples.length ? (
-              <Card>
-                {study.examples.map((ex, i) => (
-                  <View
-                    key={ex.uuid}
-                    style={{
-                      padding: 14,
-                      gap: 8,
-                      borderTopWidth: i ? 0.5 : 0,
-                      borderTopColor: th.hairline,
-                    }}
-                  >
-                    {editExample?.uuid === ex.uuid ? (
-                      <>
-                        <TextInput
-                          testID={`fcc-ex-input-${ex.uuid}`}
-                          value={editExample.text}
-                          onChangeText={(v) => setEditExample({ uuid: ex.uuid, text: v })}
-                          multiline
-                          autoFocus
-                          placeholder={t('fc.exm_ph_testo')}
-                          placeholderTextColor={th.text3}
-                          style={{ color: th.text, fontSize: 16, minHeight: 60 }}
-                        />
-                        <View style={{ flexDirection: 'row', gap: 12 }}>
-                          <View style={{ flex: 1 }}>
-                            <TextButton
-                              testID={`fcc-ex-cancel-${ex.uuid}`}
-                              label={t('comune.annulla')}
-                              onPress={() => setEditExample(null)}
-                            />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <PrimaryButton
-                              testID={`fcc-ex-save-${ex.uuid}`}
-                              label={t('fc.exm_salva')}
-                              disabled={!editExample.text.trim()}
-                              onPress={() => {
-                                if (services.study.updateExample(ex.uuid, editExample.text)) {
-                                  setEditExample(null);
-                                  changed();
-                                }
-                              }}
-                            />
-                          </View>
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={{ color: th.text, fontSize: 16, lineHeight: 22 }}>
-                          {ex.example_text}
-                        </Text>
-                        <CardImage
-                          testID={`fcc-ex-image-${ex.uuid}`}
-                          folder="example"
-                          name={ex.example_image}
-                          height={150}
-                        />
-                        {ex.example_audio ? (
-                          <Text style={{ color: th.text2, fontSize: 13 }}>
-                            🔊 {t('fc.app_audio_sul_sito')}
-                          </Text>
-                        ) : null}
-                        <View style={{ flexDirection: 'row', gap: 18 }}>
-                          <Pressable
-                            testID={`fcc-ex-edit-${ex.uuid}`}
-                            accessibilityRole="button"
-                            onPress={() =>
-                              setEditExample({ uuid: ex.uuid, text: ex.example_text ?? '' })
-                            }
-                          >
-                            <Text style={{ color: tone.color, fontWeight: '700' }}>
-                              {t('comune.modifica')}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            testID={`fcc-ex-delete-${ex.uuid}`}
-                            accessibilityRole="button"
-                            onPress={() => {
-                              services.study.removeExample(ex.uuid);
-                              changed();
-                            }}
-                          >
-                            <Text style={{ color: th.red, fontWeight: '700' }}>
-                              {t('comune.elimina')}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                ))}
-              </Card>
-            ) : null}
-            <View
+            <LinearGradient
+              testID="fcc-hero"
+              colors={[tone.light, tone.color, tone.dark]}
+              locations={[0, 0.55, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
-                padding: 12,
+                flex: 1,
+                minWidth: 0,
+                flexDirection: 'row',
+                alignItems: 'center',
                 gap: 10,
+                paddingVertical: 8,
+                paddingHorizontal: 14,
                 borderRadius: 16,
-                borderWidth: 1.5,
-                borderStyle: 'dashed',
-                borderColor: rgba(tone.color, 0.4),
+                boxShadow: `0 8px 20px -8px ${tone.line}, inset 0 1px 0 rgba(255,255,255,.25)`,
               }}
             >
-              <TextInput
-                testID="fcc-ex-new"
-                value={newExample}
-                onChangeText={setNewExample}
-                multiline
-                placeholder={t('fc.exm_ph_testo')}
-                placeholderTextColor={th.text3}
-                style={{ color: th.text, fontSize: 16, minHeight: 44 }}
-              />
-              <PillButton
-                testID="fcc-ex-add"
-                label={t('fc.exm_aggiungi_nuovo')}
-                tone={tone}
-                disabled={!newExample.trim()}
-                onPress={() => {
-                  if (!newExample.trim()) return;
-                  if (services.study.addExample(target, !!params.sub, newExample)) {
-                    setNewExample('');
-                    changed();
-                  }
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(255,255,255,.22)',
+                }}
+              >
+                <Glyph name="card" size={19} color="#fff" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,.78)',
+                    fontSize: 10,
+                    fontWeight: '800',
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {title}
+                </Text>
+                <Text
+                  testID="fcc-path"
+                  numberOfLines={1}
+                  style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 }}
+                >
+                  {path || '—'}
+                </Text>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{
+            padding: 14,
+            paddingBottom: insets.bottom + 110,
+            gap: 14,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {field('q')}
+          {field('a')}
+
+          {item.media ? (
+            <Text testID="fcc-media" style={{ color: th.text2, fontSize: 13 }}>
+              🔊 {t('fc.app_audio_sul_sito')}
+            </Text>
+          ) : null}
+
+          {target && study ? (
+            <Card style={{ paddingVertical: 6, paddingHorizontal: 16 }}>
+              <ToggleRow
+                testID="fcc-learnt"
+                label={t('fc.gm_imparato')}
+                value={study.learnt}
+                color={th.green}
+                icon={
+                  <Glyph
+                    name="check"
+                    size={16}
+                    color={study.learnt ? th.green : th.text3}
+                    stroke={2.6}
+                  />
+                }
+                onChange={(v) => {
+                  services.study.setLearnt(target, !!params.sub, v);
+                  changed();
                 }}
               />
-            </View>
-          </View>
-        ) : null}
-
-        {!isNew && !isSub ? (
-          <View style={{ gap: 10 }}>
-            <SectionHead
-              icon={<Glyph name="card" size={14} color={th.text3} stroke={2.3} />}
-              label={t('fc.app_carte_figlie')}
-            />
-            {data.subs.length ? (
-              <Card>
-                {data.subs.map((s, i) => (
-                  <Pressable
-                    key={s.uuid}
-                    testID={`fcc-sub-${s.uuid}`}
-                    accessibilityRole="button"
-                    onPress={() => router.push({ pathname: '/fc-card', params: { sub: s.uuid } })}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: 14,
-                      borderTopWidth: i ? 0.5 : 0,
-                      borderTopColor: th.hairline,
-                    }}
-                  >
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={{ color: th.text, fontWeight: '700' }} numberOfLines={2}>
-                        {docToPlain(parseDoc(s.question_desc)) || '—'}
-                      </Text>
-                      <Text style={{ color: th.text2 }} numberOfLines={2}>
-                        {docToPlain(parseDoc(s.answer_desc))}
-                      </Text>
-                    </View>
-                    <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
-                  </Pressable>
-                ))}
-              </Card>
-            ) : null}
-            <PillButton
-              testID="fcc-add-sub"
-              label={t('fc.ifc_aggiungi_figlio')}
-              tone={tone}
-              glyph="plus"
-              onPress={() => router.push({ pathname: '/fc-card', params: { parent: params.id } })}
-            />
-          </View>
-        ) : null}
-
-        {params.sub && data.parentCard ? (
-          <PillButton
-            testID="fcc-split"
-            label={t('vocab.vi_separa')}
-            tone={tone}
-            onPress={() => {
-              const made = repo.unjoinSubcard(params.sub!);
-              if (!made) return;
-              changed();
-              router.replace({ pathname: '/fc-card', params: { id: made } });
-            }}
-          />
-        ) : null}
-
-        {params.sub && data.parentCard ? (
-          <PillButton
-            testID="fcc-to-parent"
-            label={t('fc.vis_una_carta')}
-            tone={tone}
-            onPress={() =>
-              router.replace({ pathname: '/fc-card', params: { id: data.parentCard! } })
-            }
-          />
-        ) : null}
-
-        {!isNew && !isSub ? (
-          <Card>
-            <Pressable
-              testID="fcc-move"
-              accessibilityRole="button"
-              onPress={() => setMoving(!moving)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}
-            >
-              <Glyph name="folder" size={18} color={tone.color} />
-              <Text style={{ flex: 1, color: th.text, fontSize: 16, fontWeight: '600' }}>
-                {t('fc.app_sposta_carta')}
-              </Text>
-              <View style={{ transform: [{ rotate: moving ? '90deg' : '0deg' }] }}>
-                <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
-              </View>
-            </Pressable>
-            {moving ? (
-              <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-                <Card style={{ backgroundColor: th.surface2 }}>
-                  <DeckPicker
-                    decks={data.decks}
-                    value={data.deckId}
-                    onCreate={(name, parent) => repo.createDeck({ name, parent })}
-                    onPick={(d) => {
-                      if (d) repo.moveCard(params.id!, d);
-                      setMoving(false);
-                      changed();
-                    }}
+              <View style={{ height: 0.5, backgroundColor: th.hairline, marginLeft: 44 }} />
+              <ToggleRow
+                testID="fcc-favorite"
+                label={t('fc.gm_preferiti')}
+                value={study.favorite}
+                color="#FF2D55"
+                icon={
+                  <HoIcon
+                    name="heart"
+                    size={16}
+                    color={study.favorite ? '#FF2D55' : th.text3}
+                    sw={2.4}
                   />
-                </Card>
-              </View>
-            ) : null}
-          </Card>
-        ) : null}
-
-        {!isNew ? (
-          <Card style={{ padding: 14, gap: 10 }}>
-            {deleting ? (
-              <>
-                <Text style={{ color: th.text, fontWeight: '700' }}>
-                  {isSub ? t('fc.app_elimina_carta_figlia') : t('fc.vis_eliminare_carta')}
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <TextButton
-                      testID="fcc-delete-cancel"
-                      label={t('comune.annulla')}
-                      onPress={() => setDeleting(false)}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      testID="fcc-delete-confirm"
-                      danger
-                      label={t('comune.elimina')}
-                      onPress={remove}
-                    />
-                  </View>
-                </View>
-              </>
-            ) : (
-              <TextButton
-                testID="fcc-delete"
-                danger
-                label={t('comune.elimina')}
-                onPress={() => setDeleting(true)}
+                }
+                onChange={(v) => {
+                  services.study.setFavorite(target, !!params.sub, v);
+                  changed();
+                }}
               />
-            )}
-          </Card>
-        ) : null}
-      </ScrollView>
+            </Card>
+          ) : null}
 
-      {edit ? (
+          {target && study ? (
+            <View style={{ gap: 10 }}>
+              <SectionHead
+                icon={<HoIcon name="bulb" size={14} color={th.text3} sw={2.3} />}
+                label={t('fc.exm_conteggio', { n: study.examples.length })}
+              />
+              {study.examples.length ? (
+                <Card>
+                  {study.examples.map((ex, i) => (
+                    <View
+                      key={ex.uuid}
+                      style={{
+                        padding: 14,
+                        gap: 8,
+                        borderTopWidth: i ? 0.5 : 0,
+                        borderTopColor: th.hairline,
+                      }}
+                    >
+                      {editExample?.uuid === ex.uuid ? (
+                        <>
+                          <TextInput
+                            testID={`fcc-ex-input-${ex.uuid}`}
+                            value={editExample.text}
+                            onChangeText={(v) => setEditExample({ uuid: ex.uuid, text: v })}
+                            multiline
+                            autoFocus
+                            placeholder={t('fc.exm_ph_testo')}
+                            placeholderTextColor={th.text3}
+                            style={{ color: th.text, fontSize: 16, minHeight: 60 }}
+                          />
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <View style={{ flex: 1 }}>
+                              <TextButton
+                                testID={`fcc-ex-cancel-${ex.uuid}`}
+                                label={t('comune.annulla')}
+                                onPress={() => setEditExample(null)}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <PrimaryButton
+                                testID={`fcc-ex-save-${ex.uuid}`}
+                                label={t('fc.exm_salva')}
+                                disabled={!editExample.text.trim()}
+                                onPress={() => {
+                                  if (services.study.updateExample(ex.uuid, editExample.text)) {
+                                    setEditExample(null);
+                                    changed();
+                                  }
+                                }}
+                              />
+                            </View>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={{ color: th.text, fontSize: 16, lineHeight: 22 }}>
+                            {ex.example_text}
+                          </Text>
+                          <CardImage
+                            testID={`fcc-ex-image-${ex.uuid}`}
+                            folder="example"
+                            name={ex.example_image}
+                            height={150}
+                          />
+                          {ex.example_audio ? (
+                            <Text style={{ color: th.text2, fontSize: 13 }}>
+                              🔊 {t('fc.app_audio_sul_sito')}
+                            </Text>
+                          ) : null}
+                          <View style={{ flexDirection: 'row', gap: 18 }}>
+                            <Pressable
+                              testID={`fcc-ex-edit-${ex.uuid}`}
+                              accessibilityRole="button"
+                              onPress={() =>
+                                setEditExample({ uuid: ex.uuid, text: ex.example_text ?? '' })
+                              }
+                            >
+                              <Text style={{ color: tone.color, fontWeight: '700' }}>
+                                {t('comune.modifica')}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              testID={`fcc-ex-delete-${ex.uuid}`}
+                              accessibilityRole="button"
+                              onPress={() => {
+                                services.study.removeExample(ex.uuid);
+                                changed();
+                              }}
+                            >
+                              <Text style={{ color: th.red, fontWeight: '700' }}>
+                                {t('comune.elimina')}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  ))}
+                </Card>
+              ) : null}
+              <View
+                style={{
+                  padding: 12,
+                  gap: 10,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderStyle: 'dashed',
+                  borderColor: rgba(tone.color, 0.4),
+                }}
+              >
+                <TextInput
+                  testID="fcc-ex-new"
+                  value={newExample}
+                  onChangeText={setNewExample}
+                  multiline
+                  placeholder={t('fc.exm_ph_testo')}
+                  placeholderTextColor={th.text3}
+                  style={{ color: th.text, fontSize: 16, minHeight: 44 }}
+                />
+                <PillButton
+                  testID="fcc-ex-add"
+                  label={t('fc.exm_aggiungi_nuovo')}
+                  tone={tone}
+                  disabled={!newExample.trim()}
+                  onPress={() => {
+                    if (!newExample.trim()) return;
+                    if (services.study.addExample(target, !!params.sub, newExample)) {
+                      setNewExample('');
+                      changed();
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {!isNew && !isSub ? (
+            <View style={{ gap: 10 }}>
+              <SectionHead
+                icon={<Glyph name="card" size={14} color={th.text3} stroke={2.3} />}
+                label={t('fc.app_carte_figlie')}
+              />
+              {data.subs.length ? (
+                <Card>
+                  {data.subs.map((s, i) => (
+                    <Pressable
+                      key={s.uuid}
+                      testID={`fcc-sub-${s.uuid}`}
+                      accessibilityRole="button"
+                      onPress={() => router.push({ pathname: '/fc-card', params: { sub: s.uuid } })}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: 14,
+                        borderTopWidth: i ? 0.5 : 0,
+                        borderTopColor: th.hairline,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={{ color: th.text, fontWeight: '700' }} numberOfLines={2}>
+                          {docToPlain(parseDoc(s.question_desc)) || '—'}
+                        </Text>
+                        <Text style={{ color: th.text2 }} numberOfLines={2}>
+                          {docToPlain(parseDoc(s.answer_desc))}
+                        </Text>
+                      </View>
+                      <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
+                    </Pressable>
+                  ))}
+                </Card>
+              ) : null}
+              <PillButton
+                testID="fcc-add-sub"
+                label={t('fc.ifc_aggiungi_figlio')}
+                tone={tone}
+                glyph="plus"
+                onPress={() => router.push({ pathname: '/fc-card', params: { parent: params.id } })}
+              />
+            </View>
+          ) : null}
+
+          {params.sub && data.parentCard ? (
+            <PillButton
+              testID="fcc-split"
+              label={t('vocab.vi_separa')}
+              tone={tone}
+              onPress={() => {
+                const made = repo.unjoinSubcard(params.sub!);
+                if (!made) return;
+                changed();
+                router.replace({ pathname: '/fc-card', params: { id: made } });
+              }}
+            />
+          ) : null}
+
+          {params.sub && data.parentCard ? (
+            <PillButton
+              testID="fcc-to-parent"
+              label={t('fc.vis_una_carta')}
+              tone={tone}
+              onPress={() =>
+                router.replace({ pathname: '/fc-card', params: { id: data.parentCard! } })
+              }
+            />
+          ) : null}
+
+          {!isNew && !isSub ? (
+            <Card>
+              <Pressable
+                testID="fcc-move"
+                accessibilityRole="button"
+                onPress={() => setMoving(!moving)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}
+              >
+                <Glyph name="folder" size={18} color={tone.color} />
+                <Text style={{ flex: 1, color: th.text, fontSize: 16, fontWeight: '600' }}>
+                  {t('fc.app_sposta_carta')}
+                </Text>
+                <View style={{ transform: [{ rotate: moving ? '90deg' : '0deg' }] }}>
+                  <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
+                </View>
+              </Pressable>
+              {moving ? (
+                <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+                  <Card style={{ backgroundColor: th.surface2 }}>
+                    <DeckPicker
+                      decks={data.decks}
+                      value={data.deckId}
+                      onCreate={(name, parent) => repo.createDeck({ name, parent })}
+                      onPick={(d) => {
+                        if (d) repo.moveCard(params.id!, d);
+                        setMoving(false);
+                        changed();
+                      }}
+                    />
+                  </Card>
+                </View>
+              ) : null}
+            </Card>
+          ) : null}
+
+          {!isNew ? (
+            <Card style={{ padding: 14, gap: 10 }}>
+              {deleting ? (
+                <>
+                  <Text style={{ color: th.text, fontWeight: '700' }}>
+                    {isSub ? t('fc.app_elimina_carta_figlia') : t('fc.vis_eliminare_carta')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <TextButton
+                        testID="fcc-delete-cancel"
+                        label={t('comune.annulla')}
+                        onPress={() => setDeleting(false)}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <PrimaryButton
+                        testID="fcc-delete-confirm"
+                        danger
+                        label={t('comune.elimina')}
+                        onPress={remove}
+                      />
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <TextButton
+                  testID="fcc-delete"
+                  danger
+                  label={t('comune.elimina')}
+                  onPress={() => setDeleting(true)}
+                />
+              )}
+            </Card>
+          ) : null}
+        </ScrollView>
+
         <View
           style={{
             position: 'absolute',
@@ -688,18 +682,13 @@ export default function CardScreen() {
             borderTopColor: th.hairline,
           }}
         >
-          {!isNew ? (
-            <View style={{ flex: 1 }}>
-              <TextButton
-                testID="fcc-cancel"
-                label={t('comune.annulla')}
-                onPress={() => {
-                  setDraft({ q: null, a: null });
-                  setEditing(false);
-                }}
-              />
-            </View>
-          ) : null}
+          <View style={{ flex: 1 }}>
+            <TextButton
+              testID="fcc-cancel"
+              label={t('comune.annulla')}
+              onPress={() => router.back()}
+            />
+          </View>
           <View style={{ flex: 1 }}>
             <PrimaryButton
               testID="fcc-save"
@@ -709,7 +698,7 @@ export default function CardScreen() {
             />
           </View>
         </View>
-      ) : null}
+      </BarDockProvider>
     </View>
   );
 }

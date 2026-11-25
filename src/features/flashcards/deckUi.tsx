@@ -5,7 +5,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import type { Theme } from '@/core/theme/ThemeProvider';
 import { rgba, shade } from '@/features/grades/ui';
@@ -28,6 +28,12 @@ const PATHS = {
   card: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 10h16',
   pencil: 'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z',
   clock: 'M12 7v5l3 2',
+  checkbox: 'm9 12 2 2 4-4',
+  photo:
+    'M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM21 15l-5-5L5 21M9 8.5h.01',
+  mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
+  trash: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
+  star: 'm12 2.5 3 6.6 7.2.8-5.4 4.9 1.5 7.2L12 18.2l-6.3 3.8 1.5-7.2-5.4-4.9 7.2-.8Z',
 } as const;
 
 export type GlyphName = keyof typeof PATHS;
@@ -53,6 +59,18 @@ export function Glyph({
       ) : null}
       {name === 'gear' ? (
         <Circle cx={12} cy={12} r={3} fill="none" stroke={color} strokeWidth={stroke} />
+      ) : null}
+      {name === 'checkbox' ? (
+        <Rect
+          x={3}
+          y={3}
+          width={18}
+          height={18}
+          rx={6}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+        />
       ) : null}
       {name === 'clock' ? (
         <Circle cx={12} cy={12} r={9} fill="none" stroke={color} strokeWidth={stroke} />
