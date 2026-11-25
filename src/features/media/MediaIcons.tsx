@@ -302,3 +302,229 @@ export function AudioPreview(p: Slot & { testID: string; failed: boolean }) {
     </>
   );
 }
+
+/** Un file scelto ma non ancora attaccato a niente (l'esempio nuovo non esiste finché non si aggiunge). */
+export type StagedFile = { uri: string; mime: string };
+
+/**
+ * Come `PhotoButton`, ma la foto resta nel modulo (`value`) invece di andare subito su una riga: serve all'esempio nuovo,
+ * che si crea solo quando si preme «aggiungi».
+ */
+export function StagePhotoButton({
+  testID,
+  color,
+  value,
+  onChange,
+}: {
+  testID: string;
+  color: string;
+  value: StagedFile | null;
+  onChange: (file: StagedFile | null) => void;
+}) {
+  const { t } = useTranslation();
+  const th = useTheme();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const pick = async (source: 'library' | 'camera') => {
+    if (busy) return;
+    setBusy(true);
+    setOpen(false);
+    try {
+      const file = await pickImage(source);
+      if (file) onChange({ uri: file.uri, mime: file.mime });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <IconBtn
+        testID={testID}
+        label={t('fcv.immagine')}
+        glyph="photo"
+        color={value ? color : th.text2}
+        on={!!value || open}
+        onPress={() => setOpen(!open)}
+      />
+      {open ? (
+        <>
+          <Pill
+            testID={`${testID}-library`}
+            label={t('comune.app_foto_libreria')}
+            color={color}
+            disabled={busy}
+            onPress={() => void pick('library')}
+          />
+          <Pill
+            testID={`${testID}-camera`}
+            label={t('comune.app_foto_scatta')}
+            color={color}
+            disabled={busy}
+            onPress={() => void pick('camera')}
+          />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/** Come `MicButton`, per il modulo dell'esempio nuovo: la registrazione resta in `value` finché non si aggiunge. */
+export function StageMicButton({
+  testID,
+  color,
+  value,
+  onChange,
+  onError,
+}: {
+  testID: string;
+  color: string;
+  value: StagedFile | null;
+  onChange: (file: StagedFile | null) => void;
+  onError: (failed: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const th = useTheme();
+  const [recording, setRecording] = useState(false);
+
+  return recording ? (
+    <Recorder
+      onDone={(uri) => {
+        setRecording(false);
+        if (!uri) {
+          onError(true);
+          return;
+        }
+        onChange({ uri: keepFile(uri, 'm4a'), mime: 'audio/mp4' });
+      }}
+    />
+  ) : (
+    <IconBtn
+      testID={`${testID}-record`}
+      label={value ? t('fc.ifc_registra') : t('fc.ifc_tocca_registrare')}
+      glyph="mic"
+      color={value ? color : th.text2}
+      on={!!value}
+      onPress={() => {
+        onError(false);
+        setRecording(true);
+      }}
+    />
+  );
+}
+
+/** La foto e il suono scelti per l'esempio nuovo, con la loro crocetta e il loro cestino. */
+export function StagedPreview({
+  testID,
+  image,
+  audio,
+  failed,
+  onClearImage,
+  onClearAudio,
+}: {
+  testID: string;
+  image: StagedFile | null;
+  audio: StagedFile | null;
+  failed: boolean;
+  onClearImage: () => void;
+  onClearAudio: () => void;
+}) {
+  const { t } = useTranslation();
+  const th = useTheme();
+  return (
+    <>
+      {image ? (
+        <View>
+          <Image
+            testID={`${testID}-image`}
+            source={{ uri: image.uri }}
+            contentFit="contain"
+            accessibilityIgnoresInvertColors
+            style={{ width: '100%', height: 160, borderRadius: 10 }}
+          />
+          <Pressable
+            testID={`${testID}-image-remove`}
+            accessibilityRole="button"
+            accessibilityLabel={t('vocab.mi_rimuovi_immagine')}
+            hitSlop={8}
+            onPress={onClearImage}
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,.55)',
+            }}
+          >
+            <Glyph name="close" size={14} color="#fff" stroke={2.8} />
+          </Pressable>
+        </View>
+      ) : null}
+      {audio ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <CardAudio testID={`${testID}-audio`} name={null} localUri={audio.uri} />
+          <Text style={{ flex: 1, color: th.text2, fontSize: 13 }}>{t('fc.ifc_audio_pronto')}</Text>
+          <Pressable
+            testID={`${testID}-audio-remove`}
+            accessibilityRole="button"
+            accessibilityLabel={t('fc.ibf_elimina_audio')}
+            hitSlop={8}
+            onPress={onClearAudio}
+          >
+            <Glyph name="trash" size={18} color={th.red} stroke={2.2} />
+          </Pressable>
+        </View>
+      ) : null}
+      {failed ? (
+        <Text testID={`${testID}-mic-error`} style={{ color: th.red, fontSize: 13 }}>
+          {t('fc.ifc_no_microfono')}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+/** Il tondino «AI» accanto alle altre icone: viola, con un giro di attesa mentre l'IA scrive. */
+export function AiButton({
+  testID,
+  label,
+  busy,
+  disabled,
+  onPress,
+}: {
+  testID: string;
+  label: string;
+  busy: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled || busy}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        height: 34,
+        paddingHorizontal: 13,
+        borderRadius: 17,
+        backgroundColor: '#8B5CF6',
+        opacity: disabled ? 0.5 : 1,
+        transform: [{ scale: pressed ? 0.95 : 1 }],
+      })}
+    >
+      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.4 }}>
+        {busy ? '…' : 'AI'}
+      </Text>
+    </Pressable>
+  );
+}

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { memoryDb } from '@/core/db/__tests__/testDb';
 import { migrate } from '@/core/db/migrations';
@@ -45,6 +45,8 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 let mockPrefs: Partial<LocalPrefs> = {};
+const mockAiExample = jest.fn();
+let mockAccount: { fcAiExample: jest.Mock } | null = null;
 const mockUpdatePrefs = jest.fn((patch: Partial<LocalPrefs>) => {
   mockPrefs = { ...mockPrefs, ...patch };
   mockVersion += 1;
@@ -52,6 +54,7 @@ const mockUpdatePrefs = jest.fn((patch: Partial<LocalPrefs>) => {
 jest.mock('@/core/app/AppProvider', () => ({
   useApp: () => ({
     services: mockServices,
+    account: mockAccount,
     version: mockVersion,
     changed: mockChanged,
     localPrefs: {
@@ -65,6 +68,8 @@ jest.mock('@/core/app/AppProvider', () => ({
 function setup() {
   mockVersion = 0;
   mockPrefs = {};
+  mockAccount = { fcAiExample: mockAiExample };
+  mockAiExample.mockReset();
   mockParams = {};
   mockPush.mockClear();
   mockBack.mockClear();
@@ -796,7 +801,8 @@ describe('card page', () => {
     await fireEvent(screen.getByTestId('fcc-q-block-0'), 'focus');
     expect(screen.getByTestId('bar-dock')).toBeTruthy();
     expect(screen.getByTestId('fcc-q-bar')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('fcc-cancel'));
+    expect(screen.queryByTestId('fcc-cancel')).toBeNull(); // niente barra Annulla/Salva in basso
+    await fireEvent.press(screen.getByTestId('fcc-close'));
     expect(mockBack).toHaveBeenCalled();
   });
 
@@ -813,7 +819,101 @@ describe('card page', () => {
     const cards = flashcards.cards(deck);
     expect(cards).toHaveLength(1);
     expect(JSON.parse(cards[0]!.question_desc!).blocks[0].runs[0].s).toBe('Capital of Italy?');
-    expect(mockBack).toHaveBeenCalled();
+    // si resta sulla pagina: la barra dice quando è stato salvato
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(screen.getByTestId('fcc-last-saved').props.children).toBeTruthy();
+    expect(screen.queryByTestId('fcc-dirty')).toBeNull();
+  });
+
+  test('autosave: a pause in typing saves the card by itself; the switch turns it off', async () => {
+    jest.useFakeTimers();
+    try {
+      const { flashcards } = setup();
+      const deck = flashcards.createDeck({ name: 'Chem' })!;
+      const c = flashcards.addCard(deck, 'old q', 'old a')!;
+      mockParams = { id: c };
+      await render(wrap(<CardScreen />));
+      await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'typed q');
+      expect(screen.getByTestId('fcc-dirty')).toBeTruthy();
+      await act(async () => {
+        jest.advanceTimersByTime(1200);
+      });
+      expect(JSON.parse(flashcards.card(c)!.question_desc!).blocks[0].runs[0].s).toBe('typed q');
+      expect(screen.queryByTestId('fcc-dirty')).toBeNull();
+      // spento: nessun salvataggio da solo
+      await fireEvent(screen.getByTestId('fcc-autosave'), 'valueChange', false);
+      await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'not saved');
+      await act(async () => {
+        jest.advanceTimersByTime(3000);
+      });
+      expect(JSON.parse(flashcards.card(c)!.question_desc!).blocks[0].runs[0].s).toBe('typed q');
+      await fireEvent.press(screen.getByTestId('fcc-save'));
+      expect(JSON.parse(flashcards.card(c)!.question_desc!).blocks[0].runs[0].s).toBe('not saved');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('add example: photo and audio are staged, then attached to the new example', async () => {
+    const { flashcards, study, db } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    (pickImage as jest.Mock).mockResolvedValueOnce({ uri: 'file:///x/p.jpg', mime: 'image/jpeg' });
+    await render(wrap(<CardScreen />));
+    expect(screen.getByTestId('fcc-ex-photo')).toBeTruthy();
+    expect(screen.getByTestId('fcc-ex-mic-record')).toBeTruthy();
+    expect(screen.getByTestId('fcc-ex-ai')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcc-ex-photo'));
+    await fireEvent.press(screen.getByTestId('fcc-ex-photo-library'));
+    await screen.findByTestId('fcc-ex-image');
+    await fireEvent.changeText(screen.getByTestId('fcc-ex-new'), 'An example');
+    await fireEvent.press(screen.getByTestId('fcc-ex-add'));
+    const examples = study.examples(c);
+    expect(examples).toHaveLength(1);
+    expect(db.all<{ slot: string }>('SELECT slot FROM media_queue').map((r) => r.slot)).toContain(
+      'example_image',
+    );
+    expect(mockTrigger).toHaveBeenCalled();
+    expect(screen.queryByTestId('fcc-ex-image')).toBeNull(); // il modulo si svuota
+    expect((screen.getByTestId('fcc-ex-new').props as { value: string }).value).toBe('');
+  });
+
+  test('add example: the AI button fills the box from the card; a refusal shows its message', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'Capital of Italy?', 'Rome')!;
+    mockParams = { id: c };
+    const doc = stringifyDoc({
+      v: 2,
+      blocks: [{ t: 'p', runs: [{ s: 'Rome is on the Tiber.' }] }],
+    });
+    mockAiExample.mockResolvedValueOnce({ success: true, example: doc });
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-ex-ai'));
+    await waitFor(() =>
+      expect((screen.getByTestId('fcc-ex-new').props as { value: string }).value).toBe(
+        'Rome is on the Tiber.',
+      ),
+    );
+    expect(mockAiExample).toHaveBeenCalledWith({ q: 'Capital of Italy?', a: 'Rome' });
+    mockAiExample.mockResolvedValueOnce({ success: false, message: 'No credits left' });
+    await fireEvent.press(screen.getByTestId('fcc-ex-ai'));
+    expect((await screen.findByTestId('fcc-ex-ai-error')).props.children).toBe('No credits left');
+  });
+
+  test('delete sits in the save bar and asks once before removing the card', async () => {
+    const { flashcards } = setup();
+    const deck = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(deck, 'q', 'a')!;
+    mockParams = { id: c };
+    await render(wrap(<CardScreen />));
+    await fireEvent.press(screen.getByTestId('fcc-delete'));
+    await fireEvent.press(screen.getByTestId('fcc-delete-cancel'));
+    expect(flashcards.card(c)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcc-delete'));
+    await fireEvent.press(screen.getByTestId('fcc-delete-confirm'));
+    expect(flashcards.card(c)).toBeFalsy();
   });
 
   test('edit a card: the untouched formatted side stays as it is; editing it keeps the formatting', async () => {

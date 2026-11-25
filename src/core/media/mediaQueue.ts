@@ -17,6 +17,7 @@ export const MEDIA_SLOTS = {
     question_audio: 'audio',
     answer_audio: 'audio',
   },
+  fc_study_examples: { example_image: 'image', example_audio: 'audio' },
   fc_vocab_cards: { image: 'image' },
   fc_vocab_subcards: { image: 'image' },
   fc_vocab_examples: { example_image: 'image' },

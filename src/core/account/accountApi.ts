@@ -88,6 +88,17 @@ export type DiaryAiReply = {
   libro_possibile?: boolean;
 };
 
+/** La risposta di `/ai/ai_example.php`: `example` è il testo dell'esempio; gli errori attesi (crediti finiti…) sono risposte. */
+export type AiExampleReply = {
+  success: boolean;
+  example?: string;
+  error?: string;
+  message?: string;
+  riprovabile?: boolean;
+  stima?: number;
+  disponibili?: number | null;
+};
+
 /** Un'ora di previsione (`ore` del sito: h ora, i icona, l descrizione, t gradi, ap percepita, p pioggia %, v vento, u umidità). */
 export interface WxHour {
   h: string;
@@ -478,6 +489,27 @@ export class AccountApi {
     }
     // una risposta del sito con {ok:false,error} è una risposta: chi chiama decide cosa dire
     if (j && typeof j.ok === 'boolean') return j;
+    throw new ApiError(res.status, 'http_error', `HTTP ${res.status}`);
+  }
+
+  /**
+   * L'esempio di una carta scritto dall'IA: la STESSA pagina del sito (stessi crediti, stessi limiti), che accetta il token
+   * dell'app. `q` e `a` sono il testo semplice della carta. Serve rete.
+   */
+  async fcAiExample(body: { q: string; a: string; extra?: string }): Promise<AiExampleReply> {
+    const res = await this.send('POST', '/ai/ai_example.php', {
+      q: body.q,
+      a: body.a,
+      extra: body.extra ?? '',
+      opzioni: { stile: {}, impegno: 'medio' },
+    });
+    let j: AiExampleReply | null = null;
+    try {
+      j = JSON.parse(await res.text()) as AiExampleReply;
+    } catch {
+      /* pagina d'errore del server */
+    }
+    if (j && typeof j.success === 'boolean') return j;
     throw new ApiError(res.status, 'http_error', `HTTP ${res.status}`);
   }
 

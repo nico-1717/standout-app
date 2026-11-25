@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -11,13 +11,34 @@ import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { Glyph, RoundBtn, catTones, type CatTones } from '@/features/flashcards/deckUi';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { BarDockProvider } from '@/features/flashcards/BarDock';
+import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
 import { RichEditor } from '@/features/flashcards/RichEditor';
 import { deckMap, deckPath } from '@/features/flashcards/logic';
 import { rgba } from '@/features/grades/ui';
 import { HoIcon } from '@/features/home/HomeKit';
-import { AudioPreview, MicButton, PhotoButton, PhotoPreview } from '@/features/media/MediaIcons';
+import {
+  AiButton,
+  AudioPreview,
+  MicButton,
+  PhotoButton,
+  PhotoPreview,
+  StageMicButton,
+  StagePhotoButton,
+  StagedPreview,
+  type StagedFile,
+} from '@/features/media/MediaIcons';
 import { Card, PrimaryButton, TextButton } from '@/ui/kit';
+
+/** Salva dopo una pausa di scrittura: ogni disegno nuovo (un tasto) fa ripartire l'attesa. */
+function AutoSave({ on, onSave }: { on: boolean; onSave: () => void }) {
+  useEffect(() => {
+    if (!on) return;
+    const timer = setTimeout(onSave, 900);
+    return () => clearTimeout(timer);
+  });
+  return null;
+}
 
 type Side = 'q' | 'a';
 
@@ -37,24 +58,38 @@ export default function CardScreen() {
     deck?: string;
     parent?: string;
   }>();
-  const { services, version, changed } = useApp();
+  const { services, version, changed, account, localPrefs, updateLocalPrefs } = useApp();
 
   const [micFailed, setMicFailed] = useState<{ q: boolean; a: boolean }>({ q: false, a: false });
   const [draft, setDraft] = useState<{ q: string | null; a: string | null }>({ q: null, a: null });
+  // ciò che è già salvato (le stesse bozze): sporco = la bozza è diversa
+  const [saved, setSaved] = useState<{ q: string | null; a: string | null }>({ q: null, a: null });
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  // una carta nuova esiste dal primo salvataggio: da lì in poi è una carta come le altre
+  const [born, setBorn] = useState<{ kind: 'card' | 'sub'; id: string } | null>(null);
   const [moving, setMoving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [newExample, setNewExample] = useState('');
+  const [exImage, setExImage] = useState<StagedFile | null>(null);
+  const [exAudio, setExAudio] = useState<StagedFile | null>(null);
+  const [exMicFailed, setExMicFailed] = useState(false);
+  const [exAi, setExAi] = useState<{ busy: boolean; error: string | null }>({
+    busy: false,
+    error: null,
+  });
   const [editExample, setEditExample] = useState<{ uuid: string; text: string } | null>(null);
 
-  const isNew = !params.id && !params.sub;
-  const isSub = !!params.sub || !!params.parent;
+  const cid = params.id ?? (born?.kind === 'card' ? born.id : null);
+  const sub = params.sub ?? (born?.kind === 'sub' ? born.id : null);
+  const isNew = !cid && !sub;
+  const isSub = !!sub || !!params.parent;
 
   const data = useMemo(() => {
     void version;
     if (!services) return null;
     const repo = services.flashcards;
-    if (params.id) {
-      const c = repo.card(params.id);
+    if (cid) {
+      const c = repo.card(cid);
       if (!c) return null;
       return {
         item: {
@@ -72,8 +107,8 @@ export default function CardScreen() {
         decks: repo.decks(),
       };
     }
-    if (params.sub) {
-      const s = repo.subcard(params.sub);
+    if (sub) {
+      const s = repo.subcard(sub);
       if (!s) return null;
       const parent = repo.card(s.parent_uuid);
       return {
@@ -113,9 +148,9 @@ export default function CardScreen() {
       };
     }
     return null;
-  }, [services, version, params.id, params.sub, params.deck, params.parent]);
+  }, [services, version, cid, sub, params.deck, params.parent]);
 
-  const target = params.id ?? params.sub ?? null;
+  const target = cid ?? sub ?? null;
   const study = useMemo(() => {
     void version;
     if (!services || !target) return null;
@@ -144,14 +179,18 @@ export default function CardScreen() {
   const crumbs = data.deckId ? [...deckPath(map, data.deckId), map.get(data.deckId)!] : [];
 
   const raw = (s: Side) => (s === 'q' ? item.q : item.a);
-  const row = params.sub ?? params.id ?? null;
-  const table = params.sub ? 'fc_study_subcards' : 'fc_study_cards';
+  const row = sub ?? cid ?? null;
+  const table = sub ? 'fc_study_subcards' : 'fc_study_cards';
   const set = (s: Side, v: string | null) => setDraft({ ...draft, [s]: v ?? '' });
 
-  // la bozza è già il campo da salvare ('' = svuotato, null = non toccato)
-  const canSave = isNew ? !!(draft.q || draft.a) : draft.q !== null || draft.a !== null;
+  // la bozza è già il campo da salvare ('' = svuotato, null = non toccato); sporco = diversa da ciò che è già salvato
+  const dirty = draft.q !== saved.q || draft.a !== saved.a;
+  const canSave = dirty && (!isNew || !!(draft.q || draft.a));
+  const autosave = localPrefs.fcAutosave;
 
+  /** Salva la bozza (la carta nuova nasce qui) e resta sulla pagina: con il salvataggio automatico si salva di continuo. */
   const save = () => {
+    if (!canSave) return;
     const q = draft.q !== null ? draft.q || null : undefined;
     const a = draft.a !== null ? draft.a || null : undefined;
     if (isNew) {
@@ -159,21 +198,67 @@ export default function CardScreen() {
         ? repo.addSubcard(params.parent, q ?? null, a ?? null)
         : repo.addCard(params.deck!, q ?? null, a ?? null);
       if (!id) return;
-      changed();
-      router.back();
-      return;
+      setBorn({ kind: params.parent ? 'sub' : 'card', id });
+    } else {
+      const ok = sub
+        ? repo.updateSubcard(sub, { question: q, answer: a })
+        : repo.updateCard(cid!, { question: q, answer: a });
+      if (!ok) return;
     }
-    const ok = params.sub
-      ? repo.updateSubcard(params.sub, { question: q, answer: a })
-      : repo.updateCard(params.id!, { question: q, answer: a });
-    if (!ok) return;
+    setSaved(draft);
+    setSavedAt(Date.now());
     changed();
-    router.back();
   };
 
   const deck = data.deckId ? map.get(data.deckId) : undefined;
   const tone = catTones(deck?.color ?? th.brand);
   const path = crumbs.map((c) => c.name).join(' › ');
+
+  /** L'esempio nasce qui; la foto e il suono scelti gli si attaccano subito dopo e partono verso il sito. */
+  const addExample = () => {
+    if (!target || !newExample.trim()) return;
+    const id = services.study.addExample(target, !!sub, newExample);
+    if (!id) return;
+    if (exImage) {
+      services.media.putFile('fc_study_examples', id, 'example_image', exImage.uri, exImage.mime);
+    }
+    if (exAudio) {
+      services.media.putFile('fc_study_examples', id, 'example_audio', exAudio.uri, exAudio.mime);
+    }
+    if (exImage || exAudio) services.scheduler.trigger(0);
+    setNewExample('');
+    setExImage(null);
+    setExAudio(null);
+    setExMicFailed(false);
+    setExAi({ busy: false, error: null });
+    changed();
+  };
+
+  /** L'IA scrive l'esempio dalla carta com'è adesso (anche non ancora salvata); si accoda a ciò che c'è già nel campo. */
+  const runAi = async () => {
+    if (!account || exAi.busy) return;
+    const plain = (side: Side) =>
+      docToPlain(parseDoc(side === 'q' ? (draft.q ?? item.q) : (draft.a ?? item.a)));
+    const q = plain('q');
+    const a = plain('a');
+    if (!q.trim() && !a.trim()) {
+      setExAi({ busy: false, error: t('fc.exm_carta_vuota') });
+      return;
+    }
+    setExAi({ busy: true, error: null });
+    try {
+      const r = await account.fcAiExample({ q, a });
+      if (r.success && r.example) {
+        const text = docToPlain(parseDoc(r.example));
+        setNewExample(newExample.trim() ? `${newExample.trim()}\n\n${text}` : text);
+        setExAi({ busy: false, error: null });
+      } else {
+        setExAi({ busy: false, error: r.message ?? t('fc.ibfai_errore_ia') });
+      }
+    } catch {
+      setExAi({ busy: false, error: t('fc.ibfai_err_rete') });
+    }
+  };
 
   const field = (s: Side) => {
     const label = s === 'q' ? t('fc.ifc_domanda') : t('fc.ifc_risposta');
@@ -246,8 +331,8 @@ export default function CardScreen() {
     : t('fc.mfc_tb_modifica');
 
   const remove = () => {
-    if (params.sub) repo.removeSubcard(params.sub);
-    else repo.removeCard(params.id!);
+    if (sub) repo.removeSubcard(sub);
+    else repo.removeCard(cid!);
     changed();
     router.back();
   };
@@ -326,24 +411,111 @@ export default function CardScreen() {
               </View>
             </LinearGradient>
           </View>
+          <AutoSave on={autosave && canSave} onSave={save} />
+          <View
+            testID="fcc-savebar"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}
+          >
+            <Pressable
+              testID="fcc-save"
+              accessibilityRole="button"
+              accessibilityLabel={t('comune.salva_ora')}
+              accessibilityState={{ disabled: !canSave }}
+              disabled={!canSave}
+              onPress={save}
+              style={({ pressed }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: canSave ? tone.color : th.surface2,
+                transform: [{ scale: pressed ? 0.92 : 1 }],
+              })}
+            >
+              <Glyph name="save" size={18} color={canSave ? '#fff' : th.text3} stroke={2.2} />
+              {dirty ? (
+                <View
+                  testID="fcc-dirty"
+                  style={{
+                    position: 'absolute',
+                    top: 1,
+                    right: 1,
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: '#FF9500',
+                    borderWidth: 1.5,
+                    borderColor: th.bg,
+                  }}
+                />
+              ) : null}
+            </Pressable>
+            <Switch
+              testID="fcc-autosave"
+              accessibilityLabel={t('comune.salvataggio_auto')}
+              value={autosave}
+              onValueChange={(v) => updateLocalPrefs({ fcAutosave: v })}
+              trackColor={{ true: tone.color }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: th.text2, fontSize: 12, fontWeight: '800' }}>
+                {t('comune.salvataggio_auto')}
+              </Text>
+              <Text testID="fcc-last-saved" style={{ color: th.text3, fontSize: 11 }}>
+                {savedAt
+                  ? t('fc.exm_salvato_alle', { ora: new Date(savedAt).toTimeString().slice(0, 5) })
+                  : ' '}
+              </Text>
+            </View>
+            {!isNew ? (
+              deleting ? (
+                <>
+                  <TextButton
+                    testID="fcc-delete-cancel"
+                    label={t('comune.annulla')}
+                    onPress={() => setDeleting(false)}
+                  />
+                  <TextButton
+                    testID="fcc-delete-confirm"
+                    danger
+                    label={t('comune.elimina')}
+                    onPress={remove}
+                  />
+                </>
+              ) : (
+                <Pressable
+                  testID="fcc-delete"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('comune.elimina')}
+                  hitSlop={6}
+                  onPress={() => setDeleting(true)}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: rgba(th.red, 0.12),
+                  }}
+                >
+                  <Glyph name="trash" size={17} color={th.red} stroke={2.2} />
+                </Pressable>
+              )
+            ) : null}
+          </View>
         </View>
 
         <ScrollView
           contentContainerStyle={{
             padding: 14,
-            paddingBottom: insets.bottom + 110,
+            paddingBottom: insets.bottom + 40,
             gap: 14,
           }}
           keyboardShouldPersistTaps="handled"
         >
           {field('q')}
           {field('a')}
-
-          {item.media ? (
-            <Text testID="fcc-media" style={{ color: th.text2, fontSize: 13 }}>
-              🔊 {t('fc.app_audio_sul_sito')}
-            </Text>
-          ) : null}
 
           {target && study ? (
             <Card style={{ paddingVertical: 6, paddingHorizontal: 16 }}>
@@ -361,7 +533,7 @@ export default function CardScreen() {
                   />
                 }
                 onChange={(v) => {
-                  services.study.setLearnt(target, !!params.sub, v);
+                  services.study.setLearnt(target, !!sub, v);
                   changed();
                 }}
               />
@@ -380,7 +552,7 @@ export default function CardScreen() {
                   />
                 }
                 onChange={(v) => {
-                  services.study.setFavorite(target, !!params.sub, v);
+                  services.study.setFavorite(target, !!sub, v);
                   changed();
                 }}
               />
@@ -452,9 +624,7 @@ export default function CardScreen() {
                             height={150}
                           />
                           {ex.example_audio ? (
-                            <Text style={{ color: th.text2, fontSize: 13 }}>
-                              🔊 {t('fc.app_audio_sul_sito')}
-                            </Text>
+                            <CardAudio testID={`fcc-ex-audio-${ex.uuid}`} name={ex.example_audio} />
                           ) : null}
                           <View style={{ flexDirection: 'row', gap: 18 }}>
                             <Pressable
@@ -506,18 +676,49 @@ export default function CardScreen() {
                   placeholderTextColor={th.text3}
                   style={{ color: th.text, fontSize: 16, minHeight: 44 }}
                 />
+                <View
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
+                >
+                  <StagePhotoButton
+                    testID="fcc-ex-photo"
+                    color={tone.color}
+                    value={exImage}
+                    onChange={setExImage}
+                  />
+                  <StageMicButton
+                    testID="fcc-ex-mic"
+                    color={tone.color}
+                    value={exAudio}
+                    onChange={setExAudio}
+                    onError={setExMicFailed}
+                  />
+                  <AiButton
+                    testID="fcc-ex-ai"
+                    label={t('fc.exm_genera_ia')}
+                    busy={exAi.busy}
+                    disabled={!account}
+                    onPress={() => void runAi()}
+                  />
+                </View>
+                <StagedPreview
+                  testID="fcc-ex"
+                  image={exImage}
+                  audio={exAudio}
+                  failed={exMicFailed}
+                  onClearImage={() => setExImage(null)}
+                  onClearAudio={() => setExAudio(null)}
+                />
+                {exAi.error ? (
+                  <Text testID="fcc-ex-ai-error" style={{ color: th.red, fontSize: 13 }}>
+                    {exAi.error}
+                  </Text>
+                ) : null}
                 <PillButton
                   testID="fcc-ex-add"
                   label={t('fc.exm_aggiungi_nuovo')}
                   tone={tone}
                   disabled={!newExample.trim()}
-                  onPress={() => {
-                    if (!newExample.trim()) return;
-                    if (services.study.addExample(target, !!params.sub, newExample)) {
-                      setNewExample('');
-                      changed();
-                    }
-                  }}
+                  onPress={addExample}
                 />
               </View>
             </View>
@@ -564,18 +765,18 @@ export default function CardScreen() {
                 label={t('fc.ifc_aggiungi_figlio')}
                 tone={tone}
                 glyph="plus"
-                onPress={() => router.push({ pathname: '/fc-card', params: { parent: params.id } })}
+                onPress={() => router.push({ pathname: '/fc-card', params: { parent: cid } })}
               />
             </View>
           ) : null}
 
-          {params.sub && data.parentCard ? (
+          {sub && data.parentCard ? (
             <PillButton
               testID="fcc-split"
               label={t('vocab.vi_separa')}
               tone={tone}
               onPress={() => {
-                const made = repo.unjoinSubcard(params.sub!);
+                const made = repo.unjoinSubcard(sub!);
                 if (!made) return;
                 changed();
                 router.replace({ pathname: '/fc-card', params: { id: made } });
@@ -583,7 +784,7 @@ export default function CardScreen() {
             />
           ) : null}
 
-          {params.sub && data.parentCard ? (
+          {sub && data.parentCard ? (
             <PillButton
               testID="fcc-to-parent"
               label={t('fc.vis_una_carta')}
@@ -618,7 +819,7 @@ export default function CardScreen() {
                       value={data.deckId}
                       onCreate={(name, parent) => repo.createDeck({ name, parent })}
                       onPick={(d) => {
-                        if (d) repo.moveCard(params.id!, d);
+                        if (d) repo.moveCard(cid!, d);
                         setMoving(false);
                         changed();
                       }}
@@ -628,76 +829,7 @@ export default function CardScreen() {
               ) : null}
             </Card>
           ) : null}
-
-          {!isNew ? (
-            <Card style={{ padding: 14, gap: 10 }}>
-              {deleting ? (
-                <>
-                  <Text style={{ color: th.text, fontWeight: '700' }}>
-                    {isSub ? t('fc.app_elimina_carta_figlia') : t('fc.vis_eliminare_carta')}
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 1 }}>
-                      <TextButton
-                        testID="fcc-delete-cancel"
-                        label={t('comune.annulla')}
-                        onPress={() => setDeleting(false)}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <PrimaryButton
-                        testID="fcc-delete-confirm"
-                        danger
-                        label={t('comune.elimina')}
-                        onPress={remove}
-                      />
-                    </View>
-                  </View>
-                </>
-              ) : (
-                <TextButton
-                  testID="fcc-delete"
-                  danger
-                  label={t('comune.elimina')}
-                  onPress={() => setDeleting(true)}
-                />
-              )}
-            </Card>
-          ) : null}
         </ScrollView>
-
-        <View
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            flexDirection: 'row',
-            gap: 12,
-            paddingHorizontal: 14,
-            paddingTop: 10,
-            paddingBottom: insets.bottom + 10,
-            backgroundColor: th.headerGlass,
-            borderTopWidth: 0.5,
-            borderTopColor: th.hairline,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <TextButton
-              testID="fcc-cancel"
-              label={t('comune.annulla')}
-              onPress={() => router.back()}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <PrimaryButton
-              testID="fcc-save"
-              label={t('comune.salva')}
-              disabled={!canSave}
-              onPress={save}
-            />
-          </View>
-        </View>
       </BarDockProvider>
     </View>
   );

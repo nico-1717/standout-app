@@ -50,6 +50,8 @@ export interface LocalPrefs {
   fcFullExamples: boolean;
   /** le categorie (studio e lingue): elenco o griglia */
   fcTreeView: TreeView;
+  /** la pagina di una carta salva da sola mentre si scrive */
+  fcAutosave: boolean;
   /** la barra in basso: ordine, schede fissate a sinistra e schede nascoste */
   bar: BarPrefs;
 }
@@ -65,6 +67,7 @@ export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
   fcFullCards: false,
   fcFullExamples: false,
   fcTreeView: 'list',
+  fcAutosave: true,
   bar: DEFAULT_BAR,
 };
 
@@ -83,6 +86,7 @@ function clean(raw: unknown): LocalPrefs {
     fcFullCards: r.fcFullCards === true,
     fcFullExamples: r.fcFullExamples === true,
     fcTreeView: cleanTreeView(r.fcTreeView),
+    fcAutosave: r.fcAutosave !== false,
     bar: cleanBar(r.bar),
   };
 }
