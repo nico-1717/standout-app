@@ -491,23 +491,43 @@ export default function CardScreen() {
                     onPress={() => setDeleting(true)}
                   />
                 ) : null}
-                <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-                  <Switch
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  <Pressable
                     testID="fcc-autosave"
+                    accessibilityRole="switch"
                     accessibilityLabel={t('comune.salvataggio_auto')}
-                    value={autosave}
-                    onValueChange={(v) => updateLocalPrefs({ fcAutosave: v })}
-                    trackColor={{ true: th.green }}
-                  />
-                  <Text style={{ color: th.text3, fontSize: 11, fontWeight: '800' }}>
-                    {t('comune.salvataggio_auto')}
-                  </Text>
-                  <Text testID="fcc-last-saved" style={{ color: th.text3, fontSize: 10 }}>
+                    accessibilityState={{ checked: autosave }}
+                    hitSlop={8}
+                    onPress={() => updateLocalPrefs({ fcAutosave: !autosave })}
+                    style={{
+                      width: 52,
+                      height: 30,
+                      borderRadius: 15,
+                      padding: 2,
+                      justifyContent: 'center',
+                      backgroundColor: autosave ? th.green : th.surface2,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: '#fff',
+                        alignSelf: autosave ? 'flex-end' : 'flex-start',
+                      }}
+                    />
+                  </Pressable>
+                  <Text
+                    testID="fcc-last-saved"
+                    numberOfLines={1}
+                    style={{ color: th.text3, fontSize: 11, fontWeight: '800' }}
+                  >
                     {savedAt
                       ? t('fc.exm_salvato_alle', {
                           ora: new Date(savedAt).toTimeString().slice(0, 5),
                         })
-                      : ' '}
+                      : t('comune.salvataggio_auto')}
                   </Text>
                 </View>
                 <Pressable
@@ -524,7 +544,6 @@ export default function CardScreen() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: th.green,
-                    opacity: canSave ? 1 : 0.45,
                     transform: [{ scale: pressed ? 0.92 : 1 }],
                   })}
                 >

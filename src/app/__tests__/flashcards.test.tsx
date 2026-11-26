@@ -841,7 +841,7 @@ describe('card page', () => {
       expect(JSON.parse(flashcards.card(c)!.question_desc!).blocks[0].runs[0].s).toBe('typed q');
       expect(screen.queryByTestId('fcc-dirty')).toBeNull();
       // spento: nessun salvataggio da solo
-      await fireEvent(screen.getByTestId('fcc-autosave'), 'valueChange', false);
+      await fireEvent.press(screen.getByTestId('fcc-autosave'));
       await fireEvent.changeText(screen.getByTestId('fcc-q-block-0'), 'not saved');
       await act(async () => {
         jest.advanceTimersByTime(3000);
