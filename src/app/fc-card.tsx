@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,9 +65,9 @@ function BarIcon({
       hitSlop={6}
       onPress={onPress}
       style={({ pressed }) => ({
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: bg,
@@ -385,81 +384,15 @@ export default function CardScreen() {
           style={{
             // la pagina è un foglio: l'area sicura in alto è già in parte coperta, non va contata due volte
             paddingTop: Math.max(insets.top - 20, 12),
-            paddingBottom: 12,
-            paddingHorizontal: 14,
+            paddingBottom: 10,
+            paddingHorizontal: 12,
             backgroundColor: th.headerGlass,
             borderBottomWidth: 0.5,
             borderBottomColor: th.hairline,
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <LinearGradient
-              testID="fcc-hero"
-              colors={[tone.light, tone.color, tone.dark]}
-              locations={[0, 0.55, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-                paddingVertical: 8,
-                paddingHorizontal: 14,
-                borderRadius: 16,
-                boxShadow: `0 8px 20px -8px ${tone.line}, inset 0 1px 0 rgba(255,255,255,.25)`,
-              }}
-            >
-              <View
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 10,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255,255,255,.22)',
-                }}
-              >
-                <Glyph name="card" size={19} color="#fff" />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                  style={{
-                    color: 'rgba(255,255,255,.78)',
-                    fontSize: 10,
-                    fontWeight: '800',
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {title}
-                </Text>
-                <Text
-                  testID="fcc-path"
-                  numberOfLines={1}
-                  style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: -0.2 }}
-                >
-                  {path || '—'}
-                </Text>
-              </View>
-            </LinearGradient>
-          </View>
           <AutoSave on={autosave && canSave} onSave={save} />
-          <View
-            testID="fcc-savebar"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 10,
-              padding: 6,
-              borderRadius: 999,
-              backgroundColor: th.surface,
-              borderWidth: 0.5,
-              borderColor: th.hairline,
-            }}
-          >
+          <View testID="fcc-savebar" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <BarIcon
               testID="fcc-close"
               label={t('comune.chiudi')}
@@ -468,8 +401,30 @@ export default function CardScreen() {
               bg={th.surface2}
               onPress={() => router.back()}
             />
+            <View testID="fcc-hero" style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: tone.color,
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {title}
+              </Text>
+              <Text
+                testID="fcc-path"
+                numberOfLines={1}
+                ellipsizeMode="head"
+                style={{ color: th.text, fontSize: 14, fontWeight: '800', letterSpacing: -0.2 }}
+              >
+                {path || '—'}
+              </Text>
+            </View>
             {deleting ? (
-              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 4 }}>
+              <>
                 <TextButton
                   testID="fcc-delete-cancel"
                   label={t('comune.annulla')}
@@ -481,7 +436,7 @@ export default function CardScreen() {
                   label={t('comune.elimina')}
                   onPress={remove}
                 />
-              </View>
+              </>
             ) : (
               <>
                 {!isNew ? (
@@ -494,80 +449,95 @@ export default function CardScreen() {
                     onPress={() => setDeleting(true)}
                   />
                 ) : null}
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                  <Pressable
-                    testID="fcc-autosave"
-                    accessibilityRole="switch"
-                    accessibilityLabel={t('comune.salvataggio_auto')}
-                    accessibilityState={{ checked: autosave }}
-                    hitSlop={8}
-                    onPress={() => updateLocalPrefs({ fcAutosave: !autosave })}
-                    style={{
-                      width: 52,
-                      height: 30,
-                      borderRadius: 15,
-                      padding: 2,
-                      justifyContent: 'center',
-                      backgroundColor: autosave ? th.green : th.surface2,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: 13,
-                        backgroundColor: '#fff',
-                        alignSelf: autosave ? 'flex-end' : 'flex-start',
-                      }}
-                    />
-                  </Pressable>
-                  <Text
-                    testID="fcc-last-saved"
-                    numberOfLines={1}
-                    style={{ color: th.text3, fontSize: 11, fontWeight: '800' }}
-                  >
-                    {savedAt
-                      ? t('fc.exm_salvato_alle', {
-                          ora: new Date(savedAt).toTimeString().slice(0, 5),
-                        })
-                      : t('comune.salvataggio_auto')}
-                  </Text>
-                </View>
-                <Pressable
-                  testID="fcc-save"
-                  accessibilityRole="button"
-                  accessibilityLabel={t('comune.salva_ora')}
-                  accessibilityState={{ disabled: !canSave }}
-                  disabled={!canSave}
-                  onPress={save}
-                  style={({ pressed }) => ({
-                    width: 58,
-                    height: 58,
-                    borderRadius: 29,
+                <View
+                  style={{
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: th.green,
-                    transform: [{ scale: pressed ? 0.92 : 1 }],
-                  })}
+                    gap: 6,
+                    height: 42,
+                    paddingLeft: 10,
+                    paddingRight: 3,
+                    borderRadius: 21,
+                    backgroundColor: th.surface,
+                    borderWidth: 0.5,
+                    borderColor: th.hairline,
+                  }}
                 >
-                  <Glyph name="save" size={26} color="#fff" stroke={2} />
-                  {dirty ? (
-                    <View
-                      testID="fcc-dirty"
+                  <View style={{ alignItems: 'center', gap: 3 }}>
+                    <Pressable
+                      testID="fcc-autosave"
+                      accessibilityRole="switch"
+                      accessibilityLabel={t('comune.salvataggio_auto')}
+                      accessibilityState={{ checked: autosave }}
+                      hitSlop={8}
+                      onPress={() => updateLocalPrefs({ fcAutosave: !autosave })}
                       style={{
-                        position: 'absolute',
-                        top: 3,
-                        right: 3,
-                        width: 12,
-                        height: 12,
-                        borderRadius: 6,
-                        backgroundColor: '#FF9500',
-                        borderWidth: 2,
-                        borderColor: th.surface,
+                        width: 34,
+                        height: 20,
+                        borderRadius: 10,
+                        padding: 2,
+                        justifyContent: 'center',
+                        backgroundColor: autosave ? th.green : th.surface2,
                       }}
-                    />
-                  ) : null}
-                </Pressable>
+                    >
+                      <View
+                        style={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: 8,
+                          backgroundColor: '#fff',
+                          alignSelf: autosave ? 'flex-end' : 'flex-start',
+                        }}
+                      />
+                    </Pressable>
+                    <Text
+                      testID="fcc-last-saved"
+                      numberOfLines={1}
+                      style={{ color: th.text3, fontSize: 9, fontWeight: '800' }}
+                    >
+                      {savedAt
+                        ? t('fc.exm_salvato_alle', {
+                            ora: new Date(savedAt).toTimeString().slice(0, 5),
+                          })
+                        : t('comune.salvataggio_auto')}
+                    </Text>
+                  </View>
+                  <Pressable
+                    testID="fcc-save"
+                    accessibilityRole="button"
+                    accessibilityLabel={t('comune.salva_ora')}
+                    accessibilityState={{ disabled: !canSave }}
+                    disabled={!canSave}
+                    onPress={save}
+                    style={({ pressed }) => ({
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: th.green,
+                      transform: [{ scale: pressed ? 0.92 : 1 }],
+                    })}
+                  >
+                    <Glyph name="save" size={18} color="#fff" stroke={2.2} />
+                    {dirty ? (
+                      <View
+                        testID="fcc-dirty"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          backgroundColor: '#FF9500',
+                          borderWidth: 1.5,
+                          borderColor: th.surface,
+                        }}
+                      />
+                    ) : null}
+                  </Pressable>
+                </View>
               </>
             )}
           </View>
