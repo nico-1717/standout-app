@@ -15,7 +15,6 @@ import {
   type TextInputKeyPressEvent,
   type TextInputSelectionChangeEvent,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 
@@ -30,7 +29,8 @@ import {
   type TextRun,
 } from './doc';
 import { codeGroups, codeSegments } from './codeBlocks';
-import { codeSegStyle, DocView, markColor, markStyle } from './DocView';
+import { codeSegStyle, markColor, markStyle, Runs } from './DocView';
+import { MathView } from './math/MathView';
 import { CODE_BG, CODE_FG, CODE_HEAD_FG } from './highlight';
 import {
   autoMath,
@@ -77,6 +77,46 @@ const nowMs = (): number => Date.now();
 
 const newlines = (s: string): number => s.split('\n').length - 1;
 
+/** Una riga con formule quando non ci si scrive: il testo com'è davvero, con la formula disegnata dentro. */
+function RenderedRow({
+  testID,
+  block,
+  onOpen,
+}: {
+  testID: string;
+  block: Block;
+  onOpen: () => void;
+}) {
+  const th = useTheme();
+  const faded = block.t === 'li' && block.ck === 1;
+  const ink = faded ? th.text2 : th.text;
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={{ paddingVertical: 3, paddingHorizontal: 8, minHeight: 28, justifyContent: 'center' }}
+    >
+      {block.t === 'fx' ? (
+        <MathView tex={block.tex} size={18} color={th.text} />
+      ) : (
+        <Text
+          style={{
+            color: ink,
+            fontSize: 16,
+            lineHeight: 22,
+            ...(faded ? { textDecorationLine: 'line-through' as const } : null),
+          }}
+        >
+          {block.t === 'p' || block.t === 'li' ? (
+            <Runs runs={block.runs} th={th} size={16} color={ink} />
+          ) : null}
+        </Text>
+      )}
+    </Pressable>
+  );
+}
+
 /**
  * L'editor ricco di una carta (domanda o risposta), con la barra del formato del sito: la pastiglia con il tastino, le
  * famiglie Testo / Elenco / Formula / Codice e «annulla». La barra c'è solo mentre si scrive in quel campo. Il testo si scrive
@@ -95,7 +135,6 @@ export function RichEditor({
   placeholder?: string;
 }) {
   const th = useTheme();
-  const { t } = useTranslation();
   const [doc, setDoc] = useState<Doc>(() => parseDoc(value));
   const [focus, setFocus] = useState(0);
   const [sel, setSel] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
@@ -346,6 +385,12 @@ export function RichEditor({
     update(d);
   };
 
+  /** Un tocco su una riga disegnata la riapre per scrivere, col cursore in fondo. */
+  const reopen = (i: number, at: number) => {
+    pending.current = { block: i, at };
+    setActive(true);
+    setFocus(i);
+  };
   const onKey = (i: number, e: TextInputKeyPressEvent) => {
     if (e.nativeEvent.key !== 'Backspace') return;
     if (sel.start !== 0 || sel.end !== 0 || focus !== i) return;
@@ -371,9 +416,6 @@ export function RichEditor({
   };
 
   const groups = codeGroups(doc.blocks);
-  const hasMath = doc.blocks.some(
-    (b) => b.t === 'fx' || ((b.t === 'p' || b.t === 'li') && b.runs.some((r) => 'x' in r)),
-  );
 
   /** Il testo della casella a tratti, già formattato (la casella è il campo: quello che scrivi lo vedi com'è). */
   const spans = (b: Block, i: number): ReactNode => {
@@ -407,6 +449,8 @@ export function RichEditor({
     );
   };
 
+  /* Le funzioni passate qui (fuoco, tasti, selezione) toccano i ref solo quando scatta l'evento, mai mentre si disegna. */
+  /* eslint-disable react-hooks/refs */
   const input = (b: Block, i: number, k: BlockKind) => {
     const code = k === 'code';
     return (
@@ -447,7 +491,14 @@ export function RichEditor({
       </TextInput>
     );
   };
+  /* eslint-enable react-hooks/refs */
 
+  /**
+   * Le formule come sul sito: col cursore dentro una riga si vede il codice (si modifica quello); appena si esce la riga
+   * si vede com'è davvero, con la formula disegnata nel testo. Un tocco la riapre per modificarla.
+   */
+  const hasFormula = (b: Block): boolean =>
+    b.t === 'fx' || ((b.t === 'p' || b.t === 'li') && b.runs.some((r) => 'x' in r));
   const rows: ReactNode[] = [];
   let skipUntil = -1;
   for (let i = 0; i < doc.blocks.length; i++) {
@@ -511,6 +562,16 @@ export function RichEditor({
       skipUntil = group.end;
       continue;
     }
+    const field =
+      hasFormula(b) && !(active && i === focus) ? (
+        <RenderedRow
+          testID={`${testID}-rendered-${i}`}
+          block={b}
+          onOpen={() => reopen(i, textOf(b).length)}
+        />
+      ) : (
+        input(b, i, k)
+      );
     const lvl = b.t === 'li' ? b.lvl : (b.lvl ?? 0);
     rows.push(
       <View
@@ -564,7 +625,7 @@ export function RichEditor({
               : null,
           ]}
         >
-          {input(b, i, k)}
+          {field}
         </View>
       </View>,
     );
@@ -601,15 +662,6 @@ export function RichEditor({
       >
         {rows}
       </View>
-
-      {hasMath ? (
-        <View style={{ gap: 4 }}>
-          <Text style={{ color: th.text2, fontSize: 11, fontWeight: '700' }}>
-            {t('fc.smi_anteprima').toUpperCase()}
-          </Text>
-          <DocView testID={`${testID}-preview`} raw={stringifyDoc(doc)} />
-        </View>
-      ) : null}
     </View>
   );
 }

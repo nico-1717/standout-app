@@ -40,7 +40,7 @@ export function markStyle(th: Theme, m: Marks | undefined): TextStyle {
   };
 }
 
-function Runs({
+export function Runs({
   runs,
   th,
   size,

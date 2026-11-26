@@ -21,6 +21,26 @@ const tab = async (name: string, id = 'e') => {
 const last = (fn: jest.Mock) => parseDoc(fn.mock.calls.at(-1)![0] as string);
 
 describe('RichEditor', () => {
+  test('formulas are drawn in the text when you are not in the line; a tap opens the code to edit', async () => {
+    const raw = JSON.stringify({
+      v: 2,
+      blocks: [
+        { t: 'p', runs: [{ s: 'evento ' }, { x: '\\omega_i' }] },
+        { t: 'p', runs: [{ s: 'plain line' }] },
+      ],
+    });
+    await render(wrap(<RichEditor value={raw} onChange={jest.fn()} testID="e" />));
+    // niente anteprima a parte: la riga con la formula è già disegnata, la riga senza formule resta scrivibile
+    expect(screen.queryByTestId('e-preview')).toBeNull();
+    expect(screen.getByTestId('e-rendered-0')).toBeTruthy();
+    expect(screen.queryByTestId('e-block-0')).toBeNull();
+    expect(screen.getByTestId('e-block-1')).toBeTruthy();
+    // un tocco: compare il codice da modificare
+    await fireEvent.press(screen.getByTestId('e-rendered-0'));
+    expect(screen.getByTestId('e-block-0')).toBeTruthy();
+    expect(screen.queryByTestId('e-rendered-0')).toBeNull();
+  });
+
   test('typing reports the field; empty reports null', async () => {
     const onChange = jest.fn();
     await render(wrap(<RichEditor value={null} onChange={onChange} testID="e" />));
