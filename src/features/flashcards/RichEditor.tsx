@@ -433,7 +433,7 @@ export function RichEditor({
           color: code ? CODE_FG : th.text,
           fontSize: code ? 14 : 16,
           lineHeight: code ? 22 : 22,
-          paddingVertical: code ? 0 : 8,
+          paddingVertical: code ? 0 : 3,
           paddingHorizontal: code ? 0 : 8,
           borderRadius: 8,
           ...(code || k === 'fx' ? { fontFamily: MONO } : null),
@@ -526,8 +526,11 @@ export function RichEditor({
           <Text
             style={{
               color: b.t === 'li' && b.c ? markColor(th, b.c) : th.text,
-              paddingTop: 10,
+              fontSize: 16,
+              lineHeight: 22,
+              paddingTop: 3,
               width: 16,
+              textAlign: 'center',
             }}
           >
             {bulletFor(lvl)}
@@ -540,9 +543,9 @@ export function RichEditor({
             accessibilityRole="checkbox"
             accessibilityState={{ checked: b.t === 'li' && b.ck === 1 }}
             onPress={() => update(toggleChecked(doc, i))}
-            style={{ paddingTop: 8, width: 22 }}
+            style={{ paddingTop: 3, width: 22 }}
           >
-            <Text style={{ color: th.text, fontSize: 17 }}>
+            <Text style={{ color: th.text, fontSize: 17, lineHeight: 22 }}>
               {b.t === 'li' && b.ck === 1 ? '☑' : '☐'}
             </Text>
           </Pressable>
@@ -588,7 +591,7 @@ export function RichEditor({
 
       <View
         style={{
-          gap: 2,
+          gap: 0,
           borderRadius: 14,
           backgroundColor: th.surface2,
           paddingVertical: 6,
