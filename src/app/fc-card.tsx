@@ -302,7 +302,7 @@ export default function CardScreen() {
 
   const field = (s: Side) => {
     const label = s === 'q' ? t('fc.ifc_domanda') : t('fc.ifc_risposta');
-    const accent = s === 'q' ? th.text3 : tone.color;
+    const accent = s === 'q' ? th.orange : tone.color;
     return (
       <Card style={{ paddingVertical: 14, paddingLeft: 20, paddingRight: 16, gap: 10 }}>
         <View
@@ -312,7 +312,7 @@ export default function CardScreen() {
             top: 0,
             bottom: 0,
             width: 5,
-            backgroundColor: s === 'q' ? th.hairline2 : tone.color,
+            backgroundColor: accent,
           }}
         />
         <Eyebrow label={label} color={accent} />
