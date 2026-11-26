@@ -10,6 +10,8 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 import { docToPlain, parseDoc } from '@/features/flashcards/doc';
 import { Glyph, catTones, type CatTones } from '@/features/flashcards/deckUi';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
+import { Sheet } from '@/features/habits/Sheet';
+import { habitsTheme } from '@/features/habits/habitsTheme';
 import { BarDockProvider } from '@/features/flashcards/BarDock';
 import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
@@ -87,6 +89,7 @@ type Side = 'q' | 'a';
  */
 export default function CardScreen() {
   const th = useTheme();
+  const ht = useMemo(() => habitsTheme(th.scheme, undefined, th.style), [th.scheme, th.style]);
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -864,37 +867,41 @@ export default function CardScreen() {
               <Pressable
                 testID="fcc-move"
                 accessibilityRole="button"
-                onPress={() => setMoving(!moving)}
+                onPress={() => setMoving(true)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}
               >
                 <Glyph name="folder" size={18} color={tone.color} />
                 <Text style={{ flex: 1, color: th.text, fontSize: 16, fontWeight: '600' }}>
                   {t('fc.app_sposta_carta')}
                 </Text>
-                <View style={{ transform: [{ rotate: moving ? '90deg' : '0deg' }] }}>
-                  <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
-                </View>
+                <Glyph name="chev" size={16} color={th.text3} stroke={2.4} />
               </Pressable>
-              {moving ? (
-                <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-                  <Card style={{ backgroundColor: th.surface2 }}>
-                    <DeckPicker
-                      decks={data.decks}
-                      value={data.deckId}
-                      onCreate={(name, parent) => repo.createDeck({ name, parent })}
-                      onPick={(d) => {
-                        if (d) repo.moveCard(cid!, d);
-                        setMoving(false);
-                        changed();
-                      }}
-                    />
-                  </Card>
-                </View>
-              ) : null}
             </Card>
           ) : null}
         </ScrollView>
       </BarDockProvider>
+      {moving ? (
+        <Sheet
+          visible
+          title={t('fc.app_sposta_carta')}
+          th={ht}
+          onClose={() => setMoving(false)}
+          testID="fcc-move-sheet"
+        >
+          <View style={{ padding: 14, paddingBottom: 24 }}>
+            <DeckPicker
+              decks={data.decks}
+              value={data.deckId}
+              onCreate={(name, parent) => repo.createDeck({ name, parent })}
+              onPick={(d) => {
+                if (d && d !== data.deckId) repo.moveCard(cid!, d);
+                setMoving(false);
+                changed();
+              }}
+            />
+          </View>
+        </Sheet>
+      ) : null}
     </View>
   );
 }

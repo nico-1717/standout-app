@@ -1025,7 +1025,9 @@ describe('card page', () => {
     const c = flashcards.addCard(d1, 'q', 'a')!;
     mockParams = { id: c };
     await render(wrap(<CardScreen />));
+    expect(screen.queryByTestId('fcc-move-sheet')).toBeNull();
     await fireEvent.press(screen.getByTestId('fcc-move'));
+    expect(screen.getByTestId('fcc-move-sheet')).toBeTruthy(); // il selettore si apre come un foglio
     await fireEvent.press(screen.getByTestId(`deck-pick-${d2}`));
     expect(flashcards.card(c)!.category_uuid).toBe(d2);
     await fireEvent.press(screen.getByTestId('fcc-delete'));
