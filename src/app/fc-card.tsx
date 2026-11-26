@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '@/core/app/AppProvider';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { docToPlain, parseDoc } from '@/features/flashcards/doc';
-import { Glyph, RoundBtn, catTones, type CatTones } from '@/features/flashcards/deckUi';
+import { Glyph, catTones, type CatTones } from '@/features/flashcards/deckUi';
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { BarDockProvider } from '@/features/flashcards/BarDock';
 import { CardAudio } from '@/features/flashcards/CardAudio';
@@ -38,6 +38,44 @@ function AutoSave({ on, onSave }: { on: boolean; onSave: () => void }) {
     return () => clearTimeout(timer);
   });
   return null;
+}
+
+/** Tondo piccolo dentro la barra del salvataggio (chiudi, elimina). */
+function BarIcon({
+  testID,
+  label,
+  glyph,
+  color,
+  bg,
+  onPress,
+}: {
+  testID: string;
+  label: string;
+  glyph: 'close' | 'trash';
+  color: string;
+  bg: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: bg,
+        transform: [{ scale: pressed ? 0.92 : 1 }],
+      })}
+    >
+      <Glyph name={glyph} size={18} color={color} stroke={2.2} />
+    </Pressable>
+  );
 }
 
 type Side = 'q' | 'a';
@@ -352,13 +390,6 @@ export default function CardScreen() {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <RoundBtn
-              th={th}
-              testID="fcc-close"
-              label={t('comune.chiudi')}
-              glyph="close"
-              onPress={() => router.back()}
-            />
             <LinearGradient
               testID="fcc-hero"
               colors={[tone.light, tone.color, tone.dark]}
@@ -414,95 +445,109 @@ export default function CardScreen() {
           <AutoSave on={autosave && canSave} onSave={save} />
           <View
             testID="fcc-savebar"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 10,
+              padding: 6,
+              borderRadius: 999,
+              backgroundColor: th.surface,
+              borderWidth: 0.5,
+              borderColor: th.hairline,
+            }}
           >
-            <Pressable
-              testID="fcc-save"
-              accessibilityRole="button"
-              accessibilityLabel={t('comune.salva_ora')}
-              accessibilityState={{ disabled: !canSave }}
-              disabled={!canSave}
-              onPress={save}
-              style={({ pressed }) => ({
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: canSave ? tone.color : th.surface2,
-                transform: [{ scale: pressed ? 0.92 : 1 }],
-              })}
-            >
-              <Glyph name="save" size={18} color={canSave ? '#fff' : th.text3} stroke={2.2} />
-              {dirty ? (
-                <View
-                  testID="fcc-dirty"
-                  style={{
-                    position: 'absolute',
-                    top: 1,
-                    right: 1,
-                    width: 10,
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: '#FF9500',
-                    borderWidth: 1.5,
-                    borderColor: th.bg,
-                  }}
-                />
-              ) : null}
-            </Pressable>
-            <Switch
-              testID="fcc-autosave"
-              accessibilityLabel={t('comune.salvataggio_auto')}
-              value={autosave}
-              onValueChange={(v) => updateLocalPrefs({ fcAutosave: v })}
-              trackColor={{ true: tone.color }}
+            <BarIcon
+              testID="fcc-close"
+              label={t('comune.chiudi')}
+              glyph="close"
+              color={th.text}
+              bg={th.surface2}
+              onPress={() => router.back()}
             />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: th.text2, fontSize: 12, fontWeight: '800' }}>
-                {t('comune.salvataggio_auto')}
-              </Text>
-              <Text testID="fcc-last-saved" style={{ color: th.text3, fontSize: 11 }}>
-                {savedAt
-                  ? t('fc.exm_salvato_alle', { ora: new Date(savedAt).toTimeString().slice(0, 5) })
-                  : ' '}
-              </Text>
-            </View>
-            {!isNew ? (
-              deleting ? (
-                <>
-                  <TextButton
-                    testID="fcc-delete-cancel"
-                    label={t('comune.annulla')}
-                    onPress={() => setDeleting(false)}
-                  />
-                  <TextButton
-                    testID="fcc-delete-confirm"
-                    danger
+            {deleting ? (
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 4 }}>
+                <TextButton
+                  testID="fcc-delete-cancel"
+                  label={t('comune.annulla')}
+                  onPress={() => setDeleting(false)}
+                />
+                <TextButton
+                  testID="fcc-delete-confirm"
+                  danger
+                  label={t('comune.elimina')}
+                  onPress={remove}
+                />
+              </View>
+            ) : (
+              <>
+                {!isNew ? (
+                  <BarIcon
+                    testID="fcc-delete"
                     label={t('comune.elimina')}
-                    onPress={remove}
+                    glyph="trash"
+                    color={th.red}
+                    bg={rgba(th.red, 0.12)}
+                    onPress={() => setDeleting(true)}
                   />
-                </>
-              ) : (
+                ) : null}
+                <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+                  <Switch
+                    testID="fcc-autosave"
+                    accessibilityLabel={t('comune.salvataggio_auto')}
+                    value={autosave}
+                    onValueChange={(v) => updateLocalPrefs({ fcAutosave: v })}
+                    trackColor={{ true: th.green }}
+                  />
+                  <Text style={{ color: th.text3, fontSize: 11, fontWeight: '800' }}>
+                    {t('comune.salvataggio_auto')}
+                  </Text>
+                  <Text testID="fcc-last-saved" style={{ color: th.text3, fontSize: 10 }}>
+                    {savedAt
+                      ? t('fc.exm_salvato_alle', {
+                          ora: new Date(savedAt).toTimeString().slice(0, 5),
+                        })
+                      : ' '}
+                  </Text>
+                </View>
                 <Pressable
-                  testID="fcc-delete"
+                  testID="fcc-save"
                   accessibilityRole="button"
-                  accessibilityLabel={t('comune.elimina')}
-                  hitSlop={6}
-                  onPress={() => setDeleting(true)}
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 19,
+                  accessibilityLabel={t('comune.salva_ora')}
+                  accessibilityState={{ disabled: !canSave }}
+                  disabled={!canSave}
+                  onPress={save}
+                  style={({ pressed }) => ({
+                    width: 58,
+                    height: 58,
+                    borderRadius: 29,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: rgba(th.red, 0.12),
-                  }}
+                    backgroundColor: th.green,
+                    opacity: canSave ? 1 : 0.45,
+                    transform: [{ scale: pressed ? 0.92 : 1 }],
+                  })}
                 >
-                  <Glyph name="trash" size={17} color={th.red} stroke={2.2} />
+                  <Glyph name="save" size={26} color="#fff" stroke={2} />
+                  {dirty ? (
+                    <View
+                      testID="fcc-dirty"
+                      style={{
+                        position: 'absolute',
+                        top: 3,
+                        right: 3,
+                        width: 12,
+                        height: 12,
+                        borderRadius: 6,
+                        backgroundColor: '#FF9500',
+                        borderWidth: 2,
+                        borderColor: th.surface,
+                      }}
+                    />
+                  ) : null}
                 </Pressable>
-              )
-            ) : null}
+              </>
+            )}
           </View>
         </View>
 
