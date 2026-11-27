@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +9,7 @@ import { pickImage } from '@/core/media/pickImage';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { CardAudio } from '@/features/flashcards/CardAudio';
 import { CardImage } from '@/features/flashcards/CardImage';
+import { ZoomImage } from '@/features/flashcards/ImageZoom';
 import { Glyph, type GlyphName } from '@/features/flashcards/deckUi';
 
 import { Recorder } from './AudioField';
@@ -167,15 +167,9 @@ export function PhotoPreview(p: Slot & { testID: string; folder?: 'card' | 'exam
     <View testID={`${p.testID}-preview`} style={{ gap: 6 }}>
       <View>
         {localUri ? (
-          <Image
-            testID={`${p.testID}-local`}
-            source={{ uri: localUri }}
-            contentFit="contain"
-            accessibilityIgnoresInvertColors
-            style={{ width: '100%', height: 200, borderRadius: 10 }}
-          />
+          <ZoomImage testID={`${p.testID}-local`} uri={localUri} height={200} />
         ) : !removed ? (
-          <CardImage testID={`${p.testID}-remote`} name={p.name} folder={p.folder ?? 'card'} />
+          <CardImage testID={`${p.testID}-remote`} name={p.name} folder={p.folder ?? 'card'} zoom />
         ) : null}
         <Pressable
           testID={`${p.testID}-remove`}
@@ -436,13 +430,7 @@ export function StagedPreview({
     <>
       {image ? (
         <View>
-          <Image
-            testID={`${testID}-image`}
-            source={{ uri: image.uri }}
-            contentFit="contain"
-            accessibilityIgnoresInvertColors
-            style={{ width: '100%', height: 160, borderRadius: 10 }}
-          />
+          <ZoomImage testID={`${testID}-image`} uri={image.uri} height={160} />
           <Pressable
             testID={`${testID}-image-remove`}
             accessibilityRole="button"

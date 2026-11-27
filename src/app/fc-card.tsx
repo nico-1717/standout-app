@@ -659,6 +659,7 @@ export default function CardScreen() {
                             folder="example"
                             name={ex.example_image}
                             height={150}
+                            zoom
                           />
                           {ex.example_audio ? (
                             <CardAudio testID={`fcc-ex-audio-${ex.uuid}`} name={ex.example_audio} />

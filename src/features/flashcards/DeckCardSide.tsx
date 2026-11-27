@@ -112,6 +112,7 @@ export function DeckCardSide(p: {
               <CardImage
                 testID={`${p.testID}-image`}
                 name={p.image}
+                zoom
                 height={split ? 76 : p.full ? 320 : 230}
               />
             </View>
