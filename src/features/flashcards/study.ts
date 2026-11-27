@@ -218,6 +218,26 @@ export class StudyRepo {
     );
   }
 
+  /** Gli esempi di tante carte in una volta (per l'elenco del mazzo): carta -> esempi, solo per chi ne ha. */
+  examplesFor(uuids: string[]): Map<string, Example[]> {
+    const out = new Map<string, Example[]>();
+    for (let i = 0; i < uuids.length; i += 400) {
+      const chunk = uuids.slice(i, i + 400);
+      const marks = chunk.map(() => '?').join(',');
+      const rows = this.db.all<Example>(
+        `SELECT uuid, card_uuid, child_uuid, example_text, example_image, example_audio
+           FROM fc_study_examples WHERE card_uuid IN (${marks}) OR child_uuid IN (${marks}) ORDER BY rowid`,
+        [...chunk, ...chunk],
+      );
+      for (const r of rows) {
+        const key = r.card_uuid ?? r.child_uuid;
+        if (!key) continue;
+        out.set(key, [...(out.get(key) ?? []), r]);
+      }
+    }
+    return out;
+  }
+
   addExample(targetUuid: string, isChild: boolean, text: string): string | null {
     const t = text.trim().slice(0, EXAMPLE_MAX);
     if (!t || !this.targetExists(targetUuid, isChild)) return null;

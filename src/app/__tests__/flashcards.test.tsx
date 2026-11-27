@@ -403,6 +403,26 @@ describe('category page', () => {
     expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/fc-card', params: { sub: kid } });
   });
 
+  test('examples show under the answer as a carousel with dots, for cards and for child cards', async () => {
+    const { flashcards, study } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const c = flashcards.addCard(id, 'Q', 'A')!;
+    const kid = flashcards.addSubcard(c, 'Kid q', 'Kid a')!;
+    flashcards.addCard(id, 'No examples', 'x');
+    study.addExample(c, false, 'First example');
+    study.addExample(c, false, 'Second example');
+    study.addExample(kid, true, 'Kid example');
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    expect(screen.getByTestId(`fcd-ex-${c}`)).toHaveTextContent(/Examples \(2\)/);
+    expect(screen.getByTestId(`fcd-ex-${c}`)).toHaveTextContent(/First example/);
+    expect(screen.getByTestId(`fcd-ex-${c}-dot-1`)).toBeTruthy();
+    // un solo esempio: niente pallini
+    expect(screen.getByTestId(`fcd-ex-${kid}`)).toHaveTextContent(/Examples \(1\)/);
+    expect(screen.queryByTestId(`fcd-ex-${kid}-dots`)).toBeNull();
+    expect(screen.getAllByText(/Examples \(/)).toHaveLength(2);
+  });
+
   test('a father card with an empty answer shows as a group title', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;

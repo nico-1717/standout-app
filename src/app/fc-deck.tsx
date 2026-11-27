@@ -28,6 +28,7 @@ import {
 import { DeckPicker } from '@/features/flashcards/DeckPicker';
 import { DocView } from '@/features/flashcards/DocView';
 import { DeckCardSide } from '@/features/flashcards/DeckCardSide';
+import { DeckExamples } from '@/features/flashcards/DeckExamples';
 import { DeckViewSheet } from '@/features/flashcards/DeckViewSheet';
 import { OptionMenu } from '@/features/flashcards/OptionMenu';
 import { CONFLICT_KEY } from '@/features/flashcards/ProjectDeckCard';
@@ -122,6 +123,10 @@ export default function DeckScreen() {
       deck,
       decks,
       subs,
+      examples: services.study.examplesFor([
+        ...cards.map((c) => c.uuid),
+        ...[...subs.values()].flat().map((k) => k.uuid),
+      ]),
       subLevels: services.games.childLevels([...subs.values()].flat().map((k) => k.uuid)),
       kids: decks.filter((d) => d.parent_uuid === id).sort(compareDecks),
       cards,
@@ -150,8 +155,19 @@ export default function DeckScreen() {
       </View>
     );
   }
-  const { deck, decks, kids, counts, levels, learnt, favorites, childCounts, subs, subLevels } =
-    data;
+  const {
+    deck,
+    decks,
+    kids,
+    counts,
+    levels,
+    learnt,
+    favorites,
+    childCounts,
+    subs,
+    subLevels,
+    examples,
+  } = data;
   const filter = localPrefs.fcViewStatus;
   const passes =
     filter === 'dup'
@@ -469,6 +485,12 @@ export default function DeckScreen() {
               image={c.answer_image}
               audio={c.answer_audio}
               full={localPrefs.fcFullCards}
+              onPress={pressCard}
+            />
+            <DeckExamples
+              testID={`fcd-ex-${c.uuid}`}
+              examples={examples.get(c.uuid) ?? []}
+              full={localPrefs.fcFullExamples}
               onPress={pressCard}
             />
           </>
