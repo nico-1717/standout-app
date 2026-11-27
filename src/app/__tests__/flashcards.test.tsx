@@ -378,6 +378,31 @@ describe('category page', () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-insert', params: { deck: id } });
   });
 
+  test('child cards sit under their father, marked as sub-cards, with their own star and learnt tick', async () => {
+    const { flashcards, study } = setup();
+    const id = flashcards.createDeck({ name: 'Chem' })!;
+    const father = flashcards.addCard(id, 'Father q', 'Father a')!;
+    const kid = flashcards.addSubcard(father, 'Kid q', 'Kid a')!;
+    flashcards.addCard(id, 'Other q', 'Other a');
+    mockParams = { id };
+    await render(wrap(<DeckScreen />));
+    const group = screen.getByTestId(`fcd-children-${father}`);
+    expect(group).toBeTruthy();
+    expect(screen.getByTestId(`fcd-child-tag-${kid}`)).toHaveTextContent(/Sub-card/);
+    expect(screen.getByTestId(`fcd-card-${kid}`)).toBeTruthy();
+    expect(screen.queryByTestId(`fcd-children-${kid}`)).toBeNull();
+    // il figlio ha la sua stella e la sua casella: toccarle non tocca il padre
+    await fireEvent.press(screen.getByTestId(`fcd-fav-${kid}`));
+    expect(study.isFavorite(kid)).toBe(true);
+    expect(study.isFavorite(father)).toBe(false);
+    await fireEvent.press(screen.getByTestId(`fcd-learn-toggle-${kid}`));
+    expect(study.isLearnt(kid)).toBe(true);
+    expect(study.isLearnt(father)).toBe(false);
+    // un tocco sul figlio apre la sua pagina (sub), non quella del padre
+    await fireEvent.press(screen.getByTestId(`fcd-card-${kid}`));
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/fc-card', params: { sub: kid } });
+  });
+
   test('a father card with an empty answer shows as a group title', async () => {
     const { flashcards } = setup();
     const id = flashcards.createDeck({ name: 'Chem' })!;

@@ -5,7 +5,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
 import type { Theme } from '@/core/theme/ThemeProvider';
 import { rgba, shade } from '@/features/grades/ui';
@@ -99,6 +99,41 @@ export const catTones = (color: string) => ({
 export type CatTones = ReturnType<typeof catTones>;
 
 /** Il tasto tondo dell'intestazione (38 px, come `.icon-btn`). `tone` lo colora a sfumatura. */
+/** Una riga tratteggiata verticale lungo il lato sinistro: lega le carte figlie al loro padre (come sul sito). */
+export function DashedBar({
+  color,
+  width,
+  inset = 0,
+  opacity = 1,
+  testID,
+}: {
+  color: string;
+  width: number;
+  inset?: number;
+  opacity?: number;
+  testID?: string;
+}) {
+  return (
+    <View
+      testID={testID}
+      pointerEvents="none"
+      style={{ position: 'absolute', left: 0, top: inset, bottom: inset, width, opacity }}
+    >
+      <Svg width={width} height="100%">
+        <Line
+          x1={width / 2}
+          y1={0}
+          x2={width / 2}
+          y2="100%"
+          stroke={color}
+          strokeWidth={width}
+          strokeDasharray="7 5"
+        />
+      </Svg>
+    </View>
+  );
+}
+
 export function RoundBtn({
   th,
   glyph,

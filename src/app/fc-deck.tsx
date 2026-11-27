@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,14 @@ import { useApp } from '@/core/app/AppProvider';
 import { useTheme, type Theme } from '@/core/theme/ThemeProvider';
 import { CardViewer } from '@/features/flashcards/CardViewer';
 import { DeckIcon } from '@/features/flashcards/DeckIcon';
-import { Glyph, LevelPill, RoundBtn, catTones, type GlyphName } from '@/features/flashcards/deckUi';
+import {
+  DashedBar,
+  Glyph,
+  LevelPill,
+  RoundBtn,
+  catTones,
+  type GlyphName,
+} from '@/features/flashcards/deckUi';
 import {
   CARD_SORTS,
   filterCards,
@@ -42,6 +49,7 @@ import {
   examUrgency,
   iconFromName,
   type Deck,
+  type SubCard,
 } from '@/features/flashcards/logic';
 import { rgba } from '@/features/grades/ui';
 import { isRichNote, noteText } from '@/features/projects/notes';
@@ -102,15 +110,25 @@ export default function DeckScreen() {
     const deck = repo.deck(id);
     if (!deck) return null;
     const decks = repo.decks();
+    const cards = repo.cards(id);
+    const childCounts = repo.childCounts(id);
+    // le carte figlie di ogni padre, mostrate sotto di lui come sul sito
+    const subs = new Map(
+      cards
+        .filter((c) => (childCounts.get(c.uuid) ?? 0) > 0)
+        .map((c) => [c.uuid, repo.subcards(c.uuid)] as const),
+    );
     return {
       deck,
       decks,
+      subs,
+      subLevels: services.games.childLevels([...subs.values()].flat().map((k) => k.uuid)),
       kids: decks.filter((d) => d.parent_uuid === id).sort(compareDecks),
-      cards: repo.cards(id),
+      cards,
       counts: repo.cardCounts(),
       canDelete: repo.canDeleteDeck(id),
-      levels: services.games.cardLevels(repo.cards(id)),
-      childCounts: repo.childCounts(id),
+      levels: services.games.cardLevels(cards),
+      childCounts,
       learnt: services.study.learnt(),
       favorites: services.study.favorites(),
       questions: repo.questionCounts(),
@@ -132,7 +150,8 @@ export default function DeckScreen() {
       </View>
     );
   }
-  const { deck, decks, kids, counts, levels, learnt, favorites, childCounts } = data;
+  const { deck, decks, kids, counts, levels, learnt, favorites, childCounts, subs, subLevels } =
+    data;
   const filter = localPrefs.fcViewStatus;
   const passes =
     filter === 'dup'
@@ -223,8 +242,8 @@ export default function DeckScreen() {
   const autoIcon = iconFromName(deck.name);
 
   const tone = catTones(deck.color);
-  const toggleLearnt = (uuid: string) => {
-    services.study.setLearnt(uuid, false, !learnt.has(uuid));
+  const toggleLearnt = (uuid: string, isChild = false) => {
+    services.study.setLearnt(uuid, isChild, !learnt.has(uuid));
     changed();
   };
   const addSub = () => {
@@ -257,6 +276,206 @@ export default function DeckScreen() {
     </Text>
   );
   const shadow = th.scheme === 'dark' ? undefined : '0 1px 3px rgba(0,0,0,.08)';
+
+  const renderCard = (c: (typeof data.cards)[number] | SubCard, child: boolean) => {
+    const title = !child && 'is_father' in c && isTitleCard(c, childCounts.get(c.uuid) ?? 0);
+    const isLearnt = learnt.has(c.uuid);
+    const isFav = favorites.has(c.uuid);
+    const isPicked = !child && selecting && picked.has(c.uuid);
+    const lvl = child ? subLevels.get(c.uuid) : levels.get(c.uuid);
+    const pressCard = () => {
+      if (child) {
+        if (!selecting) router.push({ pathname: '/fc-card', params: { sub: c.uuid } });
+        return;
+      }
+      if (!selecting) {
+        router.push({ pathname: '/fc-card', params: { id: c.uuid } });
+        return;
+      }
+      const next = new Set(picked);
+      if (next.has(c.uuid)) next.delete(c.uuid);
+      else next.add(c.uuid);
+      setPicked(next);
+    };
+    return (
+      <Pressable
+        key={c.uuid}
+        testID={`fcd-card-${c.uuid}`}
+        accessibilityRole="button"
+        onPress={pressCard}
+        accessibilityState={selecting ? { checked: picked.has(c.uuid) } : undefined}
+        style={{
+          borderRadius: th.radiusCard,
+          borderWidth: isPicked ? 0 : 0.5,
+          borderColor: th.hairline,
+          borderLeftWidth: child ? 0 : 4,
+          borderLeftColor: deck.color,
+          paddingTop: 12,
+          paddingBottom: 12,
+          paddingLeft: child ? 17 : 14,
+          paddingRight: 14,
+          gap: 10,
+          backgroundColor: isPicked
+            ? tone.soft
+            : isLearnt
+              ? rgba(th.green, th.scheme === 'dark' ? 0.14 : 0.1)
+              : title
+                ? rgba(deck.color, 0.06)
+                : th.surface,
+          boxShadow: isPicked ? `inset 0 0 0 2px ${deck.color}` : shadow,
+        }}
+      >
+        {child ? <DashedBar color={deck.color} width={3} inset={8} opacity={0.75} /> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 }}>
+          {child ? (
+            <Text
+              testID={`fcd-child-tag-${c.uuid}`}
+              style={{
+                color: rgba(deck.color, 0.9),
+                fontSize: 11.5,
+                fontWeight: '800',
+              }}
+            >
+              ↳ {t('fc.vis_sotto_carta')}
+            </Text>
+          ) : null}
+          {selecting && !child ? (
+            <View
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                borderWidth: 2,
+                borderColor: isPicked ? deck.color : th.hairline2,
+                backgroundColor: isPicked ? deck.color : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isPicked ? <Glyph name="check" size={14} color="#fff" stroke={3} /> : null}
+            </View>
+          ) : (
+            <Pressable
+              testID={`fcd-learn-toggle-${c.uuid}`}
+              accessibilityRole="checkbox"
+              accessibilityLabel={t('fc.cg_learnt')}
+              accessibilityState={{ checked: isLearnt }}
+              hitSlop={6}
+              onPress={() => toggleLearnt(c.uuid, child)}
+              style={{
+                width: 30,
+                height: 30,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isLearnt ? (
+                <Glyph name="check" size={24} color={th.green} stroke={3.4} />
+              ) : (
+                <Text style={{ fontSize: 21 }}>🧐</Text>
+              )}
+            </Pressable>
+          )}
+          {!selecting ? (
+            <Pressable
+              testID={`fcd-fav-${c.uuid}`}
+              accessibilityRole="button"
+              accessibilityLabel={t('fc.gm_preferiti')}
+              accessibilityState={{ selected: isFav }}
+              hitSlop={6}
+              onPress={() => {
+                services.study.setFavorite(c.uuid, child, !isFav);
+                changed();
+              }}
+              style={{
+                width: 30,
+                height: 30,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Glyph
+                name="star"
+                size={19}
+                color={isFav ? '#FFB800' : rgba(th.text3, 0.7)}
+                fill={isFav ? '#FFB800' : undefined}
+                stroke={2}
+              />
+            </Pressable>
+          ) : null}
+          {isLearnt ? (
+            <Text
+              testID={`fcd-learnt-${c.uuid}`}
+              style={{ color: th.green, fontSize: 12, fontWeight: '800' }}
+            >
+              {t('fc.cg_learnt')}
+            </Text>
+          ) : null}
+          <View style={{ flex: 1 }} />
+          {'is_father' in c && c.is_father && !title ? (
+            <Text style={{ color: th.text3, fontSize: 11.5, fontWeight: '700' }}>
+              {t('fc.vis_n_sottocarte', { n: childCounts.get(c.uuid) ?? 0 })}
+            </Text>
+          ) : null}
+          {lvl ? (
+            <LevelPill testID={`fcd-level-${c.uuid}`} level={lvl} label={t(`fcv.liv_${lvl}`)} />
+          ) : null}
+        </View>
+
+        {title && (preview(c.question_desc) || '').length > 0 ? (
+          <View
+            testID={`fcd-title-${c.uuid}`}
+            style={{
+              gap: 5,
+              paddingVertical: 4,
+              paddingLeft: 12,
+              borderLeftWidth: 3,
+              borderLeftColor: deck.color,
+            }}
+          >
+            <Text
+              style={{
+                color: deck.color,
+                opacity: 0.75,
+                fontSize: 10,
+                fontWeight: '800',
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+              }}
+            >
+              {t('fc.vis_titolo')}
+            </Text>
+            <DocView raw={c.question_desc} size={16.5} weight="800" />
+            <Text style={{ color: th.text3, fontSize: 11.5, fontWeight: '700' }}>
+              {t('fc.vis_n_sottocarte', { n: childCounts.get(c.uuid) ?? 0 })}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <DeckCardSide
+              testID={`fcd-q-${c.uuid}`}
+              label={t('fc.ifc_domanda')}
+              raw={c.question_desc}
+              image={c.question_image}
+              audio={c.question_audio}
+              full={localPrefs.fcFullCards}
+              onPress={pressCard}
+              question
+            />
+            <DeckCardSide
+              testID={`fcd-a-${c.uuid}`}
+              label={t('fc.ifc_risposta')}
+              raw={c.answer_desc}
+              image={c.answer_image}
+              audio={c.answer_audio}
+              full={localPrefs.fcFullCards}
+              onPress={pressCard}
+            />
+          </>
+        )}
+      </Pressable>
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
@@ -1340,193 +1559,20 @@ export default function DeckScreen() {
           {cards.length ? (
             <View style={{ gap: 10 }}>
               {cards.map((c) => {
-                const title = isTitleCard(c, childCounts.get(c.uuid) ?? 0);
-                const isLearnt = learnt.has(c.uuid);
-                const isFav = favorites.has(c.uuid);
-                const isPicked = selecting && picked.has(c.uuid);
-                const lvl = levels.get(c.uuid);
-                const pressCard = () => {
-                  if (!selecting) {
-                    router.push({ pathname: '/fc-card', params: { id: c.uuid } });
-                    return;
-                  }
-                  const next = new Set(picked);
-                  if (next.has(c.uuid)) next.delete(c.uuid);
-                  else next.add(c.uuid);
-                  setPicked(next);
-                };
+                const kids = subs.get(c.uuid) ?? [];
                 return (
-                  <Pressable
-                    key={c.uuid}
-                    testID={`fcd-card-${c.uuid}`}
-                    accessibilityRole="button"
-                    onPress={pressCard}
-                    accessibilityState={selecting ? { checked: picked.has(c.uuid) } : undefined}
-                    style={{
-                      borderRadius: th.radiusCard,
-                      borderWidth: isPicked ? 0 : 0.5,
-                      borderColor: th.hairline,
-                      borderLeftWidth: 4,
-                      borderLeftColor: deck.color,
-                      paddingTop: 12,
-                      paddingBottom: 12,
-                      paddingLeft: 14,
-                      paddingRight: 14,
-                      gap: 10,
-                      backgroundColor: isPicked
-                        ? tone.soft
-                        : isLearnt
-                          ? rgba(th.green, th.scheme === 'dark' ? 0.14 : 0.1)
-                          : title
-                            ? rgba(deck.color, 0.06)
-                            : th.surface,
-                      boxShadow: isPicked ? `inset 0 0 0 2px ${deck.color}` : shadow,
-                    }}
-                  >
-                    <View
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 28 }}
-                    >
-                      {selecting ? (
-                        <View
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: 12,
-                            borderWidth: 2,
-                            borderColor: isPicked ? deck.color : th.hairline2,
-                            backgroundColor: isPicked ? deck.color : 'transparent',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {isPicked ? (
-                            <Glyph name="check" size={14} color="#fff" stroke={3} />
-                          ) : null}
-                        </View>
-                      ) : (
-                        <Pressable
-                          testID={`fcd-learn-toggle-${c.uuid}`}
-                          accessibilityRole="checkbox"
-                          accessibilityLabel={t('fc.cg_learnt')}
-                          accessibilityState={{ checked: isLearnt }}
-                          hitSlop={6}
-                          onPress={() => toggleLearnt(c.uuid)}
-                          style={{
-                            width: 30,
-                            height: 30,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {isLearnt ? (
-                            <Glyph name="check" size={24} color={th.green} stroke={3.4} />
-                          ) : (
-                            <Text style={{ fontSize: 21 }}>🧐</Text>
-                          )}
-                        </Pressable>
-                      )}
-                      {!selecting ? (
-                        <Pressable
-                          testID={`fcd-fav-${c.uuid}`}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('fc.gm_preferiti')}
-                          accessibilityState={{ selected: isFav }}
-                          hitSlop={6}
-                          onPress={() => {
-                            services.study.setFavorite(c.uuid, false, !isFav);
-                            changed();
-                          }}
-                          style={{
-                            width: 30,
-                            height: 30,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Glyph
-                            name="star"
-                            size={19}
-                            color={isFav ? '#FFB800' : rgba(th.text3, 0.7)}
-                            fill={isFav ? '#FFB800' : undefined}
-                            stroke={2}
-                          />
-                        </Pressable>
-                      ) : null}
-                      {isLearnt ? (
-                        <Text
-                          testID={`fcd-learnt-${c.uuid}`}
-                          style={{ color: th.green, fontSize: 12, fontWeight: '800' }}
-                        >
-                          {t('fc.cg_learnt')}
-                        </Text>
-                      ) : null}
-                      <View style={{ flex: 1 }} />
-                      {c.is_father && !title ? (
-                        <Text style={{ color: th.text3, fontSize: 11.5, fontWeight: '700' }}>
-                          {t('fc.app_carte_figlie')}
-                        </Text>
-                      ) : null}
-                      {lvl ? (
-                        <LevelPill
-                          testID={`fcd-level-${c.uuid}`}
-                          level={lvl}
-                          label={t(`fcv.liv_${lvl}`)}
-                        />
-                      ) : null}
-                    </View>
-
-                    {title && (preview(c.question_desc) || '').length > 0 ? (
+                  <View key={c.uuid} style={{ gap: 8 }}>
+                    {renderCard(c, false)}
+                    {kids.length ? (
                       <View
-                        testID={`fcd-title-${c.uuid}`}
-                        style={{
-                          gap: 5,
-                          paddingVertical: 4,
-                          paddingLeft: 12,
-                          borderLeftWidth: 3,
-                          borderLeftColor: deck.color,
-                        }}
+                        testID={`fcd-children-${c.uuid}`}
+                        style={{ marginLeft: 20, paddingLeft: 14, gap: 8 }}
                       >
-                        <Text
-                          style={{
-                            color: deck.color,
-                            opacity: 0.75,
-                            fontSize: 10,
-                            fontWeight: '800',
-                            letterSpacing: 1,
-                            textTransform: 'uppercase',
-                          }}
-                        >
-                          {t('fc.vis_titolo')}
-                        </Text>
-                        <DocView raw={c.question_desc} size={16.5} weight="800" />
-                        <Text style={{ color: th.text3, fontSize: 11.5, fontWeight: '700' }}>
-                          {t('fc.vis_n_sottocarte', { n: childCounts.get(c.uuid) ?? 0 })}
-                        </Text>
+                        <DashedBar color={deck.color} width={2} opacity={0.45} />
+                        {kids.map((k) => renderCard(k, true))}
                       </View>
-                    ) : (
-                      <>
-                        <DeckCardSide
-                          testID={`fcd-q-${c.uuid}`}
-                          label={t('fc.ifc_domanda')}
-                          raw={c.question_desc}
-                          image={c.question_image}
-                          audio={c.question_audio}
-                          full={localPrefs.fcFullCards}
-                          onPress={pressCard}
-                          question
-                        />
-                        <DeckCardSide
-                          testID={`fcd-a-${c.uuid}`}
-                          label={t('fc.ifc_risposta')}
-                          raw={c.answer_desc}
-                          image={c.answer_image}
-                          audio={c.answer_audio}
-                          full={localPrefs.fcFullCards}
-                          onPress={pressCard}
-                        />
-                      </>
-                    )}
-                  </Pressable>
+                    ) : null}
+                  </View>
                 );
               })}
             </View>

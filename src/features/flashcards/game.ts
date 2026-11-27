@@ -674,6 +674,12 @@ export class GameRepo {
     return out;
   }
 
+  /** Il livello di ogni carta figlia (`c<uuid>`), per l'elenco del mazzo. */
+  childLevels(uuids: string[]): Map<string, Level> {
+    const hist = this.histories();
+    return new Map(uuids.map((u) => [u, this.levelOfKey(`c${u}`, hist)]));
+  }
+
   /* ---------------- serie e record ---------------- */
 
   /** La serie di una partita: giuste di fila adesso, la serie più lunga e le risposte date (`fcv_serie_partita`). */
