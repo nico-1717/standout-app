@@ -45,7 +45,7 @@ name: Play a flashcard game from the deck (crash check)
     optional: true
 - takeScreenshot: 51-setup
 - tapOn:
-    id: fcs-play-all
+    id: fcs-multi-play
 - extendedWaitUntil:
     visible:
       id: fcg-progress

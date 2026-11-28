@@ -1,4 +1,24 @@
-import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
+type NativeModule = typeof import('expo-speech-recognition').ExpoSpeechRecognitionModule;
+
+let loaded: NativeModule | null | undefined;
+
+/**
+ * The native microphone module, loaded the first time it is needed. If this build does not contain it (or it
+ * fails to start) the voice mode is simply off: the game must never crash because of it.
+ */
+function native(): NativeModule | null {
+  if (loaded !== undefined) return loaded;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const lib: typeof import('expo-speech-recognition') = require('expo-speech-recognition');
+    loaded = lib.ExpoSpeechRecognitionModule ?? null;
+  } catch {
+    loaded = null;
+  }
+  return loaded;
+}
+
+const noop = () => {};
 
 /**
  * Il microfono che capisce le parole (`expo-speech-recognition`): usa il riconoscimento di iOS e di Android. Qui sta
@@ -61,7 +81,9 @@ export interface SpeechEngine {
 export const phoneEngine: SpeechEngine = {
   async requestPermission() {
     try {
-      const r = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      const m = native();
+      if (!m) return false;
+      const r = await m.requestPermissionsAsync();
       return r.granted;
     } catch {
       return false;
@@ -69,13 +91,13 @@ export const phoneEngine: SpeechEngine = {
   },
   available() {
     try {
-      return ExpoSpeechRecognitionModule.isRecognitionAvailable();
+      return native()?.isRecognitionAvailable() ?? false;
     } catch {
       return false;
     }
   },
   start(o) {
-    ExpoSpeechRecognitionModule.start({
+    native()?.start({
       lang: o.lang,
       interimResults: o.interim,
       maxAlternatives: o.alternatives,
@@ -88,35 +110,35 @@ export const phoneEngine: SpeechEngine = {
   },
   stop() {
     try {
-      ExpoSpeechRecognitionModule.stop();
+      native()?.stop();
     } catch {
       /* già fermo */
     }
   },
   abort() {
     try {
-      ExpoSpeechRecognitionModule.abort();
+      native()?.abort();
     } catch {
       /* già fermo */
     }
   },
   onResult(cb) {
-    const sub = ExpoSpeechRecognitionModule.addListener('result', (e) =>
+    const sub = native()?.addListener('result', (e) =>
       cb({ alternatives: e.results.map((r) => r.transcript), isFinal: e.isFinal }),
     );
-    return () => sub.remove();
+    return sub ? () => sub.remove() : noop;
   },
   onError(cb) {
-    const sub = ExpoSpeechRecognitionModule.addListener('error', (e) => cb(e.error));
-    return () => sub.remove();
+    const sub = native()?.addListener('error', (e) => cb(e.error));
+    return sub ? () => sub.remove() : noop;
   },
   onStart(cb) {
-    const sub = ExpoSpeechRecognitionModule.addListener('start', () => cb());
-    return () => sub.remove();
+    const sub = native()?.addListener('start', () => cb());
+    return sub ? () => sub.remove() : noop;
   },
   onEnd(cb) {
-    const sub = ExpoSpeechRecognitionModule.addListener('end', () => cb());
-    return () => sub.remove();
+    const sub = native()?.addListener('end', () => cb());
+    return sub ? () => sub.remove() : noop;
   },
 };
 
