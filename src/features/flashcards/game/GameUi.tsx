@@ -643,7 +643,7 @@ export function AnswerSlot({
   return (
     <Animated.View
       testID={testID}
-      entering={FadeIn.duration(420)}
+      entering={FadeIn.duration(300)}
       style={{
         minHeight: 96,
         borderRadius: 20,
@@ -655,7 +655,7 @@ export function AnswerSlot({
     >
       <SlotBack />
       {label}
-      <Animated.View entering={ZoomIn.springify().damping(12).delay(60)}>{children}</Animated.View>
+      <View>{children}</View>
     </Animated.View>
   );
 }
@@ -680,7 +680,7 @@ export function GradeRow(p: {
     delay: number,
     active = false,
   ) => (
-    <Animated.View entering={ZoomIn.springify().damping(11).delay(delay)}>
+    <Animated.View entering={FadeIn.duration(260).delay(delay)}>
       <Pressable
         testID={testID}
         accessibilityRole="button"
@@ -728,9 +728,9 @@ export function GradeRow(p: {
         justifyContent: 'space-around',
       }}
     >
-      {ball('fcg-wrong', p.wrongLabel, '#FF3B30', 72, ICONS.wrong, p.onWrong, 160)}
-      {ball('fcg-learnt', p.learntLabel, '#FF9500', 46, ICONS.learnt, p.onLearnt, 240, p.learnt)}
-      {ball('fcg-correct', p.rightLabel, '#34C759', 72, ICONS.right, p.onRight, 200)}
+      {ball('fcg-wrong', p.wrongLabel, '#FF3B30', 72, ICONS.wrong, p.onWrong, 80)}
+      {ball('fcg-learnt', p.learntLabel, '#FF9500', 46, ICONS.learnt, p.onLearnt, 80, p.learnt)}
+      {ball('fcg-correct', p.rightLabel, '#34C759', 72, ICONS.right, p.onRight, 80)}
     </View>
   );
 }
