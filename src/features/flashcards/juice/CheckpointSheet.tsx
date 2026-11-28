@@ -43,7 +43,7 @@ function AccuracyRing({ value, color, track }: { value: number; color: string; t
         : withTiming(value / 100, { duration: 800, easing: Easing.out(Easing.cubic) }),
     );
   }, [value, still, p]);
-  const props = useAnimatedProps(() => ({ strokeDasharray: [C * p.get(), C] }));
+  const props = useAnimatedProps(() => ({ strokeDasharray: `${C * p.get()} ${C}` }));
   return (
     <Svg
       width={120}

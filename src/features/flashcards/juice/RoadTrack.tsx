@@ -55,8 +55,8 @@ export function RoadRing({
     go(o1, outer);
     go(o2, inner);
   }, [outer, inner, still, o1, o2]);
-  const p1 = useAnimatedProps(() => ({ strokeDasharray: [C1 * o1.get(), C1] }));
-  const p2 = useAnimatedProps(() => ({ strokeDasharray: [C2 * o2.get(), C2] }));
+  const p1 = useAnimatedProps(() => ({ strokeDasharray: `${C1 * o1.get()} ${C1}` }));
+  const p2 = useAnimatedProps(() => ({ strokeDasharray: `${C2 * o2.get()} ${C2}` }));
   return (
     <Svg
       width={46}
