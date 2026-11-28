@@ -19,6 +19,15 @@ import { discState, ringNumbers, type RoadModel } from '../roadModel';
 /** Il lilla dei flashcard, quando il mazzo non ha un colore suo. */
 export const ROAD_ACCENT = '#B79CFF';
 
+/** Il testo sopra un colore: scuro sui colori chiari, bianco sugli scuri (il «lch» del sito). */
+export function inkOn(hex: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return '#fff';
+  const n = parseInt(m[1]!, 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#1C1C1E' : '#fff';
+}
+
 const C1 = 2 * Math.PI * 15.2;
 const C2 = 2 * Math.PI * 9.6;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -66,13 +75,13 @@ export function RoadRing({
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
     >
-      <Circle cx={18} cy={18} r={15.2} stroke={track} strokeWidth={3} fill="none" />
+      <Circle cx={18} cy={18} r={15.2} stroke={track} strokeWidth={4.2} fill="none" />
       <AnimatedCircle
         cx={18}
         cy={18}
         r={15.2}
         stroke={color}
-        strokeWidth={3}
+        strokeWidth={4.2}
         strokeLinecap="round"
         fill="none"
         transform="rotate(-90 18 18)"
@@ -80,13 +89,13 @@ export function RoadRing({
       />
       {two ? (
         <>
-          <Circle cx={18} cy={18} r={9.6} stroke={track} strokeWidth={3} fill="none" />
+          <Circle cx={18} cy={18} r={9.6} stroke={track} strokeWidth={3.6} fill="none" />
           <AnimatedCircle
             cx={18}
             cy={18}
             r={9.6}
             stroke={color}
-            strokeWidth={3}
+            strokeWidth={3.6}
             strokeLinecap="round"
             fill="none"
             transform="rotate(-90 18 18)"
@@ -117,6 +126,7 @@ export function RoadTrack({
   wrong,
   accent,
   title,
+  right,
   onErrors,
 }: {
   model: RoadModel;
@@ -126,6 +136,8 @@ export function RoadTrack({
   accent: string;
   /** il testo accanto all'anello (dove si è arrivati, la serie) */
   title: ReactNode;
+  /** a destra nella riga dell'anello: orologio, impostazioni, microfono */
+  right?: ReactNode;
   onErrors: (from: number, to: number) => void;
 }) {
   const th = useTheme();
@@ -145,8 +157,130 @@ export function RoadTrack({
   const fillStyle = useAnimatedStyle(() => ({ width: roadX(fillW.get(), width) }));
   const beyondStyle = useAnimatedStyle(() => ({ width: roadX(beyondW.get(), width) }));
 
+  const ink = inkOn(accent);
+  const path = (
+    <View
+      accessibilityLabel={t('fc.gm_f2_percorso')}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={{ height: 26, justifyContent: 'center' }}
+    >
+      <View style={{ height: 2, borderRadius: 1, backgroundColor: th.hairline2 }} />
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            height: 2,
+            borderRadius: 1,
+            backgroundColor: accent,
+            opacity: 0.3,
+          },
+          beyondStyle,
+        ]}
+      />
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            height: 2,
+            borderRadius: 1,
+            backgroundColor: accent,
+            shadowColor: accent,
+            shadowOpacity: 0.6,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 0 },
+          },
+          fillStyle,
+        ]}
+      />
+      {width > 0 ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: accent,
+          }}
+        />
+      ) : null}
+      {width > 0
+        ? discs.map(([a, b]) => {
+            const n = wrongIn(wrong, a, b);
+            const state = discState(model.pos, a, b);
+            const cur = state === 'cur';
+            const size = n > 0 || cur ? (cur ? 22 : 18) : state === 'ok' ? 5 : 4;
+            const left = roadX((b / model.tot) * 100, width) - size / 2;
+            const base = {
+              position: 'absolute' as const,
+              left,
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              alignItems: 'center' as const,
+              justifyContent: 'center' as const,
+            };
+            const style =
+              n > 0
+                ? {
+                    ...base,
+                    backgroundColor: accent,
+                    borderWidth: cur ? 1.5 : 0,
+                    borderColor: th.surface,
+                    shadowColor: accent,
+                    shadowOpacity: 0.55,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 0 },
+                  }
+                : cur
+                  ? {
+                      ...base,
+                      backgroundColor: th.surface,
+                      borderWidth: 1.5,
+                      borderColor: accent,
+                      shadowColor: accent,
+                      shadowOpacity: 0.35,
+                      shadowRadius: 5,
+                      shadowOffset: { width: 0, height: 0 },
+                    }
+                  : state === 'ok'
+                    ? { ...base, backgroundColor: accent, opacity: 0.85 }
+                    : { ...base, backgroundColor: th.hairline2 };
+            return n > 0 ? (
+              <Pressable
+                key={a}
+                testID={`fcg-disc-${a}`}
+                accessibilityRole="button"
+                accessibilityLabel={t('fc.gm_f2_nodo', { n })}
+                hitSlop={9}
+                onPress={() => onErrors(a, b)}
+                style={style}
+              >
+                <Text
+                  style={{
+                    color: ink,
+                    fontSize: 10,
+                    fontWeight: '800',
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {n}
+                </Text>
+              </Pressable>
+            ) : (
+              <View key={a} testID={`fcg-disc-${a}`} style={style} />
+            );
+          })
+        : null}
+    </View>
+  );
+
   return (
-    <View testID="fcg-road" style={{ gap: 8 }}>
+    <View testID="fcg-road" style={{ gap: 6 }}>
+      {path}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {v.ring ? (
           <View
@@ -157,87 +291,8 @@ export function RoadTrack({
             <RoadRing outer={v.o1} inner={v.o2} two={v.r2} color={accent} track={th.hairline2} />
           </View>
         ) : null}
-        <View style={{ flex: 1 }}>{title}</View>
-      </View>
-      <View
-        accessibilityLabel={t('fc.gm_f2_percorso')}
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-        style={{ height: 26, justifyContent: 'center' }}
-      >
-        <View style={{ height: 4, borderRadius: 2, backgroundColor: th.hairline2 }} />
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              left: 0,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: accent,
-              opacity: 0.35,
-            },
-            beyondStyle,
-          ]}
-        />
-        <Animated.View
-          style={[
-            { position: 'absolute', left: 0, height: 4, borderRadius: 2, backgroundColor: accent },
-            fillStyle,
-          ]}
-        />
-        {width > 0
-          ? discs.map(([a, b]) => {
-              const n = wrongIn(wrong, a, b);
-              const state = discState(model.pos, a, b);
-              const size = state === 'cur' ? DISC + 3 : DISC;
-              const left = roadX((b / model.tot) * 100, width) - size / 2;
-              const base = {
-                position: 'absolute' as const,
-                left,
-                width: size,
-                height: size,
-                borderRadius: size / 2,
-                alignItems: 'center' as const,
-                justifyContent: 'center' as const,
-              };
-              const style =
-                n > 0
-                  ? {
-                      ...base,
-                      backgroundColor: th.red,
-                      borderWidth: state === 'cur' ? 2 : 0,
-                      borderColor: th.text,
-                    }
-                  : state === 'ok'
-                    ? { ...base, backgroundColor: accent }
-                    : state === 'cur'
-                      ? { ...base, backgroundColor: th.bg, borderWidth: 3, borderColor: accent }
-                      : {
-                          ...base,
-                          backgroundColor: th.bg,
-                          borderWidth: 2,
-                          borderColor: th.hairline2,
-                        };
-              const text =
-                n > 0 ? (
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{n}</Text>
-                ) : null;
-              return n > 0 ? (
-                <Pressable
-                  key={a}
-                  testID={`fcg-disc-${a}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('fc.gm_f2_nodo', { n })}
-                  hitSlop={8}
-                  onPress={() => onErrors(a, b)}
-                  style={style}
-                >
-                  {text}
-                </Pressable>
-              ) : (
-                <View key={a} testID={`fcg-disc-${a}`} style={style} />
-              );
-            })
-          : null}
+        <View style={{ flex: 1, minWidth: 0 }}>{title}</View>
+        {right}
       </View>
     </View>
   );

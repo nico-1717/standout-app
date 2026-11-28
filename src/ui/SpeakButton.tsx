@@ -17,18 +17,32 @@ export function SpeakButton({
   once = false,
   testID,
   size = 20,
+  look = 'plain',
+  accent,
 }: {
   text: string;
   lang: string;
   once?: boolean;
   testID?: string;
   size?: number;
+  /** plain = solo l'icona; square = il tasto quadrato del gioco (fcv-speak); round = il tondino degli esempi */
+  look?: 'plain' | 'square' | 'round';
+  /** il colore del tasto (square/round) */
+  accent?: string;
 }) {
   const th = useTheme();
   const { t } = useTranslation();
   const [on, setOn] = useState(false);
   if (!text.trim()) return null;
-  const color = on ? th.brand : th.text2;
+  const ac = accent ?? th.blue;
+  const boxed = look !== 'plain';
+  const color = boxed ? (on ? '#fff' : ac) : on ? th.brand : th.text2;
+  const box =
+    look === 'square'
+      ? { width: 46, height: 46, borderRadius: 14 }
+      : look === 'round'
+        ? { width: 26, height: 26, borderRadius: 13 }
+        : null;
   return (
     <Pressable
       testID={testID}
@@ -45,11 +59,21 @@ export function SpeakButton({
         setOn(true);
         void speak(text, lang, { once, done: () => setOn(false) });
       }}
-      style={{ padding: 4 }}
+      style={({ pressed }) =>
+        box
+          ? {
+              ...box,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: on ? ac : `${ac}${look === 'square' ? '26' : '1F'}`,
+              transform: [{ scale: pressed ? 0.9 : 1 }],
+            }
+          : { padding: 4 }
+      }
     >
       <Svg
-        width={size}
-        height={size}
+        width={look === 'square' ? 21 : look === 'round' ? 14 : size}
+        height={look === 'square' ? 21 : look === 'round' ? 14 : size}
         viewBox="0 0 24 24"
         fill="none"
         stroke={color}

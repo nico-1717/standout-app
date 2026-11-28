@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -37,7 +37,6 @@ import { CheckpointSheet, type RecordLine } from '@/features/flashcards/juice/Ch
 import { ErrorsSheet } from '@/features/flashcards/juice/ErrorsSheet';
 import { GameSettingsSheet } from '@/features/flashcards/juice/GameSettingsSheet';
 import { ToastHost, useToasts } from '@/features/flashcards/juice/GameToasts';
-import { JuiceBar } from '@/features/flashcards/juice/JuiceBar';
 import { ROAD_ACCENT, RoadTrack } from '@/features/flashcards/juice/RoadTrack';
 import { StreakPill } from '@/features/flashcards/juice/StreakPill';
 import { useGameConfetti } from '@/features/flashcards/juice/useGameConfetti';
@@ -56,11 +55,30 @@ import {
   type ReadableCard,
   type Segment,
 } from '@/features/flashcards/voice/reading';
+import {
+  AnswerSlot,
+  CardTitle,
+  ChronoPill,
+  CornerFab,
+  ExampleLine,
+  GameCard,
+  GapBlank,
+  GradeRow,
+  HintBox,
+  Icon,
+  IconBtn,
+  ICONS,
+  LevelBadge,
+  NavPill,
+  RevealVeil,
+  SectionTitle,
+  WideButton,
+} from '@/features/flashcards/game/GameUi';
 import { Confetti } from '@/features/habits/Confetti';
+import { langFlag, langName } from '@/features/languages/langs';
 import { gapParts, speakable } from '@/features/languages/gap';
 import { Card, PrimaryButton, TextButton } from '@/ui/kit';
 import { haptic } from '@/ui/motion';
-import { MicButton } from '@/ui/MicButton';
 import { SpeakButton } from '@/ui/SpeakButton';
 
 interface Item {
@@ -69,6 +87,8 @@ interface Item {
   isChild: boolean;
   question: string | null;
   answer: string | null;
+  questionLang?: string | null;
+  answerLang?: string | null;
   questionImage: string | null;
   answerImage: string | null;
   questionAudio: string | null;
@@ -80,10 +100,6 @@ interface Item {
   answerVoice: VoiceSpec | null;
   exampleVoice: string | null;
 }
-
-/** Lo spazio vuoto di una parte nascosta: la larghezza dice a grandi linee quanto è lunga (corta, media, lunga). */
-const gapBlank = (text: string): string =>
-  text.length <= 4 ? '____' : text.length <= 9 ? '________' : '____________';
 
 /** Un checkpoint che aspetta di essere letto: il tratto, il riassunto, i record e dove si va dopo. */
 interface CkState {
@@ -173,6 +189,9 @@ export default function GameScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [kit, game, added.length],
   );
+
+  // il tempo già giocato quando si apre (l'orologio poi sale da solo)
+  const [playedBase] = useState(() => (kit && game ? kit.games.playedSeconds(game) : 0));
 
   if (!services || !game || !kit) return null;
   const { games } = kit;
@@ -377,104 +396,81 @@ export default function GameScreen() {
     else refresh();
   };
 
-  const verdictBtn = (
-    testID: string,
-    label: string,
-    color: string,
-    onPress: () => void,
-    filled = true,
-  ) => (
-    <Pressable
-      key={testID}
-      testID={testID}
-      accessibilityRole="button"
-      onPress={onPress}
-      style={{
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-        backgroundColor: filled ? color : 'transparent',
-        borderWidth: filled ? 0 : 1.5,
-        borderColor: color,
-      }}
-    >
-      <Text style={{ color: filled ? '#fff' : color, fontWeight: '700', fontSize: 15 }}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-
-  /** Significato ed esempi come aiuto: sempre («aperto»), a un tocco, o solo dopo la risposta. */
+  /** Significato ed esempi (.fcv-hints): sempre («aperto»), a un tocco, o solo dopo la risposta; vista la risposta, tutti. */
   const hintBlock = (it: Item) => {
-    const lines: { key: 'meaning' | 'examples'; node: ReactNode }[] = [];
-    if (it.meaning) lines.push({ key: 'meaning', node: it.meaning });
-    if (it.examples.length) {
-      lines.push({
-        key: 'examples',
-        node: it.examples.map((e, n) => (
-          <View key={n} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text
-              testID={`fcg-example-${n}`}
-              style={{ flex: 1, color: th.text2, fontSize: 14, fontStyle: 'italic' }}
-            >
-              {gapParts(e.text, it.word, e.gap).map((part, k) =>
-                !part.hidden ? (
-                  part.text
-                ) : shown ? (
-                  <Text key={k} style={{ color: th.brand, fontWeight: '700' }}>
-                    {part.text}
-                  </Text>
-                ) : (
-                  <Text key={k}>{gapBlank(part.text)}</Text>
-                ),
-              )}
-            </Text>
-            {/* l'ascolto compare solo con la risposta: prima la voce direbbe proprio la parola da indovinare */}
-            {shown && it.exampleVoice ? (
-              <SpeakButton
-                testID={`fcg-speak-example-${n}`}
-                text={speakable(e.text, it.word)}
-                lang={it.exampleVoice}
-                once
-                size={18}
-              />
-            ) : null}
-          </View>
-        )),
-      });
+    const blocks: ReactNode[] = [];
+    const isOpen = (key: 'meaning' | 'examples') => {
+      const mode = kit.hints[key];
+      return (
+        shown || mode === 'aperto' || tapped.has(`${it.play.uuid}:${key}`)
+          ? 'open'
+          : mode === 'tocco'
+            ? 'tap'
+            : 'hidden'
+      ) as 'open' | 'tap' | 'hidden';
+    };
+    const opener = (key: string) => () => setTapped(new Set([...tapped, `${it.play.uuid}:${key}`]));
+    if (it.meaning && isOpen('meaning') !== 'hidden') {
+      blocks.push(
+        <HintBox
+          key="m"
+          testID="fcg-hint-meaning"
+          label={t('fcv.indizio_significato')}
+          open={isOpen('meaning') === 'open'}
+          onOpen={opener('meaning')}
+        >
+          <Text style={{ color: th.text2, fontSize: 16, lineHeight: 24, fontStyle: 'italic' }}>
+            {it.meaning}
+          </Text>
+        </HintBox>,
+      );
     }
-    return (
-      <View style={{ gap: 6 }}>
-        {lines.map((l) => {
-          const mode = kit.hints[l.key];
-          const id = `${it.play.uuid}:${l.key}`;
-          const open = mode === 'aperto' || (mode === 'dopo' && shown) || tapped.has(id);
-          return open ? (
-            l.key === 'examples' ? (
-              <View key={l.key} testID="fcg-hint-examples" style={{ gap: 4 }}>
-                {l.node}
-              </View>
-            ) : (
-              <Text key={l.key} testID="fcg-hint-meaning" style={{ color: th.text2, fontSize: 14 }}>
-                {l.node}
-              </Text>
-            )
-          ) : mode === 'tocco' ? (
-            <Pressable
-              key={l.key}
-              testID={`fcg-hint-${l.key}-show`}
-              accessibilityRole="button"
-              onPress={() => setTapped(new Set([...tapped, id]))}
-            >
-              <Text style={{ color: th.brand, fontSize: 14 }}>
-                {t(l.key === 'meaning' ? 'fcv.indizio_significato' : 'fcv.indizio_esempio')}
-              </Text>
-            </Pressable>
-          ) : null;
-        })}
-      </View>
-    );
+    if (it.examples.length && isOpen('examples') !== 'hidden') {
+      blocks.push(
+        <HintBox
+          key="e"
+          testID="fcg-hint-examples"
+          label={t('fcv.indizio_esempio')}
+          open={isOpen('examples') === 'open'}
+          onOpen={opener('examples')}
+        >
+          <View style={{ gap: 9, marginTop: 2 }}>
+            {it.examples.map((e, n) => (
+              <ExampleLine key={n}>
+                <Text
+                  testID={`fcg-example-${n}`}
+                  style={{ flex: 1, color: th.text, fontSize: 16, lineHeight: 24 }}
+                >
+                  {gapParts(e.text, it.word, e.gap).map((part, k) =>
+                    !part.hidden ? (
+                      part.text
+                    ) : shown ? (
+                      <Text key={k} style={{ color: th.purple, fontWeight: '800' }}>
+                        {part.text}
+                      </Text>
+                    ) : (
+                      <GapBlank key={k} word={part.text} />
+                    ),
+                  )}
+                </Text>
+                {/* l'ascolto compare solo con la risposta: prima la voce direbbe proprio la parola da indovinare */}
+                {shown && it.exampleVoice ? (
+                  <SpeakButton
+                    testID={`fcg-speak-example-${n}`}
+                    text={speakable(e.text, it.word)}
+                    lang={it.exampleVoice}
+                    once
+                    look="round"
+                    accent={th.purple}
+                  />
+                ) : null}
+              </ExampleLine>
+            ))}
+          </View>
+        </HintBox>,
+      );
+    }
+    return blocks.length ? <View style={{ gap: 10, marginTop: 16 }}>{blocks}</View> : null;
   };
 
   // ---- la partita a voce: in che fase si è, cosa leggere, cosa si può dire, cosa fa ogni comando ----
@@ -555,10 +551,6 @@ export default function GameScreen() {
   };
 
   const label = (it: Item) => t(it.isChild ? 'fc.gm_sottoconcetto' : 'fc.gm_concetto_principale');
-  const mark = (s: ReturnType<typeof stateOf>) =>
-    s === 'correct' ? '✓' : s === 'wrong' ? '✗' : s === 'seen' ? '•' : '○';
-  const markColor = (s: ReturnType<typeof stateOf>) =>
-    s === 'correct' ? th.green : s === 'wrong' ? th.red : th.text2;
 
   const front = games.frontier(game);
   const wrongRows = allPlays.filter((p) => p.user_answer === 'Wrong');
@@ -578,132 +570,191 @@ export default function GameScreen() {
             };
           });
 
+  const accent = games.accentAt(game, pos) ?? ROAD_ACCENT;
+  const ui = i18n.language === 'it' ? 'it' : 'en';
+  const sideTag = (it: Item, side: 'q' | 'a') => {
+    const code = side === 'q' ? it.questionLang : it.answerLang;
+    return kit.vocab && code
+      ? { flag: langFlag(code), label: langName(code, ui, false) }
+      : { flag: null, label: t(side === 'q' ? 'fc.ifc_domanda' : 'fc.ifc_risposta') };
+  };
+  const big = (it: Item) => kit.vocab && !it.isChild;
+  const openEdit = (it: Item) => {
+    games.saveCombo(game);
+    if (kit.vocab) router.push({ pathname: '/lang-word', params: { id: it.target } });
+    else
+      router.push({
+        pathname: '/fc-card',
+        params: it.isChild ? { sub: it.target } : { id: it.target },
+      });
+  };
+  const allAnswered = items.length > 0 && !current;
+
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
+      {/* l'intestazione (.app-header): la strada, poi anello, contatore e i tasti tondi */}
       <View
         style={{
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top + 8,
           paddingBottom: 10,
           paddingHorizontal: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
+          backgroundColor: th.headerGlass,
+          borderBottomWidth: 0.5,
+          borderBottomColor: th.hairline,
+          zIndex: 10,
         }}
       >
-        <Pressable
-          testID="fcg-close"
-          accessibilityRole="button"
-          accessibilityLabel={t('comune.chiudi')}
-          onPress={() => {
-            games.saveCombo(game);
-            router.back();
-          }}
-          hitSlop={10}
-        >
-          <Text style={{ color: th.brand, fontSize: 17 }}>✕</Text>
-        </Pressable>
-        <View style={{ flex: 1 }} />
-        <MicButton
-          testID="fcg-voice"
-          active={voiceOn}
-          label={t('fc.vg_titolo')}
-          size={32}
-          tint={th.brand}
-          onPress={() => setIntroOpen(true)}
-        />
-        <Pressable
-          testID="fcg-gear"
-          accessibilityRole="button"
-          accessibilityLabel={t('fcv.gs_titolo')}
-          onPress={() => setSettingsOpen(true)}
-          hitSlop={10}
-        >
-          <Text style={{ color: th.brand, fontSize: 20 }}>⚙︎</Text>
-        </Pressable>
-        <Pressable
-          testID="fcg-conclude"
-          accessibilityRole="button"
-          onPress={() => setConfirming(true)}
-          hitSlop={10}
-        >
-          <Text style={{ color: th.brand, fontSize: 15, fontWeight: '600' }}>
-            {t('fc.gm_concludi')}
-          </Text>
-        </Pressable>
-      </View>
-      <View style={{ marginHorizontal: 16 }}>
-        <JuiceBar
-          progress={total > 0 ? closed / total : 0}
-          final={finalStretch(total, front).on}
-          track={th.surface2}
-        />
-      </View>
-      <View style={{ marginHorizontal: 16, marginTop: 10 }}>
         <RoadTrack
           model={{ tot: total, pos, front, done: games.tally(game).played, cp: perPosition }}
           every={everyNow}
           wrong={wrongRows.map((p) => p.position)}
-          accent={ROAD_ACCENT}
+          accent={accent}
           onErrors={(a, b) => setErrorsRange([a, b])}
           title={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Text testID="fcg-progress" style={{ color: th.text2, fontWeight: '600' }}>
-                {t('fc.gm_posizione', { n: pos, tot: total })}
+            <View
+              testID="fcg-progress"
+              accessible
+              accessibilityLabel={t('fc.gm_posizione', { n: pos, tot: total })}
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: th.text,
+                  fontSize: 26,
+                  fontWeight: '800',
+                  letterSpacing: -0.5,
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {pos}
+                <Text style={{ color: th.text2, fontSize: 16, fontWeight: '600' }}> / {total}</Text>
               </Text>
-              <StreakPill n={streak.current} />
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: th.text2,
+                  fontSize: 11.5,
+                  marginTop: 2,
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {t('fc.gm_n_concetti', { conteggio: '' }).replace(/\s*$/, ' ')}
+                <Text style={{ color: th.text, fontWeight: '700' }}>
+                  {closed}/{total}
+                </Text>
+              </Text>
+            </View>
+          }
+          right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ChronoPill base={playedBase} color={accent} label={t('fc.gm_durata')} />
+              <IconBtn
+                testID="fcg-gear"
+                label={t('fcv.gs_titolo')}
+                onPress={() => setSettingsOpen(true)}
+              >
+                <Icon d={ICONS.gear} color={th.text2} />
+              </IconBtn>
+              <IconBtn
+                testID="fcg-voice"
+                label={t('fc.vg_titolo')}
+                on={voiceOn}
+                accent={accent}
+                onPress={() => setIntroOpen(true)}
+              >
+                <Icon d={ICONS.mic} color={voiceOn ? '#fff' : th.text2} />
+              </IconBtn>
             </View>
           }
         />
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 30,
+          paddingBottom: insets.bottom + 40,
+        }}
       >
         {record >= 3 && streak.current > record ? (
           <Text
             testID="fcg-record"
-            style={{ color: th.green, fontWeight: '700', textAlign: 'center' }}
+            style={{ color: th.green, fontWeight: '700', textAlign: 'center', marginBottom: 14 }}
           >
             {t('fcv.gj_record_combo', { n: streak.current })}
           </Text>
         ) : null}
 
-        {confirming ? (
-          <Card style={{ padding: 16, gap: 10 }}>
-            <Text style={{ color: th.text, fontSize: 16, fontWeight: '600' }}>
-              {t('fc.gm_conferma_concludi')}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {verdictBtn(
-                'fcg-conclude-no',
-                t('fc.gm_no_continua'),
-                th.brand,
-                () => setConfirming(false),
-                false,
-              )}
-              {verdictBtn('fcg-conclude-yes', t('fc.gm_si_risultati'), th.brand, finish)}
-            </View>
-          </Card>
-        ) : null}
-
-        {father && (!current || current.isChild) ? (
-          <Card style={{ padding: 16, gap: 6 }}>
-            <Text style={{ color: th.text2, fontSize: 12, fontWeight: '700' }}>
-              {t('fc.gm_concetto_principale').toUpperCase()}
-            </Text>
+        {/* il padre sopra i suoi sottoconcetti (.card-title-header) */}
+        {father && current?.isChild ? (
+          <View
+            style={{
+              paddingTop: 10,
+              paddingHorizontal: 4,
+              paddingBottom: 14,
+              marginBottom: 14,
+              borderBottomWidth: 1.5,
+              borderBottomColor: th.hairline,
+            }}
+          >
             <DocView testID="fcg-father" raw={father.question} size={18} />
-          </Card>
+          </View>
         ) : null}
 
         {current ? (
-          <Card style={{ padding: 16, gap: 12 }}>
-            <Text style={{ color: th.text2, fontSize: 12, fontWeight: '700' }}>
-              {label(current).toUpperCase()}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <DocView testID="fcg-question" raw={current.question} size={19} />
+          <GameCard
+            gold={kit.isFavorite(current.target)}
+            top={streak.current >= 2 ? <StreakPill n={streak.current} /> : null}
+          >
+            <CornerFab
+              testID="fcg-favorite"
+              label={t('fc.gm_preferiti')}
+              side="left"
+              gold={kit.isFavorite(current.target)}
+              onPress={() => {
+                kit.setFavorite(current.target, current.isChild, !kit.isFavorite(current.target));
+                haptic.tap();
+                refresh();
+              }}
+            >
+              <Icon
+                d={ICONS.star}
+                size={16}
+                color={kit.isFavorite(current.target) ? '#fff' : th.text2}
+                fill={kit.isFavorite(current.target)}
+                width={2}
+              />
+            </CornerFab>
+            <CornerFab
+              testID="fcg-edit"
+              label={t('comune.modifica')}
+              side="right"
+              onPress={() => openEdit(current)}
+            >
+              <Icon d={ICONS.pencil} size={16} color={th.text2} />
+            </CornerFab>
+            <LevelBadge
+              level={games.levelOfCard(current.target, current.isChild)}
+              label={t(`fcv.liv_${games.levelOfCard(current.target, current.isChild)}`)}
+            />
+            {items.length > 1 ? (
+              <CardTitle label={label(current)} child={current.isChild} />
+            ) : (
+              <View style={{ height: 38 }} />
+            )}
+
+            {/* la domanda (.q-section) */}
+            <SectionTitle {...sideTag(current, 'q')} />
+            <CardImage testID="fcg-question-image" name={current.questionImage} zoom />
+            <CardAudio testID="fcg-question-audio" name={current.questionAudio} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <DocView
+                  testID="fcg-question"
+                  raw={current.question}
+                  size={big(current) ? 28 : 19}
+                  weight={big(current) ? '700' : undefined}
+                />
               </View>
               {current.questionVoice ? (
                 <SpeakButton
@@ -711,106 +762,104 @@ export default function GameScreen() {
                   text={current.question ?? ''}
                   lang={current.questionVoice.lang}
                   once={current.questionVoice.once}
+                  look="square"
+                  accent={accent}
                 />
               ) : null}
             </View>
-            <CardImage testID="fcg-question-image" name={current.questionImage} />
-            <CardAudio testID="fcg-question-audio" name={current.questionAudio} />
-            {kit.vocab ? hintBlock(current) : null}
-            {shown ? (
-              <View style={{ gap: 12 }}>
-                <View style={{ height: 1, backgroundColor: th.hairline2 }} />
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <DocView testID="fcg-answer" raw={current.answer} size={17} />
+
+            {/* il posto della risposta (.fcv-slot): velato finché non lo si tocca */}
+            <View style={{ marginTop: 16 }}>
+              {shown ? (
+                <AnswerSlot
+                  testID="fcg-answer-slot"
+                  label={<SectionTitle {...sideTag(current, 'a')} tight />}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <DocView
+                        testID="fcg-answer"
+                        raw={current.answer}
+                        size={big(current) ? 30 : 17}
+                        weight={big(current) ? '800' : undefined}
+                      />
+                    </View>
+                    {current.answerVoice ? (
+                      <SpeakButton
+                        testID="fcg-speak-answer"
+                        text={current.answer ?? ''}
+                        lang={current.answerVoice.lang}
+                        once={current.answerVoice.once}
+                        look="square"
+                        accent={accent}
+                      />
+                    ) : null}
                   </View>
-                  {current.answerVoice ? (
-                    <SpeakButton
-                      testID="fcg-speak-answer"
-                      text={current.answer ?? ''}
-                      lang={current.answerVoice.lang}
-                      once={current.answerVoice.once}
-                    />
-                  ) : null}
-                </View>
-                <CardImage testID="fcg-answer-image" name={current.answerImage} />
-                <CardAudio testID="fcg-answer-audio" name={current.answerAudio} />
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {verdictBtn('fcg-wrong', t('fc.vg_sbagliato'), th.red, () =>
-                    grade(current, 'wrong'),
-                  )}
-                  {verdictBtn('fcg-correct', t('fc.res_corretto'), th.green, () =>
-                    grade(current, 'correct'),
-                  )}
-                  {verdictBtn('fcg-learnt', t('fc.gm_imparato'), th.brand, () =>
-                    grade(current, 'learnt'),
-                  )}
-                </View>
-              </View>
-            ) : (
-              <Pressable
-                testID="fcg-reveal"
-                accessibilityRole="button"
-                onPress={() => setShown(true)}
-                style={{
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  backgroundColor: th.surface2,
-                }}
-              >
-                <Text style={{ color: th.text, fontWeight: '700' }}>
-                  {t('fc.gm_mostra_risposta')}
-                </Text>
-                <Text style={{ color: th.text2, fontSize: 12, marginTop: 2 }}>
-                  {t('fc.gm_tocca_rivela')}
-                </Text>
-              </Pressable>
-            )}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Text style={{ color: th.text }}>{t('fc.gm_preferiti')}</Text>
-              <Switch
-                testID="fcg-favorite"
-                value={kit.isFavorite(current.target)}
-                onValueChange={(v) => {
-                  kit.setFavorite(current.target, current.isChild, v);
-                  refresh();
-                }}
-              />
+                  <CardImage testID="fcg-answer-image" name={current.answerImage} zoom />
+                  <CardAudio testID="fcg-answer-audio" name={current.answerAudio} />
+                </AnswerSlot>
+              ) : (
+                <RevealVeil
+                  testID="fcg-reveal"
+                  label={<SectionTitle {...sideTag(current, 'a')} tight />}
+                  text={t('fc.gm_tocca_rivela')}
+                  a11y={t('fc.gm_mostra_risposta')}
+                  onPress={() => {
+                    haptic.tap();
+                    setShown(true);
+                  }}
+                />
+              )}
             </View>
-          </Card>
-        ) : father ? (
-          <Card style={{ padding: 16, gap: 12 }}>
-            {father.play.user_answer !== 'Titolo' ? (
-              <DocView testID="fcg-answer" raw={father.answer} size={17} />
+
+            {kit.vocab ? hintBlock(current) : null}
+
+            {shown ? (
+              <GradeRow
+                wrongLabel={t('fc.vg_sbagliato')}
+                rightLabel={t('fc.res_corretto')}
+                learntLabel={t('fc.gm_imparato')}
+                learnt={false}
+                onWrong={() => grade(current, 'wrong')}
+                onRight={() => grade(current, 'correct')}
+                onLearnt={() => grade(current, 'learnt')}
+              />
             ) : null}
-            <PrimaryButton
-              testID="fcg-next"
-              label={t('fc.gm_avanti')}
-              onPress={() => go(pos + 1)}
-            />
-          </Card>
+          </GameCard>
+        ) : father ? (
+          <GameCard gold={false}>
+            <DocView testID="fcg-question" raw={father.question} size={19} />
+            {father.play.user_answer !== 'Titolo' ? (
+              <View style={{ marginTop: 16 }}>
+                <AnswerSlot label={<SectionTitle {...sideTag(father, 'a')} tight />}>
+                  <DocView testID="fcg-answer" raw={father.answer} size={17} />
+                </AnswerSlot>
+              </View>
+            ) : null}
+          </GameCard>
         ) : null}
 
-        {items.length > 1 || (items.length === 1 && !current) ? (
-          <Card style={{ padding: 12, gap: 6 }}>
+        {/* le carte già votate di questa posizione: il verdetto si può cambiare */}
+        {items.length > 1 || allAnswered ? (
+          <View style={{ gap: 8, marginTop: 16 }}>
             {items.map((it) => {
-              const s = stateOf(it.play.user_answer);
-              const voted = s === 'correct' || s === 'wrong';
+              const st = stateOf(it.play.user_answer);
+              const voted = st === 'correct' || st === 'wrong';
+              if (!voted && st !== 'seen') return null;
               return (
                 <View
                   key={it.play.uuid}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 16,
+                    backgroundColor: th.surface,
+                    borderWidth: 0.5,
+                    borderColor: th.hairline,
+                  }}
                 >
-                  <Text style={{ color: markColor(s), width: 18, fontWeight: '800' }}>
-                    {mark(s)}
-                  </Text>
                   <Text style={{ color: th.text, flex: 1 }} numberOfLines={1}>
                     {(it.question ?? '').replace(/\s+/g, ' ').slice(0, 60) || label(it)}
                   </Text>
@@ -825,21 +874,113 @@ export default function GameScreen() {
                           pos,
                           it.target,
                           it.isChild,
-                          s === 'correct' ? 'wrong' : 'correct',
+                          st === 'correct' ? 'wrong' : 'correct',
                         );
                         refresh();
                       }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 8,
+                        paddingHorizontal: 14,
+                        borderRadius: 11,
+                        backgroundColor: st === 'correct' ? th.greenSoft : th.redSoft,
+                      }}
                     >
-                      <Text style={{ color: th.brand, fontSize: 13 }}>
-                        {t('fc.gm_cambia_verdetto')}
+                      <Text
+                        style={{
+                          color: st === 'correct' ? th.green : th.red,
+                          fontSize: 13.5,
+                          fontWeight: '800',
+                        }}
+                      >
+                        {st === 'correct' ? '✓' : '✕'}{' '}
+                        {t(st === 'correct' ? 'fc.lbl_corretto' : 'fc.lbl_errato')}
                       </Text>
                     </Pressable>
-                  ) : null}
+                  ) : (
+                    <Text style={{ color: th.text2, fontSize: 13 }}>{t('fc.gm_solo_vista')}</Text>
+                  )}
                 </View>
               );
             })}
-          </Card>
+          </View>
         ) : null}
+
+        {/* «‹ Indietro» e, a posizione finita, «Avanti ›» (.nav-row) */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 10,
+            marginTop: 22,
+            marginBottom: 4,
+          }}
+        >
+          {pos > 1 ? (
+            <NavPill testID="fcg-back" label={t('comune.indietro')} onPress={() => go(pos - 1)} />
+          ) : null}
+          {allAnswered ? (
+            <NavPill
+              testID="fcg-next"
+              label={t('fc.gm_avanti')}
+              forward
+              onPress={() => go(pos + 1)}
+            />
+          ) : null}
+        </View>
+
+        {/* «Concludi» (#end-game-section) con la conferma arancione (.card-warn) */}
+        <View
+          style={{
+            marginTop: 26,
+            paddingTop: 18,
+            borderTopWidth: 0.5,
+            borderTopColor: th.hairline,
+          }}
+        >
+          {confirming ? (
+            <View
+              style={{ backgroundColor: th.orangeSoft, borderRadius: 18, padding: 16, gap: 10 }}
+            >
+              <Text style={{ color: th.orange, fontSize: 14.5, fontWeight: '700' }}>
+                {t('fc.gm_conferma_concludi')}
+              </Text>
+              <WideButton
+                testID="fcg-conclude-yes"
+                label={t('fc.gm_si_risultati')}
+                tone="red"
+                onPress={finish}
+              />
+              <NavPill
+                testID="fcg-conclude-no"
+                label={t('fc.gm_no_continua')}
+                onPress={() => setConfirming(false)}
+              />
+            </View>
+          ) : (
+            <WideButton
+              testID="fcg-conclude"
+              label={t('fc.gm_concludi')}
+              onPress={() => setConfirming(true)}
+            />
+          )}
+          <Pressable
+            testID="fcg-close"
+            accessibilityRole="button"
+            accessibilityLabel={t('comune.chiudi')}
+            onPress={() => {
+              games.saveCombo(game);
+              router.back();
+            }}
+            style={{ alignSelf: 'center', marginTop: 18, padding: 8 }}
+          >
+            <Text style={{ color: th.text3, fontSize: 14, fontWeight: '600' }}>
+              {t('comune.chiudi')}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       <ToastHost toast={toasts.toast} top={insets.top + 56} />

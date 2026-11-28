@@ -283,12 +283,13 @@ describe('playing', () => {
     expect(games.game(game)!.score).toBe(0);
   });
 
-  test('the favourite switch marks the card; the verdict of a graded sub-card can be changed', async () => {
+  test('the star marks the card as a favourite; the verdict of a graded sub-card can be changed', async () => {
     const { games, study, c1, game } = started();
     mockParams = { game, position: '1' };
     await render(wrap(<GameScreen />));
-    await fireEvent(screen.getByTestId('fcg-favorite'), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('fcg-favorite'));
     expect(study.isFavorite(c1)).toBe(true);
+    expect(screen.getByTestId('fcg-favorite').props.accessibilityState.selected).toBe(true);
     await fireEvent.press(screen.getByTestId('fcg-reveal'));
     await fireEvent.press(screen.getByTestId('fcg-correct'));
     // seconda carta, padre giusto: la riga del padre ha il tasto «cambia verdetto»
@@ -298,6 +299,24 @@ describe('playing', () => {
     expect(father.user_answer).toBe('Correct');
     await fireEvent.press(screen.getByTestId(`fcg-verdict-${father.uuid}`));
     expect(games.plays(game, 2).find((p) => p.card_uuid)!.user_answer).toBe('Wrong');
+  });
+
+  test('like the website: the pencil edits the card, «Back» goes to the previous position, the deck colour leads', async () => {
+    const { flashcards, games, deck, c1, game } = started();
+    flashcards.updateDeck(deck, { color: '#FF9500' });
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(games.accentAt(game, 1)).toBe('#FF9500');
+    // in prima posizione non c'è niente prima
+    expect(screen.queryByTestId('fcg-back')).toBeNull();
+    await fireEvent.press(screen.getByTestId('fcg-edit'));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/fc-card', params: { id: c1 } });
+    await fireEvent.press(screen.getByTestId('fcg-reveal'));
+    await fireEvent.press(screen.getByTestId('fcg-correct'));
+    expect(within(screen.getByTestId('fcg-question')).getByText('Q2')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('fcg-back'));
+    // la prima è già votata: si vede col suo verdetto e il tasto «Avanti»
+    expect(screen.getByTestId('fcg-next')).toBeTruthy();
   });
 
   test('resuming a position behind the first open one jumps to the open one', async () => {

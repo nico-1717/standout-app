@@ -19,6 +19,9 @@ export interface PlayView {
   examples: ExampleView[];
   /** la parola della carta: le sue forme sono la parte nascosta degli esempi finché non si rivela */
   word: string;
+  /** la lingua del lato domanda e del lato risposta (solo lingue: bandiera e nome nell'etichetta) */
+  questionLang?: string | null;
+  answerLang?: string | null;
   /** come si legge ad alta voce (solo lingue): la parola da imparare nella lingua che si studia, il resto in quella che si conosce */
   questionVoice: VoiceSpec | null;
   answerVoice: VoiceSpec | null;
@@ -138,6 +141,8 @@ export function languageKit(s: Services, course: string): GameKit {
     if (!row || !game) return none;
     const dir = directionAt(game.type, gameUuid, position);
     const [q, a] = dir === 'w2t' ? [row.word, row.translation] : [row.translation ?? '', row.word];
+    const learnCode = c?.learn_lang ?? 'en-GB';
+    const knownCode = c?.known_lang ?? 'it';
     return {
       question: q,
       answer: a,
@@ -151,6 +156,8 @@ export function languageKit(s: Services, course: string): GameKit {
         .map((e) => ({ text: e.example_text ?? '', gap: e.gap_text }))
         .filter((e) => e.text.trim()),
       word: row.word,
+      questionLang: dir === 'w2t' ? learnCode : knownCode,
+      answerLang: dir === 'w2t' ? knownCode : learnCode,
       ...voices(dir),
     };
   };

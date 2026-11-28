@@ -329,6 +329,22 @@ export class GameRepo {
     );
   }
 
+  /**
+   * Il colore della categoria della carta in una posizione (f2Colore del sito): l'accento della partita (la linea,
+   * l'anello, l'orologio, l'ascolto). Null se la categoria non ha un colore valido.
+   */
+  accentAt(gameUuid: string, position: number): string | null {
+    const r = this.db.all<{ color: string | null }>(
+      `SELECT d.color FROM ${this.scope.plays} p
+         JOIN ${this.scope.cards} c ON c.uuid = p.card_uuid
+         JOIN ${this.scope.decks} d ON d.uuid = c.category_uuid
+        WHERE p.game_uuid = ? AND p.position = ? LIMIT 1`,
+      [gameUuid, position],
+    )[0];
+    const c = r?.color ?? '';
+    return /^#[0-9a-fA-F]{6}$/.test(c) ? c : null;
+  }
+
   allPlays(gameUuid: string): PlayRow[] {
     return this.db.all<PlayRow>(
       `SELECT uuid, game_uuid, card_uuid, child_uuid, correct_answer, user_answer, position, play_date

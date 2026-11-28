@@ -137,7 +137,7 @@ describe('language game screens', () => {
 
   test('hints: open at once by default', async () => {
     await startGame();
-    expect(screen.getByTestId('fcg-hint-meaning').props.children).toBe('a building');
+    expect(screen.getByTestId('fcg-hint-meaning')).toHaveTextContent(/a building/);
   });
 
   test('hints: on a tap', async () => {

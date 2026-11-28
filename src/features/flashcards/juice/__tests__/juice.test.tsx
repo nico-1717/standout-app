@@ -30,7 +30,9 @@ describe('StreakPill', () => {
     expect(flameColor(2)).toBe('#FF9F0A');
     expect(flameColor(5)).toBe('#FF6B00');
     expect(flameColor(12)).toBe('#FF375F');
-    expect(flameColor(31)).toBe('#BF5AF2');
+    expect(flameColor(16)).toBe('#BF5AF2');
+    // da 30 la pillola diventa d'oro e la fiamma si scalda
+    expect(flameColor(31)).toBe('#C2410C');
   });
 });
 
