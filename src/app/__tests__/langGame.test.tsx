@@ -232,7 +232,9 @@ describe('language game screens', () => {
     games.grade(r.game, 1, plays[0]!.card_uuid!, false, 'wrong');
     mockParams = { game: r.game };
     await render(wrap(<ResultScreen />));
-    expect(screen.getByText('house → maison')).toBeTruthy();
+    // come sul sito: la parola come domanda e la traduzione nella risposta
+    expect(screen.getAllByText('house').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('maison').length).toBeGreaterThan(0);
     const play = games.allPlays(r.game).find((x) => x.card_uuid)!;
     await fireEvent.press(screen.getByTestId(`fcr-speak-q-${play.uuid}`));
     expect(mockSpeak).toHaveBeenLastCalledWith('house', 'en-GB', expect.anything());

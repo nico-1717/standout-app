@@ -474,12 +474,44 @@ describe('result and history', () => {
     mockParams = { game: r.game };
     await render(wrap(<ResultScreen />));
     const row = `fcr-open-${games.plays(r.game, 1)[0]!.uuid}`;
-    expect(screen.queryByText('Rome')).toBeNull();
-    await fireEvent.press(screen.getByTestId(row));
+    // come sul sito la risposta è già scritta sotto la domanda; toccando la carta si apre il visore
     expect(screen.getByText('Rome')).toBeTruthy();
+    expect(screen.queryByTestId('fcr-viewer')).toBeNull();
     await fireEvent.press(screen.getByTestId(row));
-    expect(screen.queryByText('Rome')).toBeNull();
+    expect(screen.getByTestId('fcr-viewer')).toBeTruthy();
   });
+  test('result like the website: the stats row, the resume pill, the edit pencil and the page jump', async () => {
+    const { flashcards, games } = setup();
+    const deck = flashcards.createDeck({ name: 'Maths' })!;
+    flashcards.addCard(deck, 'One', 'Uno');
+    flashcards.addCard(deck, 'Two', 'Due');
+    const r = games.start({ decks: [deck], status: 'all', order: 'in_order' });
+    if (r.kind !== 'started') throw new Error('empty');
+    const p = games.ensurePosition(r.game, 1)!;
+    games.grade(r.game, 1, p[0]!.card_uuid!, false, 'correct');
+    mockParams = { game: r.game };
+    await render(wrap(<ResultScreen />));
+    expect(screen.getByTestId('fcr-pages')).toHaveTextContent(/^1 \/ 2/);
+    expect(screen.getByText('Maths')).toBeTruthy();
+    // la partita non è finita: si riprende dalla seconda
+    await fireEvent.press(screen.getByTestId('fcr-continue'));
+    expect(mockReplace).toHaveBeenLastCalledWith({
+      pathname: '/fc-game',
+      params: { game: r.game, position: '2' },
+    });
+    const play = games.plays(r.game, 1)[0]!;
+    await fireEvent.press(screen.getByTestId(`fcr-edit-${play.uuid}`));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/fc-card',
+      params: { id: play.card_uuid },
+    });
+    await fireEvent.press(screen.getByTestId('fcr-jump-1'));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/fc-game',
+      params: { game: r.game, position: '1' },
+    });
+  });
+
   test('the full-screen viewer flips a card, goes next and closes', async () => {
     const { flashcards, games } = setup();
     const deck = flashcards.createDeck({ name: 'View' })!;
@@ -556,7 +588,7 @@ describe('result and history', () => {
     expect(screen.getByTestId('fcr-score')).toHaveTextContent('75%');
     expect(screen.getByTestId('fcr-correct')).toBeTruthy();
 
-    await fireEvent(screen.getByTestId('fcr-only-wrong'), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('fcr-only-wrong'));
     expect(screen.queryByTestId(`fcr-verdict-${games.plays(game, 1)[0]!.uuid}`)).toBeNull();
     expect(screen.getByTestId(`fcr-verdict-${father2.uuid}`)).toBeTruthy();
 
