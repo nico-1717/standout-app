@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="iPhone 17 Pro - iOS 26.2 - 3C77BD39-D906-4EE7-A765-141CEFD8EFDF" tests="1" failures="0" time="224.288" timestamp="2026-11-28T20:16:09">
+    <testcase id="Play a flashcard game from the deck (crash check)" name="Play a flashcard game from the deck (crash check)" classname="Play a flashcard game from the deck (crash check)" file=".maestro/50-flashcards-game.yaml" time="223.998" timestamp="2026-11-28T20:16:10" status="SUCCESS"/>
+  </testsuite>
+</testsuites>

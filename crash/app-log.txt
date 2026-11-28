@@ -1,0 +1,400 @@
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:32.199 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:32.304 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000e76eb0> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:32.304 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:32.304 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.11s
+2026-11-28 20:19:32.304 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:32.306 Df Standout[88629:394da] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:32.306 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:32.306 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:32.306 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000ec9a10> (error: (null))
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:32.700 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:32.700 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:32.700 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:32.701 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000ec91d0> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:32.701 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:32.701 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:32.701 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:32.794 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000f356b0> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:32.795 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:32.795 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.09s
+2026-11-28 20:19:32.795 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:32.796 Df Standout[88629:394da] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:32.796 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:32.797 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:32.797 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000f1fe10> (error: (null))
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:33.243 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:33.243 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:33.243 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:33.243 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000da8f00> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:33.243 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:33.243 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:33.243 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:33.341 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000e7b840> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:33.342 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:33.342 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.10s
+2026-11-28 20:19:33.342 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:33.344 Df Standout[88629:394da] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:33.344 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:33.344 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:33.344 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000ed1380> (error: (null))
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:33.821 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:33.821 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:33.821 Df Standout[88629:394da] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:33.822 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000ed7180> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:33.822 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:33.822 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:33.822 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:33.921 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000f16250> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:33.921 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:33.921 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.10s
+2026-11-28 20:19:33.921 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:33.923 Df Standout[88629:394da] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:33.923 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:33.923 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:33.923 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000ed7e70> (error: (null))
+2026-11-28 20:19:34.368 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:34.368 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:34.368 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:34.368 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:34.369 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000efa8b0> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:34.369 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:34.369 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:34.369 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:34.524 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000ee2c10> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:34.524 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:34.524 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.16s
+2026-11-28 20:19:34.524 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:34.531 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:34.531 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:34.532 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:34.532 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000e9b210> (error: (null))
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:35.168 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:35.168 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:35.168 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:35.169 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000ed06f0> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:35.169 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:35.169 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:35.169 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:35.289 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000ed1aa0> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:35.289 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:35.289 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.12s
+2026-11-28 20:19:35.289 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:35.292 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:35.292 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:35.292 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:35.292 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000eca1c0> (error: (null))
+2026-11-28 20:19:36.311 Df Standout[88629:366eb] [com.apple.KeyboardArbiter:Client] TX focusApplication (peekAppEvent) stealKB:Y scene:app.standout.mobile-default
+2026-11-28 20:19:36.312 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.312 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+2026-11-28 20:19:36.312 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x107b13010>; contextId: 0x7C4CB701
+2026-11-28 20:19:36.314 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.325 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.341 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.358 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.375 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.391 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.408 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.425 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.425 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:36.426 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+2026-11-28 20:19:36.426 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x107b13010>; contextId: 0x7C4CB701
+2026-11-28 20:19:36.442 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 1
+2026-11-28 20:19:36.442 A  Standout[88629:366eb] (UIKitCore) send gesture actions
+2026-11-28 20:19:36.442 A  Standout[88629:366eb] (UIKitCore) send gesture actions
+2026-11-28 20:19:38.921 Df Standout[88629:38da5] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:38.922 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:38.922 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:38.922 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:38.923 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000f7dd10> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:38.923 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:38.923 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:38.923 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:39.066 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000f7c3f0> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:39.066 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:39.066 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.14s
+2026-11-28 20:19:39.066 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:39.069 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:39.069 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:39.069 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:39.069 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000fc2c70> (error: (null))
+2026-11-28 20:19:39.581 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Received request to fetch matches for query:
+2026-11-28 20:19:39.581 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Evaluating query:
+2026-11-28 20:19:39.581 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Getting root element snapshot
+2026-11-28 20:19:39.581 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Getting snapshot for App element pid: 88629 for query
+2026-11-28 20:19:39.581 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Query requires iOS snapshot attributes .
+2026-11-28 20:19:39.582 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: about to CFRunLoopPerform
+2026-11-28 20:19:39.582 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting with 30.00s responsiveness timeout
+2026-11-28 20:19:39.582 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: inside CFRunLoopPerform
+2026-11-28 20:19:39.582 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[MT]: MT responded in time (won the race to the busy flag)
+2026-11-28 20:19:39.582 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] XCTPerformOnMainRunLoop[not MT]: waiting 60.00s for work to complete
+2026-11-28 20:19:39.583 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got main window <AXUIElementRef 0x600000fc3d80> {pid=88629} {uid=[ID:3 hash:0x107b13010]}
+2026-11-28 20:19:39.583 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeParent, XC_kAXXCAttributeIdentifier, XC_kAXXCAttributeAutomationType, XC_kAXXCAttributeTraits
+2026-11-28 20:19:39.583 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Capturing hierarchy with parameters {
+    attributes =     (
+        5003,
+        5004,
+        5002,
+        5019,
+        5058,
+        2004
+    );
+    maxArrayCount = 2147483647;
+    maxChildren = 2147483647;
+    maxDepth = 2147483647;
+    snapshotKeyHonorModalViews = 0;
+    traverseFromParentsToChildren = 1;
+}
+2026-11-28 20:19:39.583 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Snapshot attributes 5003, 5004, 5002, 5019, 5058, 2004
+2026-11-28 20:19:39.705 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got snapshot for <AXUIElementRef 0x600000fc2f40> {pid=88629} {uid=[ID:1 hash:0x0]}
+2026-11-28 20:19:39.705 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Got app orientation 0
+2026-11-28 20:19:39.705 Df Standout[88629:366eb] [com.apple.dt.xctest:Default] Captured accessibility snapshot data in 0.12s
+2026-11-28 20:19:39.705 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Found main window: Window
+2026-11-28 20:19:39.707 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] App orientation is 0 (not portrait) and UITextEffectsWindow window Window is not main window
+2026-11-28 20:19:39.707 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Leaving frame unchanged for Window: either already correct or we can't detect it.
+2026-11-28 20:19:39.708 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Query  found matching snapshots: {(
+    Application, pid: 88629
+)} (error: (null))
+2026-11-28 20:19:39.708 Df Standout[88629:394e2] [com.apple.dt.xctest:Default] Replying to query  with results: <XCTElementQueryResults: 0x600000ff0c60> (error: (null))
+2026-11-28 20:19:40.760 Df Standout[88629:366eb] [com.apple.KeyboardArbiter:Client] TX focusApplication (peekAppEvent) stealKB:Y scene:app.standout.mobile-default
+2026-11-28 20:19:40.760 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.760 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+2026-11-28 20:19:40.760 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x107b13010>; contextId: 0x7C4CB701
+2026-11-28 20:19:40.761 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.775 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.791 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.808 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.825 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.842 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.842 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 1
+2026-11-28 20:19:40.842 A  Standout[88629:366eb] (UIKitCore) send gesture actions
+2026-11-28 20:19:40.858 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.875 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.875 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Evaluating dispatch of UIEvent: 0x600003d42580; type: 0; subtype: 0; backing type: 11; shouldSend: 1; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+2026-11-28 20:19:40.875 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to windows: 1
+2026-11-28 20:19:40.875 Df Standout[88629:366eb] [com.apple.UIKit:EventDispatch] Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x107b13010>; contextId: 0x7C4CB701
+2026-11-28 20:19:40.875 A  Standout[88629:366eb] (UIKitCore) send gesture actions
+2026-11-28 20:19:43.186 Df Standout[88629:394c2] (libAudioDSP.dylib) cannot migrate AudioUnit assets for current process
+2026-11-28 20:19:54.959 Df Standout[88629:394da] [com.apple.xpc:connection] [0x107a0a5e0] invalidated because the client process (pid 86677) either cancelled the connection or exited
+2026-11-28 20:19:54.984 Df Standout[88629:394da] [com.apple.dt.xctest:Default] Connection from client with pid 86677 was invalidated.
+2026-11-28 20:19:55.013 Df Standout[88629:394da] [com.apple.dt.automationmode:Default] Handling posted change notification (com.apple.dt.automationmode.state-changed)
+2026-11-28 20:19:55.028 Df Standout[88629:394da] [com.apple.dt.automationmode:Default] XAM shared observer connecting to com.apple.dt.automationmode.reader
+2026-11-28 20:19:55.030 Df Standout[88629:394da] [com.apple.xpc:connection] [0x107bc0e20] activating connection: mach=true listener=false peer=false name=com.apple.dt.automationmode.reader
+2026-11-28 20:19:55.051 Df Standout[88629:394da] [com.apple.xpc:connection] [0x107bc0e20] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-11-28 20:19:55.051 Df Standout[88629:394da] [com.apple.dt.automationmode:Default] Comparing previous enabled state (1) to current enabled state (0)
+2026-11-28 20:19:55.053 Df Standout[88629:39a41] [com.apple.dt.xctest:Default] Automation Mode has been disabled, existing connections will be invalidated.
+2026-11-28 20:19:56.830 Df Standout[88629:394c2] [com.apple.xpc:connection] [0x12b480db0] activating connection: mach=true listener=false peer=false name=com.apple.assistant.analytics
+2026-11-28 20:19:58.035 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] Annotations changed, re-performing query for continuous discovery, report block = <0x600001048450>.
+2026-11-28 20:19:58.036 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d DA8D35CF-21F9-410B-84FE-1AF4757DBA2E] <PKHost:0x60000192bc40> Beginning discovery for flags: 0, point: com.apple.AudioUnit
+2026-11-28 20:19:58.036 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] Annotations changed, re-performing query for continuous discovery, report block = <0x6000010799b0>.
+2026-11-28 20:19:58.036 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d 0F6F844D-05B9-471F-A7A3-56060940C539] <PKHost:0x60000192bc40> Beginning discovery for flags: 0, point: com.apple.AudioUnit-Speech
+2026-11-28 20:19:58.036 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] Annotations changed, re-performing query for continuous discovery, report block = <0x600001079860>.
+2026-11-28 20:19:58.042 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d 06779AD1-8F96-4B58-8533-499A8AD323D9] <PKHost:0x60000192bc40> Beginning discovery for flags: 0, point: com.apple.AudioUnit-UI
+2026-11-28 20:19:58.277 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d DA8D35CF-21F9-410B-84FE-1AF4757DBA2E] <PKHost:0x60000192bc40> Completed discovery. Final # of matches: 0
+2026-11-28 20:19:58.280 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] <PKDiscoveryDriver:0x60000275bba0> delivering update to host (0 plugins)
+2026-11-28 20:19:58.285 A  Standout[88629:37e02] (ExtensionFoundation) discovering extensions
+2026-11-28 20:19:58.286 Df Standout[88629:37e02] [com.apple.extensionkit:NSExtension] discovered extensions: attributes {
+    NSExtensionPointName = "com.apple.AudioUnit";
+}, extensionSet {(
+)}
+2026-11-28 20:19:58.294 Df Standout[88629:394c2] [com.apple.PlugInKit:discovery] [d 0F6F844D-05B9-471F-A7A3-56060940C539] <PKHost:0x60000192bc40> Completed discovery. Final # of matches: 4
+2026-11-28 20:19:58.294 Df Standout[88629:394c2] [com.apple.PlugInKit:discovery] <PKDiscoveryDriver:0x6000026cb5a0> delivering update to host (4 plugins)
+2026-11-28 20:19:58.294 A  Standout[88629:394c2] (ExtensionFoundation) discovering extensions
+2026-11-28 20:19:58.302 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d 06779AD1-8F96-4B58-8533-499A8AD323D9] <PKHost:0x60000192bc40> Completed discovery. Final # of matches: 0
+2026-11-28 20:19:58.302 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] <PKDiscoveryDriver:0x6000026ccd80> delivering update to host (0 plugins)
+2026-11-28 20:19:58.302 A  Standout[88629:37e02] (ExtensionFoundation) discovering extensions
+2026-11-28 20:19:58.303 Df Standout[88629:37e02] [com.apple.extensionkit:NSExtension] discovered extensions: attributes {
+    NSExtensionPointName = "com.apple.AudioUnit-UI";
+}, extensionSet {(
+)}
+2026-11-28 20:19:58.308 Df Standout[88629:394c2] [com.apple.extensionkit:NSExtension] discovered extensions: attributes {
+    NSExtensionPointName = "com.apple.AudioUnit-Speech";
+}, extensionSet {(
+    <EXConcreteExtension: 0x6000039fc9c0> {id = com.apple.ax.KonaTTSSupport.KonaSynthesizer},
+    <EXConcreteExtension: 0x60000790cc30> {id = com.apple.speech.MacinTalkFramework.MacinTalkAUSP},
+    <EXConcreteExtension: 0x6000039ff810> {id = com.apple.texttospeech.SiriAUSP},
+    <EXConcreteExtension: 0x60000790f740> {id = com.apple.ax.MauiTTSSupport.MauiAUSP}
+)}
+2026-11-28 20:19:58.472 Df Standout[88629:394c2] [com.apple.launchservices:db] NotifyToken::RegisterDispatch(com.apple.LaunchServices.database) fired for session key LSSessionKey(system: 0 uid: 501)
+2026-11-28 20:19:58.693 Df Standout[88629:39a41] [com.apple.PlugInKit:discovery] Annotations changed, re-performing query for continuous discovery, report block = <0x600001048450>.
+2026-11-28 20:19:58.906 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] Annotations changed, re-performing query for continuous discovery, report block = <0x600001079860>.
+2026-11-28 20:19:58.906 Df Standout[88629:394c2] [com.apple.PlugInKit:discovery] Annotations changed, re-performing query for continuous discovery, report block = <0x6000010799b0>.
+2026-11-28 20:19:59.009 Df Standout[88629:39a41] [com.apple.PlugInKit:discovery] [d D3DA34CE-7ADD-4BEF-8738-405F66DC179A] <PKHost:0x60000192bc40> Beginning discovery for flags: 0, point: com.apple.AudioUnit
+2026-11-28 20:19:59.011 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d 9CF46B4A-DEB9-4A91-9BFD-52AC9E4465A9] <PKHost:0x60000192bc40> Beginning discovery for flags: 0, point: com.apple.AudioUnit-UI
+2026-11-28 20:19:59.012 Df Standout[88629:394c2] [com.apple.PlugInKit:discovery] [d B4D4EF31-7A5B-4A03-B28A-52984A7920D3] <PKHost:0x60000192bc40> Beginning discovery for flags: 0, point: com.apple.AudioUnit-Speech
+2026-11-28 20:20:01.434 Df Standout[88629:37e02] [com.apple.xpc:connection] [0x12b480db0] invalidated because the current process cancelled the connection by calling xpc_connection_cancel()
+2026-11-28 20:20:01.993 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d D3DA34CE-7ADD-4BEF-8738-405F66DC179A] <PKHost:0x60000192bc40> Completed discovery. Final # of matches: 0
+2026-11-28 20:20:02.009 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] <PKDiscoveryDriver:0x60000275bba0> delivering update to host (0 plugins)
+2026-11-28 20:20:02.009 A  Standout[88629:37e02] (ExtensionFoundation) discovering extensions
+2026-11-28 20:20:02.015 Df Standout[88629:37e02] [com.apple.extensionkit:NSExtension] discovered extensions: attributes {
+    NSExtensionPointName = "com.apple.AudioUnit";
+}, extensionSet {(
+)}
+2026-11-28 20:20:02.131 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d 9CF46B4A-DEB9-4A91-9BFD-52AC9E4465A9] <PKHost:0x60000192bc40> Completed discovery. Final # of matches: 0
+2026-11-28 20:20:02.131 Df Standout[88629:394c2] [com.apple.PlugInKit:discovery] <PKDiscoveryDriver:0x6000026ccd80> delivering update to host (0 plugins)
+2026-11-28 20:20:02.131 A  Standout[88629:394c2] (ExtensionFoundation) discovering extensions
+2026-11-28 20:20:02.131 Df Standout[88629:394c2] [com.apple.extensionkit:NSExtension] discovered extensions: attributes {
+    NSExtensionPointName = "com.apple.AudioUnit-UI";
+}, extensionSet {(
+)}
+2026-11-28 20:20:02.137 Df Standout[88629:37e02] [com.apple.PlugInKit:discovery] [d B4D4EF31-7A5B-4A03-B28A-52984A7920D3] <PKHost:0x60000192bc40> Completed discovery. Final # of matches: 4
+2026-11-28 20:20:02.137 Df Standout[88629:39a41] [com.apple.PlugInKit:discovery] <PKDiscoveryDriver:0x6000026cb5a0> delivering update to host (4 plugins)
+2026-11-28 20:20:02.137 A  Standout[88629:39a41] (ExtensionFoundation) discovering extensions
+2026-11-28 20:20:02.138 Df Standout[88629:39a41] [com.apple.extensionkit:NSExtension] discovered extensions: attributes {
+    NSExtensionPointName = "com.apple.AudioUnit-Speech";
+}, extensionSet {(
+    <EXConcreteExtension: 0x6000039fcf70> {id = com.apple.ax.KonaTTSSupport.KonaSynthesizer},
+    <EXConcreteExtension: 0x6000039fc000> {id = com.apple.speech.MacinTalkFramework.MacinTalkAUSP},
+    <EXConcreteExtension: 0x6000039fe560> {id = com.apple.texttospeech.SiriAUSP},
+    <EXConcreteExtension: 0x6000039fe2f0> {id = com.apple.ax.MauiTTSSupport.MauiAUSP}
+)}
+2026-11-28 20:20:10.454 Df log[94284:0] [com.apple.log:] log run noninteractively, parent: 80375 (launchd_sim), args: 'log' 'show' '--last' '40m' '--style' 'compact' '--predicate' 'process == "Standout" OR subsystem CONTAINS "standout" OR eventMessage CONTAINS "Unhandled JS Exception" OR eventMessage CONTAINS "
