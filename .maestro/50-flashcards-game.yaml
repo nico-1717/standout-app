@@ -56,3 +56,11 @@ name: Play a flashcard game from the deck (crash check)
     id: fcg-reveal
     optional: true
 - takeScreenshot: 53-game-revealed
+- swipe:
+    start: 30%, 45%
+    end: 95%, 45%
+    duration: 400
+- takeScreenshot: 54-after-swipe
+- tapOn:
+    id: fcg-voice
+- takeScreenshot: 55-voice-popup
