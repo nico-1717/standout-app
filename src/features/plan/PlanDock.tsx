@@ -30,6 +30,14 @@ const TB = {
     'M4 11h11',
     'M17.8 20.817l-2.172 1.138a.392 .392 0 0 1 -.568 -.41l.415 -2.411l-1.757 -1.707a.389 .389 0 0 1 .217 -.665l2.428 -.352l1.086 -2.193a.392 .392 0 0 1 .702 0l1.086 2.193l2.428 .352a.39 .39 0 0 1 .217 .665l-1.757 1.707l.414 2.41a.39 .39 0 0 1 -.567 .411l-2.172 -1.138',
   ],
+  adddate: [
+    'M12.5 21h-6.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v5',
+    'M16 3v4',
+    'M8 3v4',
+    'M4 11h16',
+    'M16 19h6',
+    'M19 16v6',
+  ],
   undo: ['M9 14l-4 -4l4 -4', 'M5 10h11a4 4 0 1 1 0 8h-1'],
   spark: [
     'M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6',
@@ -65,6 +73,7 @@ export function PlanDock(p: {
   onTool: (t: Tool) => void;
   showEvents: boolean;
   onEvents: () => void;
+  onAddDate: () => void;
   canUndo: boolean;
   onUndo: () => void;
   onAutoplan: () => void;
@@ -138,6 +147,15 @@ export function PlanDock(p: {
         style={[round(false), p.showEvents ? { backgroundColor: 'rgba(255,159,10,.24)' } : null]}
       >
         <Ico name="events" color={p.showEvents ? '#FF9F0A' : th.text} />
+      </Pressable>
+      <Pressable
+        testID="cal-add-date"
+        accessibilityRole="button"
+        accessibilityLabel={t('piano.data_imp_btn')}
+        onPress={p.onAddDate}
+        style={round(false)}
+      >
+        <Ico name="adddate" color={th.text} />
       </Pressable>
       <Pressable
         testID="cal-undo"

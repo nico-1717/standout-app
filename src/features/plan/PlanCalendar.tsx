@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import type { Project } from '@/features/projects/logic';
+import { useApp } from '@/core/app/AppProvider';
 import { Card, TextButton } from '@/ui/kit';
 import { haptic } from '@/ui/motion';
 
@@ -25,6 +26,7 @@ import { useFloatingDock } from './dockHost';
 import { addDays } from './engine';
 import { hours, monthLabel, shortHours, weekdayName } from './format';
 import { usePaintGesture } from './paintGesture';
+import { KeyDateSheet } from './KeyDateSheet';
 import { PlanDock, type Tool } from './PlanDock';
 import type { PlanRepo } from './repo';
 import { calendarView, type CalendarNode } from './view';
@@ -64,6 +66,8 @@ export function PlanCalendar(p: {
   const [sel, setSel] = useState<string | null>(p.initialSel ?? null);
   const [tool, setTool] = useState<Tool>('paint');
   const [showEv, setShowEv] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const { services } = useApp();
   const [undo, setUndo] = useState<Undo[]>([]);
   const [scope, setScope] = useState<string | null>(p.scope);
 
@@ -240,12 +244,28 @@ export function PlanCalendar(p: {
   });
   const pressDay = useCallback((day: string) => tapRef.current(day), []);
 
+  const saveKeyDate = (v: { title: string; date: string; level: 'high' | 'highest' }) => {
+    services?.planner.create({
+      title: v.title,
+      date: v.date,
+      allDay: true,
+      importance: v.level,
+      notify: 'none',
+    });
+    setAdding(false);
+    setShowEv(true);
+    // il mese mostrato segue la data scelta, così la si vede subito
+    setMonth(`${v.date.slice(0, 7)}-01`);
+    p.changed();
+  };
+
   useFloatingDock(
     <PlanDock
       tool={tool}
       onTool={setTool}
       showEvents={showEv}
       onEvents={() => setShowEv(!showEv)}
+      onAddDate={() => setAdding(true)}
       canUndo={undo.length > 0}
       onUndo={doUndo}
       onAutoplan={p.onAutoplan}
@@ -500,6 +520,12 @@ export function PlanCalendar(p: {
           })()}
         </Card>
       ) : null}
+      <KeyDateSheet
+        visible={adding}
+        today={today}
+        onSave={saveKeyDate}
+        onClose={() => setAdding(false)}
+      />
     </View>
   );
 }
