@@ -1312,6 +1312,18 @@ export class GameRepo {
     );
   }
 
+  /** La carta di una posizione, solo letta (l'anteprima dello swipe: niente righe create). */
+  peekCard(gameUuid: string, position: number): string | null {
+    const have = this.plays(gameUuid, position)[0];
+    if (have) return have.card_uuid;
+    return (
+      this.db.all<{ card_uuid: string }>(
+        `SELECT card_uuid FROM ${this.scope.sequence} WHERE game_uuid = ? AND position = ?`,
+        [gameUuid, position],
+      )[0]?.card_uuid ?? null
+    );
+  }
+
   /**
    * Le righe di risposta di una posizione, create se è la prima volta (il padre, poi le sottocarte). Ritorna null se la
    * posizione è oltre la fine della sequenza.

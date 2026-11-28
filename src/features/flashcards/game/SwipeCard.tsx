@@ -78,6 +78,8 @@ export function SwipeCard(p: {
   enabled: boolean;
   onCommit: (good: boolean) => void;
   onCross: () => void;
+  /** la carta dopo, che si vede dietro mentre si trascina */
+  behind?: ReactNode;
   children: ReactNode;
 }) {
   const { width } = useWindowDimensions();
@@ -137,10 +139,30 @@ export function SwipeCard(p: {
       ],
     };
   });
+  // la carta dietro si avvicina man mano che quella davanti si allontana
+  const back = useAnimatedStyle(() => {
+    const k = Math.min(1, Math.abs(s.x.get()) / threshold(width));
+    const gone = 1 - s.o.get();
+    const v = Math.max(k, gone);
+    return {
+      opacity: s.x.get() === 0 && gone === 0 ? 0 : 0.55 + v * 0.45,
+      transform: [{ scale: 0.94 + v * 0.06 }],
+    };
+  });
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View style={style}>{p.children}</Animated.View>
-    </GestureDetector>
+    <View>
+      {p.behind ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, back]}
+        >
+          {p.behind}
+        </Animated.View>
+      ) : null}
+      <GestureDetector gesture={pan}>
+        <Animated.View style={style}>{p.children}</Animated.View>
+      </GestureDetector>
+    </View>
   );
 }
 

@@ -215,6 +215,8 @@ export default function GameScreen() {
     [kit, game, added.length],
   );
 
+  // dove finisce l'intestazione: l'elenco degli errori si apre lì sotto
+  const [headerH, setHeaderH] = useState(0);
   // lo swipe e il volo della carta a ogni voto
   const sw = useSwipeState();
   const busy = useRef(false);
@@ -612,6 +614,7 @@ export default function GameScreen() {
               key: p.uuid,
               position: p.position,
               label: kit.label(game, p.position, target, isChild),
+              isChild,
             };
           });
 
@@ -635,10 +638,34 @@ export default function GameScreen() {
   };
   const allAnswered = items.length > 0 && !current;
 
+  /** La carta che arriva dopo (l'anteprima dietro lo swipe): la prossima da fare qui, o la prima della posizione dopo. */
+  const nextPreview = (): ReactNode => {
+    const i = current ? items.indexOf(current) : -1;
+    const here = items.slice(i + 1).find((it) => stateOf(it.play.user_answer) === 'open');
+    let v: Item | null = here ?? null;
+    if (!v && pos < total) {
+      const uuid = games.peekCard(game, pos + 1);
+      if (uuid)
+        v = { ...kit.view(game, pos + 1, uuid, false), target: uuid, isChild: false } as Item;
+    }
+    if (!v) return null;
+    return (
+      <View style={{ flex: 1, borderRadius: 22, overflow: 'hidden' }}>
+        <GameCard gold={false}>
+          <View style={{ height: 38 }} />
+          <SectionTitle {...sideTag(v, 'q')} />
+          <DocView raw={v.question} size={big(v) ? 28 : 19} weight={big(v) ? '700' : undefined} />
+        </GameCard>
+        <View style={{ flex: 1, backgroundColor: th.surface }} />
+      </View>
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: th.bg }}>
       {/* l'intestazione (.app-header): la strada, poi anello, contatore e i tasti tondi */}
       <View
+        onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
         style={{
           paddingTop: insets.top + 8,
           paddingBottom: 10,
@@ -752,6 +779,7 @@ export default function GameScreen() {
             enabled={shown}
             onCross={() => haptic.tap()}
             onCommit={(good) => vote(current, good ? 'correct' : 'wrong', true)}
+            behind={shown ? nextPreview() : null}
           >
             <GameCard
               gold={kit.isFavorite(current.target)}
@@ -1123,6 +1151,12 @@ export default function GameScreen() {
         from={errorsRange?.[0] ?? 0}
         to={errorsRange?.[1] ?? 0}
         rows={errorRows}
+        top={headerH}
+        accent={games.accentAt(game, pos) ?? ROAD_ACCENT}
+        onPick={(p) => {
+          setErrorsRange(null);
+          go(p);
+        }}
         onClose={() => setErrorsRange(null)}
       />
       <GameSettingsSheet

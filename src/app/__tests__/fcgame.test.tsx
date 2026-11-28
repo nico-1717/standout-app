@@ -340,6 +340,16 @@ describe('playing', () => {
     expect(screen.getByTestId('fcg-next')).toBeTruthy();
   });
 
+  test('with the answer shown, the next card waits behind (the swipe preview)', async () => {
+    const { game } = started();
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(screen.queryAllByText('Q2')).toHaveLength(0);
+    await fireEvent.press(screen.getByTestId('fcg-reveal'));
+    // la seconda carta c'è già, dietro, senza aver creato la sua posizione
+    expect(screen.getAllByText('Q2').length).toBeGreaterThan(0);
+  });
+
   test('resuming a position behind the first open one jumps to the open one', async () => {
     const { games, game } = started();
     mockParams = { game, position: '1' };

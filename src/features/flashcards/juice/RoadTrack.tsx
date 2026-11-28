@@ -223,32 +223,30 @@ export function RoadTrack({
               alignItems: 'center' as const,
               justifyContent: 'center' as const,
             };
-            const style =
-              n > 0
+            // il punto in cui si è resta vuoto (solo il bordo), anche se nel suo tratto ci sono errori
+            const style = cur
+              ? {
+                  ...base,
+                  backgroundColor: th.surface,
+                  borderWidth: 1.5,
+                  borderColor: accent,
+                  shadowColor: accent,
+                  shadowOpacity: 0.35,
+                  shadowRadius: 5,
+                  shadowOffset: { width: 0, height: 0 },
+                }
+              : n > 0
                 ? {
                     ...base,
                     backgroundColor: accent,
-                    borderWidth: cur ? 1.5 : 0,
-                    borderColor: th.surface,
                     shadowColor: accent,
                     shadowOpacity: 0.55,
                     shadowRadius: 6,
                     shadowOffset: { width: 0, height: 0 },
                   }
-                : cur
-                  ? {
-                      ...base,
-                      backgroundColor: th.surface,
-                      borderWidth: 1.5,
-                      borderColor: accent,
-                      shadowColor: accent,
-                      shadowOpacity: 0.35,
-                      shadowRadius: 5,
-                      shadowOffset: { width: 0, height: 0 },
-                    }
-                  : state === 'ok'
-                    ? { ...base, backgroundColor: accent, opacity: 0.85 }
-                    : { ...base, backgroundColor: th.hairline2 };
+                : state === 'ok'
+                  ? { ...base, backgroundColor: accent, opacity: 0.85 }
+                  : { ...base, backgroundColor: th.hairline2 };
             return n > 0 ? (
               <Pressable
                 key={a}
@@ -261,7 +259,7 @@ export function RoadTrack({
               >
                 <Text
                   style={{
-                    color: ink,
+                    color: cur ? accent : ink,
                     fontSize: 10,
                     fontWeight: '800',
                     fontVariant: ['tabular-nums'],

@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/core/theme/ThemeProvider';
 
 import type { BlockSummary, Due } from '../../gameJuice';
 import { CheckpointSheet } from '../CheckpointSheet';
+import { ErrorsSheet } from '../ErrorsSheet';
 import { RoadTrack } from '../RoadTrack';
 import { StreakPill, flameColor } from '../StreakPill';
 
@@ -136,5 +137,34 @@ describe('CheckpointSheet', () => {
     );
     expect(screen.queryByTestId('fcg-ck-boss')).toBeNull();
     expect(screen.getByLabelText(/100%/)).toBeTruthy();
+  });
+});
+
+describe('the list of cards to review (the dropdown under the header)', () => {
+  it('a row takes you to that card; the cross closes it', async () => {
+    const onPick = jest.fn();
+    const onClose = jest.fn();
+    await render(
+      wrap(
+        <ErrorsSheet
+          visible
+          from={31}
+          to={40}
+          top={120}
+          accent="#FF9500"
+          rows={[
+            { key: 'a', position: 34, label: 'lacks experience' },
+            { key: 'b', position: 35, label: 'took part in', isChild: true },
+          ]}
+          onPick={onPick}
+          onClose={onClose}
+        />,
+      ),
+    );
+    expect(screen.getByText('lacks experience')).toBeTruthy();
+    await fireEvent.press(screen.getAllByTestId('fcg-error-row')[1]!);
+    expect(onPick).toHaveBeenCalledWith(35);
+    await fireEvent.press(screen.getByTestId('fcg-errors-close'));
+    expect(onClose).toHaveBeenCalled();
   });
 });
