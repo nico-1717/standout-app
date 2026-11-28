@@ -112,8 +112,9 @@ describe('categories list', () => {
     await render(wrap(<FlashcardsScreen />));
     expect(screen.getByTestId(`fc-stats-${d}`)).toBeTruthy();
     expect(screen.getByText('Never played')).toBeTruthy();
+    // come sul sito, il tasto in alto a destra porta allo storico (da lì si gioca)
     await fireEvent.press(screen.getByTestId('fc-play'));
-    expect(mockPush).toHaveBeenCalledWith('/fc-setup');
+    expect(mockPush).toHaveBeenCalledWith('/fc-history');
   });
 
   test('empty message, then adds a subject; a sub-category opens its branch', async () => {

@@ -21,6 +21,7 @@ import {
 } from '@/features/flashcards/history';
 import { HistoryRoad, MiniClimb } from '@/features/flashcards/HistoryRoad';
 import { Icon } from '@/features/flashcards/game/GameUi';
+import { SwipeDeleteRow } from '@/features/flashcards/SwipeDeleteRow';
 import { HistorySubjects } from '@/features/flashcards/HistorySubjects';
 import { deckBranch, flattenDecks } from '@/features/flashcards/logic';
 import { buildSubjects, groupActivity } from '@/features/flashcards/subjects';
@@ -1031,223 +1032,239 @@ export default function HistoryScreen() {
                         borderColor: th.hairline,
                       }}
                     >
-                      {isGold ? (
-                        <LinearGradient
-                          pointerEvents="none"
-                          colors={['rgba(255,214,10,0.10)', 'transparent']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 0.55, y: 0.55 }}
-                          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                        />
-                      ) : null}
-                      <Pressable
-                        testID={`fch-game-${g.uuid}`}
-                        accessibilityRole="button"
-                        accessibilityState={{ expanded: isOpen }}
-                        onPress={() =>
-                          setOpenIds((cur) =>
-                            cur.includes(g.uuid)
-                              ? cur.filter((x) => x !== g.uuid)
-                              : [...cur, g.uuid],
-                          )
-                        }
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 12,
-                          paddingVertical: 10,
-                          paddingHorizontal: 12,
-                        }}
+                      <SwipeDeleteRow
+                        testID={`fch-swipe-${g.uuid}`}
+                        label={t('comune.elimina')}
+                        onDelete={() => setAsking(g.uuid)}
                       >
-                        {isGold ? (
-                          <View
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: 16,
-                              overflow: 'hidden',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
+                        <Pressable
+                          testID={`fch-game-${g.uuid}`}
+                          accessibilityRole="button"
+                          accessibilityState={{ expanded: isOpen }}
+                          onPress={() =>
+                            setOpenIds((cur) =>
+                              cur.includes(g.uuid)
+                                ? cur.filter((x) => x !== g.uuid)
+                                : [...cur, g.uuid],
+                            )
+                          }
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 12,
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                            // opaca: sotto c'è il tasto rosso che si scopre trascinando
+                            backgroundColor: th.surface,
+                          }}
+                        >
+                          {isGold ? (
                             <LinearGradient
-                              colors={['#FFE680', '#FFC300', '#FF9F0A']}
+                              pointerEvents="none"
+                              colors={['rgba(255,214,10,0.10)', 'transparent']}
                               start={{ x: 0, y: 0 }}
-                              end={{ x: 1, y: 1 }}
+                              end={{ x: 0.55, y: 0.55 }}
                               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                             />
-                            <Icon d={IC.trophy} size={17} color="#7A4A00" width={2.2} />
-                          </View>
-                        ) : (
-                          <GameRing
-                            done={e.total > 0 ? Math.min(1, e.closed / e.total) : 0}
-                            color={col}
-                          />
-                        )}
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text
-                            numberOfLines={1}
-                            style={{ color: th.text, fontSize: 15.5, fontWeight: '700' }}
-                          >
-                            {nameOf(e)}
-                          </Text>
-                          <Text
-                            numberOfLines={1}
-                            style={{
-                              color: th.text2,
-                              fontSize: 12.5,
-                              marginTop: 1,
-                              fontVariant: ['tabular-nums'],
-                            }}
-                          >
-                            {meta}
-                          </Text>
+                          ) : null}
                           {isGold ? (
                             <View
                               style={{
-                                flexDirection: 'row',
+                                width: 32,
+                                height: 32,
+                                borderRadius: 16,
+                                overflow: 'hidden',
                                 alignItems: 'center',
-                                gap: 5,
-                                marginTop: 5,
+                                justifyContent: 'center',
                               }}
                             >
-                              <Icon d={IC.trophy} size={13} color={plateGold} width={2.2} />
-                              <Text
-                                testID={`fch-plate-${g.uuid}`}
-                                numberOfLines={1}
-                                style={{ color: plateGold, fontSize: 12, fontWeight: '800' }}
-                              >
-                                {ch.state === 'perfetta'
-                                  ? t('fc.sfc_perfetta')
-                                  : t(
-                                      e.retries.length === 1
-                                        ? 'fc.sfc_conquistata_1'
-                                        : 'fc.sfc_conquistata_n',
-                                      { n: e.retries.length },
-                                    )}
-                              </Text>
+                              <LinearGradient
+                                colors={['#FFE680', '#FFC300', '#FF9F0A']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                }}
+                              />
+                              <Icon d={IC.trophy} size={17} color="#7A4A00" width={2.2} />
                             </View>
-                          ) : fix ? (
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 5,
-                                marginTop: 5,
-                              }}
-                            >
-                              <Icon d={IC.target} size={13} color={th.orange} width={2.2} />
-                              <Text
-                                testID={`fch-plate-${g.uuid}`}
-                                numberOfLines={1}
-                                style={{ color: th.orange, fontSize: 12, fontWeight: '800' }}
-                              >
-                                {t(
-                                  ch.toFix === 1
-                                    ? 'fc.sfc_da_sistemare_1'
-                                    : 'fc.sfc_da_sistemare_n',
-                                  { n: ch.toFix },
-                                )}
-                              </Text>
-                              <MiniClimb chain={ch} />
-                            </View>
-                          ) : null}
-                          {detailed ? (
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                flexWrap: 'wrap',
-                                alignItems: 'center',
-                                columnGap: 10,
-                                rowGap: 4,
-                                marginTop: 5,
-                              }}
-                            >
-                              <Text style={{ color: th.text2, fontSize: 12, fontWeight: '600' }}>
-                                {t('fc.sfc_carte_n', { c: e.closed, t: e.total })}
-                              </Text>
-                              <Text style={{ color: th.text2, fontSize: 12, fontWeight: '600' }}>
-                                {t(e.wrong === 1 ? 'fc.sfc_errori_1' : 'fc.sfc_errori_n', {
-                                  n: e.wrong,
-                                })}
-                              </Text>
-                              {e.retries.length ? (
-                                <Text style={{ color: th.text2, fontSize: 12, fontWeight: '600' }}>
-                                  {t(
-                                    e.retries.length === 1
-                                      ? 'fc.sfc_ripassi_1'
-                                      : 'fc.sfc_ripassi_n',
-                                    { n: e.retries.length },
-                                  )}
-                                </Text>
-                              ) : null}
-                              <View style={{ flexGrow: 1, flexBasis: 60 }}>
-                                <OkKoBar p={p} h={4} />
-                              </View>
-                            </View>
-                          ) : null}
-                        </View>
-                        {/* la pastiglia: in sospeso, 100% d'oro, o la precisione */}
-                        {suspended ? (
-                          <View
-                            style={{
-                              paddingVertical: 3,
-                              paddingHorizontal: 9,
-                              borderRadius: 99,
-                              backgroundColor: th.blueSoft,
-                            }}
-                          >
-                            <Text style={{ color: th.blue, fontSize: 12, fontWeight: '700' }}>
-                              {t('fc.sfc_in_sospeso')}
-                            </Text>
-                          </View>
-                        ) : isGold ? (
-                          <View
-                            testID={`fch-gold-${g.uuid}`}
-                            accessible
-                            accessibilityLabel="100%"
-                            style={{ borderRadius: 99, overflow: 'hidden' }}
-                          >
-                            <LinearGradient
-                              colors={['#FFE680', '#FFC300', '#FFAA1A']}
-                              start={{ x: 0, y: 0 }}
-                              end={{ x: 1, y: 1 }}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingVertical: 3,
-                                paddingHorizontal: 9,
-                              }}
-                            >
-                              <Icon d={IC.star} size={12} color="#5C3A00" fill />
-                              <Text style={{ color: '#5C3A00', fontSize: 12, fontWeight: '700' }}>
-                                100%
-                              </Text>
-                            </LinearGradient>
-                          </View>
-                        ) : (
-                          <View
-                            style={{
-                              paddingVertical: 3,
-                              paddingHorizontal: 9,
-                              borderRadius: 99,
-                              backgroundColor: tone.bg,
-                            }}
-                          >
+                          ) : (
+                            <GameRing
+                              done={e.total > 0 ? Math.min(1, e.closed / e.total) : 0}
+                              color={col}
+                            />
+                          )}
+                          <View style={{ flex: 1, minWidth: 0 }}>
                             <Text
+                              numberOfLines={1}
+                              style={{ color: th.text, fontSize: 15.5, fontWeight: '700' }}
+                            >
+                              {nameOf(e)}
+                            </Text>
+                            <Text
+                              numberOfLines={1}
                               style={{
-                                color: tone.fg,
-                                fontSize: 12,
-                                fontWeight: '700',
+                                color: th.text2,
+                                fontSize: 12.5,
+                                marginTop: 1,
                                 fontVariant: ['tabular-nums'],
                               }}
                             >
-                              {p === null ? '–' : `${p}%`}
+                              {meta}
                             </Text>
+                            {isGold ? (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  marginTop: 5,
+                                }}
+                              >
+                                <Icon d={IC.trophy} size={13} color={plateGold} width={2.2} />
+                                <Text
+                                  testID={`fch-plate-${g.uuid}`}
+                                  numberOfLines={1}
+                                  style={{ color: plateGold, fontSize: 12, fontWeight: '800' }}
+                                >
+                                  {ch.state === 'perfetta'
+                                    ? t('fc.sfc_perfetta')
+                                    : t(
+                                        e.retries.length === 1
+                                          ? 'fc.sfc_conquistata_1'
+                                          : 'fc.sfc_conquistata_n',
+                                        { n: e.retries.length },
+                                      )}
+                                </Text>
+                              </View>
+                            ) : fix ? (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  marginTop: 5,
+                                }}
+                              >
+                                <Icon d={IC.target} size={13} color={th.orange} width={2.2} />
+                                <Text
+                                  testID={`fch-plate-${g.uuid}`}
+                                  numberOfLines={1}
+                                  style={{ color: th.orange, fontSize: 12, fontWeight: '800' }}
+                                >
+                                  {t(
+                                    ch.toFix === 1
+                                      ? 'fc.sfc_da_sistemare_1'
+                                      : 'fc.sfc_da_sistemare_n',
+                                    { n: ch.toFix },
+                                  )}
+                                </Text>
+                                <MiniClimb chain={ch} />
+                              </View>
+                            ) : null}
+                            {detailed ? (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  flexWrap: 'wrap',
+                                  alignItems: 'center',
+                                  columnGap: 10,
+                                  rowGap: 4,
+                                  marginTop: 5,
+                                }}
+                              >
+                                <Text style={{ color: th.text2, fontSize: 12, fontWeight: '600' }}>
+                                  {t('fc.sfc_carte_n', { c: e.closed, t: e.total })}
+                                </Text>
+                                <Text style={{ color: th.text2, fontSize: 12, fontWeight: '600' }}>
+                                  {t(e.wrong === 1 ? 'fc.sfc_errori_1' : 'fc.sfc_errori_n', {
+                                    n: e.wrong,
+                                  })}
+                                </Text>
+                                {e.retries.length ? (
+                                  <Text
+                                    style={{ color: th.text2, fontSize: 12, fontWeight: '600' }}
+                                  >
+                                    {t(
+                                      e.retries.length === 1
+                                        ? 'fc.sfc_ripassi_1'
+                                        : 'fc.sfc_ripassi_n',
+                                      { n: e.retries.length },
+                                    )}
+                                  </Text>
+                                ) : null}
+                                <View style={{ flexGrow: 1, flexBasis: 60 }}>
+                                  <OkKoBar p={p} h={4} />
+                                </View>
+                              </View>
+                            ) : null}
                           </View>
-                        )}
-                      </Pressable>
+                          {/* la pastiglia: in sospeso, 100% d'oro, o la precisione */}
+                          {suspended ? (
+                            <View
+                              style={{
+                                paddingVertical: 3,
+                                paddingHorizontal: 9,
+                                borderRadius: 99,
+                                backgroundColor: th.blueSoft,
+                              }}
+                            >
+                              <Text style={{ color: th.blue, fontSize: 12, fontWeight: '700' }}>
+                                {t('fc.sfc_in_sospeso')}
+                              </Text>
+                            </View>
+                          ) : isGold ? (
+                            <View
+                              testID={`fch-gold-${g.uuid}`}
+                              accessible
+                              accessibilityLabel="100%"
+                              style={{ borderRadius: 99, overflow: 'hidden' }}
+                            >
+                              <LinearGradient
+                                colors={['#FFE680', '#FFC300', '#FFAA1A']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 9,
+                                }}
+                              >
+                                <Icon d={IC.star} size={12} color="#5C3A00" fill />
+                                <Text style={{ color: '#5C3A00', fontSize: 12, fontWeight: '700' }}>
+                                  100%
+                                </Text>
+                              </LinearGradient>
+                            </View>
+                          ) : (
+                            <View
+                              style={{
+                                paddingVertical: 3,
+                                paddingHorizontal: 9,
+                                borderRadius: 99,
+                                backgroundColor: tone.bg,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: tone.fg,
+                                  fontSize: 12,
+                                  fontWeight: '700',
+                                  fontVariant: ['tabular-nums'],
+                                }}
+                              >
+                                {p === null ? '–' : `${p}%`}
+                              </Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      </SwipeDeleteRow>
 
                       {/* il dettaglio (.sfc-det): i numeri, la barra, la strada, i ripassi e i tasti */}
                       {isOpen ? (

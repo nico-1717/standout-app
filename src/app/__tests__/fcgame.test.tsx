@@ -657,7 +657,9 @@ describe('result and history', () => {
       pathname: '/fc-game',
       params: { game, position: '2' },
     });
-    await fireEvent.press(screen.getByTestId(`fch-del-${game}`));
+    // il tasto rosso dello swipe chiede la stessa conferma
+    await fireEvent.press(screen.getByTestId(`fch-swipe-${game}-del`));
+    expect(screen.getByTestId(`fch-del-yes-${game}`)).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`fch-del-yes-${game}`));
     expect(games.game(game)).toBeNull();
     expect(screen.getByTestId('fch-empty')).toBeTruthy();

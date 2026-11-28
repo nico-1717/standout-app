@@ -345,7 +345,7 @@ export default function FlashcardsScreen() {
         play={{
           testID: 'fc-play',
           label: t('fc.cg_gioca'),
-          onPress: () => router.push('/fc-setup'),
+          onPress: () => router.push('/fc-history'),
           colors: [ho.blue, ho.indigo],
         }}
         search={{
