@@ -36,6 +36,8 @@ export interface LocalPrefs {
   fcCheckpoint: number;
   /** flashcard: i suoni del gioco (come `fcv_suoni` del sito, per dispositivo) */
   fcSounds: boolean;
+  /** flashcard: la lettura ad alta voce fuori dalla partita a voce (`tts-mode` del sito): mai, al tocco, automatica */
+  fcReadMode: 'no' | 'click' | 'auto';
   /** flashcard a voce: lingua dei comandi ('' = quella dell'app) */
   fcVoiceLang: string;
   /** flashcard a voce, parole: cosa si legge (`fcv_lettura` del sito) */
@@ -60,6 +62,7 @@ export const DEFAULT_LOCAL_PREFS: LocalPrefs = {
   highContrast: false,
   fcCheckpoint: DEFAULT_CHECKPOINT,
   fcSounds: true,
+  fcReadMode: 'click',
   fcVoiceLang: '',
   fcVoiceRead: '1100',
   noteCollapsed: false,
@@ -79,6 +82,7 @@ function clean(raw: unknown): LocalPrefs {
     highContrast: r.highContrast === true,
     fcCheckpoint: cleanCheckpoint(r.fcCheckpoint),
     fcSounds: r.fcSounds !== false,
+    fcReadMode: r.fcReadMode === 'no' || r.fcReadMode === 'auto' ? r.fcReadMode : 'click',
     fcVoiceLang: cleanVoiceLang(r.fcVoiceLang),
     fcVoiceRead: cleanVoiceRead(r.fcVoiceRead),
     noteCollapsed: r.noteCollapsed === true,

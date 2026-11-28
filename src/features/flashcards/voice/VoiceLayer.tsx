@@ -66,6 +66,12 @@ export function VoiceLayer(props: VoiceLayerProps) {
   const session = useRef<VoiceSession | null>(null);
   const [state, setState] = useState<ListenerState>('off');
   const [heard, setHeard] = useState('');
+  // l'ultima frase capita resta in vista finché non cambia la carta
+  const [heardOn, setHeardOn] = useState(props.cardKey);
+  if (heardOn !== props.cardKey) {
+    setHeardOn(props.cardKey);
+    setHeard('');
+  }
   const [speaking, setSpeaking] = useState(false);
   const [problem, setProblem] = useState<FatalReason | null>(null);
 
@@ -85,7 +91,7 @@ export function VoiceLayer(props: VoiceLayerProps) {
       }),
       onAction: (a) => latest.current.onAction(a),
       onState: setState,
-      onHeard: setHeard,
+      onHeard: (text) => setHeard(text),
       onSpeaking: setSpeaking,
       onFatal: (why) => {
         setProblem(why);
@@ -133,14 +139,12 @@ export function VoiceLayer(props: VoiceLayerProps) {
   const orb = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   if (!active && !problem) return null;
-  const text = problem
+  const status = problem
     ? t(problem === 'permission' ? 'app.voce_permesso' : 'app.voce_non_supportata')
     : speaking
       ? t('app.voce_leggo')
-      : state === 'hearing' && heard
-        ? `“${heard}”`
-        : t('app.voce_ascolto');
-  const color = problem ? th.red : speaking ? th.text2 : state === 'hearing' ? th.green : th.brand;
+      : t('app.voce_ascolto');
+  const color = problem ? th.red : speaking ? th.text2 : state === 'hearing' ? th.green : th.purple;
   return (
     <View
       testID="fcg-voice-bar"
@@ -149,58 +153,107 @@ export function VoiceLayer(props: VoiceLayerProps) {
         left: 12,
         right: 12,
         bottom: insets.bottom + 10,
-        borderRadius: 18,
-        padding: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
+        borderRadius: 22,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        gap: 10,
         backgroundColor: th.surface,
-        borderWidth: 1,
+        borderWidth: 0.5,
         borderColor: th.hairline2,
-        boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.28)',
       }}
     >
-      <Pressable
-        testID="fcg-voice-open"
-        accessibilityRole="button"
-        accessibilityLabel={t('fc.vg_attiva')}
-        onPress={props.onOpen}
-        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
-      >
-        <Animated.View
-          style={[{ width: 22, height: 22, borderRadius: 11, backgroundColor: color }, orb]}
-        />
-        <View style={{ flex: 1 }}>
-          <Text
-            testID="fcg-voice-status"
-            numberOfLines={problem ? 4 : 1}
-            style={{ color: th.text, fontWeight: '600' }}
-          >
-            {text}
-          </Text>
-          {!problem && props.hint ? (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Pressable
+          testID="fcg-voice-open"
+          accessibilityRole="button"
+          accessibilityLabel={t('fc.vg_attiva')}
+          onPress={props.onOpen}
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+        >
+          {/* la sfera che respira mentre ascolta (vg-orb del sito) */}
+          <View style={{ width: 30, height: 30, alignItems: 'center', justifyContent: 'center' }}>
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  backgroundColor: color,
+                  opacity: 0.25,
+                },
+                orb,
+              ]}
+            />
+            <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: color }} />
+          </View>
+          <View style={{ flex: 1 }}>
             <Text
-              testID="fcg-voice-hint"
-              numberOfLines={2}
-              style={{ color: th.text2, fontSize: 12, marginTop: 2 }}
+              testID="fcg-voice-status"
+              numberOfLines={problem ? 4 : 1}
+              style={{ color: th.text, fontWeight: '700', fontSize: 15 }}
             >
-              {props.hint}
+              {status}
             </Text>
-          ) : null}
+            {!problem && props.hint ? (
+              <Text
+                testID="fcg-voice-hint"
+                numberOfLines={2}
+                style={{ color: th.text2, fontSize: 12.5, marginTop: 2 }}
+              >
+                {props.hint}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+        <Pressable
+          testID="fcg-voice-off"
+          accessibilityRole="button"
+          accessibilityLabel={t('fc.vg_termina')}
+          hitSlop={10}
+          onPress={() => {
+            setProblem(null);
+            props.onStop();
+          }}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: th.surface2,
+          }}
+        >
+          <Text style={{ color: th.text2, fontSize: 15, fontWeight: '700' }}>✕</Text>
+        </Pressable>
+      </View>
+      {/* quello che il microfono sta capendo, parola per parola */}
+      {!problem ? (
+        <View
+          style={{
+            borderRadius: 14,
+            paddingVertical: 9,
+            paddingHorizontal: 12,
+            backgroundColor: th.surface2,
+            minHeight: 40,
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            testID="fcg-voice-heard"
+            numberOfLines={2}
+            style={{
+              color: heard ? th.text : th.text3,
+              fontSize: 16,
+              fontWeight: heard ? '600' : '400',
+              fontStyle: heard ? 'normal' : 'italic',
+            }}
+          >
+            {heard ? `“${heard}”` : '…'}
+          </Text>
         </View>
-      </Pressable>
-      <Pressable
-        testID="fcg-voice-off"
-        accessibilityRole="button"
-        accessibilityLabel={t('fc.vg_termina')}
-        hitSlop={10}
-        onPress={() => {
-          setProblem(null);
-          props.onStop();
-        }}
-      >
-        <Text style={{ color: th.brand, fontSize: 18 }}>✕</Text>
-      </Pressable>
+      ) : null}
     </View>
   );
 }

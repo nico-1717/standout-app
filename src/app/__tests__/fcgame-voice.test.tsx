@@ -47,6 +47,9 @@ jest.mock('@/core/speech/speak', () => ({
     mockSpoken.push({ text, lang, ...o });
   }),
   stopSpeaking: jest.fn(),
+  warmVoices: jest.fn(),
+  readAloud: jest.fn(),
+  stopReading: jest.fn(),
 }));
 
 const engine = phoneEngine as unknown as FakeEngine;
@@ -140,11 +143,15 @@ describe('playing by voice', () => {
     await say('show the answer');
     expect(within(screen.getByTestId('fcg-answer')).getByText('A1')).toBeTruthy();
     expect(mockSpoken.map((s) => s.text)).toContain('A1');
+    // si legge quello che il microfono ha capito
+    expect(screen.getByTestId('fcg-voice-heard')).toHaveTextContent('“show the answer”');
     await finishReading();
 
     await say('correct');
     expect(within(screen.getByTestId('fcg-question')).getByText('Q2')).toBeTruthy();
     expect(mockSpoken.map((s) => s.text)).toContain('Q2');
+    // carta nuova: la frase di prima non c'è più
+    expect(screen.getByTestId('fcg-voice-heard')).toHaveTextContent('…');
     const { games } = mockServices as { games: GameRepo };
     expect(games.tally(game)).toMatchObject({ correct: 1, wrong: 0 });
   });

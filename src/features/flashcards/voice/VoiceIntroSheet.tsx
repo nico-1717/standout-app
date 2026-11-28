@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +7,7 @@ import { VOICE_LANGS } from '@/core/settings/localPrefs';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Sheet } from '@/features/habits/Sheet';
 import { habitsTheme } from '@/features/habits/habitsTheme';
+import { Icon } from '@/features/flashcards/game/GameUi';
 import { PrimaryButton, TextButton } from '@/ui/kit';
 
 import { resolveVoiceLang, voiceDicts } from './dicts';
@@ -70,13 +72,60 @@ export function VoiceIntroSheet({
     </View>
   );
 
-  const row = (intent: string, desc: string) => (
-    <View key={intent} style={{ gap: 2 }}>
-      <Text style={{ color: ht.text, fontWeight: '700' }}>“{commandExample(lang, intent)}”</Text>
-      <Text style={{ color: ht.text2, fontSize: 13 }}>{t(desc)}</Text>
-    </View>
+  /** Un comando (.vg-cmd-row del sito): il tondino colorato, la frase da dire e cosa fa. */
+  const BADGE: Record<string, [string, string | string[]]> = {
+    ripeti: [th.indigo, ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5']],
+    risposta: [
+      th.orange,
+      [
+        'M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z',
+        'M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z',
+      ],
+    ],
+    corretto: [th.green, 'M5 12.5 10 17l9-10'],
+    errato: [th.red, 'M6 6l12 12M18 6 6 18'],
+    continua: [th.blue, 'M9 6l6 6-6 6'],
+    boss: [th.purple, 'M12 2.5 14.9 8.7l6.8.8-5 4.7 1.3 6.7L12 17.6l-6 3.3 1.3-6.7-5-4.7 6.8-.8Z'],
+  };
+  const row = (intent: string, desc: string) => {
+    const [c, d] = BADGE[intent] ?? [th.brand, 'M5 12h14'];
+    return (
+      <View key={intent} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: `${c}24`,
+          }}
+        >
+          <Icon d={d} size={17} color={c} width={2.2} />
+        </View>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={{ color: ht.text, fontWeight: '800', fontSize: 15.5 }}>
+            «{commandExample(lang, intent)}»
+          </Text>
+          <Text style={{ color: ht.text2, fontSize: 13 }}>{t(desc)}</Text>
+        </View>
+      </View>
+    );
+  };
+  const groupLabel = (k: string) => (
+    <Text
+      style={{
+        color: ht.text2,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.1,
+        textTransform: 'uppercase',
+      }}
+    >
+      {t(k)}
+    </Text>
   );
-
+  const box = { gap: 14, padding: 14, borderRadius: 18, backgroundColor: ht.surface2 } as const;
   const langName = (l: string) => (l === '' ? t('app.voce_lingua_app') : l);
   const yes = t('fc.vg_si');
   const no = t('fc.vg_no');
@@ -106,28 +155,58 @@ export function VoiceIntroSheet({
       }
     >
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }}>
-        <Text style={{ color: ht.text }}>{t('fc.vg_intro')}</Text>
+        {/* la testa (.vg-sheet-head): il microfono in un tondo colorato e la spiegazione */}
+        <View style={{ alignItems: 'center', gap: 10 }}>
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              overflow: 'hidden',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: th.purple,
+              shadowOpacity: 0.5,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
+            }}
+          >
+            <LinearGradient
+              colors={[th.purple, th.blue]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+            <Icon
+              d={[
+                'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z',
+                'M19 10v2a7 7 0 0 1-14 0v-2',
+                'M12 19v3',
+              ]}
+              size={28}
+              color="#fff"
+              width={2.2}
+            />
+          </View>
+          <Text style={{ color: ht.text, fontSize: 15.5, lineHeight: 22, textAlign: 'center' }}>
+            {t('fc.vg_intro')}
+          </Text>
+        </View>
         {vocab ? <Text style={{ color: ht.text2 }}>{t('fc.vg_parole_nota')}</Text> : null}
         <Text style={{ color: ht.text2 }}>{t('fc.vg_auto_avanti')}</Text>
 
-        <View style={{ gap: 10 }}>
-          <Text style={{ color: ht.text, fontWeight: '800', fontSize: 16 }}>
-            {t('fc.vg_per_rispondere')}
-          </Text>
+        <View style={box}>
+          {groupLabel('fc.vg_per_rispondere')}
           {row('risposta', 'fc.vg_d_risposta')}
           {row('corretto', 'fc.vg_d_corretto')}
           {row('errato', 'fc.vg_d_errato')}
         </View>
-        <View style={{ gap: 10 }}>
-          <Text style={{ color: ht.text, fontWeight: '800', fontSize: 16 }}>
-            {t('fc.vg_mentre_ascolti')}
-          </Text>
+        <View style={box}>
+          {groupLabel('fc.vg_mentre_ascolti')}
           {row('ripeti', 'fc.vg_d_ripeti')}
         </View>
-        <View style={{ gap: 10 }}>
-          <Text style={{ color: ht.text, fontWeight: '800', fontSize: 16 }}>
-            {t('fc.vg_ck_titolo')}
-          </Text>
+        <View style={box}>
+          {groupLabel('fc.vg_ck_titolo')}
           {row('continua', 'fc.vg_d_continua')}
           {row('boss', 'fc.vg_d_boss')}
         </View>

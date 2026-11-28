@@ -27,7 +27,7 @@ export interface SessionDeps {
   speak: (
     text: string,
     lang: string,
-    opts: { once?: boolean; done?: () => void },
+    opts: { once?: boolean; done?: () => void; chain?: boolean },
   ) => Promise<void> | void;
   stopSpeaking: () => void;
   commands: CommandSet;
@@ -37,7 +37,7 @@ export interface SessionDeps {
   onAction: (a: VoiceAction) => void;
   onState?: (s: ListenerState) => void;
   /** l'ultima frase sentita (per mostrarla) */
-  onHeard?: (text: string) => void;
+  onHeard?: (text: string, final: boolean) => void;
   onSpeaking?: (on: boolean) => void;
   onFatal?: (why: FatalReason) => void;
   now?: () => number;
@@ -74,7 +74,8 @@ export class VoiceSession {
       {
         onResult: (r) => {
           const first = r.alternatives[0];
-          if (first && r.isFinal) d.onHeard?.(first);
+          // anche le parole a metà frase: si vede subito cosa sta capendo
+          if (first) d.onHeard?.(first, r.isFinal);
           const action = this.brain.hear(r);
           if (action) this.run(action);
         },
@@ -135,7 +136,7 @@ export class VoiceSession {
         this.finished(mine);
         return;
       }
-      void this.d.speak(v.text, v.lang, { once: v.once, done: next });
+      void this.d.speak(v.text, v.lang, { once: v.once, chain: i > 1, done: next });
     };
     next();
   }

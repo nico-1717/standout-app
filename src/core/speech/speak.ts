@@ -48,11 +48,31 @@ const loadVoices = (): Promise<VoiceInfo[]> => {
   return voicesCache;
 };
 
+/** La voce scelta per ogni lingua, calcolata una volta sola: la lettura parte subito. */
+const picked = new Map<string, string | null>();
+let voiceList: VoiceInfo[] | null = null;
+const voiceFor = (lang: string): string | null => {
+  if (!voiceList) return null;
+  if (!picked.has(lang)) picked.set(lang, pickVoice(voiceList, lang)?.identifier ?? null);
+  return picked.get(lang) ?? null;
+};
+
+/** Carica in anticipo l'elenco delle voci (all'apertura del gioco), così la prima lettura non aspetta. */
+export function warmVoices(langs: readonly string[] = []): void {
+  void loadVoices().then((v) => {
+    voiceList = v;
+    for (const l of langs) voiceFor(l);
+  });
+}
+
+/** Si sta già parlando? Una lettura in catena non deve fermare quella prima. */
+let busy = false;
+
 /** Dice `text` nella lingua `lang` (es. «en-GB»). `once` = una volta sola. `done` si chiama alla fine (o se non si può parlare). */
 export async function speak(
   text: string,
   lang: string,
-  opts: { once?: boolean; done?: () => void } = {},
+  opts: { once?: boolean; done?: () => void; chain?: boolean } = {},
 ): Promise<void> {
   const t = text.trim();
   if (!t) {
@@ -60,10 +80,16 @@ export async function speak(
     return;
   }
   try {
-    await Speech.stop();
-    const voice = pickVoice(await loadVoices(), lang);
-    const base = { language: lang, ...(voice ? { voice: voice.identifier } : {}) };
-    const finish = () => opts.done?.();
+    // fermare costa qualche decimo di secondo su iPhone: solo se c'è davvero qualcosa che sta parlando
+    if (!opts.chain && busy) void Speech.stop();
+    if (!voiceList) voiceList = await loadVoices();
+    const voice = voiceFor(lang);
+    const base = { language: lang, ...(voice ? { voice } : {}) };
+    busy = true;
+    const finish = () => {
+      busy = false;
+      opts.done?.();
+    };
     if (opts.once) {
       Speech.speak(t, { ...base, rate: 1, onDone: finish, onStopped: finish, onError: finish });
       return;
@@ -76,5 +102,31 @@ export async function speak(
 }
 
 export const stopSpeaking = (): void => {
+  busy = false;
   void Speech.stop();
 };
+
+let reading = 0;
+/**
+ * Legge dei pezzi uno dopo l'altro (la lettura automatica fuori dalla partita a voce). Una lettura nuova ferma quella
+ * in corso.
+ */
+export function readAloud(parts: readonly { text: string; lang: string; once?: boolean }[]): void {
+  const mine = ++reading;
+  const list = parts.filter((p) => p.text.trim());
+  stopSpeaking();
+  let i = 0;
+  const next = (): void => {
+    if (mine !== reading) return;
+    const p = list[i++];
+    if (!p) return;
+    void speak(p.text, p.lang, { once: p.once, chain: i > 1, done: next });
+  };
+  next();
+}
+
+/** Ferma la lettura automatica (si cambia schermata). */
+export function stopReading(): void {
+  reading++;
+  stopSpeaking();
+}

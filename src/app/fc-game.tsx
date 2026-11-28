@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -74,7 +74,16 @@ import {
   SectionTitle,
   WideButton,
 } from '@/features/flashcards/game/GameUi';
+import {
+  comeBack,
+  FLY_MS,
+  flyAway,
+  SwipeCard,
+  SwipeOverlay,
+  useSwipeState,
+} from '@/features/flashcards/game/SwipeCard';
 import { Confetti } from '@/features/habits/Confetti';
+import { readAloud, stopReading, warmVoices } from '@/core/speech/speak';
 import { langFlag, langName } from '@/features/languages/langs';
 import { gapParts, speakable } from '@/features/languages/gap';
 import { Card, PrimaryButton, TextButton } from '@/ui/kit';
@@ -128,6 +137,22 @@ function stateOf(a: string | null): 'open' | 'correct' | 'wrong' | 'seen' {
  * votate si può cambiare il verdetto. Le animazioni, la voce e l'IA arrivano dopo.
  * Parametri: `game` e `position` (da dove si parte; una posizione dietro la prima ancora aperta rimanda a quella).
  */
+/**
+ * La lettura automatica fuori dalla partita a voce («Automatica» nelle impostazioni): la domanda quando compare, la
+ * risposta quando la si scopre.
+ */
+function AutoReader({ on, id, parts }: { on: boolean; id: string; parts: Segment[] }) {
+  const latest = useRef(parts);
+  useEffect(() => {
+    latest.current = parts;
+  });
+  useEffect(() => {
+    if (on) readAloud(latest.current);
+  }, [on, id]);
+  useEffect(() => () => stopReading(), []);
+  return null;
+}
+
 export default function GameScreen() {
   const th = useTheme();
   const { t, i18n } = useTranslation();
@@ -190,6 +215,12 @@ export default function GameScreen() {
     [kit, game, added.length],
   );
 
+  // lo swipe e il volo della carta a ogni voto
+  const sw = useSwipeState();
+  const busy = useRef(false);
+  const win = useWindowDimensions();
+  // le voci del telefono si caricano subito: la prima lettura non aspetta
+  useEffect(() => warmVoices(), []);
   // il tempo già giocato quando si apre (l'orologio poi sale da solo)
   const [playedBase] = useState(() => (kit && game ? kit.games.playedSeconds(game) : 0));
 
@@ -396,6 +427,20 @@ export default function GameScreen() {
     else refresh();
   };
 
+  /** Un voto con la sua animazione (gradeFeedback del sito): la carta vola via, poi arriva quella dopo. */
+  const vote = (it: Item, g: Grade, flown = false) => {
+    if (busy.current) return;
+    busy.current = true;
+    if (!flown) flyAway(sw, g, win.width, win.height);
+    const done = () => {
+      busy.current = false;
+      grade(it, g);
+      comeBack(sw);
+    };
+    if (FLY_MS) setTimeout(done, FLY_MS);
+    else done();
+  };
+
   /** Significato ed esempi (.fcv-hints): sempre («aperto»), a un tocco, o solo dopo la risposta; vista la risposta, tutti. */
   const hintBlock = (it: Item) => {
     const blocks: ReactNode[] = [];
@@ -547,7 +592,7 @@ export default function GameScreen() {
     }
     if (!current) return;
     if (a.kind === 'reveal' || a.kind === 'reveal-read') setShown(true);
-    else if (a.kind === 'grade') grade(current, a.correct ? 'correct' : 'wrong');
+    else if (a.kind === 'grade') vote(current, a.correct ? 'correct' : 'wrong');
   };
 
   const label = (it: Item) => t(it.isChild ? 'fc.gm_sottoconcetto' : 'fc.gm_concetto_principale');
@@ -702,130 +747,137 @@ export default function GameScreen() {
         ) : null}
 
         {current ? (
-          <GameCard
-            gold={kit.isFavorite(current.target)}
-            top={streak.current >= 2 ? <StreakPill n={streak.current} /> : null}
+          <SwipeCard
+            s={sw}
+            enabled={shown}
+            onCross={() => haptic.tap()}
+            onCommit={(good) => vote(current, good ? 'correct' : 'wrong', true)}
           >
-            <CornerFab
-              testID="fcg-favorite"
-              label={t('fc.gm_preferiti')}
-              side="left"
+            <GameCard
               gold={kit.isFavorite(current.target)}
-              onPress={() => {
-                kit.setFavorite(current.target, current.isChild, !kit.isFavorite(current.target));
-                haptic.tap();
-                refresh();
-              }}
+              top={streak.current >= 2 ? <StreakPill n={streak.current} /> : null}
             >
-              <Icon
-                d={ICONS.star}
-                size={16}
-                color={kit.isFavorite(current.target) ? '#fff' : th.text2}
-                fill={kit.isFavorite(current.target)}
-                width={2}
-              />
-            </CornerFab>
-            <CornerFab
-              testID="fcg-edit"
-              label={t('comune.modifica')}
-              side="right"
-              onPress={() => openEdit(current)}
-            >
-              <Icon d={ICONS.pencil} size={16} color={th.text2} />
-            </CornerFab>
-            <LevelBadge
-              level={games.levelOfCard(current.target, current.isChild)}
-              label={t(`fcv.liv_${games.levelOfCard(current.target, current.isChild)}`)}
-            />
-            {items.length > 1 ? (
-              <CardTitle label={label(current)} child={current.isChild} />
-            ) : (
-              <View style={{ height: 38 }} />
-            )}
-
-            {/* la domanda (.q-section) */}
-            <SectionTitle {...sideTag(current, 'q')} />
-            <CardImage testID="fcg-question-image" name={current.questionImage} zoom />
-            <CardAudio testID="fcg-question-audio" name={current.questionAudio} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <DocView
-                  testID="fcg-question"
-                  raw={current.question}
-                  size={big(current) ? 28 : 19}
-                  weight={big(current) ? '700' : undefined}
+              <CornerFab
+                testID="fcg-favorite"
+                label={t('fc.gm_preferiti')}
+                side="left"
+                gold={kit.isFavorite(current.target)}
+                onPress={() => {
+                  kit.setFavorite(current.target, current.isChild, !kit.isFavorite(current.target));
+                  haptic.tap();
+                  refresh();
+                }}
+              >
+                <Icon
+                  d={ICONS.star}
+                  size={16}
+                  color={kit.isFavorite(current.target) ? '#fff' : th.text2}
+                  fill={kit.isFavorite(current.target)}
+                  width={2}
                 />
+              </CornerFab>
+              <CornerFab
+                testID="fcg-edit"
+                label={t('comune.modifica')}
+                side="right"
+                onPress={() => openEdit(current)}
+              >
+                <Icon d={ICONS.pencil} size={16} color={th.text2} />
+              </CornerFab>
+              <LevelBadge
+                level={games.levelOfCard(current.target, current.isChild)}
+                label={t(`fcv.liv_${games.levelOfCard(current.target, current.isChild)}`)}
+              />
+              {items.length > 1 ? (
+                <CardTitle label={label(current)} child={current.isChild} />
+              ) : (
+                <View style={{ height: 38 }} />
+              )}
+
+              {/* la domanda (.q-section) */}
+              <SectionTitle {...sideTag(current, 'q')} />
+              <CardImage testID="fcg-question-image" name={current.questionImage} zoom />
+              <CardAudio testID="fcg-question-audio" name={current.questionAudio} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <DocView
+                    testID="fcg-question"
+                    raw={current.question}
+                    size={big(current) ? 28 : 19}
+                    weight={big(current) ? '700' : undefined}
+                  />
+                </View>
+                {current.questionVoice && localPrefs.fcReadMode !== 'no' ? (
+                  <SpeakButton
+                    testID="fcg-speak-question"
+                    text={current.question ?? ''}
+                    lang={current.questionVoice.lang}
+                    once={current.questionVoice.once}
+                    look="square"
+                    accent={accent}
+                  />
+                ) : null}
               </View>
-              {current.questionVoice ? (
-                <SpeakButton
-                  testID="fcg-speak-question"
-                  text={current.question ?? ''}
-                  lang={current.questionVoice.lang}
-                  once={current.questionVoice.once}
-                  look="square"
-                  accent={accent}
+
+              {/* il posto della risposta (.fcv-slot): velato finché non lo si tocca */}
+              <View style={{ marginTop: 16 }}>
+                {shown ? (
+                  <AnswerSlot
+                    testID="fcg-answer-slot"
+                    label={<SectionTitle {...sideTag(current, 'a')} tight />}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <DocView
+                          testID="fcg-answer"
+                          raw={current.answer}
+                          size={big(current) ? 30 : 17}
+                          weight={big(current) ? '800' : undefined}
+                        />
+                      </View>
+                      {current.answerVoice && localPrefs.fcReadMode !== 'no' ? (
+                        <SpeakButton
+                          testID="fcg-speak-answer"
+                          text={current.answer ?? ''}
+                          lang={current.answerVoice.lang}
+                          once={current.answerVoice.once}
+                          look="square"
+                          accent={accent}
+                        />
+                      ) : null}
+                    </View>
+                    <CardImage testID="fcg-answer-image" name={current.answerImage} zoom />
+                    <CardAudio testID="fcg-answer-audio" name={current.answerAudio} />
+                  </AnswerSlot>
+                ) : (
+                  <RevealVeil
+                    testID="fcg-reveal"
+                    label={<SectionTitle {...sideTag(current, 'a')} tight />}
+                    text={t('fc.gm_tocca_rivela')}
+                    a11y={t('fc.gm_mostra_risposta')}
+                    onPress={() => {
+                      haptic.tap();
+                      setShown(true);
+                    }}
+                  />
+                )}
+              </View>
+
+              {kit.vocab ? hintBlock(current) : null}
+
+              {shown ? (
+                <GradeRow
+                  wrongLabel={t('fc.vg_sbagliato')}
+                  rightLabel={t('fc.res_corretto')}
+                  learntLabel={t('fc.gm_imparato')}
+                  learnt={false}
+                  onWrong={() => vote(current, 'wrong')}
+                  onRight={() => vote(current, 'correct')}
+                  onLearnt={() => vote(current, 'learnt')}
                 />
               ) : null}
-            </View>
-
-            {/* il posto della risposta (.fcv-slot): velato finché non lo si tocca */}
-            <View style={{ marginTop: 16 }}>
-              {shown ? (
-                <AnswerSlot
-                  testID="fcg-answer-slot"
-                  label={<SectionTitle {...sideTag(current, 'a')} tight />}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <DocView
-                        testID="fcg-answer"
-                        raw={current.answer}
-                        size={big(current) ? 30 : 17}
-                        weight={big(current) ? '800' : undefined}
-                      />
-                    </View>
-                    {current.answerVoice ? (
-                      <SpeakButton
-                        testID="fcg-speak-answer"
-                        text={current.answer ?? ''}
-                        lang={current.answerVoice.lang}
-                        once={current.answerVoice.once}
-                        look="square"
-                        accent={accent}
-                      />
-                    ) : null}
-                  </View>
-                  <CardImage testID="fcg-answer-image" name={current.answerImage} zoom />
-                  <CardAudio testID="fcg-answer-audio" name={current.answerAudio} />
-                </AnswerSlot>
-              ) : (
-                <RevealVeil
-                  testID="fcg-reveal"
-                  label={<SectionTitle {...sideTag(current, 'a')} tight />}
-                  text={t('fc.gm_tocca_rivela')}
-                  a11y={t('fc.gm_mostra_risposta')}
-                  onPress={() => {
-                    haptic.tap();
-                    setShown(true);
-                  }}
-                />
-              )}
-            </View>
-
-            {kit.vocab ? hintBlock(current) : null}
-
-            {shown ? (
-              <GradeRow
-                wrongLabel={t('fc.vg_sbagliato')}
-                rightLabel={t('fc.res_corretto')}
-                learntLabel={t('fc.gm_imparato')}
-                learnt={false}
-                onWrong={() => grade(current, 'wrong')}
-                onRight={() => grade(current, 'correct')}
-                onLearnt={() => grade(current, 'learnt')}
-              />
-            ) : null}
-          </GameCard>
+            </GameCard>
+          </SwipeCard>
         ) : father ? (
           <GameCard gold={false}>
             <DocView testID="fcg-question" raw={father.question} size={19} />
@@ -983,6 +1035,12 @@ export default function GameScreen() {
         </View>
       </ScrollView>
 
+      <SwipeOverlay s={sw} />
+      <AutoReader
+        on={localPrefs.fcReadMode === 'auto' && !voiceOn && !ck}
+        id={voiceKey}
+        parts={voiceScript}
+      />
       <ToastHost toast={toasts.toast} top={insets.top + 56} />
       {/* con una pausa aperta i coriandoli li disegna il suo foglio, non questo strato */}
       {ck ? null : <Confetti bursts={fx.bursts} onDone={fx.done} />}

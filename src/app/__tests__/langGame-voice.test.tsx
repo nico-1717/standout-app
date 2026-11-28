@@ -46,6 +46,9 @@ jest.mock('@/core/speech/speak', () => ({
     mockSpoken.push({ text, lang, ...o });
   }),
   stopSpeaking: jest.fn(),
+  warmVoices: jest.fn(),
+  readAloud: jest.fn(),
+  stopReading: jest.fn(),
 }));
 
 const engine = phoneEngine as unknown as FakeEngine;

@@ -30,6 +30,14 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: mockBack, replace: mockReplace }),
   useLocalSearchParams: () => mockParams,
 }));
+jest.mock('@/core/speech/speak', () => ({
+  speak: jest.fn(),
+  stopSpeaking: jest.fn(),
+  warmVoices: jest.fn(),
+  readAloud: (...a: unknown[]) => mockRead(...a),
+  stopReading: jest.fn(),
+}));
+const mockRead = jest.fn();
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -46,7 +54,7 @@ jest.mock('@/core/app/AppProvider', () => ({
 
 function setup() {
   mockVersion = 0;
-  mockPrefs = { fcCheckpoint: 10, fcSounds: false };
+  mockPrefs = { fcCheckpoint: 10, fcSounds: false, fcReadMode: 'click' };
   mockParams = {};
   mockPush.mockClear();
   mockBack.mockClear();
@@ -250,6 +258,19 @@ describe('playing', () => {
     expect(screen.getByTestId('fcg-settings')).toBeTruthy();
     expect(screen.getByTestId('fcg-ck-step-25')).toBeTruthy();
     expect(screen.getByTestId('fcg-sounds')).toBeTruthy();
+    // la lettura ad alta voce: mai, al tocco, automatica
+    expect(screen.getByTestId('fcg-read-mode-click').props.accessibilityState.selected).toBe(true);
+  });
+
+  test('«Automatic» reading reads the question when it appears and the answer when it is revealed', async () => {
+    const { game } = started();
+    mockPrefs = { ...mockPrefs, fcReadMode: 'auto' };
+    mockRead.mockClear();
+    mockParams = { game, position: '1' };
+    await render(wrap(<GameScreen />));
+    expect(mockRead).toHaveBeenLastCalledWith([expect.objectContaining({ text: 'Q1' })]);
+    await fireEvent.press(screen.getByTestId('fcg-reveal'));
+    expect(mockRead).toHaveBeenLastCalledWith([expect.objectContaining({ text: 'A1' })]);
   });
 
   test('a recorded audio plays from the question; the answer one shows after the reveal', async () => {

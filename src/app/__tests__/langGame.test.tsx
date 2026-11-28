@@ -29,6 +29,9 @@ const mockSpeak = jest.fn();
 jest.mock('@/core/speech/speak', () => ({
   speak: (...a: unknown[]) => mockSpeak(...a),
   stopSpeaking: jest.fn(),
+  warmVoices: jest.fn(),
+  readAloud: jest.fn(),
+  stopReading: jest.fn(),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),

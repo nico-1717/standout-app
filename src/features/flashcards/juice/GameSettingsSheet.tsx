@@ -85,6 +85,53 @@ export function GameSettingsSheet({
             accessibilityLabel={t('fcv.gs_suoni')}
           />
         </View>
+        {/* la lettura ad alta voce (le impostazioni di lettura del sito): mai, al tocco o da sola */}
+        <View style={{ gap: 10 }}>
+          <Text style={{ color: ht.text, fontWeight: '700', fontSize: 16 }}>
+            {t('fc.gm_impostazioni')}
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              padding: 3,
+              borderRadius: 12,
+              backgroundColor: ht.surface2,
+            }}
+          >
+            {(
+              [
+                ['no', t('comune.no')],
+                ['click', t('fc.gm_solo_click')],
+                ['auto', t('fc.gm_automatica')],
+              ] as const
+            ).map(([v, label]) => {
+              const on = localPrefs.fcReadMode === v;
+              return (
+                <Pressable
+                  key={v}
+                  testID={`fcg-read-mode-${v}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => updateLocalPrefs({ fcReadMode: v })}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 9,
+                    alignItems: 'center',
+                    borderRadius: 10,
+                    backgroundColor: on ? th.brand : 'transparent',
+                  }}
+                >
+                  <Text style={{ color: on ? '#fff' : ht.text, fontWeight: '700', fontSize: 14 }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text testID="fcg-read-mode-hint" style={{ color: ht.text2, fontSize: 13 }}>
+            {t(`fc.gm_lettura_${localPrefs.fcReadMode}_spiega`)}
+          </Text>
+        </View>
       </ScrollView>
     </Sheet>
   );
