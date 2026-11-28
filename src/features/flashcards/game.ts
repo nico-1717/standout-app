@@ -362,6 +362,15 @@ export class GameRepo {
       .map((r) => r.deck_uuid);
   }
 
+  /** Quante volte ci si è messi a giocare questa partita (le sessioni, «Sessioni» nello storico del sito). */
+  sessionCount(gameUuid: string): number {
+    return (
+      this.db.all<{ n: number }>('SELECT COUNT(*) AS n FROM fc_game_durations WHERE game_uuid = ?', [
+        gameUuid,
+      ])[0]?.n ?? 0
+    );
+  }
+
   /** Il tempo giocato in tutto, in secondi. */
   playedSeconds(gameUuid: string): number {
     return Number(

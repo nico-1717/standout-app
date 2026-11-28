@@ -9,6 +9,11 @@ export interface HistoryPart {
   seconds: number;
   /** Posizione da cui riprendere, se la partita è rimasta a metà (con almeno una risposta). */
   resume: number | null;
+  /** i concetti finiti e quelli in tutto (l'anello e «Carte 12/40») */
+  closed: number;
+  total: number;
+  /** quante volte ci si è messi a giocarla */
+  sessions: number;
 }
 
 /** Una partita «madre» con i suoi ripassi (come sul sito: i ripassi stanno dentro la madre). */
@@ -43,6 +48,9 @@ const part = (games: GameRepo, game: GameRow): HistoryPart => {
     score: t.score,
     seconds: games.playedSeconds(game.uuid),
     resume: pending !== null && t.played > 0 ? pending : null,
+    closed: games.closedPositions(game.uuid),
+    total: games.totalPositions(game.uuid),
+    sessions: games.sessionCount(game.uuid),
   };
 };
 

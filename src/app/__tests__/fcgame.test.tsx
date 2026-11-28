@@ -363,21 +363,21 @@ describe('playing', () => {
 });
 
 describe('result and history', () => {
-  test('the details switch shows the mistakes button, which opens the result on the mistakes', async () => {
+  test('tapping a game opens its details, with the mistakes button that opens the result on the mistakes', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);
     games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'wrong');
     games.conclude(game);
     await render(wrap(<HistoryScreen />));
     expect(screen.queryByTestId(`fch-errors-${game}`)).toBeNull();
-    await fireEvent.press(screen.getByTestId('fch-density'));
+    await fireEvent.press(screen.getByTestId(`fch-game-${game}`));
     await fireEvent.press(screen.getByTestId(`fch-errors-${game}`));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/fc-result',
       params: { game, errors: '1' },
     });
   });
-  test('detailed rows list each review: open it, or delete one left half way', async () => {
+  test('the details list each review: open it, or delete one left half way', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);
     games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'wrong');
@@ -389,7 +389,7 @@ describe('result and history', () => {
     games.grade(r.game, 1, games.plays(r.game, 1)[0]!.card_uuid!, false, 'correct');
     await render(wrap(<HistoryScreen />));
     expect(screen.queryByTestId(`fch-retries-${game}`)).toBeNull();
-    await fireEvent.press(screen.getByTestId('fch-density'));
+    await fireEvent.press(screen.getByTestId(`fch-game-${game}`));
     await fireEvent.press(screen.getByTestId(`fch-retry-${r.game}`));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/fc-game',
@@ -430,7 +430,7 @@ describe('result and history', () => {
     expect(screen.getByTestId(`fch-plate-${game}`)).toHaveTextContent(/2 mistakes to fix/);
     expect(screen.queryByTestId(`fch-gold-${game}`)).toBeNull();
     expect(screen.queryByTestId(`fch-fix-${game}`)).toBeNull(); // il tasto sta nel dettaglio
-    await fireEvent.press(screen.getByTestId('fch-density'));
+    await fireEvent.press(screen.getByTestId(`fch-game-${game}`));
     expect(screen.getByTestId(`fch-road-${game}`)).toBeTruthy();
     await fireEvent.press(screen.getByTestId(`fch-fix-${game}`));
     const call = mockPush.mock.calls.at(-1)![0] as { pathname: string; params: { game: string } };
@@ -445,7 +445,7 @@ describe('result and history', () => {
     await render(wrap(<HistoryScreen />));
     expect(screen.getByTestId(`fch-gold-${game}`)).toHaveTextContent('★ 100%');
     expect(screen.getByTestId(`fch-plate-${game}`)).toHaveTextContent(/Taken to 100% in 1 review/);
-    await fireEvent.press(screen.getByTestId('fch-density'));
+    await fireEvent.press(screen.getByTestId(`fch-game-${game}`));
     expect(screen.queryByTestId(`fch-fix-${game}`)).toBeNull();
     expect(screen.getByTestId(`fch-road-${game}`)).toBeTruthy();
   });
@@ -622,14 +622,37 @@ describe('result and history', () => {
     expect(screen.getByText(/not found/i)).toBeTruthy();
   });
 
+  test('history like the website: the game to pick up again, the play button, filter chips and the numbers', async () => {
+    const { games, game } = started();
+    games.ensurePosition(game, 1);
+    games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'correct');
+    await render(wrap(<HistoryScreen />));
+    // lasciata a metà: in cima, da riprendere
+    await fireEvent.press(screen.getByTestId(`fch-resume-card-${game}`));
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: '/fc-game',
+      params: { game, position: '2' },
+    });
+    expect(screen.getByTestId('fch-summary')).toHaveTextContent(/Games1/);
+    await fireEvent.press(screen.getByTestId('fch-play'));
+    expect(mockPush).toHaveBeenLastCalledWith('/fc-setup');
+    // un filtro acceso diventa una pastiglia che lo toglie
+    await fireEvent.press(screen.getByTestId('fch-filters'));
+    await fireEvent.press(screen.getByTestId('fch-f-sort-errors'));
+    await fireEvent.press(screen.getByTestId('fch-filters-done'));
+    await fireEvent.press(screen.getByTestId('fch-chip-sort'));
+    expect(screen.queryByTestId('fch-chip-sort')).toBeNull();
+  });
+
   test('history lists the game, opens it and deletes it', async () => {
     const { games, game } = started();
     games.ensurePosition(game, 1);
     games.grade(game, 1, games.plays(game, 1)[0]!.card_uuid!, false, 'correct');
     games.conclude(game);
     await render(wrap(<HistoryScreen />));
-    // la partita è a metà (resta la seconda carta): si riprende dalla posizione aperta
+    // la partita è a metà (resta la seconda carta): toccandola si apre, «Riprendi» riparte dalla posizione aperta
     await fireEvent.press(screen.getByTestId(`fch-game-${game}`));
+    await fireEvent.press(screen.getByTestId(`fch-resume-${game}`));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/fc-game',
       params: { game, position: '2' },
