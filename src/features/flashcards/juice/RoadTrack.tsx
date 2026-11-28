@@ -101,8 +101,11 @@ export function RoadRing({
 const DISC = 17;
 
 /** La posizione di un punto sulla linea: tiene l'ultimo disco dentro i bordi (come `f2X` del sito). */
-export const roadX = (percent: number, width: number): number =>
-  DISC / 2 + (width - DISC) * (percent / 100);
+export function roadX(percent: number, width: number): number {
+  // 'worklet': the line is sized on the UI thread (a plain function there makes the app crash)
+  'worklet';
+  return DISC / 2 + (width - DISC) * (percent / 100);
+}
 
 /**
  * Il tracciato della partita: una linea con i dischi dei tratti (uno per checkpoint; se sono troppi più tratti si
