@@ -151,6 +151,13 @@ jobs:
             -e E2E_USER="$E2E_USER" -e E2E_EMAIL="$E2E_USER@users.noreply.github.com" -e E2E_PASS="$E2E_PASS" \
             --test-output-dir shots --format junit --output shots/report.xml
 
+      - name: Collect the crash reports and the app log of the simulator
+        if: always()
+        run: |
+          mkdir -p shots/crash
+          cp ~/Library/Logs/DiagnosticReports/*.ips shots/crash/ 2>/dev/null || true
+          xcrun simctl spawn "$DEVICE" log show --last 40m --style compact --predicate 'process == "Standout" OR subsystem CONTAINS "standout" OR eventMessage CONTAINS "Unhandled JS Exception" OR eventMessage CONTAINS "RCTFatal"' 2>/dev/null | tail -400 > shots/crash/app-log.txt || true
+
       - name: Keep the build log if the build failed
         if: failure()
         uses: actions/upload-artifact@v4
@@ -165,7 +172,7 @@ jobs:
         if: always()
         run: |
           rm -rf publish && mkdir publish
-          (cd shots && find . -type f \( -name '*.png' -o -name 'maestro.log' -o -name 'report.xml' \) -print0 | cpio -0pdm ../publish) || true
+          (cd shots && find . -type f \( -name '*.png' -o -name 'maestro.log' -o -name 'report.xml' -o -name '*.ips' -o -name 'app-log.txt' \) -print0 | cpio -0pdm ../publish) || true
           cd publish
           git init -q
           git checkout -q -b simulator-shots

@@ -1,0 +1,58 @@
+appId: app.standout.mobile
+name: Play a flashcard game from the deck (crash check)
+---
+- runFlow: common/login.yaml
+- swipe:
+    start: 85%, 95%
+    end: 15%, 95%
+- tapOn:
+    id: bar-flashcards
+- tapOn:
+    id: hub-study-open
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          id: fc-new
+      - eraseText: 40
+      - inputText: Game subject
+      - assertVisible: 'Game subject'
+- pressKey: Enter
+- tapOn: '.*Game subject.*'
+- tapOn:
+    id: fcd-settings
+# The sheet is an iOS Modal that Maestro cannot see by id: "Edit all cards" is tapped by its place on the screen.
+- tapOn:
+    point: 50%,73%
+- tapOn:
+    id: fci-mode-rows
+- tapOn:
+    id: fci-q-0
+- inputText: First question
+- tapOn:
+    id: fci-a-0
+- inputText: First answer
+- tapOn:
+    id: fci-save
+- tapOn:
+    id: fci-close
+- takeScreenshot: 50-deck-with-card
+- tapOn:
+    id: fcd-play
+- extendedWaitUntil:
+    visible: '.*Game subject.*'
+    timeout: 15000
+    optional: true
+- takeScreenshot: 51-setup
+- tapOn:
+    id: fcs-play-all
+- extendedWaitUntil:
+    visible:
+      id: fcg-progress
+    timeout: 20000
+    optional: true
+- takeScreenshot: 52-game-started
+- tapOn:
+    id: fcg-reveal
+    optional: true
+- takeScreenshot: 53-game-revealed
