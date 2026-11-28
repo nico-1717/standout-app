@@ -62,5 +62,12 @@ name: Play a flashcard game from the deck (crash check)
     duration: 400
 - takeScreenshot: 54-after-swipe
 - tapOn:
-    id: fcg-voice
-- takeScreenshot: 55-voice-popup
+    id: fcg-boss-end
+    optional: true
+- tapOn: 'Continue'
+- extendedWaitUntil:
+    visible:
+      id: fcr-score
+    timeout: 15000
+    optional: true
+- takeScreenshot: 55-result
