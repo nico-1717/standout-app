@@ -473,6 +473,8 @@ export default function HistoryScreen() {
   );
 
   // le righe, giorno per giorno quando sono in ordine di data
+  // la targa d'oro: più chiara sul fondo scuro, più scura sul chiaro (come il sito)
+  const plateGold = th.scheme === 'dark' ? '#FFD60A' : '#C98A00';
   const byDay = sort === 'recent';
   // la prima partita di ogni giorno porta il titolo del giorno
   const dayHeads = new Set<string>();
@@ -1109,11 +1111,11 @@ export default function HistoryScreen() {
                                 marginTop: 5,
                               }}
                             >
-                              <Icon d={IC.trophy} size={13} color="#FFD60A" width={2.2} />
+                              <Icon d={IC.trophy} size={13} color={plateGold} width={2.2} />
                               <Text
                                 testID={`fch-plate-${g.uuid}`}
                                 numberOfLines={1}
-                                style={{ color: '#FFD60A', fontSize: 12, fontWeight: '800' }}
+                                style={{ color: plateGold, fontSize: 12, fontWeight: '800' }}
                               >
                                 {ch.state === 'perfetta'
                                   ? t('fc.sfc_perfetta')
@@ -1203,7 +1205,7 @@ export default function HistoryScreen() {
                           <View
                             testID={`fch-gold-${g.uuid}`}
                             accessible
-                            accessibilityLabel="★ 100%"
+                            accessibilityLabel="100%"
                             style={{ borderRadius: 99, overflow: 'hidden' }}
                           >
                             <LinearGradient
@@ -1220,7 +1222,7 @@ export default function HistoryScreen() {
                             >
                               <Icon d={IC.star} size={12} color="#5C3A00" fill />
                               <Text style={{ color: '#5C3A00', fontSize: 12, fontWeight: '700' }}>
-                                ★ 100%
+                                100%
                               </Text>
                             </LinearGradient>
                           </View>

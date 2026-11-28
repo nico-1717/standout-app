@@ -443,7 +443,7 @@ describe('result and history', () => {
     const r = games.retry(game) as { kind: 'started'; game: string };
     playAll(games, r.game, 0);
     await render(wrap(<HistoryScreen />));
-    expect(screen.getByTestId(`fch-gold-${game}`)).toHaveTextContent('★ 100%');
+    expect(screen.getByTestId(`fch-gold-${game}`)).toHaveTextContent('100%');
     expect(screen.getByTestId(`fch-plate-${game}`)).toHaveTextContent(/Taken to 100% in 1 review/);
     await fireEvent.press(screen.getByTestId(`fch-game-${game}`));
     expect(screen.queryByTestId(`fch-fix-${game}`)).toBeNull();
