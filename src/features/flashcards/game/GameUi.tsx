@@ -13,7 +13,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Defs, Path, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Path, Pattern, Rect } from 'react-native-svg';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { tint } from '@/features/home/HomeKit';
@@ -570,7 +570,10 @@ export function RevealVeil(p: {
       <SlotBack />
       <Animated.View
         pointerEvents="none"
-        style={[{ position: 'absolute', top: 0, left: 0, width: w + 44, height: 160 }, dots]}
+        style={[
+          { position: 'absolute', top: 0, left: 0, width: w + 44, height: 400, opacity: 0.7 },
+          dots,
+        ]}
       >
         <Svg width="100%" height="100%">
           <Defs>
@@ -585,21 +588,6 @@ export function RevealVeil(p: {
           <Rect width="100%" height="100%" fill="url(#p2)" opacity={0.75} />
         </Svg>
       </Animated.View>
-      {/* i puntini svaniscono verso i bordi (la maschera ellittica del sito) */}
-      <Svg
-        pointerEvents="none"
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        width="100%"
-        height="100%"
-      >
-        <Defs>
-          <RadialGradient id="fade" cx="50%" cy="62%" rx="80%" ry="70%">
-            <Stop offset="0.3" stopColor={th.surface} stopOpacity={0} />
-            <Stop offset="0.8" stopColor={tint(th.purple, th.surface, 0.09)} stopOpacity={1} />
-          </RadialGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#fade)" />
-      </Svg>
       <Animated.View
         pointerEvents="none"
         style={[
