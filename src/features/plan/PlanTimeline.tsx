@@ -83,9 +83,11 @@ export function PlanTimeline(p: {
       events: p.repo.importantEvents(range.from, range.to),
     };
   }, [p.repo, p.projects, p.version, range.from, range.to]);
-  const { view, events } = data;
+  const { view } = data;
 
   const byId = new Map(view.nodes.map((n) => [n.project, n]));
+  // le date importanti si vedono solo se legate a un progetto
+  const events = data.events.filter((e) => e.projectUuid && byId.has(e.projectUuid));
   const rows = view.nodes
     .map((n) => ({
       n,

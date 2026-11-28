@@ -1,3 +1,4 @@
+import { Keyboard } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -55,5 +56,47 @@ describe('the important date button of the calendar bar', () => {
       date: '2026-11-28',
       level: 'highest',
     });
+  });
+
+  it('closes the keyboard when you tap an empty place or scroll', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
+    await render(
+      wrap(
+        <KeyDateSheet
+          visible
+          today="2026-11-28"
+          onSave={() => undefined}
+          onClose={() => undefined}
+        />,
+      ),
+    );
+    expect(screen.getByTestId('keydate-scroll').props.keyboardDismissMode).toBe('on-drag');
+    await fireEvent.press(screen.getByTestId('keydate-blank'));
+    expect(dismiss).toHaveBeenCalled();
+    dismiss.mockRestore();
+  });
+
+  it('edits a saved date and deletes it only after a second tap', async () => {
+    const onSave = jest.fn();
+    const onDelete = jest.fn();
+    await render(
+      wrap(
+        <KeyDateSheet
+          visible
+          today="2026-11-28"
+          initial={{ title: 'Exam', date: '2026-12-02', level: 'highest' }}
+          onSave={onSave}
+          onDelete={onDelete}
+          onClose={() => undefined}
+        />,
+      ),
+    );
+    expect(screen.getByTestId('keydate-title').props.value).toBe('Exam');
+    await fireEvent.press(screen.getByTestId('keydate-delete'));
+    expect(onDelete).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('keydate-delete'));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByTestId('keydate-save'));
+    expect(onSave).toHaveBeenCalledWith({ title: 'Exam', date: '2026-12-02', level: 'highest' });
   });
 });

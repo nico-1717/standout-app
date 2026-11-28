@@ -441,4 +441,21 @@ describe('PlanRepo important events', () => {
       ['2030-03-07', 'Viaggio', 'highest', true],
     ]);
   });
+
+  test('each day carries the event, its project and its first day (to edit it from the list)', () => {
+    const { db, repo } = setup();
+    db.run(
+      `INSERT INTO planner_events (uuid, title, event_date, end_date, start_time, end_time, item_type, importance, is_all_day, project_uuid)
+       VALUES ('exam', 'Esame', '2030-03-05', '2030-03-06', '00:00', '00:00', 'event', 'high', 1, 'p1')`,
+    );
+    const out = repo.importantEvents('2030-03-06', '2030-03-31');
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      uuid: 'exam',
+      projectUuid: 'p1',
+      startDate: '2030-03-05',
+      day: '2030-03-06',
+      repeats: false,
+    });
+  });
 });

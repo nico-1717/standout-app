@@ -28,7 +28,7 @@ import { hours, monthLabel, shortHours, weekdayName } from './format';
 import { usePaintGesture } from './paintGesture';
 import { KeyDateSheet } from './KeyDateSheet';
 import { PlanDock, type Tool } from './PlanDock';
-import type { PlanRepo } from './repo';
+import type { ImportantEvent, PlanRepo } from './repo';
 import { calendarView, type CalendarNode } from './view';
 
 export type { Tool };
@@ -67,6 +67,7 @@ export function PlanCalendar(p: {
   const [tool, setTool] = useState<Tool>('paint');
   const [showEv, setShowEv] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<ImportantEvent | null>(null);
   const { services } = useApp();
   const [undo, setUndo] = useState<Undo[]>([]);
   const [scope, setScope] = useState<string | null>(p.scope);
@@ -76,7 +77,7 @@ export function PlanCalendar(p: {
     void p.version;
     return calendarView(p.repo, p.projects, scope, range.from, range.to);
   }, [p.repo, p.projects, p.version, scope, range.from, range.to]);
-  const events = useMemo(() => {
+  const allEvents = useMemo(() => {
     void p.version;
     return showEv ? p.repo.importantEvents(range.from, range.to) : [];
   }, [p.repo, p.version, showEv, range.from, range.to]);
@@ -97,6 +98,9 @@ export function PlanCalendar(p: {
   };
   const scopeIds = (scope ? branchOf(nodes, scope) : nodes.map((n) => n.project)) as string[];
   const focusIds = current ? branchOf(nodes, current) : scopeIds;
+  // le date importanti si vedono solo se legate al progetto scelto (o a un suo sotto-progetto)
+  const focusSet = new Set(focusIds);
+  const events = allEvents.filter((e) => e.projectUuid !== null && focusSet.has(e.projectUuid));
 
   const apply = (project: string, mode: 'add' | 'remove', days: string[], record = true) => {
     if (!days.length) return;
@@ -244,18 +248,44 @@ export function PlanCalendar(p: {
   });
   const pressDay = useCallback((day: string) => tapRef.current(day), []);
 
+  const viewOf = (e: ImportantEvent) =>
+    services?.planner
+      .eventsInRange(e.day, e.day)
+      .find((v) => v.uuid === e.uuid || v.masterUuid === e.uuid) ?? null;
+
   const saveKeyDate = (v: { title: string; date: string; level: 'high' | 'highest' }) => {
-    services?.planner.create({
-      title: v.title,
-      date: v.date,
-      allDay: true,
-      importance: v.level,
-      notify: 'none',
-    });
+    if (editing) {
+      const view = viewOf(editing);
+      if (view)
+        services?.planner.update(
+          view,
+          editing.repeats
+            ? { title: v.title, importance: v.level }
+            : { title: v.title, importance: v.level, date: v.date },
+          'all',
+        );
+    } else {
+      services?.planner.create({
+        title: v.title,
+        date: v.date,
+        allDay: true,
+        importance: v.level,
+        notify: 'none',
+        projectUuid: current ?? scope ?? null,
+      });
+    }
     setAdding(false);
+    setEditing(null);
     setShowEv(true);
     // il mese mostrato segue la data scelta, così la si vede subito
     setMonth(`${v.date.slice(0, 7)}-01`);
+    p.changed();
+  };
+
+  const deleteKeyDate = () => {
+    const view = editing ? viewOf(editing) : null;
+    if (view) services?.planner.remove(view, 'one');
+    setEditing(null);
     p.changed();
   };
 
@@ -408,9 +438,11 @@ export function PlanCalendar(p: {
                   checkColor={saved ? inkOn(selColor) : th.green}
                   eventColor={
                     evs.length
-                      ? evs.some((e) => e.importance === 'highest')
-                        ? '#FF453A'
-                        : '#FFD60A'
+                      ? d < today
+                        ? '#8E8E93'
+                        : evs.some((e) => e.importance === 'highest')
+                          ? '#FF453A'
+                          : '#FFD60A'
                       : null
                   }
                   isToday={d === today}
@@ -493,9 +525,19 @@ export function PlanCalendar(p: {
                 </Text>
               );
             return mine.map((e, i) => (
-              <View
-                key={`${e.day}-${e.title}-${i}`}
-                style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}
+              <Pressable
+                key={`${e.uuid}-${e.day}-${i}`}
+                testID={`cal-ev-row-${e.uuid}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('piano.data_imp_modifica')}: ${e.title}`}
+                onPress={() => setEditing(e)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  gap: 10,
+                  alignItems: 'center',
+                  minHeight: 36,
+                  opacity: (e.day < today ? 0.45 : 1) * (pressed ? 0.6 : 1),
+                })}
               >
                 <Text style={{ width: 26, color: th.text2, fontVariant: ['tabular-nums'] }}>
                   {Number(e.day.slice(8, 10))}
@@ -508,23 +550,38 @@ export function PlanCalendar(p: {
                 </Text>
                 <Text
                   style={{
-                    color: e.importance === 'highest' ? th.red : th.orange,
+                    color:
+                      e.day < today ? th.text2 : e.importance === 'highest' ? th.red : th.orange,
                     fontSize: 12,
                     fontWeight: '700',
                   }}
                 >
                   {t(e.importance === 'highest' ? 'piano.imp_highest' : 'piano.imp_high')}
                 </Text>
-              </View>
+              </Pressable>
             ));
           })()}
         </Card>
       ) : null}
       <KeyDateSheet
-        visible={adding}
+        visible={adding || editing !== null}
         today={today}
+        initial={
+          editing
+            ? {
+                title: editing.title,
+                date: editing.startDate,
+                level: editing.importance,
+                repeats: editing.repeats,
+              }
+            : null
+        }
         onSave={saveKeyDate}
-        onClose={() => setAdding(false)}
+        onDelete={deleteKeyDate}
+        onClose={() => {
+          setAdding(false);
+          setEditing(null);
+        }}
       />
     </View>
   );

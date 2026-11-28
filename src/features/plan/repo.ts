@@ -31,6 +31,13 @@ import { rescale, type SplitRow } from './split';
 
 /** Le impostazioni come stanno salvate: `null` = «usa il ritmo misurato». */
 export interface ImportantEvent {
+  uuid: string;
+  /** il progetto a cui è legata (le date importanti si vedono solo così) */
+  projectUuid: string | null;
+  /** il primo giorno dell'evento (`day` è il giorno in cui compare) */
+  startDate: string;
+  /** si ripete: il giorno non si cambia da qui */
+  repeats: boolean;
   day: string;
   title: string;
   importance: 'high' | 'highest';
@@ -380,6 +387,9 @@ export class PlanRepo {
    */
   importantEvents(from: string, to: string): ImportantEvent[] {
     const rows = this.db.all<{
+      uuid: string;
+      project_uuid: string | null;
+      rrule: string | null;
       title: string;
       importance: string;
       is_all_day: number;
@@ -388,7 +398,7 @@ export class PlanRepo {
       fine: string;
       color: string | null;
     }>(
-      `SELECT title, importance, is_all_day, start_time, event_date, COALESCE(end_date, event_date) AS fine, color
+      `SELECT uuid, project_uuid, rrule, title, importance, is_all_day, start_time, event_date, COALESCE(end_date, event_date) AS fine, color
        FROM planner_events
        WHERE importance <> 'normal' AND item_type = 'event' AND COALESCE(is_cancelled,0) = 0
          AND event_date <= ? AND COALESCE(end_date, event_date) >= ?
@@ -401,6 +411,10 @@ export class PlanRepo {
       const last = r.fine < to ? r.fine : to;
       for (let n = 0; d <= last && n < 60; n++, d = addDays(d, 1))
         out.push({
+          uuid: r.uuid,
+          projectUuid: r.project_uuid,
+          startDate: r.event_date,
+          repeats: !!r.rrule,
           day: d,
           title: r.title,
           importance: r.importance === 'highest' ? 'highest' : 'high',
