@@ -2,13 +2,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedProps,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
@@ -37,9 +30,8 @@ const BAND = {
 
 const RING_R = 52;
 const RING_C = 2 * Math.PI * RING_R;
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-/** L'anello del punteggio (.ring-wrap): si riempie piano fino al punteggio, col numero al centro. */
+/** L'anello del punteggio (.ring-wrap): si riempie piano fino al punteggio, e il numero al centro sale con lui. */
 function ScoreRing({
   score,
   band,
@@ -51,13 +43,21 @@ function ScoreRing({
 }) {
   const th = useTheme();
   const b = BAND[band];
-  const k = useSharedValue(0);
+  // nei test si vede subito il punteggio finale
+  const [k, setK] = useState(process.env.JEST_WORKER_ID ? 1 : 0);
   useEffect(() => {
-    k.set(
-      withDelay(200, withTiming(score / 100, { duration: 1100, easing: Easing.out(Easing.cubic) })),
-    );
-  }, [k, score]);
-  const props = useAnimatedProps(() => ({ strokeDashoffset: RING_C * (1 - k.get()) }));
+    if (process.env.JEST_WORKER_ID) return;
+    let raf = 0;
+    const start = Date.now() + 250;
+    const step = () => {
+      const x = Math.min(1, Math.max(0, (Date.now() - start) / 1300));
+      setK(1 - Math.pow(1 - x, 3));
+      if (x < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+  const now = Math.round(score * k);
   return (
     <View style={{ width: 188, height: 188, alignSelf: 'center', marginTop: 2, marginBottom: 14 }}>
       <Svg
@@ -81,17 +81,19 @@ function ScoreRing({
           strokeOpacity={0.14}
           strokeWidth={3.4}
         />
-        <AnimatedCircle
-          cx={60}
-          cy={60}
-          r={RING_R}
-          fill="none"
-          stroke="url(#ring)"
-          strokeWidth={5.6}
-          strokeLinecap="round"
-          strokeDasharray={`${RING_C} ${RING_C}`}
-          animatedProps={props}
-        />
+        {now > 0 ? (
+          <Circle
+            cx={60}
+            cy={60}
+            r={RING_R}
+            fill="none"
+            stroke="url(#ring)"
+            strokeWidth={5.6}
+            strokeLinecap="round"
+            strokeDasharray={`${RING_C} ${RING_C}`}
+            strokeDashoffset={RING_C * (1 - (score / 100) * k)}
+          />
+        ) : null}
       </Svg>
       <View
         style={{

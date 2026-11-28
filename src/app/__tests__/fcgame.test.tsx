@@ -313,13 +313,14 @@ describe('playing', () => {
     expect(screen.getByTestId('fcg-favorite').props.accessibilityState.selected).toBe(true);
     await fireEvent.press(screen.getByTestId('fcg-reveal'));
     await fireEvent.press(screen.getByTestId('fcg-correct'));
-    // seconda carta, padre giusto: la riga del padre ha il tasto «cambia verdetto»
-    await fireEvent.press(screen.getByTestId('fcg-reveal'));
-    await fireEvent.press(screen.getByTestId('fcg-correct'));
-    const father = games.plays(game, 2).find((p) => p.card_uuid)!;
-    expect(father.user_answer).toBe('Correct');
-    await fireEvent.press(screen.getByTestId(`fcg-verdict-${father.uuid}`));
-    expect(games.plays(game, 2).find((p) => p.card_uuid)!.user_answer).toBe('Wrong');
+    // mentre si gioca le risposte date non si vedono sotto la carta nuova
+    const first = games.plays(game, 1)[0]!;
+    expect(screen.queryByTestId(`fcg-verdict-${first.uuid}`)).toBeNull();
+    // tornando alla posizione finita, il verdetto si può cambiare
+    await fireEvent.press(screen.getByTestId('fcg-back'));
+    expect(first.user_answer).toBe('Correct');
+    await fireEvent.press(screen.getByTestId(`fcg-verdict-${first.uuid}`));
+    expect(games.plays(game, 1)[0]!.user_answer).toBe('Wrong');
   });
 
   test('like the website: the pencil edits the card, «Back» goes to the previous position, the deck colour leads', async () => {

@@ -816,11 +816,11 @@ export default function GameScreen() {
                 level={games.levelOfCard(current.target, current.isChild)}
                 label={t(`fcv.liv_${games.levelOfCard(current.target, current.isChild)}`)}
               />
+              {/* la riga della stella, del livello e della matita; sotto, se serve, «Sottoconcetto» */}
+              <View style={{ height: 38 }} />
               {items.length > 1 ? (
                 <CardTitle label={label(current)} child={current.isChild} />
-              ) : (
-                <View style={{ height: 38 }} />
-              )}
+              ) : null}
 
               {/* la domanda (.q-section) */}
               <SectionTitle {...sideTag(current, 'q')} />
@@ -920,7 +920,7 @@ export default function GameScreen() {
         ) : null}
 
         {/* le carte già votate di questa posizione: il verdetto si può cambiare */}
-        {items.length > 1 || allAnswered ? (
+        {allAnswered ? (
           <View style={{ gap: 8, marginTop: 16 }}>
             {items.map((it) => {
               const st = stateOf(it.play.user_answer);

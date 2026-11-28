@@ -424,9 +424,8 @@ export function CardTitle({ label, child }: { label: string; child: boolean }) {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 7,
-        minHeight: 36,
-        paddingHorizontal: 34,
-        marginBottom: 12,
+        marginTop: 2,
+        marginBottom: 14,
       }}
     >
       <View
