@@ -71,3 +71,6 @@ name: Play a flashcard game from the deck (crash check)
     timeout: 15000
     optional: true
 - takeScreenshot: 55-result
+- tapOn:
+    id: fcr-close
+- takeScreenshot: 56-history
