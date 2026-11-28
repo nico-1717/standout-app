@@ -75,7 +75,8 @@ function Shell() {
             name="fc-game"
             options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
           />
-          <Stack.Screen name="fc-result" options={{ presentation: 'modal' }} />
+          {/* il risultato è una pagina intera come sul sito (la sua intestazione ha già «indietro») */}
+          <Stack.Screen name="fc-result" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="fc-history" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-stats" options={{ presentation: 'modal' }} />
           <Stack.Screen name="fc-insert" options={{ presentation: 'modal' }} />
